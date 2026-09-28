@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\RateRule;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\AvailabilityChecker;
+use App\Services\Pricing\RateRuleResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,7 @@ class BookingAddonController extends Controller
 {
     private const CLOSED = ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'];
 
-    public function extraHour(string $code, ConsumptionService $consumption, AvailabilityChecker $availability): RedirectResponse
+    public function extraHour(string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
     {
         $booking = Booking::with('room')->where('code', $code)->firstOrFail();
 
@@ -25,6 +26,13 @@ class BookingAddonController extends Controller
         }
 
         $newEndsAt = $booking->ends_at->copy()->addHour();
+        // isAvailable() solo pelea por otra reserva encima -- sin esto se
+        // podía vender una hora que dejaba a la pieza "ocupada" en el
+        // sistema después de la hora de cierre de la tarifa vigente, algo
+        // que ni crear ni reprogramar una reserva permiten.
+        if (! $rateRules->resolve($booking->starts_at, $newEndsAt)) {
+            return back()->withErrors(['booking' => 'No se puede vender esa hora adicional porque pasa la hora de cierre.']);
+        }
         if (! $availability->isAvailable($booking->room, $booking->ends_at, $newEndsAt, $booking->id)) {
             return back()->withErrors(['booking' => 'No se puede vender la hora adicional porque existe otra reserva después.']);
         }
