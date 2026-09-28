@@ -39,6 +39,8 @@ class CheckoutPendingBalanceTest extends TestCase
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
+            '2026_08_19_090001_create_products_table.php',
+            '2026_08_19_090002_add_product_id_to_booking_addons_table.php',
             '2026_08_19_090003_add_consumption_offered_to_bookings_table.php',
             '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
             '2026_08_26_120001_add_aseo_override_to_rooms_table.php',
@@ -94,6 +96,33 @@ class CheckoutPendingBalanceTest extends TestCase
 
         $response->assertForbidden();
         $this->assertSame('CHECK_IN', $this->booking->fresh()->booking_status);
+    }
+
+    public function test_checkout_is_blocked_when_a_consumption_added_in_the_same_submit_leaves_a_balance(): void
+    {
+        // La reserva llega pagada al 100% a esta pantalla -- el saldo se
+        // valida ANTES de agregar consumos, así que ese primer chequeo
+        // pasa. El bug era que no se revalidaba DESPUÉS de agregar los
+        // extras de este mismo envío.
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        Payment::create([
+            'booking_id' => $this->booking->id,
+            'payment_method_id' => $method->id,
+            'amount' => 20000,
+            'status' => 'aprobado',
+        ]);
+        $this->assertSame(0, $this->booking->fresh()->balanceDue());
+
+        $product = \App\Models\Product::create(['name' => 'Espumante', 'price' => 15000, 'is_active' => true]);
+
+        $response = $this->post("/reservas/{$this->booking->code}/finalizar", [
+            'confirm_room_checked' => '1',
+            'quantities' => [$product->id => 1],
+        ]);
+
+        $response->assertSessionHasErrors('booking');
+        $this->assertSame('CHECK_IN', $this->booking->fresh()->booking_status);
+        $this->assertSame(15000, $this->booking->fresh()->balanceDue());
     }
 
     public function test_checkout_succeeds_once_fully_paid(): void

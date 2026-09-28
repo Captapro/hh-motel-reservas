@@ -93,8 +93,8 @@
          acá arriba, otro repetido adentro de la columna "El dinero"), y con
          cantidades distintas de botones por fila se veía desalineado. --}}
     <div class="col-actions">
-        <a class="col-btn" href="{{ route('bookings.pass.preview', $booking->code) }}" target="_blank">Ver pase PDF</a>
-        <a class="col-btn" href="{{ route('bookings.pass.pdf', $booking->code) }}">Descargar pase</a>
+        <a class="col-btn" href="{{ route('bookings.pass.preview', $booking->pass_token) }}" target="_blank">Ver pase PDF</a>
+        <a class="col-btn" href="{{ route('bookings.pass.pdf', $booking->pass_token) }}">Descargar pase</a>
         <a class="col-btn" href="{{ route('rooms.board') }}">← Tablero</a>
         @unless (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
             <a class="col-btn" href="{{ route('reservations.edit', $booking->code) }}">Modificar</a>
@@ -139,7 +139,7 @@
             ."Horario: ".$booking->starts_at->timezone('America/Santiago')->format('H:i')." a ".$booking->ends_at->timezone('America/Santiago')->format('H:i')."\n"
             ."Monto pendiente: $".number_format($booking->balanceDue(), 0, ',', '.')."\n\n"
             .($paymentLines ? implode("\n", $paymentLines)."\n\nEnvíanos el comprobante por este mismo WhatsApp.\n\n" : '')
-            ."Pase de reserva: ".url(route('bookings.pass.pdf', $booking->code));
+            ."Pase de reserva: ".url(route('bookings.pass.pdf', $booking->pass_token));
         // Sin ?text= a propósito -- solo abre el chat con el cliente. El
         // mensaje armado arriba se copia aparte ("Copiar texto") y se pega a
         // mano, para poder revisarlo/editarlo dentro de WhatsApp antes de

@@ -47,9 +47,10 @@ Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->mi
 Route::get('/catalogo/reservado/{code}', [PublicBookingController::class, 'booked'])->name('catalog.booked');
 // El pase PDF se manda directo al cliente por WhatsApp (ver el botón de
 // "instrucciones de pago" en reservations/show) -- tiene que poder abrirlo
-// sin loguearse, el código de reserva ya funciona como el token de acceso.
-Route::get('/reservas/{code}/pase', [BookingPassController::class, 'preview'])->name('bookings.pass.preview');
-Route::get('/reservas/{code}/pase.pdf', [BookingPassController::class, 'download'])->name('bookings.pass.pdf');
+// sin loguearse. Usa pass_token (aleatorio) y NO code (secuencial por día,
+// fácil de adivinar probando números cercanos) como token de acceso.
+Route::get('/reservas/pase/{token}', [BookingPassController::class, 'preview'])->name('bookings.pass.preview');
+Route::get('/reservas/pase/{token}/pdf', [BookingPassController::class, 'download'])->name('bookings.pass.pdf');
 
 // Opinión del huésped -- 4-5 estrellas va directo a Google, 0-3 se queda
 // adentro (ver GuestReviewController). {code} es opcional: el QR fijo de

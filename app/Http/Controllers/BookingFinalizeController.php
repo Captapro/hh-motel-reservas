@@ -78,6 +78,14 @@ class BookingFinalizeController extends Controller
             return back()->withErrors(['booking' => $e->getMessage().' No se agregó nada de este envío — ajusta la cantidad y vuelve a intentar.']);
         }
 
+        // Los consumos recién agregados en este mismo envío pueden dejar
+        // saldo pendiente aunque la reserva ya estuviera pagada al entrar a
+        // esta pantalla -- hay que revalidar después de agregarlos, no solo
+        // antes.
+        if ($booking->fresh()->balanceDue() > 0) {
+            return back()->withErrors(['booking' => 'Los extras que acabas de agregar dejaron un saldo pendiente — registra el pago antes de cerrar la reserva.']);
+        }
+
         $checkedOutAt = $booking->checked_out_at ?? now();
         // Si el huésped se va antes de la hora reservada, la habitación tiene
         // que quedar libre desde ese momento real — no desde la hora original

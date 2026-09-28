@@ -18,6 +18,7 @@ use App\Services\Pricing\PromotionResolver;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class BookingService
 {
@@ -97,65 +98,80 @@ class BookingService
 
         $priceFinal = max(0, $priceOriginal - $discountAmount);
 
-        try {
-            $booking = DB::transaction(function () use ($room, $customer, $startsAt, $endsAt, $durationMinutes, $data, $pricing, $coupon, $discountAmount, $priceOriginal, $priceFinal) {
-                $booking = Booking::create([
-                    'code' => $this->codeGenerator->generate($startsAt),
-                    'customer_id' => $customer->id,
-                    'room_id' => $room->id,
-                    'created_by' => $data['created_by'] ?? null,
-                    'starts_at' => $startsAt,
-                    'ends_at' => $endsAt,
-                    'duration_minutes' => $durationMinutes,
-                    'guests_count' => $data['guests_count'],
-                    'booking_status' => 'PENDIENTE_PAGO',
-                    'payment_status' => 'NO_PAGADA',
-                    'rate_rule_id' => $pricing['rate_rule']->id,
-                    'rate_rule_name_snapshot' => $pricing['rate_rule']->name,
-                    'price_original' => $priceOriginal,
-                    'extra_guests_fee' => $pricing['extra_guests_fee'],
-                    'coupon_id' => $coupon?->id,
-                    'coupon_code_snapshot' => $coupon?->label(),
-                    'discount_amount' => $discountAmount,
-                    'price_final' => $priceFinal,
-                    'deposit_amount' => $data['deposit_amount'] ?? 0,
-                    'notes' => $data['notes'] ?? null,
-                ]);
-
-                foreach ($data['guest_names'] ?? [] as $guestName) {
-                    if (trim($guestName) !== '') {
-                        BookingGuest::create(['booking_id' => $booking->id, 'name' => trim($guestName)]);
-                    }
-                }
-
-                if ($coupon) {
-                    CouponRedemption::create([
-                        'coupon_id' => $coupon->id,
-                        'booking_id' => $booking->id,
+        // El código sale de un COUNT + insert, no es atómico: dos reservas
+        // creadas al mismo tiempo pueden leer el mismo contador y chocar
+        // contra el UNIQUE de bookings.code. Reintenta con un código nuevo
+        // en vez de dejar caer la reserva con un 500.
+        $attemptsLeft = 5;
+        while (true) {
+            try {
+                $booking = DB::transaction(function () use ($room, $customer, $startsAt, $endsAt, $durationMinutes, $data, $pricing, $coupon, $discountAmount, $priceOriginal, $priceFinal) {
+                    $booking = Booking::create([
+                        'code' => $this->codeGenerator->generate($startsAt),
+                        'pass_token' => Str::random(40),
                         'customer_id' => $customer->id,
+                        'room_id' => $room->id,
+                        'created_by' => $data['created_by'] ?? null,
+                        'starts_at' => $startsAt,
+                        'ends_at' => $endsAt,
+                        'duration_minutes' => $durationMinutes,
+                        'guests_count' => $data['guests_count'],
+                        'booking_status' => 'PENDIENTE_PAGO',
+                        'payment_status' => 'NO_PAGADA',
+                        'rate_rule_id' => $pricing['rate_rule']->id,
+                        'rate_rule_name_snapshot' => $pricing['rate_rule']->name,
+                        'price_original' => $priceOriginal,
+                        'extra_guests_fee' => $pricing['extra_guests_fee'],
+                        'coupon_id' => $coupon?->id,
+                        'coupon_code_snapshot' => $coupon?->label(),
                         'discount_amount' => $discountAmount,
-                        'verified_by' => $coupon->requires_verification ? ($data['verified_by'] ?? null) : null,
-                        'redeemed_at' => now(),
+                        'price_final' => $priceFinal,
+                        'deposit_amount' => $data['deposit_amount'] ?? 0,
+                        'notes' => $data['notes'] ?? null,
                     ]);
-                }
 
-                AuditLog::record($data['created_by'] ?? null, 'reserva.crear', 'Booking', $booking->id, null, $booking->toArray());
+                    foreach ($data['guest_names'] ?? [] as $guestName) {
+                        if (trim($guestName) !== '') {
+                            BookingGuest::create(['booking_id' => $booking->id, 'name' => trim($guestName)]);
+                        }
+                    }
+
+                    if ($coupon) {
+                        CouponRedemption::create([
+                            'coupon_id' => $coupon->id,
+                            'booking_id' => $booking->id,
+                            'customer_id' => $customer->id,
+                            'discount_amount' => $discountAmount,
+                            'verified_by' => $coupon->requires_verification ? ($data['verified_by'] ?? null) : null,
+                            'redeemed_at' => now(),
+                        ]);
+                    }
+
+                    AuditLog::record($data['created_by'] ?? null, 'reserva.crear', 'Booking', $booking->id, null, $booking->toArray());
+
+                    return $booking;
+                });
+
+                // Fuera de la transacción a propósito: si GHL falla o está lento,
+                // la reserva ya quedó confirmada igual -- nunca debe poder
+                // tumbarla ni demorarla. GhlBookingSync nunca lanza excepción.
+                $this->ghlSync->sync($booking);
 
                 return $booking;
-            });
+            } catch (QueryException $e) {
+                // SQLSTATE 23P01 = exclusion_violation (choque con bookings_no_overlap)
+                if ($e->getCode() === '23P01' || str_contains($e->getMessage(), 'bookings_no_overlap')) {
+                    throw new RoomNotAvailableException("La habitación {$room->name} acaba de ser reservada por otra persona en ese horario.");
+                }
+                // SQLSTATE 23505 = unique_violation -- dos reservas leyeron el
+                // mismo contador de código en el mismo instante.
+                if (($e->getCode() === '23505' || str_contains($e->getMessage(), 'bookings_code_unique')) && $attemptsLeft > 0) {
+                    $attemptsLeft--;
 
-            // Fuera de la transacción a propósito: si GHL falla o está lento,
-            // la reserva ya quedó confirmada igual -- nunca debe poder
-            // tumbarla ni demorarla. GhlBookingSync nunca lanza excepción.
-            $this->ghlSync->sync($booking);
-
-            return $booking;
-        } catch (QueryException $e) {
-            // SQLSTATE 23P01 = exclusion_violation (choque con bookings_no_overlap)
-            if ($e->getCode() === '23P01' || str_contains($e->getMessage(), 'bookings_no_overlap')) {
-                throw new RoomNotAvailableException("La habitación {$room->name} acaba de ser reservada por otra persona en ese horario.");
+                    continue;
+                }
+                throw $e;
             }
-            throw $e;
         }
     }
 

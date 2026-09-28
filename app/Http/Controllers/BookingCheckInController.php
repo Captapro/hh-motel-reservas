@@ -74,6 +74,22 @@ class BookingCheckInController extends Controller
             ]);
         }
 
+        // operational_status no refleja si hay alguien adentro ahora mismo
+        // (eso se calcula solo, ver RoomBoardService) -- si el huésped
+        // anterior se pasó de horario y todavía no hizo check-out, no se
+        // puede meter a otro encima.
+        $stillOccupied = $booking->room->bookings()
+            ->where('id', '!=', $booking->id)
+            ->whereNotIn('booking_status', self::TERMINAL)
+            ->whereNotNull('checked_in_at')
+            ->whereNull('checked_out_at')
+            ->exists();
+        if ($stillOccupied) {
+            return back()->withInput()->withErrors([
+                'booking' => 'La habitación '.$booking->room->name.' todavía tiene un huésped adentro (sin check-out) — hay que finalizar esa reserva antes de hacer este check-in.',
+            ]);
+        }
+
         $validated = $request->validate([
             'quantities' => ['nullable', 'array'],
             'quantities.*' => ['nullable', 'integer', 'min:0', 'max:20'],
@@ -177,10 +193,12 @@ class BookingCheckInController extends Controller
         foreach ($offers as $u) {
             if ($u->type === 'time_extension' && $u->extra_minutes) {
                 $newEndsAt = $booking->ends_at->copy()->addMinutes($u->extra_minutes);
-                // Si la extensión pasa la hora de cierre, se omite (y no se
-                // cobra) en vez de dejar la reserva funcionando fuera de
-                // horario.
-                if ($rateRules->resolve($booking->starts_at, $newEndsAt)) {
+                // Si la extensión pasa la hora de cierre o choca con la
+                // siguiente reserva de la misma pieza, se omite (y no se
+                // cobra) en vez de dejar el check-in a medio hacer con un
+                // error de la restricción EXCLUDE de Postgres.
+                if ($rateRules->resolve($booking->starts_at, $newEndsAt)
+                    && $availability->isAvailable($booking->room, $booking->starts_at, $newEndsAt, $booking->id)) {
                     $booking->update(['ends_at' => $newEndsAt]);
                     $consumption->addCustom($booking, $u->name, (int) $u->price, auth()->id());
                 }

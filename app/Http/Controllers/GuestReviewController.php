@@ -40,6 +40,11 @@ class GuestReviewController extends Controller
             'rating' => $validated['rating'],
         ]);
 
+        // {review} en las rutas de comentario es solo el ID autoincremental
+        // -- sin esta marca de sesión, cualquiera que adivinara/probara IDs
+        // consecutivos podía sobrescribir el comentario de otra opinión.
+        $request->session()->put('review_access.'.$review->id, true);
+
         $googleLink = config('services.hh_reviews.google_review_link');
 
         if ($validated['rating'] > self::LOW_RATING_MAX && $googleLink) {
@@ -53,17 +58,21 @@ class GuestReviewController extends Controller
         return redirect()->route('reviews.comment.edit', $review);
     }
 
-    public function editComment(GuestReview $review): View|RedirectResponse
+    public function editComment(Request $request, GuestReview $review): View|RedirectResponse
     {
-        if ($review->rating > self::LOW_RATING_MAX) {
+        if ($review->rating > self::LOW_RATING_MAX || ! $request->session()->get('review_access.'.$review->id)) {
             return redirect()->route('reviews.create');
         }
 
         return view('reviews.comment', ['review' => $review]);
     }
 
-    public function updateComment(Request $request, GuestReview $review): View
+    public function updateComment(Request $request, GuestReview $review): View|RedirectResponse
     {
+        if (! $request->session()->get('review_access.'.$review->id)) {
+            return redirect()->route('reviews.create');
+        }
+
         $validated = $request->validate([
             'comment' => ['nullable', 'string', 'max:1000'],
         ]);

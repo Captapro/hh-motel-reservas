@@ -10,9 +10,9 @@ use Illuminate\Http\Response;
 
 class BookingPassController extends Controller
 {
-    private function pdf(string $code)
+    private function pdf(string $token)
     {
-        $booking = Booking::with(['room.category', 'customer', 'payments', 'addons'])->where('code', $code)->firstOrFail();
+        $booking = Booking::with(['room.category', 'customer', 'payments', 'addons'])->where('pass_token', $token)->firstOrFail();
 
         // Antes esto era un "▣ ▦ ▣" decorativo, no un QR de verdad -- ahora
         // codifica la ficha interna de la reserva, para que recepción la
@@ -34,13 +34,13 @@ class BookingPassController extends Controller
         ])->setPaper([0, 0, 396, 720], 'portrait');
     }
 
-    public function preview(string $code): Response
+    public function preview(string $token): Response
     {
-        return $this->pdf($code)->stream('pase-'.$code.'.pdf');
+        return $this->pdf($token)->stream('pase.pdf');
     }
 
-    public function download(string $code): Response
+    public function download(string $token): Response
     {
-        return $this->pdf($code)->download('pase-'.$code.'.pdf');
+        return $this->pdf($token)->download('pase.pdf');
     }
 }

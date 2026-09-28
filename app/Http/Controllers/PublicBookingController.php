@@ -201,11 +201,20 @@ class PublicBookingController extends Controller
                 ->with('warning', 'La reserva quedó creada, pero uno de los extras seleccionados se agotó. Recepción podrá ofrecerte otra alternativa.');
         }
 
-        $upgrade = UpsellOffer::active()->where('type', 'category_upgrade')->with('toCategory')
+        // from_room_category_id sin comprobar acá dejaba aceptar CUALQUIER
+        // upsell de upgrade activo por su ID, aunque fuera de una categoría
+        // de origen distinta a la que el cliente realmente reservó --
+        // UpsellResolver::evaluate() sí lo valida para el panel interno,
+        // este flujo público arma la reserva a mano y se lo saltaba.
+        $upgrade = UpsellOffer::active()->where('type', 'category_upgrade')
+            ->where('from_room_category_id', $booking->room->room_category_id)
+            ->with('toCategory')
             ->whereIn('id', $validated['accepted_upsells'] ?? [])->first();
         if ($upgrade?->to_room_category_id) {
+            $operationalSetting = \App\Models\OperationalSetting::current();
             $target = Room::where('room_category_id', $upgrade->to_room_category_id)
                 ->where('operational_status', 'activa')->where('id', '!=', $booking->room_id)
+                ->floorWingEnabled($operationalSetting)
                 ->orderBy('name')->get()
                 ->first(fn (Room $candidate) => $availability->isAvailable($candidate, $startsAt, $endsAt));
             if ($target) {
