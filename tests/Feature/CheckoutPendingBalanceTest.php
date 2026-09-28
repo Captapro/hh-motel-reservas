@@ -121,6 +121,10 @@ class CheckoutPendingBalanceTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors('booking');
+        // back() mandaba de vuelta al mismo formulario de cierre, que
+        // aborta con 403 en cuanto ve saldo pendiente -- una pantalla en
+        // blanco en vez del error. Tiene que mandar a donde se resuelve.
+        $response->assertRedirect(route('payments.create', $this->booking->code));
         $this->assertSame('CHECK_IN', $this->booking->fresh()->booking_status);
         $this->assertSame(15000, $this->booking->fresh()->balanceDue());
     }

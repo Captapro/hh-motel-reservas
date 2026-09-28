@@ -197,7 +197,7 @@ class PublicBookingController extends Controller
             // La reserva ya tiene su habitación bloqueada; informamos para que
             // recepción pueda agregar el extra disponible manualmente. Los
             // demás extras que sí tenían stock ya quedaron agregados arriba.
-            return redirect()->route('catalog.booked', $booking->code)
+            return redirect()->route('catalog.booked', $booking->pass_token)
                 ->with('warning', 'La reserva quedó creada, pero uno de los extras seleccionados se agotó. Recepción podrá ofrecerte otra alternativa.');
         }
 
@@ -223,12 +223,12 @@ class PublicBookingController extends Controller
             }
         }
 
-        return redirect()->route('catalog.booked', $booking->code);
+        return redirect()->route('catalog.booked', $booking->pass_token);
     }
 
-    public function booked(string $code): View
+    public function booked(string $token): View
     {
-        $booking = \App\Models\Booking::with(['room.category', 'addons'])->where('code', $code)->firstOrFail();
+        $booking = \App\Models\Booking::with(['room.category', 'addons'])->where('pass_token', $token)->firstOrFail();
 
         return view('catalog.booked', ['booking' => $booking]);
     }

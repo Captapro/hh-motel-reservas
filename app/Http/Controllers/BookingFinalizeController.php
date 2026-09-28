@@ -81,9 +81,14 @@ class BookingFinalizeController extends Controller
         // Los consumos recién agregados en este mismo envío pueden dejar
         // saldo pendiente aunque la reserva ya estuviera pagada al entrar a
         // esta pantalla -- hay que revalidar después de agregarlos, no solo
-        // antes.
+        // antes. back() manda de vuelta a este mismo formulario, pero
+        // show() aborta con 403 en cuanto detecta saldo pendiente -- eso
+        // dejaba a recepción en una pantalla en blanco en vez de mostrarle
+        // el error. Mandar directo a registrar el pago es lo único que
+        // realmente destraba la situación.
         if ($booking->fresh()->balanceDue() > 0) {
-            return back()->withErrors(['booking' => 'Los extras que acabas de agregar dejaron un saldo pendiente — registra el pago antes de cerrar la reserva.']);
+            return redirect()->route('payments.create', $booking->code)
+                ->withErrors(['booking' => 'Los extras que acabas de agregar dejaron un saldo pendiente — registra el pago antes de cerrar la reserva.']);
         }
 
         $checkedOutAt = $booking->checked_out_at ?? now();

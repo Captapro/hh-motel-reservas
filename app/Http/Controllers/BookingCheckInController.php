@@ -78,13 +78,7 @@ class BookingCheckInController extends Controller
         // (eso se calcula solo, ver RoomBoardService) -- si el huésped
         // anterior se pasó de horario y todavía no hizo check-out, no se
         // puede meter a otro encima.
-        $stillOccupied = $booking->room->bookings()
-            ->where('id', '!=', $booking->id)
-            ->whereNotIn('booking_status', self::TERMINAL)
-            ->whereNotNull('checked_in_at')
-            ->whereNull('checked_out_at')
-            ->exists();
-        if ($stillOccupied) {
+        if ($this->roomHasGuestInside($booking->room, $booking->id)) {
             return back()->withInput()->withErrors([
                 'booking' => 'La habitación '.$booking->room->name.' todavía tiene un huésped adentro (sin check-out) — hay que finalizar esa reserva antes de hacer este check-in.',
             ]);
@@ -206,7 +200,8 @@ class BookingCheckInController extends Controller
                 $target = Room::where('room_category_id', $u->to_room_category_id)
                     ->where('operational_status', 'activa')->where('id', '!=', $booking->room_id)
                     ->orderBy('name')->get()
-                    ->first(fn (Room $r) => $availability->isAvailable($r, $booking->starts_at, $booking->ends_at, $booking->id));
+                    ->first(fn (Room $r) => $availability->isAvailable($r, $booking->starts_at, $booking->ends_at, $booking->id)
+                        && ! $this->roomHasGuestInside($r));
                 if ($target) {
                     try {
                         $booking->update(['room_id' => $target->id]);
@@ -223,5 +218,22 @@ class BookingCheckInController extends Controller
                 }
             }
         }
+    }
+
+    /**
+     * $excludeBookingId es la reserva que está por hacer check-in ahora
+     * mismo -- nunca cuenta contra sí misma. isAvailable() solo pelea por
+     * el HORARIO agendado; esto pelea por quién está adentro DE VERDAD en
+     * este instante, que puede no coincidir si el huésped anterior se pasó
+     * de hora.
+     */
+    private function roomHasGuestInside(Room $room, ?int $excludeBookingId = null): bool
+    {
+        return $room->bookings()
+            ->when($excludeBookingId, fn ($q) => $q->where('id', '!=', $excludeBookingId))
+            ->whereNotIn('booking_status', self::TERMINAL)
+            ->whereNotNull('checked_in_at')
+            ->whereNull('checked_out_at')
+            ->exists();
     }
 }

@@ -42,8 +42,11 @@ class CheckInOccupancyTest extends TestCase
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
+            '2026_08_19_090001_create_products_table.php',
             '2026_08_19_090003_add_consumption_offered_to_bookings_table.php',
             '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
+            '2026_08_20_110001_create_combos_table.php',
+            '2026_09_10_140000_create_upsell_offers_table.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -96,5 +99,52 @@ class CheckInOccupancyTest extends TestCase
 
         $response->assertRedirect(route('rooms.board'));
         $this->assertNotNull($next->fresh()->checked_in_at);
+    }
+
+    /**
+     * El upgrade de categoría al check-in revalidaba el HORARIO agendado de
+     * la habitación destino (isAvailable), pero no si alguien seguía
+     * físicamente adentro sin check-out -- se podía mover a un huésped
+     * nuevo a una pieza que ya tenía otro adentro.
+     */
+    public function test_check_in_upgrade_skips_a_destination_room_with_a_guest_inside(): void
+    {
+        $destinationCategory = RoomCategory::create(['name' => 'LITE', 'display_order' => 2]);
+        $destinationRoom = Room::create(['room_category_id' => $destinationCategory->id, 'name' => 'LITE 201', 'operational_status' => 'activa']);
+
+        // Alguien sigue adentro de la única pieza destino, sin check-out.
+        Booking::create([
+            'code' => 'HH-TEST-OCC',
+            'customer_id' => $this->customer->id,
+            'room_id' => $destinationRoom->id,
+            'starts_at' => now()->subHours(3),
+            'ends_at' => now()->subHour(),
+            'duration_minutes' => 60,
+            'guests_count' => 1,
+            'booking_status' => 'CHECK_IN',
+            'payment_status' => 'PAGADA',
+            'price_original' => 20000,
+            'price_final' => 20000,
+            'checked_in_at' => now()->subHours(3),
+        ]);
+
+        $upgrade = \App\Models\UpsellOffer::create([
+            'name' => 'Sube a LITE', 'type' => 'category_upgrade', 'price' => 5000,
+            'from_room_category_id' => $this->room->room_category_id,
+            'to_room_category_id' => $destinationCategory->id,
+            'is_active' => true,
+        ]);
+
+        $booking = $this->makeBooking();
+
+        $response = $this->post("/reservas/{$booking->code}/checkin", [
+            'accepted_upsells' => [$upgrade->id],
+        ]);
+
+        $response->assertRedirect(route('rooms.board'));
+        // Se quedó en su pieza original -- la única candidata a upgrade
+        // estaba ocupada de verdad, aunque su horario agendado ya hubiera
+        // "terminado" en el papel.
+        $this->assertSame($this->room->id, $booking->fresh()->room_id);
     }
 }
