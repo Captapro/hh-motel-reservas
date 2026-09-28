@@ -14,9 +14,16 @@ use Illuminate\Http\Request;
 
 class BookingAddonController extends Controller
 {
+    private const CLOSED = ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'];
+
     public function extraHour(string $code, ConsumptionService $consumption, AvailabilityChecker $availability): RedirectResponse
     {
         $booking = Booking::with('room')->where('code', $code)->firstOrFail();
+
+        if (in_array($booking->booking_status, self::CLOSED, true)) {
+            return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más tiempo.']);
+        }
+
         $newEndsAt = $booking->ends_at->copy()->addHour();
         if (! $availability->isAvailable($booking->room, $booking->ends_at, $newEndsAt, $booking->id)) {
             return back()->withErrors(['booking' => 'No se puede vender la hora adicional porque existe otra reserva después.']);
@@ -31,6 +38,10 @@ class BookingAddonController extends Controller
     public function store(Request $request, string $code, ConsumptionService $consumption): RedirectResponse
     {
         $booking = Booking::where('code', $code)->firstOrFail();
+
+        if (in_array($booking->booking_status, self::CLOSED, true)) {
+            return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más consumo.']);
+        }
 
         $validated = $request->validate([
             'item' => ['nullable', 'string'],

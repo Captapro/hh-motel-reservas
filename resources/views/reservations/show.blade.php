@@ -305,46 +305,48 @@
                     @endforeach
                 @endif
 
-                <div class="addon-label">Agregar producto o combo</div>
-                <form method="POST" action="{{ route('addons.extra-hour', $booking->code) }}" style="margin:10px 0 14px;">
-                    @csrf
-                    <button type="submit" style="width:100%;background:#f0b84b;color:#241b08;border:none;padding:10px;border-radius:7px;font-weight:700;cursor:pointer;">Vender 1 hora adicional — ${{ number_format($extraHourPrice, 0, ',', '.') }}</button>
-                </form>
-                <form class="addon-form" method="POST" action="{{ route('addons.store', $booking->code) }}">
-                    @csrf
-                    <select name="item" required>
-                        <option value="" disabled selected>— Elige un producto o combo —</option>
-                        @if ($combos->isNotEmpty())
-                            <optgroup label="Combos">
-                                @foreach ($combos as $combo)
-                                    <option value="combo:{{ $combo->id }}" @disabled($combo->isOutOfStock())>
-                                        {{ $combo->name }} — ${{ number_format($combo->price, 0, ',', '.') }}
-                                        {{ $combo->isOutOfStock() ? '(agotado)' : '' }}
+                @unless (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
+                    <div class="addon-label">Agregar producto o combo</div>
+                    <form method="POST" action="{{ route('addons.extra-hour', $booking->code) }}" style="margin:10px 0 14px;">
+                        @csrf
+                        <button type="submit" style="width:100%;background:#f0b84b;color:#241b08;border:none;padding:10px;border-radius:7px;font-weight:700;cursor:pointer;">Vender 1 hora adicional — ${{ number_format($extraHourPrice, 0, ',', '.') }}</button>
+                    </form>
+                    <form class="addon-form" method="POST" action="{{ route('addons.store', $booking->code) }}">
+                        @csrf
+                        <select name="item" required>
+                            <option value="" disabled selected>— Elige un producto o combo —</option>
+                            @if ($combos->isNotEmpty())
+                                <optgroup label="Combos">
+                                    @foreach ($combos as $combo)
+                                        <option value="combo:{{ $combo->id }}" @disabled($combo->isOutOfStock())>
+                                            {{ $combo->name }} — ${{ number_format($combo->price, 0, ',', '.') }}
+                                            {{ $combo->isOutOfStock() ? '(agotado)' : '' }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            <optgroup label="Productos individuales">
+                                @foreach ($products as $product)
+                                    <option value="product:{{ $product->id }}" @disabled($product->isOutOfStock())>
+                                        {{ $product->name }} — ${{ number_format($product->price, 0, ',', '.') }}
+                                        @if ($product->track_inventory)
+                                            {{ $product->isOutOfStock() ? '(agotado)' : '('.$product->stock.' disp.)' }}
+                                        @endif
                                     </option>
                                 @endforeach
                             </optgroup>
-                        @endif
-                        <optgroup label="Productos individuales">
-                            @foreach ($products as $product)
-                                <option value="product:{{ $product->id }}" @disabled($product->isOutOfStock())>
-                                    {{ $product->name }} — ${{ number_format($product->price, 0, ',', '.') }}
-                                    @if ($product->track_inventory)
-                                        {{ $product->isOutOfStock() ? '(agotado)' : '('.$product->stock.' disp.)' }}
-                                    @endif
-                                </option>
-                            @endforeach
-                        </optgroup>
-                    </select>
-                    <input type="number" name="quantity" value="1" min="1" max="20">
-                    <button type="submit">Agregar</button>
-                </form>
-                <div class="addon-sep">O algo que no está en la lista</div>
-                <form class="addon-form" method="POST" action="{{ route('addons.store', $booking->code) }}">
-                    @csrf
-                    <input type="text" name="description" placeholder="Descripción">
-                    <input type="number" name="amount" placeholder="$" min="1">
-                    <button type="submit">Agregar</button>
-                </form>
+                        </select>
+                        <input type="number" name="quantity" value="1" min="1" max="20">
+                        <button type="submit">Agregar</button>
+                    </form>
+                    <div class="addon-sep">O algo que no está en la lista</div>
+                    <form class="addon-form" method="POST" action="{{ route('addons.store', $booking->code) }}">
+                        @csrf
+                        <input type="text" name="description" placeholder="Descripción">
+                        <input type="number" name="amount" placeholder="$" min="1">
+                        <button type="submit">Agregar</button>
+                    </form>
+                @endunless
             </div>
 
             @if ($booking->payments->isNotEmpty())

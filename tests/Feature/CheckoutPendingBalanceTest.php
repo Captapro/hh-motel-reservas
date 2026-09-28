@@ -149,4 +149,28 @@ class CheckoutPendingBalanceTest extends TestCase
         // Al finalizar, la habitación queda en aseo -- no vuelve a "activa" sola.
         $this->assertSame('aseo', $fresh->room->fresh()->operational_status);
     }
+
+    public function test_extra_hour_and_consumption_are_rejected_on_a_finalized_booking(): void
+    {
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        Payment::create([
+            'booking_id' => $this->booking->id,
+            'payment_method_id' => $method->id,
+            'amount' => 20000,
+            'status' => 'aprobado',
+        ]);
+        $this->post("/reservas/{$this->booking->code}/finalizar", ['confirm_room_checked' => '1'])->assertRedirect();
+        $finalized = $this->booking->fresh();
+        $this->assertSame('FINALIZADA', $finalized->booking_status);
+        $originalEndsAt = $finalized->ends_at;
+
+        $hourResponse = $this->post("/reservas/{$this->booking->code}/hora-adicional");
+        $hourResponse->assertSessionHasErrors('booking');
+        $this->assertTrue($originalEndsAt->eq($finalized->fresh()->ends_at));
+
+        $product = \App\Models\Product::create(['name' => 'Espumante', 'price' => 15000, 'is_active' => true]);
+        $addonResponse = $this->post("/reservas/{$this->booking->code}/consumo", ['item' => 'product:'.$product->id, 'quantity' => 1]);
+        $addonResponse->assertSessionHasErrors('booking');
+        $this->assertSame(0, $finalized->fresh()->addons()->count());
+    }
 }

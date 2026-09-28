@@ -196,7 +196,15 @@ class BookingService
         /** @var Carbon $startsAt */
         $startsAt = $data['starts_at'];
         $durationMinutes = $data['duration_minutes'];
-        $endsAt = $startsAt->copy()->addMinutes($durationMinutes);
+
+        // "Hora adicional" (BookingAddonController::extraHour) y el corrimiento
+        // por atraso al check-in alargan ends_at por encima de starts_at +
+        // duration_minutes, sin tocar duration_minutes (que sigue siendo la
+        // duración TARIFADA). Si acá se recalculaba ends_at solo con la
+        // duración tarifada, ese tiempo ya pagado desaparecía del horario
+        // mientras el cargo se quedaba en la cuenta.
+        $currentExtraMinutes = max(0, (int) $booking->starts_at->copy()->addMinutes($booking->duration_minutes)->diffInMinutes($booking->ends_at, false));
+        $endsAt = $startsAt->copy()->addMinutes($durationMinutes + $currentExtraMinutes);
 
         // Si ya hay check-in real, se permite correr el inicio hacia el pasado
         // reciente para que coincida con la llegada real del huésped — no es
