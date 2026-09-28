@@ -15,6 +15,7 @@ use App\Services\Integrations\GhlBookingSync;
 use App\Services\Pricing\CouponValidator;
 use App\Services\Pricing\PriceCalculator;
 use App\Services\Pricing\PromotionResolver;
+use App\Services\Pricing\RateRuleResolver;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,7 @@ class BookingService
         private BookingCodeGenerator $codeGenerator,
         private PaymentService $paymentService,
         private GhlBookingSync $ghlSync,
+        private RateRuleResolver $rateRuleResolver,
     ) {
     }
 
@@ -64,6 +66,15 @@ class BookingService
 
         if (! $room->isOperational()) {
             throw new RoomNotAvailableException("La habitación {$room->name} no está operativa ahora mismo.");
+        }
+
+        // El precio se calcula contra baseEndsAt (la tarifa no conoce el
+        // upsell), así que valida el horario operativo por su cuenta -- si
+        // no, un "más tiempo" que cruza el cierre pasaba porque solo se
+        // chequeaba la duración base, no la ocupación real con el extra ya
+        // sumado.
+        if ($extraMinutes > 0 && ! $this->rateRuleResolver->resolve($startsAt, $endsAt)) {
+            throw new RoomNotAvailableException('Ese horario con el tiempo extra incluido pasa la hora de cierre.');
         }
 
         if (! $this->availabilityChecker->isAvailable($room, $startsAt, $endsAt)) {
