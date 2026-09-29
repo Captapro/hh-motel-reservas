@@ -15,6 +15,7 @@ fi
 # anterior se borró como pasó una vez) y hay credenciales de admin en el
 # entorno, crea esa cuenta -- sin esto, una base vacía deja el sistema sin
 # forma de entrar por el panel. No hace nada si ya existe algún usuario.
+echo "DEBUG: ADMIN_EMAIL is set = $([ -n "$ADMIN_EMAIL" ] && echo yes || echo no); ADMIN_PASSWORD is set = $([ -n "$ADMIN_PASSWORD" ] && echo yes || echo no)"
 if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
     EMPTY_USERS=$(php artisan tinker --execute="echo App\Models\User::count();" 2>/dev/null | tail -1)
     if [ "$EMPTY_USERS" = "0" ]; then
