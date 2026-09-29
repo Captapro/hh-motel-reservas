@@ -42,6 +42,8 @@ class ExtraHourClosingTimeTest extends TestCase
             '2026_08_18_120010_create_customers_table.php',
             '2026_08_18_120011_create_bookings_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
+            '2026_08_18_120015_create_payment_methods_table.php',
+            '2026_08_18_120016_create_payments_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
             '2026_08_19_090001_create_products_table.php',
             '2026_08_19_090002_add_product_id_to_booking_addons_table.php',
@@ -104,6 +106,7 @@ class ExtraHourClosingTimeTest extends TestCase
         // 01:30 + 1h = 02:30, todavía antes del cierre de las 03:00.
         $response = $this->post("/reservas/{$this->booking->code}/hora-adicional");
 
+        $response->assertRedirect();
         $response->assertSessionDoesntHaveErrors();
         $this->assertTrue(Carbon::parse('2026-10-05 02:30')->eq($this->booking->fresh()->ends_at));
         $this->assertSame(1, $this->booking->fresh()->addons()->count());

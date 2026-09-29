@@ -32,8 +32,7 @@ class BookingService
         private PaymentService $paymentService,
         private GhlBookingSync $ghlSync,
         private RateRuleResolver $rateRuleResolver,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{
@@ -43,6 +42,19 @@ class BookingService
      * }  $data
      */
     public function create(array $data): Booking
+    {
+        $booking = DB::transaction(function () use ($data) {
+            // La habitación es el mutex compartido por crear, mover y extender.
+            $data['room'] = Room::whereKey($data['room']->id)->lockForUpdate()->firstOrFail();
+
+            return $this->createLocked($data);
+        }, 3);
+        $this->ghlSync->sync($booking);
+
+        return $booking;
+    }
+
+    private function createLocked(array $data): Booking
     {
         /** @var Room $room */
         $room = $data['room'];
@@ -89,18 +101,17 @@ class BookingService
 
         // Regla: la oferta programada gana. Un código promocional NO acumula
         // sobre una habitación en oferta — se ignora si hay oferta vigente.
-        $offer = $this->promotionResolver->bestFor($room, $startsAt, $durationMinutes, $customer, $priceOriginal);
+        $offer = $this->promotionResolver->bestFor($room, $startsAt, $durationMinutes, $customer, $priceOriginal, (int) $data['guests_count'], (int) $pricing['rate_rule']->extra_person_price);
 
         if ($offer) {
             $coupon = $offer['coupon'];
             $discountAmount = $offer['discount'];
-            $waived = min(max(0, (int) $data['guests_count'] - $room->category->base_capacity), (int) $coupon->included_extra_guests);
-            $pricing['extra_guests_fee'] = max(0, $pricing['extra_guests_fee'] - ($waived * $pricing['rate_rule']->extra_person_price));
-            $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];
+            $pricing['extra_guests_fee'] = max(0, $pricing['extra_guests_fee'] - $offer['waived']);
+            $priceOriginal = $offer['price_original'];
         } elseif (! empty($data['coupon_code'])) {
             $coupon = Coupon::where('auto_apply', false)
                 ->whereRaw('UPPER(code) = ?', [mb_strtoupper(trim($data['coupon_code']))])
-                ->first();
+                ->lockForUpdate()->first();
             if (! $coupon) {
                 throw new PricingException('El código de cupón no existe.');
             }
@@ -163,11 +174,6 @@ class BookingService
                     return $booking;
                 });
 
-                // Fuera de la transacción a propósito: si GHL falla o está lento,
-                // la reserva ya quedó confirmada igual -- nunca debe poder
-                // tumbarla ni demorarla. GhlBookingSync nunca lanza excepción.
-                $this->ghlSync->sync($booking);
-
                 return $booking;
             } catch (QueryException $e) {
                 // SQLSTATE 23P01 = exclusion_violation (choque con bookings_no_overlap)
@@ -197,6 +203,17 @@ class BookingService
      * @param  array{room: Room, starts_at: Carbon, duration_minutes: int, guests_count: int, updated_by: ?int}  $data
      */
     public function reschedule(Booking $booking, array $data): Booking
+    {
+        return DB::transaction(function () use ($booking, $data) {
+            Room::whereIn('id', [$booking->room_id, $data['room']->id])->orderBy('id')->lockForUpdate()->get();
+            $booking = Booking::whereKey($booking->id)->lockForUpdate()->firstOrFail();
+            $data['room'] = Room::findOrFail($data['room']->id);
+
+            return $this->rescheduleLocked($booking, $data);
+        }, 3);
+    }
+
+    private function rescheduleLocked(Booking $booking, array $data): Booking
     {
         if (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'], true)) {
             throw new RoomNotAvailableException('Esta reserva ya está cerrada — no se puede modificar.');
@@ -232,6 +249,10 @@ class BookingService
             throw new RoomNotAvailableException("La habitación {$room->name} no está disponible en ese horario.");
         }
 
+        if ($booking->checked_in_at && $this->availabilityChecker->hasGuestInside($room, $booking->id)) {
+            throw new RoomNotAvailableException('La habitación destino todavía tiene un huésped sin check-out.');
+        }
+
         $pricing = $this->priceCalculator->calculate($room, $startsAt, $endsAt, $durationMinutes, $data['guests_count']);
         $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];
 
@@ -245,14 +266,13 @@ class BookingService
         $reResolveOffer = ($existingCoupon === null || $existingCoupon->auto_apply);
 
         if ($reResolveOffer) {
-            $offer = $this->promotionResolver->bestFor($room, $startsAt, $durationMinutes, $booking->customer, $priceOriginal);
+            $offer = $this->promotionResolver->bestFor($room, $startsAt, $durationMinutes, $booking->customer, $priceOriginal, (int) $data['guests_count'], (int) $pricing['rate_rule']->extra_person_price, $booking->id);
             if ($offer) {
                 $couponId = $offer['coupon']->id;
                 $couponSnapshot = $offer['coupon']->label();
                 $discountAmount = $offer['discount'];
-                $waived = min(max(0, (int) $data['guests_count'] - $room->category->base_capacity), (int) $offer['coupon']->included_extra_guests);
-                $pricing['extra_guests_fee'] = max(0, $pricing['extra_guests_fee'] - ($waived * $pricing['rate_rule']->extra_person_price));
-                $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];
+                $pricing['extra_guests_fee'] = max(0, $pricing['extra_guests_fee'] - $offer['waived']);
+                $priceOriginal = $offer['price_original'];
             } else {
                 $couponId = null;
                 $couponSnapshot = null;

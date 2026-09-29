@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\RateRule;
-use App\Models\RateRuleWindow;
 use App\Models\RateRulePrice;
+use App\Models\RateRuleWindow;
 use App\Models\Room;
 use App\Models\RoomCategory;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -110,7 +110,7 @@ class PublicBookingValidationTest extends TestCase
         $response = $this->post('/catalogo/reservar', $this->bookingPayload());
 
         $response->assertSessionHasErrors();
-        $this->assertSame(0, \App\Models\Booking::count());
+        $this->assertSame(0, Booking::count());
     }
 
     public function test_check_availability_agrees_with_store_outside_the_operating_window(): void
@@ -128,14 +128,15 @@ class PublicBookingValidationTest extends TestCase
 
         $this->post('/catalogo/reservar', $this->bookingPayload(['time_hour' => 5]))
             ->assertSessionHasErrors();
-        $this->assertSame(0, \App\Models\Booking::count());
+        $this->assertSame(0, Booking::count());
     }
 
     public function test_store_still_succeeds_within_the_operating_window_for_an_active_category(): void
     {
         $response = $this->post('/catalogo/reservar', $this->bookingPayload());
 
+        $response->assertRedirect();
         $response->assertSessionDoesntHaveErrors();
-        $this->assertSame(1, \App\Models\Booking::count());
+        $this->assertSame(1, Booking::count());
     }
 }

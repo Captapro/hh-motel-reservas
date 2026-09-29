@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['booking_id', 'payment_method_id', 'amount', 'status', 'external_id', 'voucher_number', 'receipt_number', 'raw_payload', 'registered_by', 'notes'])]
+#[Fillable(['request_token', 'booking_id', 'payment_method_id', 'amount', 'status', 'external_id', 'voucher_number', 'receipt_number', 'raw_payload', 'registered_by', 'notes'])]
 class Payment extends Model
 {
     protected function casts(): array

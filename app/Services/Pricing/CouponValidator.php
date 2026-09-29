@@ -16,7 +16,7 @@ use Carbon\Carbon;
  */
 class CouponValidator
 {
-    public function validate(Coupon $coupon, Room $room, Carbon $startsAt, int $durationMinutes, ?Customer $customer, int $priceOriginal): int
+    public function validate(Coupon $coupon, Room $room, Carbon $startsAt, int $durationMinutes, ?Customer $customer, int $priceOriginal, ?int $excludeBookingId = null): int
     {
         if (! $coupon->is_active) {
             throw new InvalidCouponException('Este cupón no está activo.');
@@ -53,12 +53,12 @@ class CouponValidator
             throw new InvalidCouponException('El monto de la reserva no alcanza el mínimo requerido por el cupón.');
         }
 
-        if ($coupon->max_uses_total !== null && $coupon->redemptions()->count() >= $coupon->max_uses_total) {
+        if ($coupon->max_uses_total !== null && $coupon->redemptions()->when($excludeBookingId, fn ($q) => $q->where('booking_id', '!=', $excludeBookingId))->count() >= $coupon->max_uses_total) {
             throw new InvalidCouponException('Este cupón alcanzó su número máximo de usos.');
         }
 
         if ($customer && $coupon->max_uses_per_customer !== null) {
-            $usedByCustomer = $coupon->redemptions()->where('customer_id', $customer->id)->count();
+            $usedByCustomer = $coupon->redemptions()->where('customer_id', $customer->id)->when($excludeBookingId, fn ($q) => $q->where('booking_id', '!=', $excludeBookingId))->count();
             if ($usedByCustomer >= $coupon->max_uses_per_customer) {
                 throw new InvalidCouponException('Este cliente ya usó este cupón el máximo de veces permitido.');
             }
@@ -82,7 +82,7 @@ class CouponValidator
         return $this->computeDiscount($coupon, $priceOriginal);
     }
 
-    private function computeDiscount(Coupon $coupon, int $priceOriginal): int
+    private function computeDiscount(Coupon $coupon, int $priceOriginal, ?int $excludeBookingId = null): int
     {
         $discount = match ($coupon->discount_type) {
             'percentage' => (int) round($priceOriginal * $coupon->discount_value / 100),

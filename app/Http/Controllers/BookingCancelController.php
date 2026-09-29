@@ -36,7 +36,7 @@ class BookingCancelController extends Controller
         $old = $booking->only(['booking_status']);
         $booking->update([
             'booking_status' => 'CANCELADA',
-            'notes' => trim(($booking->notes ? $booking->notes."\n" : '')."Cancelada: ".($validated['reason'] ?: 'sin motivo indicado')),
+            'notes' => trim(($booking->notes ? $booking->notes."\n" : '').'Cancelada: '.(($validated['reason'] ?? null) ?: 'sin motivo indicado')),
         ]);
 
         AuditLog::record(auth()->id(), 'reserva.cancelar', 'Booking', $booking->id, $old, $booking->fresh()->only(['booking_status', 'notes']));

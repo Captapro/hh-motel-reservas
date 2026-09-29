@@ -7,11 +7,13 @@ use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Product;
 use App\Models\RateRule;
-use App\Services\Booking\ConsumptionService;
+use App\Models\Room;
 use App\Services\Booking\AvailabilityChecker;
+use App\Services\Booking\ConsumptionService;
 use App\Services\Pricing\RateRuleResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BookingAddonController extends Controller
 {
@@ -19,7 +21,17 @@ class BookingAddonController extends Controller
 
     public function extraHour(string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
     {
-        $booking = Booking::with('room')->where('code', $code)->firstOrFail();
+        return DB::transaction(function () use ($code, $consumption, $availability, $rateRules) {
+            $booking = Booking::where('code', $code)->firstOrFail();
+            Room::whereKey($booking->room_id)->lockForUpdate()->firstOrFail();
+
+            return $this->extraHourLocked($code, $consumption, $availability, $rateRules);
+        }, 3);
+    }
+
+    private function extraHourLocked(string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
+    {
+        $booking = Booking::with('room')->where('code', $code)->lockForUpdate()->firstOrFail();
 
         if (in_array($booking->booking_status, self::CLOSED, true)) {
             return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más tiempo.']);
@@ -40,6 +52,7 @@ class BookingAddonController extends Controller
         $amount = (int) (RateRule::where('name', $rateName)->value('extra_hour_price') ?? (str_contains($rateName, 'HOT') ? 15000 : 10000));
         $booking->update(['ends_at' => $newEndsAt]);
         $consumption->addCustom($booking, 'Hora adicional (1 hora)', $amount, auth()->id());
+
         return back()->with('status', 'Hora adicional agregada por $'.number_format($amount, 0, ',', '.').'. Nueva salida: '.$newEndsAt->timezone('America/Santiago')->format('H:i').'.');
     }
 

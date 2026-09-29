@@ -11,11 +11,13 @@ use App\Models\Product;
 use App\Models\Room;
 use App\Models\UpsellOffer;
 use App\Services\Booking\AvailabilityChecker;
+use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\UpsellResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class BookingCheckInController extends Controller
@@ -52,7 +54,17 @@ class BookingCheckInController extends Controller
 
     public function store(Request $request, string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
     {
-        $booking = Booking::with('room')->where('code', $code)->firstOrFail();
+        return DB::transaction(function () use ($request, $code, $consumption, $availability, $rateRules) {
+            // Orden estable: también protege los posibles destinos de upgrades.
+            Room::orderBy('id')->lockForUpdate()->get();
+
+            return $this->checkInLocked($request, $code, $consumption, $availability, $rateRules);
+        }, 3);
+    }
+
+    private function checkInLocked(Request $request, string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
+    {
+        $booking = Booking::with('room')->where('code', $code)->lockForUpdate()->firstOrFail();
 
         if ($booking->checked_in_at) {
             return redirect()->route('reservations.show', $booking->code);
@@ -197,19 +209,7 @@ class BookingCheckInController extends Controller
                     $consumption->addCustom($booking, $u->name, (int) $u->price, auth()->id());
                 }
             } elseif ($u->type === 'category_upgrade' && $u->to_room_category_id) {
-                $target = Room::where('room_category_id', $u->to_room_category_id)
-                    ->where('operational_status', 'activa')->where('id', '!=', $booking->room_id)
-                    ->orderBy('name')->get()
-                    ->first(fn (Room $r) => $availability->isAvailable($r, $booking->starts_at, $booking->ends_at, $booking->id)
-                        && ! $this->roomHasGuestInside($r));
-                if ($target) {
-                    try {
-                        $booking->update(['room_id' => $target->id]);
-                        $consumption->addCustom($booking, $u->name, (int) $u->price, auth()->id());
-                    } catch (\Illuminate\Database\QueryException $e) {
-                        // choque con la restricción EXCLUDE — se queda con su habitación
-                    }
-                }
+                app(BookingAllocationService::class)->upgrade($booking, $u, auth()->id());
             } elseif ($u->type === 'combo' && $u->combo) {
                 try {
                     $consumption->addCombo($booking, $u->combo, 1, auth()->id());

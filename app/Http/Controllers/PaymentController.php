@@ -31,6 +31,7 @@ class PaymentController extends Controller
             'booking' => $booking,
             'methods' => $methods,
             'after' => $after,
+            'requestToken' => (string) Str::uuid(),
             'suggestedAmount' => $suggestedAmount,
         ]);
     }
@@ -63,7 +64,8 @@ class PaymentController extends Controller
 
         $validated = $request->validate([
             'payment_method_id' => ['required', 'exists:payment_methods,id'],
-            'amount' => ['required', 'integer', 'min:1', 'max:'.max($booking->balanceDue(), 1)],
+            'amount' => ['required', 'integer', 'min:1'],
+            'request_token' => ['required', 'uuid'],
             'external_id' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:255'],
             'after' => ['nullable', 'in:board'],
@@ -79,7 +81,7 @@ class PaymentController extends Controller
         // Si recepción no anota una referencia propia (ej. N° de operación de
         // una transferencia), generamos una nosotros -- así todo pago manual
         // queda igual de rastreable, sin depender de que alguien la tipee.
-        $externalId = $validated['external_id'] ?: 'REC-'.now()->format('ymdHis').'-'.strtoupper(Str::random(4));
+        $externalId = ($validated['external_id'] ?? null) ?: 'REC-'.now()->format('ymdHis').'-'.strtoupper(Str::random(4));
 
         try {
             $paymentService->register(
@@ -91,6 +93,7 @@ class PaymentController extends Controller
                 auth()->id(),
                 $validated['voucher_number'] ?? null,
                 $validated['receipt_number'] ?? null,
+                $validated['request_token'],
             );
         } catch (PaymentExceedsBalanceException $e) {
             return back()->withInput()->withErrors(['amount' => $e->getMessage()]);

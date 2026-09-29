@@ -2,28 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\InsufficientStockException;
 use App\Exceptions\InvalidCouponException;
 use App\Exceptions\PricingException;
 use App\Exceptions\RoomNotAvailableException;
+use App\Models\Booking;
+use App\Models\Combo;
 use App\Models\Coupon;
 use App\Models\Customer;
-use App\Models\Combo;
+use App\Models\OperationalSetting;
 use App\Models\Product;
-use App\Models\UpsellOffer;
 use App\Models\RateRulePrice;
 use App\Models\Room;
 use App\Models\RoomCategory;
+use App\Models\UpsellOffer;
 use App\Services\Booking\AvailabilityChecker;
+use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Pricing\RateRuleResolver;
-use App\Exceptions\InsufficientStockException;
 use App\Support\Phone;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -58,7 +60,7 @@ class PublicBookingController extends Controller
             ->filter(fn (UpsellOffer $upsell) => $upsell->combo?->is_active && ! $upsell->combo->isOutOfStock())
             ->values();
         $categoryUpsells = UpsellOffer::active()->where('type', 'category_upgrade')
-            ->with(['fromCategory','toCategory'])
+            ->with(['fromCategory', 'toCategory'])
             ->where('from_room_category_id', $selectedCategoryId)
             ->orderBy('display_order')->get();
 
@@ -171,7 +173,7 @@ class PublicBookingController extends Controller
             }
             try {
                 $consumption->addProduct($booking, $products[$productId], $quantity, null);
-        } catch (InsufficientStockException $e) {
+            } catch (InsufficientStockException $e) {
                 $soldOut = true;
             }
         }
@@ -185,6 +187,7 @@ class PublicBookingController extends Controller
                 if (isset($combos[$comboId])) {
                     $soldOut = true;
                 }
+
                 continue;
             }
             try {
@@ -212,16 +215,7 @@ class PublicBookingController extends Controller
             ->with('toCategory')
             ->whereIn('id', $validated['accepted_upsells'] ?? [])->first();
         if ($upgrade?->to_room_category_id) {
-            $operationalSetting = \App\Models\OperationalSetting::current();
-            $target = Room::where('room_category_id', $upgrade->to_room_category_id)
-                ->where('operational_status', 'activa')->where('id', '!=', $booking->room_id)
-                ->floorWingEnabled($operationalSetting)
-                ->orderBy('name')->get()
-                ->first(fn (Room $candidate) => $availability->isAvailable($candidate, $startsAt, $endsAt));
-            if ($target) {
-                $booking->update(['room_id' => $target->id]);
-                if ((int) $upgrade->price > 0) $consumption->addCustom($booking, $upgrade->name, (int) $upgrade->price, null);
-            }
+            app(BookingAllocationService::class)->upgrade($booking, $upgrade, null);
         }
 
         return redirect()->route('catalog.booked', $booking->pass_token);
@@ -229,7 +223,7 @@ class PublicBookingController extends Controller
 
     public function booked(string $token): View
     {
-        $booking = \App\Models\Booking::with(['room.category', 'addons'])->where('pass_token', $token)->firstOrFail();
+        $booking = Booking::with(['room.category', 'addons'])->where('pass_token', $token)->firstOrFail();
 
         return view('catalog.booked', ['booking' => $booking]);
     }
@@ -276,12 +270,12 @@ class PublicBookingController extends Controller
             return null;
         }
 
-        $operationalSetting = \App\Models\OperationalSetting::current();
+        $operationalSetting = OperationalSetting::current();
         $roomQuery = Room::where('room_category_id', $categoryId)
             ->where('operational_status', 'activa')
             ->categoryEnabled()
             ->floorWingEnabled($operationalSetting);
-        if (!empty($roomId)) {
+        if (! empty($roomId)) {
             $roomQuery->whereKey($roomId);
         }
 

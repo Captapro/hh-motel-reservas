@@ -48,6 +48,7 @@
     <form class="card hh-form-card" method="POST" action="{{ route('payments.store', $booking->code) }}">
         <h2>Datos del pago</h2>
         @csrf
+        <input type="hidden" name="request_token" value="{{ old('request_token', $requestToken) }}">
         @if ($after)
             <input type="hidden" name="after" value="{{ $after }}">
         @endif

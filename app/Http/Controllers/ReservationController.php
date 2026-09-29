@@ -3,30 +3,49 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\InvalidCouponException;
 use App\Exceptions\PricingException;
 use App\Exceptions\RoomNotAvailableException;
 use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Coupon;
 use App\Models\Customer;
+use App\Models\OperationalSetting;
 use App\Models\Product;
+use App\Models\RateRule;
+use App\Models\RateRulePrice;
 use App\Models\RateRuleWindow;
 use App\Models\Room;
+use App\Models\RoomCategory;
+use App\Models\UpsellOffer;
+use App\Services\Booking\AvailabilityChecker;
+use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\RoomBoardService;
+use App\Services\Pricing\CouponValidator;
+use App\Services\Pricing\PriceCalculator;
+use App\Services\Pricing\PromotionResolver;
 use App\Services\Pricing\RateRuleResolver;
+use App\Services\Pricing\UpsellResolver;
+use App\Support\Phone;
+use App\Support\Rut;
 use App\Support\TimeFormat;
 use Carbon\Carbon;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ReservationController extends Controller
 {
     public function create(Request $request, RoomBoardService $board, RateRuleResolver $rates): View
     {
-        $operationalSetting = \App\Models\OperationalSetting::current();
+        $operationalSetting = OperationalSetting::current();
         $rooms = Room::with('category')
             ->where('operational_status', 'activa')
             ->categoryEnabled()
@@ -99,10 +118,10 @@ class ReservationController extends Controller
      */
     private function durationsByCategorySlug(): array
     {
-        $slugById = \App\Models\RoomCategory::pluck('name', 'id')
-            ->map(fn ($name) => \Illuminate\Support\Str::slug($name));
+        $slugById = RoomCategory::pluck('name', 'id')
+            ->map(fn ($name) => Str::slug($name));
 
-        return \App\Models\RateRulePrice::select('room_category_id', 'duration_minutes')
+        return RateRulePrice::select('room_category_id', 'duration_minutes')
             ->distinct()
             ->get()
             ->groupBy('room_category_id')
@@ -112,7 +131,7 @@ class ReservationController extends Controller
             ->all();
     }
 
-    public function store(Request $request, BookingService $bookingService, ConsumptionService $consumption, \App\Services\Booking\AvailabilityChecker $availability): RedirectResponse
+    public function store(Request $request, BookingService $bookingService, ConsumptionService $consumption, AvailabilityChecker $availability): RedirectResponse
     {
         $validated = $request->validate([
             'room_id' => ['required', 'exists:rooms,id'],
@@ -127,7 +146,7 @@ class ReservationController extends Controller
             'customer_email' => ['required', 'email'],
             'document_type' => ['required', 'in:rut,pasaporte'],
             'document_number' => ['required', 'string', 'max:30', function ($attribute, $value, $fail) use ($request) {
-                if ($request->input('document_type') === 'rut' && $value && ! \App\Support\Rut::isValid($value)) {
+                if ($request->input('document_type') === 'rut' && $value && ! Rut::isValid($value)) {
                     $fail('El RUT no es válido — revisa el dígito verificador.');
                 }
             }],
@@ -160,8 +179,8 @@ class ReservationController extends Controller
         $upsellCharges = [];
         $upsellCombos = [];
         $upgradeTargetRoomId = null;
-        $upgradeCharge = null;
-        $upsells = \App\Models\UpsellOffer::active()->with('combo')
+        $upgradeOffer = null;
+        $upsells = UpsellOffer::active()->with('combo')
             ->whereIn('id', $validated['accepted_upsells'] ?? [])
             ->orderByRaw("type = 'time_extension' desc")
             ->get();
@@ -170,7 +189,7 @@ class ReservationController extends Controller
             if ($u->type === 'time_extension' && $u->extra_minutes) {
                 $extraMinutes += $u->extra_minutes;
                 $upsellCharges[] = ['label' => $u->name, 'amount' => (int) $u->price];
-            } elseif ($u->type === 'category_upgrade' && $u->to_room_category_id && ! $upgradeTargetRoomId) {
+            } elseif ($u->type === 'category_upgrade' && $u->to_room_category_id && ! $upgradeTargetRoomId && (int) $u->from_room_category_id === (int) $room->room_category_id) {
                 $endsAt = $startsAt->copy()->addMinutes($baseDuration + $extraMinutes);
                 $target = Room::where('room_category_id', $u->to_room_category_id)
                     ->where('operational_status', 'activa')->where('id', '!=', $room->id)
@@ -178,7 +197,7 @@ class ReservationController extends Controller
                     ->first(fn (Room $r) => $availability->isAvailable($r, $startsAt, $endsAt));
                 if ($target) {
                     $upgradeTargetRoomId = $target->id;
-                    $upgradeCharge = ['label' => $u->name, 'amount' => (int) $u->price];
+                    $upgradeOffer = $u;
                 }
             } elseif ($u->type === 'combo' && $u->combo) {
                 $upsellCombos[] = $u->combo;
@@ -191,11 +210,11 @@ class ReservationController extends Controller
         // dos a la vez.
         $documentType = $validated['document_type'] ?? null;
         $documentNumber = $validated['document_number'] ?? null;
-        $rut = $documentType === 'rut' && $documentNumber ? \App\Support\Rut::normalize($documentNumber) : null;
+        $rut = $documentType === 'rut' && $documentNumber ? Rut::normalize($documentNumber) : null;
         $passportNumber = $documentType === 'pasaporte' ? $documentNumber : null;
 
         // Buscar cliente por teléfono normalizado; crearlo si no existe (caché local — sección 08 del doc).
-        $phone = \App\Support\Phone::toE164($validated['customer_phone']);
+        $phone = Phone::toE164($validated['customer_phone']);
         $customer = Customer::firstOrCreate(
             ['phone_e164' => $phone],
             [
@@ -242,20 +261,15 @@ class ReservationController extends Controller
                 'notes' => null,
                 'guest_names' => preg_split('/\r\n|\r|\n/', $validated['guest_names'] ?? ''),
             ]);
-        } catch (RoomNotAvailableException|PricingException $e) {
+        } catch (RoomNotAvailableException|PricingException|InvalidCouponException $e) {
             return back()->withInput()->withErrors(['booking' => $e->getMessage()]);
         }
 
         // Upgrade de categoría: se cambia la habitación después de crear, para
         // que el precio de tarifa siga siendo el de la categoría reservada.
         // Si la habitación destino se ocupó en el medio, se deja la original.
-        if ($upgradeTargetRoomId) {
-            try {
-                $booking->update(['room_id' => $upgradeTargetRoomId]);
-                $upsellCharges[] = $upgradeCharge;
-            } catch (\Illuminate\Database\QueryException $e) {
-                // choque con la restricción EXCLUDE — se queda con su habitación
-            }
+        if ($upgradeOffer) {
+            app(BookingAllocationService::class)->upgrade($booking, $upgradeOffer, auth()->id());
         }
 
         foreach ($upsellCharges as $c) {
@@ -366,7 +380,7 @@ class ReservationController extends Controller
      * programada gana y el código promocional NO acumula sobre ella — solo
      * cuando la habitación no está en oferta el código aplica su descuento.
      */
-    public function priceQuote(Request $request, \App\Services\Pricing\PriceCalculator $calculator, \App\Services\Pricing\PromotionResolver $promotions, \App\Services\Pricing\CouponValidator $couponValidator, \App\Services\Pricing\UpsellResolver $upsells): \Illuminate\Http\JsonResponse
+    public function priceQuote(Request $request, PriceCalculator $calculator, PromotionResolver $promotions, CouponValidator $couponValidator, UpsellResolver $upsells): JsonResponse
     {
         $data = $request->validate([
             'room_id' => ['required', 'exists:rooms,id'],
@@ -388,15 +402,15 @@ class ReservationController extends Controller
 
         try {
             $pricing = $calculator->calculate($room, $startsAt, $endsAt, $duration, $guests);
-        } catch (\App\Exceptions\PricingException $e) {
+        } catch (PricingException $e) {
             return response()->json(['error' => $e->getMessage()]);
         }
 
         $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];
-        $offer = $promotions->bestFor($room, $startsAt, $duration, null, $priceOriginal);
+        $offer = $promotions->bestFor($room, $startsAt, $duration, null, $priceOriginal, $guests, (int) $pricing['rate_rule']->extra_person_price);
 
         $response = [
-            'price_original' => $priceOriginal,
+            'price_original' => $offer['price_original'] ?? $priceOriginal,
             'tariff' => $pricing['rate_rule']->name,
             'applied' => null,
             'code_blocked' => false,
@@ -416,7 +430,7 @@ class ReservationController extends Controller
                 'kind' => 'offer',
                 'label' => $offer['coupon']->internal_name,
                 'discount' => $offer['discount'],
-                'price_final' => max(0, $priceOriginal - $offer['discount']),
+                'price_final' => max(0, $offer['price_original'] - $offer['discount']),
             ];
             $response['code_blocked'] = $code !== '';
 
@@ -447,7 +461,7 @@ class ReservationController extends Controller
                     'discount' => $discount,
                     'price_final' => max(0, $priceOriginal - $discount),
                 ];
-            } catch (\App\Exceptions\InvalidCouponException $e) {
+            } catch (InvalidCouponException $e) {
                 $response['code_error'] = $e->getMessage();
             }
         }
@@ -459,15 +473,15 @@ class ReservationController extends Controller
      * Búsqueda de cliente por teléfono para el formulario de reserva — se
      * pega el número de WhatsApp y trae nombre/email/historial si ya existe.
      */
-    public function lookupCustomer(Request $request): \Illuminate\Http\JsonResponse
+    public function lookupCustomer(Request $request): JsonResponse
     {
         $raw = (string) $request->query('phone', '');
 
-        if (! \App\Support\Phone::looksComplete($raw)) {
+        if (! Phone::looksComplete($raw)) {
             return response()->json(['found' => false]);
         }
 
-        $customer = Customer::where('phone_e164', \App\Support\Phone::toE164($raw))->first();
+        $customer = Customer::where('phone_e164', Phone::toE164($raw))->first();
 
         if (! $customer) {
             return response()->json(['found' => false]);
@@ -503,7 +517,8 @@ class ReservationController extends Controller
         $products = Product::where('is_active', true)->orderBy('display_order')->get();
         $combos = Combo::with('items.product')->where('is_active', true)->orderBy('display_order')->get();
 
-        $extraHourPrice = (int) (\App\Models\RateRule::where('name', $booking->rate_rule_name_snapshot)->value('extra_hour_price') ?? 0);
+        $extraHourPrice = (int) (RateRule::where('name', $booking->rate_rule_name_snapshot)->value('extra_hour_price') ?? 0);
+
         return view('reservations.show', ['booking' => $booking, 'products' => $products, 'combos' => $combos, 'extraHourPrice' => $extraHourPrice]);
     }
 
@@ -526,10 +541,10 @@ class ReservationController extends Controller
      * recepción lo escanee con su celular y ahí se le abra directo la
      * cámara de /reservas/escanear -- no requiere tipear nada.
      */
-    public function scanQrImage(): \Illuminate\Http\Response
+    public function scanQrImage(): Response
     {
-        $result = (new \Endroid\QrCode\Builder\Builder(
-            writer: new \Endroid\QrCode\Writer\PngWriter(),
+        $result = (new Builder(
+            writer: new PngWriter,
             data: route('reservations.scan'),
             size: 400,
             margin: 8,
