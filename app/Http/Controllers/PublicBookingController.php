@@ -16,6 +16,7 @@ use App\Models\RoomCategory;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
+use App\Services\Pricing\RateRuleResolver;
 use App\Exceptions\InsufficientStockException;
 use App\Support\Phone;
 use Carbon\Carbon;
@@ -78,7 +79,7 @@ class PublicBookingController extends Controller
         ]);
     }
 
-    public function store(Request $request, BookingService $bookingService, ConsumptionService $consumption, AvailabilityChecker $availability): RedirectResponse
+    public function store(Request $request, BookingService $bookingService, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
     {
         // "00" con cero a la izquierda no pasa la regla integer de Laravel
         // (FILTER_VALIDATE_INT la rechaza), y una hora en punto siempre manda "00".
@@ -115,7 +116,7 @@ class PublicBookingController extends Controller
         $startsAt = Carbon::parse($validated['date'].' '.sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']));
         $endsAt = $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
 
-        $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability);
+        $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules);
 
         if (! $room) {
             return back()->withInput()->withErrors(['duration_minutes' => 'No hay habitaciones libres de ese tipo para ese horario — prueba otra fecha, hora o duración.']);
@@ -240,7 +241,7 @@ class PublicBookingController extends Controller
      * "disponible" acá nunca contradice el resultado real del envío (salvo
      * que otra reserva tome el horario justo entre medio).
      */
-    public function checkAvailability(Request $request, AvailabilityChecker $availability): JsonResponse
+    public function checkAvailability(Request $request, AvailabilityChecker $availability, RateRuleResolver $rateRules): JsonResponse
     {
         $validated = $request->validate([
             'room_category_id' => ['required', 'exists:room_categories,id'],
@@ -258,16 +259,27 @@ class PublicBookingController extends Controller
             return response()->json(['available' => false]);
         }
 
-        $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability);
+        $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules);
 
         return response()->json(['available' => (bool) $room]);
     }
 
-    private function findAvailableRoom(int $categoryId, ?int $roomId, Carbon $startsAt, Carbon $endsAt, AvailabilityChecker $availability): ?Room
+    private function findAvailableRoom(int $categoryId, ?int $roomId, Carbon $startsAt, Carbon $endsAt, AvailabilityChecker $availability, RateRuleResolver $rateRules): ?Room
     {
+        // Usada tanto por el chequeo en vivo (checkAvailability) como por
+        // store() -- si acá falta alguna regla que store() sí aplica
+        // después (categoría deshabilitada, fuera de la ventana operativa
+        // de la tarifa), el chequeo en vivo miente diciendo "disponible" y
+        // el envío real rechaza con un error de tarifa que no tiene nada
+        // que ver con lo que el cliente vio en pantalla.
+        if (! $rateRules->resolve($startsAt, $endsAt)) {
+            return null;
+        }
+
         $operationalSetting = \App\Models\OperationalSetting::current();
         $roomQuery = Room::where('room_category_id', $categoryId)
             ->where('operational_status', 'activa')
+            ->categoryEnabled()
             ->floorWingEnabled($operationalSetting);
         if (!empty($roomId)) {
             $roomQuery->whereKey($roomId);

@@ -99,7 +99,7 @@
         @unless (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
             <a class="col-btn" href="{{ route('reservations.edit', $booking->code) }}">Modificar</a>
         @endunless
-        @unless (in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA', 'NO_SHOW']))
+        @unless (in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA', 'NO_SHOW']) || $booking->checked_in_at)
             <details class="col-cancel">
                 <summary class="col-btn">Cancelar</summary>
                 <form class="cancel-form" method="POST" action="{{ route('bookings.cancel', $booking->code) }}">

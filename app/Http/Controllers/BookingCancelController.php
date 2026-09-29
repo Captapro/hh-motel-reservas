@@ -18,6 +18,17 @@ class BookingCancelController extends Controller
                 ->withErrors(['booking' => 'Esta reserva ya está cerrada — no se puede cancelar.']);
         }
 
+        // Cancelar es "esto no pasó" -- pone la reserva en un estado
+        // terminal, así que RoomBoardService deja de contarla como
+        // ocupación real y la pieza vuelve a verse libre de inmediato,
+        // aunque el huésped siga físicamente adentro y operational_status
+        // nunca pasó a "aseo". Con check-in ya hecho hay que salir por la
+        // puerta de checkout (finalizar), no por cancelar.
+        if ($booking->checked_in_at) {
+            return redirect()->route('reservations.show', $booking->code)
+                ->withErrors(['booking' => 'Esta reserva ya tiene check-in -- no se puede cancelar. Usa "Finalizar" para hacerle el check-out.']);
+        }
+
         $validated = $request->validate([
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
