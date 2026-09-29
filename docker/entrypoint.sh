@@ -18,6 +18,7 @@ fi
 echo "DEBUG: ADMIN_EMAIL is set = $([ -n "$ADMIN_EMAIL" ] && echo yes || echo no); ADMIN_PASSWORD is set = $([ -n "$ADMIN_PASSWORD" ] && echo yes || echo no)"
 if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
     EMPTY_USERS=$(php artisan tinker --execute="echo App\Models\User::count();" 2>/dev/null | tail -1)
+    echo "DEBUG: EMPTY_USERS = [$EMPTY_USERS]"
     if [ "$EMPTY_USERS" = "0" ]; then
         php artisan tinker --execute="App\Models\User::create(['name' => 'Admin', 'email' => env('ADMIN_EMAIL'), 'password' => bcrypt(env('ADMIN_PASSWORD')), 'role' => 'administrador', 'is_active' => true]); echo 'admin creado';"
     fi
