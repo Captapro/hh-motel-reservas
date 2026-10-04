@@ -19,12 +19,12 @@ class BookingFinalizeController extends Controller
     {
         $booking = Booking::with(['room.category', 'customer', 'addons'])->where('code', $code)->firstOrFail();
 
-            if (! $booking->checked_in_at) {
-                abort(403, 'Esta reserva todavía no tiene check-in — no se puede finalizar antes de que llegue el huésped.');
-            }
-            if ($booking->balanceDue() > 0) {
-                abort(403, 'Esta reserva todavía tiene un saldo pendiente — registra el pago completo antes de finalizarla.');
-            }
+        if (! $booking->checked_in_at) {
+            abort(403, 'Esta reserva todavía no tiene check-in — no se puede finalizar antes de que llegue el huésped.');
+        }
+        if ($booking->balanceDue() > 0) {
+            abort(403, 'Esta reserva todavía tiene un saldo pendiente — registra el pago completo antes de finalizarla.');
+        }
 
         $products = Product::where('is_active', true)->orderBy('display_order')->get();
         $combos = Combo::with('items.product')->where('is_active', true)->orderBy('display_order')->get();
@@ -34,19 +34,6 @@ class BookingFinalizeController extends Controller
 
     public function store(Request $request, string $code, ConsumptionService $consumption): RedirectResponse
     {
-        $booking = Booking::where('code', $code)->firstOrFail();
-
-            if (! $booking->checked_in_at) {
-                abort(403, 'Esta reserva todavía no tiene check-in — no se puede finalizar antes de que llegue el huésped.');
-            }
-            if ($booking->balanceDue() > 0) {
-                abort(403, 'Esta reserva todavía tiene un saldo pendiente — registra el pago completo antes de finalizarla.');
-            }
-
-        if ($booking->booking_status === 'FINALIZADA') {
-            return redirect()->route('reservations.show', $booking->code)->with('status', 'Esta reserva ya estaba finalizada.');
-        }
-
         $validated = $request->validate([
             'confirm_room_checked' => ['required', 'accepted'],
             'quantities' => ['nullable', 'array'],
@@ -59,10 +46,28 @@ class BookingFinalizeController extends Controller
         ]);
 
         try {
-            // Todo o nada: si un producto falla por stock a mitad del envío,
-            // lo que ya se había agregado en este mismo envío se revierte —
-            // así reintentar no deja el primer ítem duplicado.
-            DB::transaction(function () use ($validated, $booking, $consumption) {
+            return DB::transaction(function () use ($validated, $code, $consumption) {
+                // Bloqueo de fila: sin esto, agregar un consumo desde la ficha
+                // de la reserva (BookingAddonController) al mismo tiempo que
+                // se finaliza acá podía colarse entre el chequeo de saldo y el
+                // cierre -- la reserva quedaba FINALIZADA con deuda nueva sin
+                // que ninguno de los dos chequeos la viera. Ahora los dos
+                // bloquean la misma fila y se serializan.
+                $booking = Booking::where('code', $code)->lockForUpdate()->firstOrFail();
+
+                if (! $booking->checked_in_at) {
+                    abort(403, 'Esta reserva todavía no tiene check-in — no se puede finalizar antes de que llegue el huésped.');
+                }
+                if ($booking->balanceDue() > 0) {
+                    abort(403, 'Esta reserva todavía tiene un saldo pendiente — registra el pago completo antes de finalizarla.');
+                }
+                if ($booking->booking_status === 'FINALIZADA') {
+                    return redirect()->route('reservations.show', $booking->code)->with('status', 'Esta reserva ya estaba finalizada.');
+                }
+
+                // Todo o nada: si un producto falla por stock a mitad del envío,
+                // lo que ya se había agregado en este mismo envío se revierte —
+                // así reintentar no deja el primer ítem duplicado.
                 foreach ($validated['combo_quantities'] ?? [] as $comboId => $qty) {
                     if ((int) $qty > 0) {
                         $consumption->addCombo($booking, Combo::findOrFail($comboId), (int) $qty, auth()->id());
@@ -73,50 +78,53 @@ class BookingFinalizeController extends Controller
                         $consumption->addProduct($booking, Product::findOrFail($productId), (int) $qty, auth()->id());
                     }
                 }
-            });
+
+                // Los consumos recién agregados en este mismo envío (o por
+                // otra pestaña, ahora bloqueada hasta este punto) pueden dejar
+                // saldo pendiente aunque la reserva ya estuviera pagada al
+                // entrar a esta pantalla -- hay que revalidar después de
+                // agregarlos, no solo antes.
+                if ($booking->fresh()->balanceDue() > 0) {
+                    return redirect()->route('payments.create', $booking->code)
+                        ->withErrors(['booking' => 'Los extras que acabas de agregar dejaron un saldo pendiente — registra el pago antes de cerrar la reserva.']);
+                }
+
+                $checkedOutAt = $booking->checked_out_at ?? now();
+                // Si el huésped se va antes de la hora reservada, la habitación tiene
+                // que quedar libre desde ese momento real — no desde la hora original
+                // — para que el chequeo de disponibilidad y la restricción de la base
+                // de datos dejen de bloquear ese tramo ya desocupado.
+                $newEndsAt = $checkedOutAt->lt($booking->ends_at) ? $checkedOutAt : $booking->ends_at;
+                // Si entró y salió antes del inicio contratado, el rango de
+                // ocupación se cierra con la llegada real, nunca con fin < inicio.
+                $newStartsAt = $newEndsAt->lt($booking->starts_at)
+                    ? $booking->checked_in_at->min($newEndsAt) : $booking->starts_at;
+
+                $old = $booking->only(['booking_status', 'consumption_offered_at', 'checked_out_at', 'starts_at', 'ends_at']);
+                $booking->fresh()->update([
+                    'booking_status' => 'FINALIZADA',
+                    'consumption_offered_at' => now(),
+                    'consumption_offered_by' => auth()->id(),
+                    'checked_out_at' => $checkedOutAt,
+                    'starts_at' => $newStartsAt,
+                    'ends_at' => $newEndsAt,
+                ]);
+                AuditLog::record(auth()->id(), 'reserva.finalizar', 'Booking', $booking->id, $old, $booking->fresh()->only(['booking_status', 'consumption_offered_at', 'checked_out_at', 'starts_at', 'ends_at']));
+
+                // La habitación queda "en aseo" (fuera de disponibles) hasta que
+                // recepción la reactive a mano — sin cronómetro: a veces no hay
+                // mucama y la pieza queda sin hacer hasta el otro día.
+                $room = $booking->room;
+                if ($room->operational_status === 'activa') {
+                    $roomOld = $room->only(['operational_status']);
+                    $room->update(['operational_status' => 'aseo', 'aseo_started_at' => now(), 'aseo_override_at' => null]);
+                    AuditLog::record(auth()->id(), 'habitacion.enviar_aseo', 'Room', $room->id, $roomOld, ['operational_status' => 'aseo']);
+                }
+
+                return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva finalizada.');
+            }, 3);
         } catch (InsufficientStockException $e) {
             return back()->withErrors(['booking' => $e->getMessage().' No se agregó nada de este envío — ajusta la cantidad y vuelve a intentar.']);
         }
-
-        // Los consumos recién agregados en este mismo envío pueden dejar
-        // saldo pendiente aunque la reserva ya estuviera pagada al entrar a
-        // esta pantalla -- hay que revalidar después de agregarlos, no solo
-        // antes. back() manda de vuelta a este mismo formulario, pero
-        // show() aborta con 403 en cuanto detecta saldo pendiente -- eso
-        // dejaba a recepción en una pantalla en blanco en vez de mostrarle
-        // el error. Mandar directo a registrar el pago es lo único que
-        // realmente destraba la situación.
-        if ($booking->fresh()->balanceDue() > 0) {
-            return redirect()->route('payments.create', $booking->code)
-                ->withErrors(['booking' => 'Los extras que acabas de agregar dejaron un saldo pendiente — registra el pago antes de cerrar la reserva.']);
-        }
-
-        $checkedOutAt = $booking->checked_out_at ?? now();
-        // Si el huésped se va antes de la hora reservada, la habitación tiene
-        // que quedar libre desde ese momento real — no desde la hora original
-        // — para que el chequeo de disponibilidad y la restricción de la base
-        // de datos dejen de bloquear ese tramo ya desocupado.
-        $newEndsAt = $checkedOutAt->lt($booking->ends_at) ? max($booking->starts_at, $checkedOutAt) : $booking->ends_at;
-
-        $old = $booking->only(['booking_status', 'consumption_offered_at', 'checked_out_at', 'ends_at']);
-        $booking->fresh()->update([
-            'booking_status' => 'FINALIZADA',
-            'consumption_offered_at' => now(),
-            'consumption_offered_by' => auth()->id(),
-            'checked_out_at' => $checkedOutAt,
-            'ends_at' => $newEndsAt,
-        ]);
-        AuditLog::record(auth()->id(), 'reserva.finalizar', 'Booking', $booking->id, $old, $booking->fresh()->only(['booking_status', 'consumption_offered_at', 'checked_out_at', 'ends_at']));
-
-        // La habitación queda "en aseo" (fuera de disponibles) hasta que
-        // recepción la reactive a mano — sin cronómetro: a veces no hay
-        // mucama y la pieza queda sin hacer hasta el otro día.
-        if ($booking->room->operational_status === 'activa') {
-            $roomOld = $booking->room->only(['operational_status']);
-            $booking->room->update(['operational_status' => 'aseo', 'aseo_started_at' => now(), 'aseo_override_at' => null]);
-            AuditLog::record(auth()->id(), 'habitacion.enviar_aseo', 'Room', $booking->room->id, $roomOld, ['operational_status' => 'aseo']);
-        }
-
-        return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva finalizada.');
     }
 }

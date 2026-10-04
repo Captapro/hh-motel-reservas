@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Exceptions\RoomNotAvailableException;
 use App\Models\Customer;
 use App\Models\RateRule;
+use App\Models\RateRulePrice;
 use App\Models\RateRuleWindow;
 use App\Models\Room;
 use App\Models\RoomCategory;
@@ -48,6 +49,11 @@ class CreateBookingClosingTimeTest extends TestCase
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
+            '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
+            '2026_09_16_040000_add_wing_to_rooms.php',
+            '2026_09_16_040100_create_operational_settings_table.php',
+            '2026_09_17_002913_add_floor_toggles_to_operational_settings.php',
+            '2026_09_21_135116_split_floor_toggles_by_wing_in_operational_settings.php',
             '2026_09_28_120000_add_pass_token_to_bookings_table.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
@@ -64,7 +70,7 @@ class CreateBookingClosingTimeTest extends TestCase
         // hasta medianoche, envolviendo al martes -- así 23:30+3h (02:30)
         // cabe, pero 23:30+3h+1h extra (03:30) ya no.
         RateRuleWindow::create(['rate_rule_id' => $rateRule->id, 'weekday' => $this->starts->dayOfWeek, 'start_time' => '20:00:00', 'end_time' => '03:00:00', 'wraps_midnight' => true]);
-        \App\Models\RateRulePrice::create(['rate_rule_id' => $rateRule->id, 'room_category_id' => $category->id, 'duration_minutes' => 180, 'price' => 20000]);
+        RateRulePrice::create(['rate_rule_id' => $rateRule->id, 'room_category_id' => $category->id, 'duration_minutes' => 180, 'price' => 20000]);
     }
 
     public function test_extra_time_at_booking_creation_is_rejected_when_it_crosses_the_closing_time(): void

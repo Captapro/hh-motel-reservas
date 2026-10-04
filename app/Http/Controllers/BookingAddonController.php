@@ -22,16 +22,22 @@ class BookingAddonController extends Controller
     public function extraHour(string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
     {
         return DB::transaction(function () use ($code, $consumption, $availability, $rateRules) {
-            $booking = Booking::where('code', $code)->firstOrFail();
+            // La reserva se bloquea PRIMERO -- si se leyera room_id sin
+            // bloquear antes de bloquear la pieza, un traslado (reschedule)
+            // corriendo al mismo tiempo podía cambiar el room_id justo en el
+            // medio: esto terminaba bloqueando la pieza VIEJA en vez de la
+            // pieza real de la reserva, dejando el margen de aseo de la
+            // pieza nueva sin protección real.
+            $booking = Booking::where('code', $code)->lockForUpdate()->firstOrFail();
             Room::whereKey($booking->room_id)->lockForUpdate()->firstOrFail();
 
-            return $this->extraHourLocked($code, $consumption, $availability, $rateRules);
+            return $this->extraHourLocked($booking, $consumption, $availability, $rateRules);
         }, 3);
     }
 
-    private function extraHourLocked(string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
+    private function extraHourLocked(Booking $booking, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
     {
-        $booking = Booking::with('room')->where('code', $code)->lockForUpdate()->firstOrFail();
+        $booking->load('room');
 
         if (in_array($booking->booking_status, self::CLOSED, true)) {
             return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más tiempo.']);
@@ -58,12 +64,6 @@ class BookingAddonController extends Controller
 
     public function store(Request $request, string $code, ConsumptionService $consumption): RedirectResponse
     {
-        $booking = Booking::where('code', $code)->firstOrFail();
-
-        if (in_array($booking->booking_status, self::CLOSED, true)) {
-            return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más consumo.']);
-        }
-
         $validated = $request->validate([
             'item' => ['nullable', 'string'],
             'quantity' => ['nullable', 'integer', 'min:1', 'max:20'],
@@ -73,23 +73,37 @@ class BookingAddonController extends Controller
             'quantity.max' => 'Máximo 20 unidades por línea — si son más, agrégalo en dos veces.',
             'amount.max' => 'Ese monto parece demasiado alto para un ítem de consumo — revísalo.',
         ]);
+        [$type, $id] = array_pad(explode(':', $validated['item'] ?? '', 2), 2, null);
+        if (! (($type === 'combo' || $type === 'product') && $id)) {
+            $request->validate(['description' => ['required'], 'amount' => ['required']]);
+        }
 
         try {
-            [$type, $id] = array_pad(explode(':', $validated['item'] ?? '', 2), 2, null);
-            $quantity = (int) ($validated['quantity'] ?? 1);
+            return DB::transaction(function () use ($type, $id, $validated, $code, $consumption) {
+                // Bloqueo de fila: mismo motivo que en BookingFinalizeController
+                // -- si finalizar corre al mismo tiempo, uno de los dos tiene
+                // que esperar al otro para que ninguno vea un estado a medio
+                // actualizar.
+                $booking = Booking::where('code', $code)->lockForUpdate()->firstOrFail();
 
-            if ($type === 'combo' && $id) {
-                $consumption->addCombo($booking, Combo::findOrFail($id), $quantity, auth()->id());
-            } elseif ($type === 'product' && $id) {
-                $consumption->addProduct($booking, Product::findOrFail($id), $quantity, auth()->id());
-            } else {
-                $request->validate(['description' => ['required'], 'amount' => ['required']]);
-                $consumption->addCustom($booking, $validated['description'], (int) $validated['amount'], auth()->id());
-            }
+                if (in_array($booking->booking_status, self::CLOSED, true)) {
+                    return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más consumo.']);
+                }
+
+                $quantity = (int) ($validated['quantity'] ?? 1);
+
+                if ($type === 'combo' && $id) {
+                    $consumption->addCombo($booking, Combo::findOrFail($id), $quantity, auth()->id());
+                } elseif ($type === 'product' && $id) {
+                    $consumption->addProduct($booking, Product::findOrFail($id), $quantity, auth()->id());
+                } else {
+                    $consumption->addCustom($booking, $validated['description'], (int) $validated['amount'], auth()->id());
+                }
+
+                return redirect()->route('reservations.show', $booking->code);
+            }, 3);
         } catch (InsufficientStockException $e) {
             return back()->withErrors(['booking' => $e->getMessage()]);
         }
-
-        return redirect()->route('reservations.show', $booking->code);
     }
 }

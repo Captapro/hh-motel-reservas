@@ -55,17 +55,24 @@ class BookingCheckInController extends Controller
     public function store(Request $request, string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
     {
         return DB::transaction(function () use ($request, $code, $consumption, $availability, $rateRules) {
-            // Orden estable: también protege los posibles destinos de upgrades.
-            Room::orderBy('id')->lockForUpdate()->get();
+            // Antes esto bloqueaba TODAS las habitaciones (Room::orderBy('id')
+            // ->lockForUpdate()->get() sin filtro) "por si" el check-in traía
+            // un upgrade -- de paso dejaba a cualquier otra operación sobre
+            // CUALQUIER pieza (crear una reserva nueva, extender otra, etc.)
+            // esperando a que este check-in terminara, aunque fueran piezas
+            // sin ninguna relación entre sí. Alcanza con bloquear la pieza
+            // propia de esta reserva; los posibles destinos de upgrade ya
+            // los bloquea BookingAllocationService::upgrade() por su cuenta,
+            // acotado a la categoría destino real.
+            $booking = Booking::with('room')->where('code', $code)->lockForUpdate()->firstOrFail();
+            Room::whereKey($booking->room_id)->lockForUpdate()->get();
 
-            return $this->checkInLocked($request, $code, $consumption, $availability, $rateRules);
+            return $this->checkInLocked($booking, $consumption, $availability, $rateRules, $request);
         }, 3);
     }
 
-    private function checkInLocked(Request $request, string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
+    private function checkInLocked(Booking $booking, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules, Request $request): RedirectResponse
     {
-        $booking = Booking::with('room')->where('code', $code)->lockForUpdate()->firstOrFail();
-
         if ($booking->checked_in_at) {
             return redirect()->route('reservations.show', $booking->code);
         }
@@ -119,16 +126,42 @@ class BookingCheckInController extends Controller
             ]);
         }
 
-        $old = $booking->only(['booking_status', 'checked_in_at']);
+        $arrival = now();
+        if ($arrival->lt($booking->starts_at)
+            && ! $availability->isAvailable($booking->room, $arrival, $booking->ends_at, $booking->id)) {
+            return back()->withInput()->withErrors([
+                'booking' => 'No se puede adelantar el check-in: hay otra reserva o un margen de aseo pendiente antes del horario reservado.',
+            ]);
+        }
+
+        // Resolver el horario antes de registrar la entrada evita confirmar
+        // una estancia cuya salida ya pasó y que no puede extenderse.
+        $delay = (int) $booking->starts_at->diffInMinutes($arrival, false);
+        $endsAt = $booking->ends_at;
+        if ($delay > 0) {
+            $extendedEnd = $endsAt->copy()->addMinutes($delay);
+            if ($rateRules->resolve($booking->starts_at, $extendedEnd)
+                && $availability->isAvailable($booking->room, $booking->starts_at, $extendedEnd, $booking->id)) {
+                $endsAt = $extendedEnd;
+            }
+            if ($endsAt->lte($arrival)) {
+                return back()->withInput()->withErrors([
+                    'booking' => 'El horario de esta reserva ya terminó y no se puede extender. Reprograma la reserva antes de hacer el check-in.',
+                ]);
+            }
+        }
+
+        $old = $booking->only(['booking_status', 'checked_in_at', 'ends_at']);
 
         $booking->update([
-            'checked_in_at' => now(),
+            'checked_in_at' => $arrival,
+            'ends_at' => $endsAt,
             'booking_status' => in_array($booking->booking_status, ['PENDIENTE_PAGO', 'RETENIDA', 'BORRADOR', 'CONFIRMADA'], true)
                 ? 'CHECK_IN'
                 : $booking->booking_status,
         ]);
 
-        AuditLog::record(auth()->id(), 'reserva.check_in', 'Booking', $booking->id, $old, $booking->only(['booking_status', 'checked_in_at']));
+        AuditLog::record(auth()->id(), 'reserva.check_in', 'Booking', $booking->id, $old, $booking->only(['booking_status', 'checked_in_at', 'ends_at']));
 
         // El check-in es la fuente de verdad del registro de acompañantes —
         // reemplaza lo que hubiera quedado (de la creación, si algo) por lo
@@ -136,24 +169,6 @@ class BookingCheckInController extends Controller
         $booking->guests()->delete();
         foreach ($guestNames as $name) {
             BookingGuest::create(['booking_id' => $booking->id, 'name' => $name]);
-        }
-
-        $delay = $booking->checkInDelayMinutes();
-
-        // Si llegó atrasado, la cuenta regresiva de "libera en" tiene que
-        // arrancar desde que entró de verdad, no desde la hora agendada —
-        // si no, el cliente paga por un rato que nunca ocupó. Se corre
-        // ends_at el mismo atraso, salvo que ya haya otra reserva pegada a
-        // esta habitación justo después (ahí se queda con la hora original).
-        if ($delay > 0) {
-            $newEndsAt = $booking->ends_at->copy()->addMinutes($delay);
-            // No correr la salida más allá de la hora de cierre del negocio,
-            // aunque la pieza esté libre — mismo horario que ya se exige al
-            // crear o reprogramar una reserva.
-            if ($rateRules->resolve($booking->starts_at, $newEndsAt)
-                && $availability->isAvailable($booking->room, $booking->starts_at, $newEndsAt, $booking->id)) {
-                $booking->update(['ends_at' => $newEndsAt]);
-            }
         }
 
         $this->applyUpsells($booking, $validated['accepted_upsells'] ?? [], $consumption, $availability, $rateRules);

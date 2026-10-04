@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -46,18 +47,41 @@ class PaymentService
                 );
             }
 
-            $payment = Payment::create([
-                ...($requestToken !== null ? ['request_token' => $requestToken] : []),
-                'booking_id' => $booking->id,
-                'payment_method_id' => $method->id,
-                'amount' => $amount,
-                'status' => 'aprobado', // registro manual: el staff ya verificó el dinero/transferencia
-                'external_id' => $externalId,
-                'voucher_number' => $voucherNumber,
-                'receipt_number' => $receiptNumber,
-                'registered_by' => $registeredBy,
-                'notes' => $notes,
-            ]);
+            // external_id tiene un índice único (payments_external_id_unique)
+            // pensado para que una notificación repetida de Mercado Pago
+            // nunca duplique un pago -- pero el mismo campo es "Referencia /
+            // N° de operación" en el formulario manual, que cualquiera puede
+            // tipear. Repetir esa referencia desde otro formulario (otro
+            // request_token, así que el chequeo de reenvío de arriba no lo
+            // detecta) chocaba contra ese índice con un QueryException sin
+            // capturar -- un 500 en vez de un error entendible.
+            if ($externalId !== null && Payment::where('external_id', $externalId)->exists()) {
+                throw ValidationException::withMessages(['external_id' => 'Esa referencia / N° de operación ya está usada en otro pago. Si es una operación distinta, dejá el campo vacío o escribí una referencia distinta.']);
+            }
+
+            try {
+                $payment = Payment::create([
+                    ...($requestToken !== null ? ['request_token' => $requestToken] : []),
+                    'booking_id' => $booking->id,
+                    'payment_method_id' => $method->id,
+                    'amount' => $amount,
+                    'status' => 'aprobado', // registro manual: el staff ya verificó el dinero/transferencia
+                    'external_id' => $externalId,
+                    'voucher_number' => $voucherNumber,
+                    'receipt_number' => $receiptNumber,
+                    'registered_by' => $registeredBy,
+                    'notes' => $notes,
+                ]);
+            } catch (QueryException $e) {
+                // Red de seguridad ante la carrera: dos formularios con la
+                // misma referencia enviados casi al mismo tiempo pueden
+                // pasar el chequeo de arriba los dos antes de que cualquiera
+                // inserte -- acá lo agarra el índice único mismo.
+                if ($e->getCode() === '23505' && str_contains($e->getMessage(), 'payments_external_id_unique')) {
+                    throw ValidationException::withMessages(['external_id' => 'Esa referencia / N° de operación ya está usada en otro pago. Si es una operación distinta, dejá el campo vacío o escribí una referencia distinta.']);
+                }
+                throw $e;
+            }
 
             $this->recalculateStatus($booking->fresh());
 

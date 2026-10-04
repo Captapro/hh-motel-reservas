@@ -34,7 +34,10 @@ class AvailabilityChecker
         return ! $room->bookings()
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
             ->when($excludeBookingId, fn ($q) => $q->where('id', '!=', $excludeBookingId))
-            ->where('starts_at', '<', $bufferEnd)
+            // Un ingreso anticipado ocupa desde la llegada real, aunque se
+            // conserve starts_at como horario contratado para precios y atrasos.
+            ->where(fn ($q) => $q->where('starts_at', '<', $bufferEnd)
+                ->orWhere('checked_in_at', '<', $bufferEnd))
             ->where('ends_at', '>', $bufferStart)
             ->exists();
     }

@@ -26,12 +26,14 @@ class BookingAllocationService
                 return false;
             }
 
-            $target = $rooms->first(function (Room $room) use ($locked, $offer) {
+            $occupancyStartsAt = $locked->checked_in_at && $locked->checked_in_at->lt($locked->starts_at)
+                ? $locked->checked_in_at : $locked->starts_at;
+            $target = $rooms->first(function (Room $room) use ($locked, $offer, $occupancyStartsAt) {
                 return $room->id !== $locked->room_id
                     && (int) $room->room_category_id === (int) $offer->to_room_category_id
                     && $room->isOperational() && $room->category->is_active
-                    && ! $this->availability->hasGuestInside($room, $locked->id)
-                    && $this->availability->isAvailable($room, $locked->starts_at, $locked->ends_at, $locked->id)
+                    && (! $locked->checked_in_at || ! $this->availability->hasGuestInside($room, $locked->id))
+                    && $this->availability->isAvailable($room, $occupancyStartsAt, $locked->ends_at, $locked->id)
                     && $room->isFloorWingEnabled(OperationalSetting::current());
             });
             if (! $target) {

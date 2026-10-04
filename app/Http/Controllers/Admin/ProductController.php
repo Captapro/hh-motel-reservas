@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -18,7 +19,7 @@ class ProductController extends Controller
 
     public function create(): View
     {
-        return view('admin.products.form', ['product' => new Product()]);
+        return view('admin.products.form', ['product' => new Product]);
     }
 
     public function edit(Product $product): View
@@ -28,7 +29,7 @@ class ProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        return $this->save($request, new Product());
+        return $this->save($request, new Product);
     }
 
     public function update(Request $request, Product $product): RedirectResponse
@@ -67,18 +68,21 @@ class ProductController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $old = $product->only(['stock']);
-        $product->update(['stock' => max(0, $product->stock + $validated['delta'])]);
+        return DB::transaction(function () use ($product, $validated) {
+            $product = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $old = $product->only(['stock']);
+            $product->update(['stock' => max(0, $product->stock + $validated['delta'])]);
 
-        AuditLog::record(
-            auth()->id(),
-            'producto.stock_ajustar',
-            'Product',
-            $product->id,
-            $old + ['reason' => null],
-            $product->only(['stock']) + ['reason' => $validated['reason'] ?? null, 'delta' => $validated['delta']]
-        );
+            AuditLog::record(
+                auth()->id(),
+                'producto.stock_ajustar',
+                'Product',
+                $product->id,
+                $old + ['reason' => null],
+                $product->only(['stock']) + ['reason' => $validated['reason'] ?? null, 'delta' => $validated['delta']]
+            );
 
-        return redirect()->route('admin.products.index')->with('status', "Stock de {$product->name} actualizado a {$product->stock}.");
+            return redirect()->route('admin.products.index')->with('status', "Stock de {$product->name} actualizado a {$product->stock}.");
+        }, 3);
     }
 }

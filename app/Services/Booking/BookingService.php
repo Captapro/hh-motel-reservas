@@ -10,6 +10,7 @@ use App\Models\BookingGuest;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\Customer;
+use App\Models\OperationalSetting;
 use App\Models\Room;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Pricing\CouponValidator;
@@ -79,6 +80,8 @@ class BookingService
         if (! $room->isOperational()) {
             throw new RoomNotAvailableException("La habitación {$room->name} no está operativa ahora mismo.");
         }
+
+        $this->assertRoomEnabled($room);
 
         // El precio se calcula contra baseEndsAt (la tarifa no conoce el
         // upsell), así que valida el horario operativo por su cuenta -- si
@@ -225,6 +228,22 @@ class BookingService
         $startsAt = $data['starts_at'];
         $durationMinutes = $data['duration_minutes'];
 
+        // Guardar sin cambios reales (mismo room_id, horario, duración y
+        // personas) no tiene que recalcular el precio. PriceCalculator
+        // cotiza siempre según la CATEGORÍA de la pieza actual -- para una
+        // reserva que tuvo un upgrade de categoría, eso ya no coincide con
+        // lo cobrado originalmente (el upgrade se cobró aparte, como
+        // consumo, sin tocar price_original). Recalcular acá de nuevo
+        // terminaba subiéndole el precio a la tarifa completa de la
+        // categoría nueva, solo por abrir "Modificar" y guardar sin tocar
+        // nada.
+        if ((int) $room->id === (int) $booking->room_id
+            && $startsAt->eq($booking->starts_at)
+            && (int) $durationMinutes === (int) $booking->duration_minutes
+            && (int) $data['guests_count'] === (int) $booking->guests_count) {
+            return $booking;
+        }
+
         // "Hora adicional" (BookingAddonController::extraHour) y el corrimiento
         // por atraso al check-in alargan ends_at por encima de starts_at +
         // duration_minutes, sin tocar duration_minutes (que sigue siendo la
@@ -245,7 +264,11 @@ class BookingService
             throw new RoomNotAvailableException("La habitación {$room->name} no está operativa ahora mismo.");
         }
 
-        if (! $this->availabilityChecker->isAvailable($room, $startsAt, $endsAt, $booking->id)) {
+        $this->assertRoomEnabled($room);
+
+        $occupancyStartsAt = $booking->checked_in_at && $booking->checked_in_at->lt($startsAt)
+            ? $booking->checked_in_at : $startsAt;
+        if (! $this->availabilityChecker->isAvailable($room, $occupancyStartsAt, $endsAt, $booking->id)) {
             throw new RoomNotAvailableException("La habitación {$room->name} no está disponible en ese horario.");
         }
 
@@ -253,7 +276,21 @@ class BookingService
             throw new RoomNotAvailableException('La habitación destino todavía tiene un huésped sin check-out.');
         }
 
-        $pricing = $this->priceCalculator->calculate($room, $startsAt, $endsAt, $durationMinutes, $data['guests_count']);
+        // Al cambiar solo personas conservamos la base contratada, incluso
+        // después de un upgrade cobrado como consumo. Solo varía el recargo
+        // por personas; las promociones se evalúan abajo con ese nuevo total.
+        $onlyGuestsChanged = (int) $room->id === (int) $booking->room_id
+            && $startsAt->eq($booking->starts_at)
+            && (int) $durationMinutes === (int) $booking->duration_minutes;
+        if ($onlyGuestsChanged && $booking->rateRule) {
+            $pricing = [
+                'rate_rule' => $booking->rateRule,
+                'price_original' => $booking->price_original - $booking->extra_guests_fee,
+                'extra_guests_fee' => max(0, $data['guests_count'] - $room->category->base_capacity) * $booking->rateRule->extra_person_price,
+            ];
+        } else {
+            $pricing = $this->priceCalculator->calculate($room, $startsAt, $endsAt, $durationMinutes, $data['guests_count']);
+        }
         $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];
 
         // El descuento de un cupón CON código se conserva fijo (ya se validó al
@@ -333,6 +370,16 @@ class BookingService
                 throw new RoomNotAvailableException("La habitación {$room->name} acaba de ser reservada por otra persona en ese horario.");
             }
             throw $e;
+        }
+    }
+
+    private function assertRoomEnabled(Room $room): void
+    {
+        if (! $room->category->is_active) {
+            throw new RoomNotAvailableException('La categoría de esta habitación está deshabilitada.');
+        }
+        if (! $room->isFloorWingEnabled(OperationalSetting::current())) {
+            throw new RoomNotAvailableException('El piso o ala de esta habitación está deshabilitado.');
         }
     }
 }

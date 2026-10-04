@@ -6,8 +6,8 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Room;
 use App\Models\RoomCategory;
+use App\Models\UpsellOffer;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -90,7 +90,9 @@ class CheckInOccupancyTest extends TestCase
     {
         $this->makeBooking([
             'checked_in_at' => now()->subHours(2),
-            'checked_out_at' => now()->subMinutes(10),
+            'checked_out_at' => now()->subMinutes(30),
+            'starts_at' => now()->subHours(2),
+            'ends_at' => now()->subMinutes(30),
             'booking_status' => 'FINALIZADA',
         ]);
         $next = $this->makeBooking();
@@ -128,7 +130,7 @@ class CheckInOccupancyTest extends TestCase
             'checked_in_at' => now()->subHours(3),
         ]);
 
-        $upgrade = \App\Models\UpsellOffer::create([
+        $upgrade = UpsellOffer::create([
             'name' => 'Sube a LITE', 'type' => 'category_upgrade', 'price' => 5000,
             'from_room_category_id' => $this->room->room_category_id,
             'to_room_category_id' => $destinationCategory->id,

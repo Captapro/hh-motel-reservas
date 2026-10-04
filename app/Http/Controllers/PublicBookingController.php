@@ -49,7 +49,8 @@ class PublicBookingController extends Controller
                 ->first()
             : null;
 
-        $durationsByCategory = RateRulePrice::select('room_category_id', 'duration_minutes')
+        $durationsByCategory = RateRulePrice::whereHas('rateRule', fn ($q) => $q->where('is_active', true))
+            ->select('room_category_id', 'duration_minutes')
             ->distinct()
             ->get()
             ->groupBy('room_category_id')
@@ -266,7 +267,11 @@ class PublicBookingController extends Controller
         // de la tarifa), el chequeo en vivo miente diciendo "disponible" y
         // el envío real rechaza con un error de tarifa que no tiene nada
         // que ver con lo que el cliente vio en pantalla.
-        if (! $rateRules->resolve($startsAt, $endsAt)) {
+        $rate = $rateRules->resolve($startsAt, $endsAt);
+        if (! $rate || ! $rate->prices()
+            ->where('room_category_id', $categoryId)
+            ->where('duration_minutes', (int) $startsAt->diffInMinutes($endsAt, false))
+            ->exists()) {
             return null;
         }
 
