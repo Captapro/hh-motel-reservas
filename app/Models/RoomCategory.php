@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'former_name', 'description', 'sales_tip', 'features', 'base_capacity', 'extra_guest_from', 'display_order', 'is_active'])]
+#[Fillable(['name', 'former_name', 'description', 'sales_tip', 'features', 'base_capacity', 'max_capacity', 'extra_guest_from', 'display_order', 'is_active'])]
 class RoomCategory extends Model
 {
     use HasFactory;

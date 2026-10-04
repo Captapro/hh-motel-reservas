@@ -260,7 +260,7 @@
 
                 <div class="cat-body">
                     <h2>{{ $category->name }}</h2>
-                    <div class="cat-cap">Hasta {{ $category->base_capacity }} personas{{ $category->extra_guest_from ? ' · desde la '.$category->extra_guest_from.'ª persona, cargo adicional' : '' }}</div>
+                    <div class="cat-cap">Hasta {{ $category->max_capacity }} personas{{ $category->extra_guest_from ? ' · desde la '.$category->extra_guest_from.'ª persona, cargo adicional' : '' }}</div>
                     <div class="sales-tip">{{ $entry['salesTip'] }}</div>
 
                     @if ($category->description)

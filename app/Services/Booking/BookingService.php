@@ -82,6 +82,7 @@ class BookingService
         }
 
         $this->assertRoomEnabled($room);
+        $this->assertCapacity($room, (int) $data['guests_count']);
 
         // El precio se calcula contra baseEndsAt (la tarifa no conoce el
         // upsell), así que valida el horario operativo por su cuenta -- si
@@ -265,6 +266,7 @@ class BookingService
         }
 
         $this->assertRoomEnabled($room);
+        $this->assertCapacity($room, (int) $data['guests_count']);
 
         $occupancyStartsAt = $booking->checked_in_at && $booking->checked_in_at->lt($startsAt)
             ? $booking->checked_in_at : $startsAt;
@@ -370,6 +372,14 @@ class BookingService
                 throw new RoomNotAvailableException("La habitación {$room->name} acaba de ser reservada por otra persona en ese horario.");
             }
             throw $e;
+        }
+    }
+
+    private function assertCapacity(Room $room, int $guests): void
+    {
+        $max = (int) $room->category->max_capacity;
+        if ($max > 0 && $guests > $max) {
+            throw new RoomNotAvailableException("La habitación {$room->name} admite como máximo {$max} personas (se pidieron {$guests}).");
         }
     }
 

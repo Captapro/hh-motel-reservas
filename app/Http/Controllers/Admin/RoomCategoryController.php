@@ -90,6 +90,7 @@ class RoomCategoryController extends Controller
             'sales_tip' => ['nullable', 'string', 'max:300'],
             'features' => ['nullable', 'string'],
             'base_capacity' => ['required', 'integer', 'min:1'],
+            'max_capacity' => ['required', 'integer', 'gte:base_capacity', 'max:50'],
             'extra_guest_from' => ['required', 'integer', 'min:1'],
             'display_order' => ['required', 'integer'],
             'is_active' => ['sometimes', 'boolean'],

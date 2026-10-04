@@ -115,7 +115,7 @@
             <div class="room-body">
                 <h1>{{ $room->name }}</h1>
                 <div class="cat-label">Categoría {{ $category->name }}</div>
-                <div class="cap">Hasta {{ $category->base_capacity }} personas{{ $category->extra_guest_from ? ' · desde la '.$category->extra_guest_from.'ª persona, cargo adicional' : '' }}</div>
+                <div class="cap">Hasta {{ $category->max_capacity }} personas{{ $category->extra_guest_from ? ' · desde la '.$category->extra_guest_from.'ª persona, cargo adicional' : '' }}</div>
 
                 @if ($offer)
                     <div class="room-offer">

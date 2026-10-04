@@ -34,6 +34,10 @@
                 <input type="number" name="base_capacity" min="1" value="{{ old('base_capacity', $category->base_capacity ?? 2) }}" required>
             </div>
             <div>
+                <label>Capacidad máxima (personas)</label>
+                <input type="number" name="max_capacity" min="1" value="{{ old('max_capacity', $category->max_capacity ?? 10) }}" required>
+            </div>
+            <div>
                 <label>Cobra adicional desde la N° persona</label>
                 <input type="number" name="extra_guest_from" min="1" value="{{ old('extra_guest_from', $category->extra_guest_from ?? 3) }}" required>
             </div>

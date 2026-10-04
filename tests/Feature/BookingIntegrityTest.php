@@ -74,6 +74,7 @@ class BookingIntegrityTest extends TestCase
             '2026_09_21_135116_split_floor_toggles_by_wing_in_operational_settings.php',
             '2026_09_28_120000_add_pass_token_to_bookings_table.php',
             '2026_09_29_100000_add_request_token_to_payments.php',
+            '2026_10_04_130000_add_max_capacity_to_room_categories.php',
         ] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
@@ -98,6 +99,18 @@ class BookingIntegrityTest extends TestCase
     private function offer(array $overrides = []): Coupon
     {
         return Coupon::create(array_merge(['internal_name' => 'Oferta prueba', 'auto_apply' => true, 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20], $overrides));
+    }
+
+    public function test_booking_over_the_category_max_capacity_is_rejected(): void
+    {
+        $this->room->category->update(['max_capacity' => 4]);
+
+        $ok = $this->booking(['guests_count' => 4]);
+        $this->assertSame(4, $ok->guests_count);
+
+        $this->expectException(RoomNotAvailableException::class);
+        $this->expectExceptionMessage('admite como máximo 4 personas');
+        $this->booking(['guests_count' => 5, 'starts_at' => Carbon::parse('2026-10-12 12:00')]);
     }
 
     public function test_fixed_price_with_included_guest_is_not_discounted_twice(): void
