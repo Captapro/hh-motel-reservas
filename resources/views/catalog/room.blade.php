@@ -106,7 +106,7 @@
             @if ($photos->isNotEmpty())
                 <div class="gallery">
                     @foreach ($photos->take(8) as $url)
-                        <a href="{{ $url }}" target="_blank" rel="noopener"><img src="{{ $url }}" alt="Foto {{ $room->name }}" loading="lazy"></a>
+                        <a href="{{ $url }}" data-viewer="room" aria-label="Ampliar foto {{ $loop->iteration }}"><img src="{{ $url }}" alt="Foto {{ $room->name }}" loading="lazy"></a>
                     @endforeach
                 </div>
             @else
@@ -244,5 +244,6 @@
             }
         }
     </script>
+    @include('partials.photo-viewer')
 </body>
 </html>

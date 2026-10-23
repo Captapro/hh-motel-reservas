@@ -52,7 +52,7 @@
                     @if ($room->photos)
                         <div class="hh-media-preview">
                             @foreach ($room->photos as $url)
-                                <a href="{{ $url }}" target="_blank" rel="noopener"><img src="{{ $url }}" alt="Foto de {{ $room->name }}" loading="lazy"></a>
+                                <a href="{{ $url }}" data-viewer="admin-room"><img src="{{ $url }}" alt="Foto de {{ $room->name }}" loading="lazy"></a>
                             @endforeach
                         </div>
                     @endif
@@ -125,4 +125,5 @@
             </div>
         </div>
     @endif
+    @include('partials.photo-viewer')
 @endsection
