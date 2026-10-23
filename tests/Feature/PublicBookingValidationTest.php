@@ -10,6 +10,7 @@ use App\Models\RateRuleWindow;
 use App\Models\Room;
 use App\Models\RoomCategory;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ class PublicBookingValidationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->travelTo(Carbon::parse('2026-10-01 12:00'));
         $this->assertSame('sqlite', DB::connection()->getDriverName());
         foreach ([
             '0001_01_01_000000_create_users_table.php',
