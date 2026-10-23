@@ -19,10 +19,35 @@ class GuestReviewController extends Controller
             ->get();
 
         return view('admin.reviews.index', [
+            'google' => $this->googleSummary(),
             'reviews' => $reviews,
             'lowCount' => GuestReview::where('rating', '<=', 3)->count(),
             'avgRating' => round((float) GuestReview::avg('rating'), 1),
         ]);
+    }
+
+    /**
+     * Puntaje y cantidad de reseñas reales de Google, leídos de la página del
+     * widget de GoHighLevel (viene en sus datos). Se guarda 1 hora; si falla,
+     * se reintenta en 5 minutos y la pantalla sigue funcionando sin ese dato.
+     *
+     * @return array{rating: float, count: int}|null
+     */
+    private function googleSummary(): ?array
+    {
+        return \Illuminate\Support\Facades\Cache::remember('google_reviews_summary', 3600, function () {
+            try {
+                $html = \Illuminate\Support\Facades\Http::timeout(5)->get(config('services.hh_reviews.widget_url'))->body();
+                if (preg_match('/"totalRating":\s*([0-9.]+)/', $html, $r) && preg_match('/"totalReviews":\s*(\d+)/', $html, $c)) {
+                    return ['rating' => (float) $r[1], 'count' => (int) $c[1]];
+                }
+            } catch (\Throwable $e) {
+                // se muestra sin el dato de Google
+            }
+            \Illuminate\Support\Facades\Cache::put('google_reviews_summary', null, 300);
+
+            return null;
+        });
     }
 
     /**

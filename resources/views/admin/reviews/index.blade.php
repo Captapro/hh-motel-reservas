@@ -18,8 +18,18 @@
         <div>
             <div class="card">
                 <strong style="display:block; font-size:15px; margin-bottom:12px;">Puntuación real en Google</strong>
-                <script type="text/javascript" src="https://link.hhmotel.cl/reputation/assets/review-widget.js"></script>
-                <iframe class="lc_reviews_widget" src="https://link.hhmotel.cl/reputation/widgets/review_widget/ksYYfSiY8nP4YFvkrJFJ" frameborder="0" scrolling="auto" style="min-width:100%; width:100%; height:560px; border:none;"></iframe>
+                @if ($google)
+                    @php $fill = max(0, min(100, round($google['rating'] / 5 * 100))); @endphp
+                    <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+                        <div style="font-size:44px; font-weight:800; line-height:1;">{{ number_format($google['rating'], 1, ',', '') }}</div>
+                        <div>
+                            <div style="font-size:24px; letter-spacing:2px; line-height:1.1; background:linear-gradient(90deg, #9fb93c {{ $fill }}%, #444 {{ $fill }}%); -webkit-background-clip:text; background-clip:text; color:transparent;" aria-label="{{ number_format($google['rating'], 1, ',', '') }} de 5 estrellas">★★★★★</div>
+                            <div style="color:#aaa; font-size:14px; margin-top:2px;">{{ number_format($google['count'], 0, ',', '.') }} reseñas</div>
+                        </div>
+                    </div>
+                @else
+                    <p class="sub" style="margin:0;">No se pudo leer el puntaje de Google en este momento. Se vuelve a intentar solo en unos minutos.</p>
+                @endif
             </div>
 
             <div class="card">
