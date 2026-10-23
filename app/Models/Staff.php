@@ -51,6 +51,8 @@ class Staff extends Model
 
     public function openShiftLog(): ?StaffShiftLog
     {
+        StaffShiftLog::closeStale();
+
         return $this->shiftLogs()->whereNull('ended_at')->latest('started_at')->first();
     }
 }

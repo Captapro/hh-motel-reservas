@@ -49,7 +49,7 @@
 <div class="toast-wrap" id="toast-wrap"></div>
 <div class="page-inner">
     <h1>HH MOTEL — Dónde están las mucamas</h1>
-    <p class="sub">Última habitación que cada una escaneó por QR y cuándo · se avisa solo, sin recargar · <a href="{{ route('mucamas.activity') }}" style="color:#ff7918;">actualizar ahora</a></p>
+    <p class="sub">Solo las mucamas en turno ahora · última habitación que cada una escaneó por QR y cuándo · se avisa solo, sin recargar · <a href="{{ route('mucamas.activity') }}" style="color:#ff7918;">actualizar ahora</a></p>
 
     @forelse ($mucamas as $mucama)
         <div class="mucama-card">
@@ -88,7 +88,7 @@
             @endif
         </div>
     @empty
-        <p class="empty">No hay mucamas activas cargadas en Personal.</p>
+        <p class="empty">Ninguna mucama en turno ahora. El turno empieza cuando entra al panel de mucamas con su PIN y termina cuando sale.</p>
     @endforelse
 
     <h2 class="section">Registro de turnos de hoy</h2>

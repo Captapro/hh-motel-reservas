@@ -26,7 +26,12 @@ class MucamaActivityController extends Controller
         // una mucama que nunca escaneó aparecería arriba de una que sí lo
         // hizo hace un rato -- se fuerza el orden explícito para que sea el
         // mismo sin importar el motor.
+        StaffShiftLog::closeStale();
+
+        // Solo las que están en turno real: el turno empieza cuando entran
+        // al panel con su PIN y termina cuando salen.
         $mucamas = Staff::activeMucamas()
+            ->whereHas('shiftLogs', fn ($q) => $q->whereNull('ended_at'))
             ->with(['lastQrRoom.category', 'shiftLogs' => fn ($q) => $q->whereNull('ended_at')])
             ->orderByRaw('last_qr_seen_at IS NULL')
             ->orderByDesc('last_qr_seen_at')
@@ -54,7 +59,8 @@ class MucamaActivityController extends Controller
      */
     public function status(): JsonResponse
     {
-        $mucamas = Staff::activeMucamas()->get(['id', 'name', 'last_qr_room_id', 'last_qr_seen_at']);
+        StaffShiftLog::closeStale();
+        $mucamas = Staff::activeMucamas()->whereHas('shiftLogs', fn ($q) => $q->whereNull('ended_at'))->get(['id', 'name', 'last_qr_room_id', 'last_qr_seen_at']);
         $roomNames = Room::whereIn('id', $mucamas->pluck('last_qr_room_id')->filter())->pluck('name', 'id');
 
         return response()->json($mucamas->map(fn (Staff $m) => [

@@ -49,6 +49,8 @@ class User extends Authenticatable
 
     public function openShiftLog(): ?StaffShiftLog
     {
+        StaffShiftLog::closeStale();
+
         return $this->shiftLogs()->whereNull('ended_at')->latest('started_at')->first();
     }
 }
