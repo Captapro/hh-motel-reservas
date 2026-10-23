@@ -346,23 +346,23 @@
     </div>
 
     <div class="daily-summary">
-        <a href="{{ route('sales.daily') }}" class="dsum-tile">
+        <a href="{{ auth()->user()?->canAccess('ventas') ? route('sales.daily') : '#' }}" class="dsum-tile">
             <span class="dsum-label">Playrooms vendidos hoy</span>
             <span class="dsum-value">{{ $dailySummary['rooms_count'] }}</span>
         </a>
-        <a href="{{ route('sales.daily') }}" class="dsum-tile">
+        <a href="{{ auth()->user()?->canAccess('ventas') ? route('sales.daily') : '#' }}" class="dsum-tile">
             <span class="dsum-label">Extras vendidos hoy</span>
             <span class="dsum-value">{{ $dailySummary['extras_count'] }}</span>
         </a>
-        <a href="{{ route('sales.daily') }}" class="dsum-tile">
+        <a href="{{ auth()->user()?->canAccess('ventas') ? route('sales.daily') : '#' }}" class="dsum-tile">
             <span class="dsum-label">Venta Playrooms</span>
             <span class="dsum-value">${{ number_format($dailySummary['rooms_revenue'], 0, ',', '.') }}</span>
         </a>
-        <a href="{{ route('sales.daily') }}" class="dsum-tile">
+        <a href="{{ auth()->user()?->canAccess('ventas') ? route('sales.daily') : '#' }}" class="dsum-tile">
             <span class="dsum-label">Venta extras</span>
             <span class="dsum-value">${{ number_format($dailySummary['extras_revenue'], 0, ',', '.') }}</span>
         </a>
-        <a href="{{ route('sales.daily') }}" class="dsum-tile total">
+        <a href="{{ auth()->user()?->canAccess('ventas') ? route('sales.daily') : '#' }}" class="dsum-tile total">
             <span class="dsum-label">Total del día</span>
             <span class="dsum-value">${{ number_format($dailySummary['rooms_revenue'] + $dailySummary['extras_revenue'], 0, ',', '.') }}</span>
         </a>

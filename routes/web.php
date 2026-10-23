@@ -82,7 +82,7 @@ Route::get('/login', [LoginController::class, 'create'])->middleware('guest')->n
 Route::post('/login', [LoginController::class, 'store'])->middleware(['guest', 'throttle:8,1'])->name('login.store');
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'section'])->group(function () {
 
 Route::get('/reservar', [ReservationController::class, 'create'])->name('reservations.create');
 Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1')->name('customers.lookup');
@@ -237,6 +237,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::put('/personal/{staff}', [StaffController::class, 'update'])->name('staff.update');
     Route::delete('/personal/{staff}', [StaffController::class, 'destroy'])->name('staff.destroy');
 
+    Route::get('/accesos', [\App\Http\Controllers\Admin\AccessController::class, 'index'])->name('access.index');
+    Route::put('/accesos', [\App\Http\Controllers\Admin\AccessController::class, 'update'])->name('access.update');
     Route::post('/cuentas', [\App\Http\Controllers\Admin\AccountController::class, 'store'])->name('accounts.store');
     Route::put('/cuentas/{user}', [\App\Http\Controllers\Admin\AccountController::class, 'update'])->name('accounts.update');
     Route::delete('/cuentas/{user}', [\App\Http\Controllers\Admin\AccountController::class, 'destroy'])->name('accounts.destroy');

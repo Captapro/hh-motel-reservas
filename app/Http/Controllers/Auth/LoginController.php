@@ -43,7 +43,7 @@ class LoginController extends Controller
             StaffShiftLog::create(['user_id' => $user->id, 'started_at' => now()]);
         }
 
-        return redirect()->intended(route('rooms.board'));
+        return redirect()->intended(route($user->homeRoute()));
     }
 
     public function destroy(Request $request): RedirectResponse

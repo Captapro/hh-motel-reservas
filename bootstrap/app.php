@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
             'mucama' => \App\Http\Middleware\EnsureMucamaSession::class,
+            'section' => \App\Http\Middleware\EnsureSectionAccess::class,
         ]);
 
         // Global (no solo en rutas 'auth'): así una cuenta desactivada a

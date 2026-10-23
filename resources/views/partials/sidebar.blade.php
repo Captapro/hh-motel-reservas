@@ -12,12 +12,16 @@
         ['admin.analytics.index', 'admin.analytics.*', 'Analytics', 'M4 21V11h4v10 M10 21V6h4v15 M16 21V3h4v18'],
         ['admin.reviews.index', 'admin.reviews.*', 'Opiniones', 'M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z'],
     ];
+    // Cada ícono pertenece a una sección; solo se muestran las que el perfil puede ver.
+    $sectionOf = ['Tablero' => 'tablero', 'Calendario' => 'calendario', 'Clientes' => 'clientes', 'Productos' => 'productos', 'Caja' => 'caja',
+        'Operaciones' => 'operaciones', 'Ventas' => 'ventas', 'Analytics' => 'analytics', 'Opiniones' => 'opiniones'];
+    $navigation = array_values(array_filter($navigation, fn ($item) => ! isset($sectionOf[$item[2]]) || auth()->user()?->canAccess($sectionOf[$item[2]])));
     if (auth()->user()?->isAdministrador()) {
         $navigation[] = ['admin.categories.index', 'admin.categories.*,admin.rooms.*,admin.furniture.*,admin.rates.*,admin.offers.*,admin.upsells.*,admin.coupons.*,admin.staff.*,admin.shifts.*', 'Administración', 'M12 3v3 M12 18v3 M3 12h3 M18 12h3 M6 6l2 2 M16 16l2 2 M6 18l2-2 M16 8l2-2 M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0'];
     }
 @endphp
 <aside class="hh-rail" aria-label="Navegación principal">
-    <a class="hh-rail-brand" href="{{ route('rooms.board') }}" aria-label="HH Motel — Tablero"><b>HH</b><span>MOTEL<small>Recepción</small></span></a>
+    <a class="hh-rail-brand" href="{{ route(auth()->user()?->homeRoute() ?? 'rooms.board') }}" aria-label="HH Motel — Tablero"><b>HH</b><span>MOTEL<small>Recepción</small></span></a>
     <nav>
         @foreach ($navigation as [$destination, $patterns, $label, $path])
             @php $active = request()->routeIs(...explode(',', $patterns)); @endphp

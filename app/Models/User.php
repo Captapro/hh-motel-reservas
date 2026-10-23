@@ -37,6 +37,24 @@ class User extends Authenticatable
         return $this->role === 'administrador';
     }
 
+    /** Si este perfil puede entrar a la sección (el administrador siempre puede). */
+    public function canAccess(string $section): bool
+    {
+        return \App\Support\AccessSections::allows($this->role, $section);
+    }
+
+    /** Primera sección a la que este perfil puede entrar, para después del login. */
+    public function homeRoute(): string
+    {
+        foreach (\App\Support\AccessSections::SECTIONS as $key => [, $route]) {
+            if ($this->canAccess($key)) {
+                return $route;
+            }
+        }
+
+        return 'login';
+    }
+
     public function isRecepcion(): bool
     {
         return $this->role === 'recepcion';

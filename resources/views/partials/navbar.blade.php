@@ -40,14 +40,20 @@
 <div class="hh-nav-wrap">
     <div class="hh-navbar">
         <span class="hh-brand">HH MOTEL</span>
-        <a href="{{ route('rooms.board') }}" class="{{ request()->routeIs('rooms.board') ? 'hh-active' : '' }}">Tablero</a>
-        <a href="{{ route('reservations.search') }}" class="{{ request()->routeIs('reservations.search') ? 'hh-active' : '' }}">Buscar reserva</a>
-        <a href="{{ route('sales.daily') }}" class="{{ request()->routeIs('sales.daily') ? 'hh-active' : '' }}">Venta de hoy</a>
-        <a href="{{ route('sales.monthly') }}" class="{{ request()->routeIs('sales.monthly') ? 'hh-active' : '' }}">Ventas</a>
-        <a href="{{ route('cash.show') }}" class="{{ request()->routeIs('cash.show') ? 'hh-active' : '' }}">Caja</a>
-        <a href="{{ route('aseo.daily') }}" class="{{ request()->routeIs('aseo.daily') ? 'hh-active' : '' }}">Aseo del día</a>
-        <a href="{{ route('rooms.inspections.panel') }}" class="{{ request()->routeIs('rooms.inspections.*') ? 'hh-active' : '' }}">Mantención</a>
-        <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.*') ? 'hh-active' : '' }}">Admin</a>
+        @php $u = auth()->user(); @endphp
+        @if ($u?->canAccess('tablero'))<a href="{{ route('rooms.board') }}" class="{{ request()->routeIs('rooms.board') ? 'hh-active' : '' }}">Tablero</a>@endif
+        @if ($u?->canAccess('tablero') || $u?->canAccess('calendario'))<a href="{{ route('reservations.search') }}" class="{{ request()->routeIs('reservations.search') ? 'hh-active' : '' }}">Buscar reserva</a>@endif
+        @if ($u?->canAccess('ventas'))<a href="{{ route('sales.monthly') }}" class="{{ request()->routeIs('sales.*') ? 'hh-active' : '' }}">Ventas</a>@endif
+        @if ($u?->canAccess('caja'))<a href="{{ route('cash.show') }}" class="{{ request()->routeIs('cash.show') ? 'hh-active' : '' }}">Caja</a>@endif
+        @if ($u?->canAccess('operaciones'))
+            <a href="{{ route('aseo.daily') }}" class="{{ request()->routeIs('aseo.daily') ? 'hh-active' : '' }}">Aseo del día</a>
+            <a href="{{ route('rooms.inspections.panel') }}" class="{{ request()->routeIs('rooms.inspections.*') ? 'hh-active' : '' }}">Mantención</a>
+        @endif
+        @if ($u?->isAdministrador())
+            <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.*') ? 'hh-active' : '' }}">Admin</a>
+        @elseif ($u?->canAccess('clientes'))
+            <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.customers.*') ? 'hh-active' : '' }}">Clientes</a>
+        @endif
         <span class="hh-spacer"></span>
         @stack('nav-before-tariff')
         @if (isset($showTariff) && $showTariff)
@@ -98,6 +104,7 @@
             <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.staff.index') }}" class="{{ request()->routeIs('admin.staff.*') ? 'hh-active' : '' }}">Personal</a>
+                <a href="{{ route('admin.access.index') }}" class="{{ request()->routeIs('admin.access.*') ? 'hh-active' : '' }}">Perfiles y accesos</a>
             </span>
             <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">
