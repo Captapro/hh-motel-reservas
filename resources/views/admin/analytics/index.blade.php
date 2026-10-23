@@ -117,6 +117,11 @@
         $qs = fn ($over) => array_merge(['preset' => $preset, 'from' => $preset === 'custom' ? $from : null, 'to' => $preset === 'custom' ? $to : null, 'metric' => $metric, 'category' => $categoryId], $over);
     @endphp
 
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;">
+        <a href="{{ route('admin.analytics.index') }}" style="padding:7px 14px;border-radius:7px;background:#ff7918;color:#111;font-weight:600;font-size:13px;text-decoration:none;">Analytics</a>
+        <a href="{{ route('sales.monthly') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Resumen mensual</a>
+        <a href="{{ route('sales.daily') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Venta de hoy</a>
+    </div>
     <h1>Analytics</h1>
     <p class="sub">{{ $rangeLabel }} · viendo por <b>{{ $metricLabel }}</b>{{ $categoryId ? ' · '.$categories->firstWhere('id', $categoryId)?->name : '' }}. No cuenta reservas canceladas.</p>
 
