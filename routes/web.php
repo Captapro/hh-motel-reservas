@@ -218,6 +218,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/clientes', [AdminCustomerController::class, 'index'])->name('customers.index');
     Route::get('/clientes/{customer}', [AdminCustomerController::class, 'show'])->name('customers.show');
     Route::put('/clientes/{customer}', [AdminCustomerController::class, 'update'])->name('customers.update');
+    Route::delete('/clientes/{customer}', [AdminCustomerController::class, 'destroy'])->middleware('role:administrador')->name('customers.destroy');
     Route::put('/clientes/{customer}/lista-negra', [AdminCustomerController::class, 'blacklist'])->name('customers.blacklist');
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');

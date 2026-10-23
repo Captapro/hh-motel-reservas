@@ -101,6 +101,18 @@ class BookingIntegrityTest extends TestCase
         return Coupon::create(array_merge(['internal_name' => 'Oferta prueba', 'auto_apply' => true, 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20], $overrides));
     }
 
+    public function test_customer_without_history_can_be_deleted_but_one_with_bookings_cannot(): void
+    {
+        $this->booking();
+        $blocked = $this->delete(route('admin.customers.destroy', $this->customer));
+        $blocked->assertSessionHasErrors('customer');
+        $this->assertDatabaseHas('customers', ['id' => $this->customer->id]);
+
+        $fresh = Customer::create(['name' => 'Sin reservas', 'phone_e164' => '+56922222222']);
+        $this->delete(route('admin.customers.destroy', $fresh))->assertRedirect(route('admin.customers.index'));
+        $this->assertDatabaseMissing('customers', ['id' => $fresh->id]);
+    }
+
     public function test_booking_over_the_category_max_capacity_is_rejected(): void
     {
         $this->room->category->update(['max_capacity' => 4]);

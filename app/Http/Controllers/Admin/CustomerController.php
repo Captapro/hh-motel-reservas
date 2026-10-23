@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\CustomerSegmentRule;
 use App\Services\Integrations\GhlClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
@@ -54,6 +57,29 @@ class CustomerController extends Controller
             if ($model) $model->update(['label'=>$rule['label'] ?? $model->label, 'minimum_stays'=>(int)($rule['minimum_stays'] ?? $model->minimum_stays), 'analysis_window_days'=>($rule['analysis_window_days'] ?? '') !== '' ? (int)$rule['analysis_window_days'] : null, 'stars'=>min(5,max(0,(int)($rule['stars'] ?? $model->stars))), 'stale_after_days'=>($rule['stale_after_days'] ?? '') !== '' ? (int)$rule['stale_after_days'] : null]);
         }
         return back()->with('status', 'Reglas de clasificación actualizadas.');
+    }
+
+    public function destroy(Customer $customer): RedirectResponse
+    {
+        // Un cliente con reservas o cupones usados es parte del historial
+        // (cobros, caja, reportes): borrarlo dejaría esos registros sin dueño.
+        // Solo se elimina uno que nunca reservó; para el resto está la lista
+        // negra.
+        $bookings = $customer->bookings()->count();
+        $redemptions = DB::table('coupon_redemptions')->where('customer_id', $customer->id)->count();
+        if ($bookings > 0 || $redemptions > 0) {
+            return back()->withErrors(['customer' => 'No se puede eliminar: este cliente tiene '.$bookings.' reserva(s) y '.$redemptions.' cupón(es) usado(s) en su historial. Si no quieres que vuelva a reservar, bloquéalo en "Lista negra".']);
+        }
+
+        $old = $customer->only(['id', 'name', 'phone_e164', 'email']);
+        try {
+            $customer->delete();
+        } catch (QueryException $e) {
+            return back()->withErrors(['customer' => 'No se pudo eliminar: el cliente tiene registros asociados. Bloquéalo en "Lista negra" si no quieres que vuelva a reservar.']);
+        }
+        AuditLog::record(auth()->id(), 'cliente.eliminar', 'Customer', $old['id'], $old, null);
+
+        return redirect()->route('admin.customers.index')->with('status', 'Cliente '.$old['name'].' eliminado. (No se borra de GHL: si hace falta, elimínalo allá.)');
     }
 
     public function blacklist(Request $request, Customer $customer): RedirectResponse

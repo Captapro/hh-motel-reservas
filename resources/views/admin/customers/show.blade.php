@@ -24,6 +24,9 @@
         .code { font-family: ui-monospace, monospace; color:#ff7918; font-size: 12.5px; }
         .when { font-weight:600; font-size:14.5px; }
         .meta { color:#999; font-size:13px; margin-top:4px; }
+        .client-fields { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px 16px; }
+        .client-fields input, .client-fields select { width:100%; box-sizing:border-box; }
+        .danger-zone { border:1px solid #5a2327; background:#1d1315; }
         .empty { color:#777; font-size:14px; padding: 4px 0 20px; }
     </style>
 
@@ -58,7 +61,7 @@
         <div class="card" style="margin-top:10px;">
             <form method="POST" action="{{ route('admin.customers.update', $customer) }}">
                 @csrf @method('PUT')
-                <div class="row2">
+                <div class="client-fields">
                     <div>
                         <label>Nombre</label>
                         <input name="name" value="{{ $customer->name }}" maxlength="150" required>
@@ -157,5 +160,27 @@
                 <div class="meta">{{ $booking->room->name }} ({{ $booking->room->category->name }}) · {{ $booking->duration_minutes / 60 }} h · <span class="code">{{ $booking->code }}</span></div>
             </a>
         @endforeach
+    @endif
+
+    @php
+        $bookingCount = $customer->bookings()->count();
+        $redemptionCount = \Illuminate\Support\Facades\DB::table('coupon_redemptions')->where('customer_id', $customer->id)->count();
+    @endphp
+    @if ($errors->has('customer'))
+        <div class="card" style="border:1px solid #a33;margin-top:22px;"><p style="margin:0;color:#ff9a9a;">{{ $errors->first('customer') }}</p></div>
+    @endif
+    @if (auth()->user()?->role === 'administrador')
+        <div class="card danger-zone" style="margin-top:22px;">
+            <strong>Eliminar cliente</strong>
+            @if ($bookingCount === 0 && $redemptionCount === 0)
+                <p class="sub" style="margin:6px 0 12px;">Este cliente nunca reservó, así que se puede eliminar. No se borra de GHL.</p>
+                <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}" onsubmit="return confirm('¿Eliminar a {{ e($customer->name) }}? Esta acción no se puede deshacer.');">
+                    @csrf @method('DELETE')
+                    <button class="btn" type="submit" style="background:#b3202f;color:#fff;">Eliminar cliente</button>
+                </form>
+            @else
+                <p class="sub" style="margin:6px 0 0;">No se puede eliminar: tiene {{ $bookingCount }} reserva(s){{ $redemptionCount ? ' y '.$redemptionCount.' cupón(es) usado(s)' : '' }} en su historial, y borrarlo dejaría esos cobros sin dueño. Si no quieres que vuelva a reservar, usa <b>Lista negra</b> arriba.</p>
+            @endif
+        </div>
     @endif
 @endsection
