@@ -51,6 +51,14 @@
         .pill.advance { background:#2a2410; color:#e8c76f; }
         .empty { color:#666; font-size:14px; padding: 30px 0; text-align:center; }
         .table-wrap { overflow-x:auto; background:#1c1c1c; border:1px solid #333; border-radius:10px; margin-bottom:16px; }
+        th.n, td.n { text-align:right; font-variant-numeric: tabular-nums; white-space:nowrap; }
+        td { white-space:nowrap; }
+        tr.total td { font-weight:700; color:#fff; background:#202020; border-top:1px solid #444; }
+        tr.zero td { color:#555; }
+        .pill.ok { background:#16301f; color:#6fd39a; } .pill.warn { background:#2a2410; color:#e8c76f; } .pill.bad { background:#3a1c22; color:#e88a9a; }
+        .miss { display:inline-block; font-size:10px; color:#e8c76f; background:#2a2410; border:1px solid #6b5a1e; border-radius:20px; padding:1px 7px; }
+        details.adv { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:12px 16px; margin-bottom:16px; }
+        details.adv summary { cursor:pointer; color:#e8c76f; font-size:13px; }
     </style>
 </head>
 <body>
@@ -61,9 +69,25 @@
         <a href="{{ route('sales.monthly') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Historial de ventas</a>
         <a href="{{ route('admin.analytics.index') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Analytics</a>
     </div>
+    @php
+        $money = fn ($n) => '$'.number_format((int) $n, 0, ',', '.');
+        $groupOf = fn ($name) => match (true) {
+            in_array($name, ['Débito', 'Crédito', 'Mercado Pago'], true) => 'Tarjeta',
+            $name === 'Efectivo' => 'Efectivo',
+            $name === 'Transferencia' => 'Transferencia',
+            default => 'Otro',
+        };
+        $cashGroups = ['Tarjeta' => 0, 'Efectivo' => 0, 'Transferencia' => 0, 'Otro' => 0];
+        foreach ($cashByMethod as $method => $amount) { $cashGroups[$groupOf($method)] += $amount; }
+        $live = $bookings->reject(fn ($b) => $b->booking_status === 'CANCELADA');
+        $lodging = $live->sum('price_final');
+        $extrasSum = $live->sum(fn ($b) => (int) $b->addons->sum('amount'));
+    @endphp
+
     <div class="topline">
         <div>
             <h1>Venta del día — {{ ucfirst($day->locale('es')->isoFormat('dddd D [de] MMMM')) }}</h1>
+            <p class="sub" style="margin-bottom:0;">Estadías que empiezan este día y plata que entró a caja · <a href="{{ route('sales.monthly', $day->format('Y-m')) }}">ver el mes completo →</a></p>
         </div>
         <div class="nav-day">
             <a href="{{ route('sales.daily', $day->copy()->subDay()->toDateString()) }}">← Día anterior</a>
@@ -74,61 +98,15 @@
         </div>
     </div>
 
-    <div class="sec-label">Cobros de caja — plata que entró hoy, sin importar de qué reserva es</div>
-    <div class="cards">
-        <div class="card cash-total"><div class="label">Total cobrado hoy</div><div class="value">${{ number_format($cashTotal, 0, ',', '.') }}</div></div>
-        <div class="card"><div class="label">De reservas de hoy</div><div class="value">${{ number_format($samedayTotal, 0, ',', '.') }}</div></div>
-        <div class="card advance"><div class="label">Anticipos — reservas futuras</div><div class="value">${{ number_format($advanceTotal, 0, ',', '.') }}</div></div>
-        <div class="card late"><div class="label">Saldos de días anteriores</div><div class="value">${{ number_format($lateTotal, 0, ',', '.') }}</div></div>
+    <div class="cards" style="margin-top:14px;">
+        <div class="card count"><div class="label">Habitaciones vendidas</div><div class="value">{{ $live->count() }}</div></div>
+        <div class="card revenue"><div class="label">Venta total</div><div class="value">{{ $money($revenue) }}</div></div>
+        <div class="card collected"><div class="label">Cobrado de esas ventas</div><div class="value">{{ $money($collected) }}</div></div>
+        <div class="card pending"><div class="label">Pendiente</div><div class="value">{{ $money($pending) }}</div></div>
+        <div class="card cash-total"><div class="label">Entró a caja hoy</div><div class="value">{{ $money($cashTotal) }}</div></div>
     </div>
 
-    <div class="panel" style="margin-bottom:20px;">
-        <h3>Por método de pago (cobrado hoy)</h3>
-        @forelse ($cashByMethod as $method => $amount)
-            <div class="row"><span>{{ $method }}</span><span>${{ number_format($amount, 0, ',', '.') }}</span></div>
-        @empty
-            <div class="row"><span>Sin pagos registrados hoy</span><span>—</span></div>
-        @endforelse
-        <div class="row total"><span>Total</span><span>${{ number_format($cashTotal, 0, ',', '.') }}</span></div>
-    </div>
-
-    @if ($advanceBookings->isNotEmpty())
-        <div class="panel" style="margin-bottom:20px;">
-            <h3>Anticipos de hoy — dónde queda esa plata registrada</h3>
-            @foreach ($advanceBookings as $payment)
-                <div class="row">
-                    <span>
-                        {{ $payment->booking->room->name ?? '—' }} · {{ $payment->booking->customer->name ?? '—' }}
-                        · estadía {{ $payment->booking->starts_at->timezone('America/Santiago')->format('d/m/Y H:i') }}
-                        · <a class="code" href="{{ route('reservations.show', $payment->booking->code) }}">{{ $payment->booking->code }}</a>
-                    </span>
-                    <span>${{ number_format($payment->amount, 0, ',', '.') }}</span>
-                </div>
-            @endforeach
-            <p class="sec-note" style="margin-top:10px;">Esta plata ya está en la caja de hoy. El día de esa estadía, va a aparecer en su "Habitaciones vendidas" como venta ya cobrada — no hay que volver a contarla ese día.</p>
-        </div>
-    @endif
-
-    <div class="sec-label">Habitaciones vendidas — estadías que empiezan hoy</div>
-    <div class="cards">
-        <div class="card count"><div class="label">Reservas</div><div class="value">{{ $bookings->count() }}</div></div>
-        <div class="card revenue"><div class="label">Venta total</div><div class="value">${{ number_format($revenue, 0, ',', '.') }}</div></div>
-        <div class="card collected"><div class="label">Cobrado</div><div class="value">${{ number_format($collected, 0, ',', '.') }}</div></div>
-        <div class="card pending"><div class="label">Pendiente</div><div class="value">${{ number_format($pending, 0, ',', '.') }}</div></div>
-    </div>
-    @if ($collectedInAdvanceForToday > 0)
-        <p class="sec-note">De lo cobrado (${{ number_format($collected, 0, ',', '.') }}), ${{ number_format($collectedInAdvanceForToday, 0, ',', '.') }} ya había entrado a caja en un día anterior como anticipo — no es plata nueva de hoy.</p>
-    @endif
-
-    <div class="panel" style="margin-bottom:20px;">
-        <h3>Por tarifa</h3>
-        @forelse ($byTariff as $name => $data)
-            <div class="row"><span>{{ $name ?? 'Sin tarifa' }} ({{ $data['count'] }})</span><span>${{ number_format($data['revenue'], 0, ',', '.') }}</span></div>
-        @empty
-            <div class="row"><span>Sin reservas este día</span><span>—</span></div>
-        @endforelse
-    </div>
-
+    <div class="sec-label">Registro del día</div>
     <div class="table-wrap">
         @if ($bookings->isEmpty())
             <p class="empty">No hay reservas asignadas a este día.</p>
@@ -136,30 +114,86 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Hora</th><th>Habitación</th><th>Cliente</th><th>Tarifa</th>
-                        <th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th>
+                        <th>Hora</th><th>Reserva</th><th>Hab.</th><th>Categoría</th><th>Cliente</th><th>Tarifa</th>
+                        <th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th>
+                        <th>Pago</th><th>Voucher / boleta</th><th>Estado</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($bookings as $booking)
-                        <tr class="{{ $booking->booking_status === 'CANCELADA' ? 'cancelada' : '' }}">
+                        @php
+                            $cancelled = $booking->booking_status === 'CANCELADA';
+                            $extras = (int) $booking->addons->sum('amount');
+                            $docs = $booking->payments->where('status', 'aprobado')->map(fn ($p) => trim(($p->voucher_number ? 'V '.$p->voucher_number : '').' '.($p->receipt_number ? 'B '.$p->receipt_number : '')))->filter()->implode(' · ');
+                            $methods = $booking->payments->where('status', 'aprobado')->map(fn ($p) => $groupOf($p->paymentMethod?->name))->unique()->implode(' + ');
+                            $paid = $booking->paidAmount();
+                            $balance = $booking->balanceDue();
+                        @endphp
+                        <tr class="{{ $cancelled ? 'cancelada' : '' }}">
                             <td>{{ $booking->starts_at->timezone('America/Santiago')->format('H:i') }}</td>
+                            <td><a class="code" href="{{ route('reservations.show', $booking->code) }}">{{ $booking->code }}</a></td>
                             <td>{{ $booking->room->name }}</td>
-                            <td>{{ $booking->customer->name }}<br><a class="code" href="{{ route('reservations.show', $booking->code) }}">{{ $booking->code }}</a></td>
-                            <td><span class="pill">{{ $booking->rate_rule_name_snapshot ?? '—' }}</span></td>
-                            <td>${{ number_format($booking->price_final + $booking->addonsTotal(), 0, ',', '.') }}</td>
-                            <td>${{ number_format($booking->paidAmount(), 0, ',', '.') }}</td>
-                            <td>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</td>
-                            <td><span class="pill">{{ $booking->booking_status }}</span></td>
+                            <td>{{ $booking->room->category->name }}</td>
+                            <td>{{ $booking->customer->name }}</td>
+                            <td>{{ $booking->rate_rule_name_snapshot ?? '—' }}</td>
+                            <td class="n">{{ $money($booking->price_final) }}</td>
+                            <td class="n">{{ $money($extras) }}</td>
+                            <td class="n"><b>{{ $money($booking->price_final + $extras) }}</b></td>
+                            <td class="n">{{ $money($paid) }}</td>
+                            <td class="n">{{ $balance > 0 && ! $cancelled ? $money($balance) : '—' }}</td>
+                            <td>{{ $methods ?: '—' }}</td>
+                            <td>{!! $docs ?: ($paid > 0 ? '<span class="miss">falta</span>' : '—') !!}</td>
+                            <td><span class="pill {{ $cancelled ? 'bad' : ($balance <= 0 ? 'ok' : 'warn') }}">{{ $booking->booking_status }}</span></td>
                         </tr>
                     @endforeach
+                    <tr class="total">
+                        <td colspan="6">Total del día ({{ $live->count() }} {{ $live->count() === 1 ? 'habitación' : 'habitaciones' }})</td>
+                        <td class="n">{{ $money($lodging) }}</td><td class="n">{{ $money($extrasSum) }}</td><td class="n">{{ $money($revenue) }}</td>
+                        <td class="n">{{ $money($collected) }}</td><td class="n">{{ $money($pending) }}</td><td colspan="3"></td>
+                    </tr>
                 </tbody>
             </table>
         @endif
     </div>
-
     @if ($cancelledCount > 0)
         <p class="sub">{{ $cancelledCount }} {{ Str::plural('reserva', $cancelledCount) }} cancelada{{ $cancelledCount > 1 ? 's' : '' }} ese día — no se cuenta en los totales, aparece atenuada en la tabla.</p>
+    @endif
+
+    <div class="sec-label">Cobros de caja del día — plata que entró, sin importar de qué reserva es</div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Concepto</th><th class="n">Monto</th></tr></thead>
+            <tbody>
+                @foreach ($cashGroups as $label => $amount)
+                    <tr class="{{ $amount === 0 ? 'zero' : '' }}"><td>{{ $label }}</td><td class="n">{{ $money($amount) }}</td></tr>
+                @endforeach
+                <tr class="total"><td>Total cobrado</td><td class="n">{{ $money($cashTotal) }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>De dónde viene lo cobrado</th><th class="n">Monto</th></tr></thead>
+            <tbody>
+                <tr><td>De reservas de este día</td><td class="n">{{ $money($samedayTotal) }}</td></tr>
+                <tr><td>Anticipos de reservas futuras</td><td class="n">{{ $money($advanceTotal) }}</td></tr>
+                <tr><td>Saldos de estadías de días anteriores</td><td class="n">{{ $money($lateTotal) }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    @if ($collectedInAdvanceForToday > 0)
+        <p class="sec-note">De lo cobrado por las ventas de hoy ({{ $money($collected) }}), {{ $money($collectedInAdvanceForToday) }} ya había entrado a caja en un día anterior como anticipo — no es plata nueva de este día.</p>
+    @endif
+    @if ($advanceBookings->isNotEmpty())
+        <details class="adv">
+            <summary>Anticipos de este día ({{ $advanceBookings->count() }}) — dónde queda registrada esa plata</summary>
+            @foreach ($advanceBookings as $payment)
+                <div class="row">
+                    <span>{{ $payment->booking->room->name ?? '—' }} · {{ $payment->booking->customer->name ?? '—' }} · estadía {{ $payment->booking->starts_at->timezone('America/Santiago')->format('d/m/Y H:i') }} · <a class="code" href="{{ route('reservations.show', $payment->booking->code) }}">{{ $payment->booking->code }}</a></span>
+                    <span>{{ $money($payment->amount) }}</span>
+                </div>
+            @endforeach
+        </details>
     @endif
     </div>
 </body>
