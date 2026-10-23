@@ -296,6 +296,7 @@
         </div>
         <div class="topline-toolbar">
             <a class="compact-toggle sales-btn" href="{{ route('sales.daily') }}">Ventas del día →</a>
+            <a class="compact-toggle sales-btn" href="{{ route('sales.monthly') }}">Resumen del mes →</a>
             <a class="compact-toggle" href="{{ route('calendar.index') }}">Calendario</a>
             <a class="compact-toggle" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
             <a class="compact-toggle" href="{{ route('mucamas.activity') }}">Dónde están las mucamas →</a>
