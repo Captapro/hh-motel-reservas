@@ -31,6 +31,18 @@
         .next-steps strong { display:block; margin-bottom:6px; font-size:13.5px; }
         .next-steps ul { margin:0; padding-left:18px; }
         .next-steps li { margin-bottom:4px; }
+        .qr-box { background:#fff; border:1px solid #e2e2df; border-radius:12px; padding:18px; margin-bottom:20px; text-align:center; }
+        .qr-box img { width:170px; height:170px; image-rendering:pixelated; }
+        .qr-box strong { display:block; margin:10px 0 2px; font-size:14px; color:#242424; }
+        .qr-box small { color:#62656c; font-size:12.5px; }
+        .qr-box a.pass { display:inline-block; margin-top:12px; color:#b4510d; font-weight:700; font-size:13.5px; text-decoration:none; }
+        .pay-box { background:#fff; border:1px solid #e2e2df; border-radius:10px; padding:14px 16px; margin-bottom:20px; text-align:left; font-size:13.5px; color:#42464e; }
+        .pay-box strong { display:block; margin-bottom:8px; font-size:14px; }
+        .pay-box .line { display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid #eeeeea; }
+        .pay-box .line:last-of-type { border-bottom:none; }
+        .pay-box .line span:first-child { color:#62656c; }
+        .pay-box a.mp { display:block; text-align:center; margin-top:10px; background:#e8f1ff; color:#1a4fa0; padding:11px; border-radius:8px; font-weight:700; text-decoration:none; }
+        .pay-box small { display:block; margin-top:10px; color:#62656c; }
         a.btn { display:block; background:var(--hh-accent); color:#21170e; text-decoration:none; padding: 13px; border-radius: 9px; font-weight:750; font-size:14.5px; }
         a.btn:hover { background:var(--hh-accent-hover); }
         a.back { display:block; margin-top:14px; color:#62656c; text-decoration:none; font-size:13px; }
@@ -61,10 +73,35 @@
             <div class="row"><span class="muted">Total a pagar</span><span>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</span></div>
         </div>
 
+        <div class="qr-box">
+            <img src="{{ $qrDataUri }}" alt="Código QR de la reserva {{ $booking->code }}">
+            <strong>Tu código QR</strong>
+            <small>Muéstralo en recepción al llegar. Código {{ $booking->code }}.</small><br>
+            <a class="pass" href="{{ $passUrl }}">Descargar mi pase (PDF) ↓</a>
+        </div>
+
+        @php $hasBank = ! empty($pay['bank_titular']) && ! empty($pay['bank_account_number']); @endphp
+        @if ($hasBank || ! empty($pay['mercadopago_link']))
+            <div class="pay-box">
+                <strong>Para asegurar tu reserva — ${{ number_format($booking->balanceDue(), 0, ',', '.') }}</strong>
+                @if ($hasBank)
+                    <div class="line"><span>Titular</span><span>{{ $pay['bank_titular'] }}</span></div>
+                    @if (! empty($pay['bank_rut']))<div class="line"><span>RUT</span><span>{{ $pay['bank_rut'] }}</span></div>@endif
+                    @if (! empty($pay['bank_name']))<div class="line"><span>Banco</span><span>{{ $pay['bank_name'] }}</span></div>@endif
+                    <div class="line"><span>{{ $pay['bank_account_type'] ?: 'Cuenta' }}</span><span>{{ $pay['bank_account_number'] }}</span></div>
+                    @if (! empty($pay['bank_email']))<div class="line"><span>Correo</span><span>{{ $pay['bank_email'] }}</span></div>@endif
+                @endif
+                @if (! empty($pay['mercadopago_link']))
+                    <a class="mp" href="{{ $pay['mercadopago_link'] }}" target="_blank" rel="noopener">Pagar con Mercado Pago →</a>
+                @endif
+                <small>Envíanos el comprobante por WhatsApp indicando tu código {{ $booking->code }}.</small>
+            </div>
+        @endif
+
         <div class="next-steps">
             <strong>¿Qué sigue ahora?</strong>
             <ul>
-                <li>Todavía no cobramos nada — el pago se hace al llegar al motel.</li>
+                <li>@if ($hasBank || ! empty($pay['mercadopago_link']))Puedes adelantar el pago con los datos de arriba, o pagar al llegar al motel.@else Todavía no cobramos nada — el pago se hace al llegar al motel.@endif</li>
                 <li>Esta reserva queda pendiente hasta que la confirmemos por WhatsApp.</li>
                 <li>Presenta tu documento de identidad al llegar.</li>
             </ul>

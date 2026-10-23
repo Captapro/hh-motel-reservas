@@ -124,6 +124,19 @@ class BookingIntegrityTest extends TestCase
         $again->assertSee('Voucher')->assertSee('4521');
     }
 
+    public function test_public_confirmation_shows_qr_and_payment_data_when_configured(): void
+    {
+        $booking = $this->booking();
+
+        $this->get(route('catalog.booked', $booking->pass_token))
+            ->assertOk()->assertSee('data:image/png;base64', false)->assertSee('Descargar mi pase')
+            ->assertDontSee('Para asegurar tu reserva');
+
+        config(['services.hh_payment.bank_titular' => 'Titular de prueba', 'services.hh_payment.bank_account_number' => '000111', 'services.hh_payment.mercadopago_link' => 'https://mpago.test/pago']);
+        $this->get(route('catalog.booked', $booking->pass_token))
+            ->assertSee('Para asegurar tu reserva')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('Pagar con Mercado Pago');
+    }
+
     public function test_customer_deletion_respects_history(): void
     {
         $booking = $this->booking();

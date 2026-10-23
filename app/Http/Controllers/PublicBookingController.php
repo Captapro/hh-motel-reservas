@@ -226,7 +226,20 @@ class PublicBookingController extends Controller
     {
         $booking = Booking::with(['room.category', 'addons'])->where('pass_token', $token)->firstOrFail();
 
-        return view('catalog.booked', ['booking' => $booking]);
+        // Mismo QR del pase PDF: recepción lo escanea y abre la ficha.
+        $qr = (new \Endroid\QrCode\Builder\Builder(
+            writer: new \Endroid\QrCode\Writer\PngWriter(),
+            data: route('reservations.show', $booking->code),
+            size: 220,
+            margin: 0,
+        ))->build();
+
+        return view('catalog.booked', [
+            'booking' => $booking,
+            'qrDataUri' => $qr->getDataUri(),
+            'passUrl' => route('bookings.pass.pdf', $booking->pass_token),
+            'pay' => config('services.hh_payment'),
+        ]);
     }
 
     /**
