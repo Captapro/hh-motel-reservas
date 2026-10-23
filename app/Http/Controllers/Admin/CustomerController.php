@@ -61,24 +61,46 @@ class CustomerController extends Controller
 
     public function destroy(Request $request, Customer $customer): RedirectResponse
     {
-        $bookings = $customer->bookings()->get(['id', 'code']);
+        $bookings = $customer->bookings()->with(['payments', 'addons'])->get();
         $withBookings = $request->boolean('with_bookings');
+        $force = $request->boolean('force');
 
-        if ($bookings->isNotEmpty()) {
+        if ($force) {
+            // Para limpiar datos de prueba: borra también pagos y consumos,
+            // pero solo si ninguna reserva llegó a ocurrir, y pide escribir
+            // la palabra ELIMINAR.
+            if (! $customer->canForceDelete()) {
+                return back()->withErrors(['customer' => 'No se puede eliminar: tiene reservas que sí ocurrieron (check-in, finalizadas o vigentes). Eso es historial real y no se borra.']);
+            }
+            if (trim((string) $request->input('confirm_text')) !== 'ELIMINAR') {
+                return back()->withErrors(['customer' => 'Para eliminar el cliente y todo su historial tienes que escribir ELIMINAR en el cuadro de confirmación.']);
+            }
+        } elseif ($bookings->isNotEmpty()) {
             if (! $withBookings) {
                 return back()->withErrors(['customer' => 'Este cliente tiene '.$bookings->count().' reserva(s) en su historial. Para eliminarlo hay que confirmar que también se borran sus reservas.']);
             }
             // Pagos, consumos, cupones o estadías reales son registros de
-            // dinero o de lo que efectivamente ocurrió: no se borran nunca.
+            // dinero o de lo que efectivamente ocurrió: sin "force" no se borran.
             $blockers = $customer->historyBlockers();
             if ($blockers) {
-                return back()->withErrors(['customer' => 'No se puede eliminar: tiene '.implode(', ', $blockers).'. Es historial de caja y no se borra. Si no quieres que vuelva a reservar, usa "Lista negra".']);
+                return back()->withErrors(['customer' => 'No se puede eliminar: tiene '.implode(', ', $blockers).'. Es historial de caja y no se borra.']);
             }
         }
 
-        $old = $customer->only(['id', 'name', 'phone_e164', 'email']) + ['booking_codes' => $bookings->pluck('code')->all()];
+        $old = $customer->only(['id', 'name', 'phone_e164', 'email']) + [
+            'forzado' => $force,
+            'reservas' => $bookings->map(fn ($b) => [
+                'code' => $b->code, 'estado' => $b->booking_status, 'precio' => $b->price_final,
+                'pagos' => $b->payments->map(fn ($p) => ['monto' => $p->amount, 'estado' => $p->status, 'voucher' => $p->voucher_number, 'boleta' => $p->receipt_number])->all(),
+                'consumos' => $b->addons->map(fn ($a) => ['detalle' => $a->description, 'monto' => $a->amount])->all(),
+            ])->all(),
+        ];
+
         try {
-            DB::transaction(function () use ($customer, $bookings) {
+            DB::transaction(function () use ($customer, $bookings, $force) {
+                if ($force) {
+                    DB::table('payments')->whereIn('booking_id', $bookings->pluck('id'))->delete();
+                }
                 if ($bookings->isNotEmpty()) {
                     $customer->bookings()->delete();
                 }
@@ -89,7 +111,7 @@ class CustomerController extends Controller
         }
         AuditLog::record(auth()->id(), 'cliente.eliminar', 'Customer', $old['id'], $old, null);
 
-        return redirect()->route('admin.customers.index')->with('status', 'Cliente '.$old['name'].' eliminado'.($bookings->isNotEmpty() ? ' junto con '.$bookings->count().' reserva(s) sin movimientos' : '').'. (No se borra de GHL: si hace falta, elimínalo allá.)');
+        return redirect()->route('admin.customers.index')->with('status', 'Cliente '.$old['name'].' eliminado'.($bookings->isNotEmpty() ? ' junto con '.$bookings->count().' reserva(s)' : '').'. (No se borra de GHL: si hace falta, elimínalo allá.)');
     }
 
     public function blacklist(Request $request, Customer $customer): RedirectResponse

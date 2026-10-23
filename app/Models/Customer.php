@@ -65,6 +65,18 @@ class Customer extends Model
         return $reasons;
     }
 
+    /**
+     * Se puede borrar a la fuerza (junto con pagos y consumos) solo si
+     * ninguna reserva llegó a ocurrir: todas canceladas, vencidas o no
+     * show, y ninguna con check-in. Sirve para limpiar datos de prueba.
+     */
+    public function canForceDelete(): bool
+    {
+        return ! $this->bookings()
+            ->where(fn ($q) => $q->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])->orWhereNotNull('checked_in_at'))
+            ->exists();
+    }
+
     /** Edad en años cumplidos, o null si no se cargó fecha de nacimiento. */
     public function age(): ?int
     {

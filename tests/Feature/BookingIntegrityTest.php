@@ -137,6 +137,39 @@ class BookingIntegrityTest extends TestCase
             ->assertSee('Para asegurar tu reserva')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('Pagar con Mercado Pago');
     }
 
+    public function test_force_delete_cleans_test_clients_but_never_real_stays(): void
+    {
+        foreach (['2026_09_11_090000_add_identity_fields_to_customers_table.php', '2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+
+        // Cliente de prueba: reserva cancelada con un pago.
+        $test = Customer::create(['name' => 'Prueba pagada', 'phone_e164' => '+56944444444']);
+        $cancelled = $this->booking(['customer' => $test, 'starts_at' => Carbon::parse('2026-10-12 12:00')]);
+        app(PaymentService::class)->register($cancelled, $method, 20000, null, null, auth()->id());
+        $cancelled->update(['booking_status' => 'CANCELADA']);
+
+        $this->get(route('admin.customers.show', $test))->assertOk()->assertSee('Eliminar cliente y su historial de prueba')->assertSee('ELIMINAR');
+        $this->delete(route('admin.customers.destroy', $test), ['with_bookings' => 1])->assertSessionHasErrors('customer');
+        $this->delete(route('admin.customers.destroy', $test), ['force' => 1, 'confirm_text' => 'eliminar'])->assertSessionHasErrors('customer');
+        $this->assertDatabaseHas('customers', ['id' => $test->id]);
+
+        $this->delete(route('admin.customers.destroy', $test), ['force' => 1, 'confirm_text' => 'ELIMINAR'])->assertRedirect(route('admin.customers.index'));
+        $this->assertDatabaseMissing('customers', ['id' => $test->id]);
+        $this->assertDatabaseMissing('bookings', ['id' => $cancelled->id]);
+        $this->assertDatabaseMissing('payments', ['booking_id' => $cancelled->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'cliente.eliminar', 'entity_id' => $test->id]);
+
+        // Cliente con una estadía que sí ocurrió: nunca, ni con force.
+        $real = Customer::create(['name' => 'Estadía real', 'phone_e164' => '+56955555555']);
+        $stay = $this->booking(['customer' => $real, 'starts_at' => Carbon::parse('2026-10-19 12:00')]);
+        $stay->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => now()]);
+        $this->delete(route('admin.customers.destroy', $real), ['force' => 1, 'confirm_text' => 'ELIMINAR'])->assertSessionHasErrors('customer');
+        $this->assertDatabaseHas('customers', ['id' => $real->id]);
+        $this->assertDatabaseHas('bookings', ['id' => $stay->id]);
+    }
+
     public function test_customer_deletion_respects_history(): void
     {
         $booking = $this->booking();

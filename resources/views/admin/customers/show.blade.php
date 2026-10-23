@@ -185,8 +185,19 @@
                     <input type="hidden" name="with_bookings" value="1">
                     <button class="btn" type="submit" style="background:#b3202f;color:#fff;">Eliminar cliente y sus reservas</button>
                 </form>
+            @elseif ($customer->canForceDelete())
+                <p class="sub" style="margin:6px 0 12px;">Tiene {{ implode(', ', $blockers) }}, pero ninguna de sus reservas llegó a ocurrir (todas están canceladas o vencidas). Si son <b>datos de prueba</b>, puedes borrarlo junto con esos pagos. Esto también descuenta esos montos de la caja y de las ventas, y <b>no se puede deshacer</b>.</p>
+                <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}" onsubmit="return confirm('Se borrará a {{ e($customer->name) }}, sus {{ $bookingCount }} reserva(s) y sus pagos. ¿Seguro?');">
+                    @csrf @method('DELETE')
+                    <input type="hidden" name="force" value="1">
+                    <label style="display:block;font-size:12.5px;color:#bbb;margin-bottom:6px;">Para confirmar, escribe <b>ELIMINAR</b></label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <input name="confirm_text" autocomplete="off" placeholder="ELIMINAR" style="max-width:200px;">
+                        <button class="btn" type="submit" style="background:#b3202f;color:#fff;">Eliminar cliente y su historial de prueba</button>
+                    </div>
+                </form>
             @else
-                <p class="sub" style="margin:6px 0 0;">No se puede eliminar: tiene {{ implode(', ', $blockers) }}. Es historial de caja y no se borra. Si no quieres que vuelva a reservar, usa <b>Lista negra</b> arriba.</p>
+                <p class="sub" style="margin:6px 0 0;">No se puede eliminar: tiene {{ implode(', ', $blockers) }} y alguna de sus reservas sí ocurrió o sigue vigente. Es historial real y no se borra. Si no quieres que vuelva a reservar, usa <b>Lista negra</b> arriba.</p>
             @endif
         </div>
     @endif
