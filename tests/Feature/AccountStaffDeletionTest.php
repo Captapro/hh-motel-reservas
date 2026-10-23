@@ -16,6 +16,7 @@ class AccountStaffDeletionTest extends TestCase
         foreach ([
             '0001_01_01_000000_create_users_table.php',
             '2026_08_18_120001_add_role_to_users_table.php',
+            '2026_10_23_210000_allow_soporte_role_on_users.php',
             '2026_08_18_120018_create_audit_logs_table.php',
             '2026_08_18_120002_create_room_categories_table.php',
             '2026_08_18_120003_create_rooms_table.php',
@@ -46,6 +47,23 @@ class AccountStaffDeletionTest extends TestCase
         // Un segundo administrador sí se puede borrar mientras quede otro activo.
         $other = User::factory()->create(['role' => 'administrador', 'is_active' => true]);
         $this->delete(route('admin.accounts.destroy', $other))->assertRedirect(route('admin.staff.index'));
+    }
+
+    public function test_administrators_cannot_see_touch_or_create_soporte_accounts(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador']);
+        $soporte = User::factory()->create(['role' => 'soporte', 'name' => 'Cuenta Soporte Oculta']);
+
+        $this->actingAs($admin);
+        $this->delete(route('admin.accounts.destroy', $soporte))->assertNotFound();
+        $this->put(route('admin.accounts.update', $soporte), ['name' => 'x', 'email' => 'x@x.cl', 'role' => 'recepcion', 'is_active' => 1])->assertNotFound();
+        $this->post(route('admin.accounts.store'), ['name' => 'Otro', 'email' => 'otro@x.cl', 'role' => 'soporte', 'password' => 'clave-segura-123'])->assertSessionHasErrors('role');
+        $this->assertDatabaseHas('users', ['id' => $soporte->id, 'role' => 'soporte']);
+
+        // Soporte sí puede administrar cuentas, incluida otra de soporte.
+        $this->actingAs($soporte);
+        $this->post(route('admin.accounts.store'), ['name' => 'Segundo', 'email' => 'segundo@x.cl', 'role' => 'soporte', 'password' => 'clave-segura-123']);
+        $this->assertDatabaseHas('users', ['email' => 'segundo@x.cl', 'role' => 'soporte']);
     }
 
     public function test_staff_member_can_be_deleted_with_their_shifts(): void

@@ -25,6 +25,7 @@
                     <select name="role" required>
                         <option value="recepcion">Anfitrión</option>
                         <option value="administrador">Administrador</option>
+                        @if (auth()->user()?->isSoporte())<option value="soporte">Soporte (master)</option>@endif
                         <option value="marketing">Marketing</option>
                     </select>
                 </div>
@@ -41,7 +42,7 @@
                     <tr>
                         <td>{{ $account->name }}</td>
                         <td>{{ $account->email }}</td>
-                        <td>{{ $account->role === 'recepcion' ? 'Anfitrión' : ucfirst($account->role) }}</td>
+                        <td>{{ ['recepcion' => 'Anfitrión', 'soporte' => 'Soporte (master)'][$account->role] ?? ucfirst($account->role) }}</td>
                         <td><span class="pill">{{ $account->is_active ? 'ACTIVA' : 'DESACTIVADA' }}</span></td>
                         <td>
                             <details>
@@ -53,6 +54,7 @@
                                     <select name="role">
                                         <option value="recepcion" @selected($account->role === 'recepcion')>Anfitrión</option>
                                         <option value="administrador" @selected($account->role === 'administrador')>Administrador</option>
+                                        @if (auth()->user()?->isSoporte())<option value="soporte" @selected($account->role === 'soporte')>Soporte (master)</option>@endif
                                         <option value="marketing" @selected($account->role === 'marketing')>Marketing</option>
                                     </select>
                                     <select name="is_active">

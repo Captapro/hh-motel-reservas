@@ -169,7 +169,7 @@
     @if ($errors->has('customer'))
         <div class="card" style="border:1px solid #a33;margin-top:22px;"><p style="margin:0;color:#ff9a9a;">{{ $errors->first('customer') }}</p></div>
     @endif
-    @if (auth()->user()?->role === 'administrador')
+    @if (auth()->user()?->isAdministrador())
         <div class="card danger-zone" style="margin-top:22px;">
             <strong>Eliminar cliente</strong>
             @if ($bookingCount === 0)

@@ -104,11 +104,15 @@
             <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.staff.index') }}" class="{{ request()->routeIs('admin.staff.*') ? 'hh-active' : '' }}">Personal</a>
-                <a href="{{ route('admin.access.index') }}" class="{{ request()->routeIs('admin.access.*') ? 'hh-active' : '' }}">Perfiles y accesos</a>
+                @if (auth()->user()?->isSoporte())
+                    <a href="{{ route('admin.access.index') }}" class="{{ request()->routeIs('admin.access.*') ? 'hh-active' : '' }}">Perfiles y accesos</a>
+                @endif
             </span>
             <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">
-                <a href="{{ route('admin.ghl.index') }}" class="{{ request()->routeIs('admin.ghl.*') ? 'hh-active' : '' }}">Integración GHL</a>
+                @if (auth()->user()?->isSoporte())
+                    <a href="{{ route('admin.ghl.index') }}" class="{{ request()->routeIs('admin.ghl.*') ? 'hh-active' : '' }}">Integración GHL</a>
+                @endif
             </span>
         </div>
     @endif

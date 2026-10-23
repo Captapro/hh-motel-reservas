@@ -237,8 +237,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::put('/personal/{staff}', [StaffController::class, 'update'])->name('staff.update');
     Route::delete('/personal/{staff}', [StaffController::class, 'destroy'])->name('staff.destroy');
 
-    Route::get('/accesos', [\App\Http\Controllers\Admin\AccessController::class, 'index'])->name('access.index');
-    Route::put('/accesos', [\App\Http\Controllers\Admin\AccessController::class, 'update'])->name('access.update');
+    Route::get('/accesos', [\App\Http\Controllers\Admin\AccessController::class, 'index'])->middleware('role:soporte')->name('access.index');
+    Route::put('/accesos', [\App\Http\Controllers\Admin\AccessController::class, 'update'])->middleware('role:soporte')->name('access.update');
     Route::post('/cuentas', [\App\Http\Controllers\Admin\AccountController::class, 'store'])->name('accounts.store');
     Route::put('/cuentas/{user}', [\App\Http\Controllers\Admin\AccountController::class, 'update'])->name('accounts.update');
     Route::delete('/cuentas/{user}', [\App\Http\Controllers\Admin\AccountController::class, 'destroy'])->name('accounts.destroy');
@@ -248,7 +248,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::put('/turnos/{shift}', [ShiftController::class, 'update'])->name('shifts.update');
     Route::delete('/turnos/{shift}', [ShiftController::class, 'destroy'])->name('shifts.destroy');
 
-    Route::get('/integraciones/ghl', [\App\Http\Controllers\Admin\GhlTestController::class, 'index'])->name('ghl.index');
-    Route::post('/integraciones/ghl/probar', [\App\Http\Controllers\Admin\GhlTestController::class, 'test'])->name('ghl.test');
+    Route::get('/integraciones/ghl', [\App\Http\Controllers\Admin\GhlTestController::class, 'index'])->middleware('role:soporte')->name('ghl.index');
+    Route::post('/integraciones/ghl/probar', [\App\Http\Controllers\Admin\GhlTestController::class, 'test'])->middleware('role:soporte')->name('ghl.test');
     }); // fin role:administrador
 });

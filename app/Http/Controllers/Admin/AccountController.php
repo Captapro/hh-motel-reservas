@@ -12,12 +12,24 @@ use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
+    /** Roles que quien está logueado puede asignar: solo soporte puede crear otro soporte. */
+    private function assignableRoles(): array
+    {
+        return array_merge(['administrador', 'recepcion', 'marketing'], auth()->user()?->isSoporte() ? ['soporte'] : []);
+    }
+
+    /** Las cuentas de soporte solo las administra otro soporte; para un administrador no existen. */
+    private function guardSoporte(User $user): void
+    {
+        abort_if($user->role === 'soporte' && ! auth()->user()?->isSoporte(), 404);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', Rule::in(['administrador', 'recepcion', 'marketing'])],
+            'role' => ['required', Rule::in($this->assignableRoles())],
         ]);
 
         $password = Str::password(12);
@@ -36,10 +48,11 @@ class AccountController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        $this->guardSoporte($user);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'role' => ['required', Rule::in(['administrador', 'recepcion', 'marketing'])],
+            'role' => ['required', Rule::in($this->assignableRoles())],
             'is_active' => ['sometimes', 'boolean'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
@@ -60,6 +73,7 @@ class AccountController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
+        $this->guardSoporte($user);
         if ($user->id === auth()->id()) {
             return back()->withErrors(['account' => 'No puedes eliminar tu propia cuenta mientras estás dentro. Entra con otro administrador para hacerlo.']);
         }

@@ -54,7 +54,7 @@
         <a class="seg-chip esporadico {{ $segmentFilter === 'esporadico' ? 'active' : '' }}" href="{{ route('admin.customers.index', $baseParams + ['segment' => 'esporadico']) }}"><b>{{ $counts['esporadico'] }}</b> Esporádicos</a>
     </div>
 
-    @if(auth()->user()?->role === 'administrador')
+    @if(auth()->user()?->isAdministrador())
         <details class="card" style="margin-bottom:18px;">
             <summary style="cursor:pointer;font-weight:700;">Configurar clasificación y lista negra</summary>
             <form method="POST" action="{{ route('admin.customers.rules.update') }}" style="margin-top:14px;">

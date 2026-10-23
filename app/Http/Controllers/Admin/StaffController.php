@@ -16,7 +16,7 @@ class StaffController extends Controller
     {
         return view('admin.staff.index', [
             'staff' => Staff::orderBy('role')->orderBy('name')->get(),
-            'accounts' => User::orderBy('role')->orderBy('name')->get(),
+            'accounts' => User::when(! auth()->user()?->isSoporte(), fn ($q) => $q->where('role', '!=', 'soporte'))->orderBy('role')->orderBy('name')->get(),
         ]);
     }
 

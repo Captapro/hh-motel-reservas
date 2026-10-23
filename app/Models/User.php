@@ -32,9 +32,16 @@ class User extends Authenticatable
         ];
     }
 
+    /** Administrador o soporte: soporte es un perfil por encima, con todo lo del administrador. */
     public function isAdministrador(): bool
     {
-        return $this->role === 'administrador';
+        return in_array($this->role, ['administrador', 'soporte'], true);
+    }
+
+    /** Perfil master: además ve y configura lo técnico (accesos, integraciones) y las cuentas de soporte. */
+    public function isSoporte(): bool
+    {
+        return $this->role === 'soporte';
     }
 
     /** Si este perfil puede entrar a la sección (el administrador siempre puede). */

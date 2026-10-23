@@ -55,7 +55,7 @@ class AccessSections
 
     public static function allows(?string $role, string $section): bool
     {
-        if ($role === 'administrador') {
+        if (in_array($role, ['administrador', 'soporte'], true)) {
             return true;
         }
         if (! isset(self::ROLES[$role])) {

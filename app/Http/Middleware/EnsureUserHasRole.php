@@ -10,7 +10,8 @@ class EnsureUserHasRole
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (! $request->user() || ! in_array($request->user()->role, $roles, true)) {
+        // 'soporte' es superior: cumple el requisito de cualquier rol.
+        if (! $request->user() || ($request->user()->role !== 'soporte' && ! in_array($request->user()->role, $roles, true))) {
             abort(403, 'No tienes permiso para acceder a esta sección.');
         }
 

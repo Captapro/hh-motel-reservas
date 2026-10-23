@@ -22,4 +22,9 @@ if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
     fi
 fi
 
+# Cuenta de soporte (master): se crea o se repara desde SUPPORT_EMAIL y
+# SUPPORT_PASSWORD, que se definen en Render. No pisa la contraseña de una
+# cuenta que ya existe.
+php artisan app:soporte-sincronizar || true
+
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"
