@@ -67,6 +67,7 @@
         tbody tr:nth-child(even) td { background:#202020; }
         tbody tr:hover td { background:#2a2420; }
         tr.zero td { color:#7d7d7d; }
+        tr.blank td { height:36px; }
         tr.total td { background:#2e2e2e !important; border-top:2px solid #555; color:#fff; }
         tr.today td { background:#33201a !important; }
         tr.cur-month td { background:#33201a !important; }
@@ -116,52 +117,55 @@
 
     <div class="sec-label">Registro del día</div>
     <div class="table-wrap">
-        @if ($bookings->isEmpty())
-            <p class="empty">No hay reservas asignadas a este día.</p>
-        @else
-            <table>
-                <thead>
-                    <tr>
-                        <th>Hora</th><th>Reserva</th><th>Hab.</th><th>Categoría</th><th>Cliente</th><th>Tarifa</th>
-                        <th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th>
-                        <th>Pago</th><th>Voucher / boleta</th><th>Estado</th>
+        <table>
+            <thead>
+                <tr>
+                    <th>Hora</th><th>Reserva</th><th>Hab.</th><th>Categoría</th><th>Cliente</th><th>Tarifa</th>
+                    <th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th>
+                    <th>Pago</th><th>Voucher / boleta</th><th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($bookings as $booking)
+                    @php
+                        $cancelled = $booking->booking_status === 'CANCELADA';
+                        $extras = (int) $booking->addons->sum('amount');
+                        $docs = $booking->payments->where('status', 'aprobado')->map(fn ($p) => trim(($p->voucher_number ? 'V '.$p->voucher_number : '').' '.($p->receipt_number ? 'B '.$p->receipt_number : '')))->filter()->implode(' · ');
+                        $methods = $booking->payments->where('status', 'aprobado')->map(fn ($p) => $groupOf($p->paymentMethod?->name))->unique()->implode(' + ');
+                        $paid = $booking->paidAmount();
+                        $balance = $booking->balanceDue();
+                    @endphp
+                    <tr class="{{ $cancelled ? 'cancelada' : '' }}">
+                        <td>{{ $booking->starts_at->timezone('America/Santiago')->format('H:i') }}</td>
+                        <td><a class="code" href="{{ route('reservations.show', $booking->code) }}">{{ $booking->code }}</a></td>
+                        <td>{{ $booking->room->name }}</td>
+                        <td>{{ $booking->room->category->name }}</td>
+                        <td>{{ $booking->customer->name }}</td>
+                        <td>{{ $booking->rate_rule_name_snapshot ?? '—' }}</td>
+                        <td class="n">{{ $money($booking->price_final) }}</td>
+                        <td class="n">{{ $money($extras) }}</td>
+                        <td class="n"><b>{{ $money($booking->price_final + $extras) }}</b></td>
+                        <td class="n">{{ $money($paid) }}</td>
+                        <td class="n">{{ $balance > 0 && ! $cancelled ? $money($balance) : '—' }}</td>
+                        <td>{{ $methods ?: '—' }}</td>
+                        <td>{!! $docs ?: ($paid > 0 ? '<span class="miss">falta</span>' : '—') !!}</td>
+                        <td><span class="pill {{ $cancelled ? 'bad' : ($balance <= 0 ? 'ok' : 'warn') }}">{{ $booking->booking_status }}</span></td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach ($bookings as $booking)
-                        @php
-                            $cancelled = $booking->booking_status === 'CANCELADA';
-                            $extras = (int) $booking->addons->sum('amount');
-                            $docs = $booking->payments->where('status', 'aprobado')->map(fn ($p) => trim(($p->voucher_number ? 'V '.$p->voucher_number : '').' '.($p->receipt_number ? 'B '.$p->receipt_number : '')))->filter()->implode(' · ');
-                            $methods = $booking->payments->where('status', 'aprobado')->map(fn ($p) => $groupOf($p->paymentMethod?->name))->unique()->implode(' + ');
-                            $paid = $booking->paidAmount();
-                            $balance = $booking->balanceDue();
-                        @endphp
-                        <tr class="{{ $cancelled ? 'cancelada' : '' }}">
-                            <td>{{ $booking->starts_at->timezone('America/Santiago')->format('H:i') }}</td>
-                            <td><a class="code" href="{{ route('reservations.show', $booking->code) }}">{{ $booking->code }}</a></td>
-                            <td>{{ $booking->room->name }}</td>
-                            <td>{{ $booking->room->category->name }}</td>
-                            <td>{{ $booking->customer->name }}</td>
-                            <td>{{ $booking->rate_rule_name_snapshot ?? '—' }}</td>
-                            <td class="n">{{ $money($booking->price_final) }}</td>
-                            <td class="n">{{ $money($extras) }}</td>
-                            <td class="n"><b>{{ $money($booking->price_final + $extras) }}</b></td>
-                            <td class="n">{{ $money($paid) }}</td>
-                            <td class="n">{{ $balance > 0 && ! $cancelled ? $money($balance) : '—' }}</td>
-                            <td>{{ $methods ?: '—' }}</td>
-                            <td>{!! $docs ?: ($paid > 0 ? '<span class="miss">falta</span>' : '—') !!}</td>
-                            <td><span class="pill {{ $cancelled ? 'bad' : ($balance <= 0 ? 'ok' : 'warn') }}">{{ $booking->booking_status }}</span></td>
-                        </tr>
-                    @endforeach
-                    <tr class="total">
-                        <td colspan="6">Total del día ({{ $live->count() }} {{ $live->count() === 1 ? 'habitación' : 'habitaciones' }})</td>
-                        <td class="n">{{ $money($lodging) }}</td><td class="n">{{ $money($extrasSum) }}</td><td class="n">{{ $money($revenue) }}</td>
-                        <td class="n">{{ $money($collected) }}</td><td class="n">{{ $money($pending) }}</td><td colspan="3"></td>
-                    </tr>
-                </tbody>
-            </table>
-        @endif
+                @endforeach
+                @if ($bookings->isEmpty())
+                    <tr class="zero"><td colspan="14" style="text-align:center;padding:12px;">Sin reservas asignadas a este día</td></tr>
+                @endif
+                {{-- Filas en blanco para que se vea como hoja de cálculo --}}
+                @for ($i = max(0, 10 - max($bookings->count(), 1)); $i > 0; $i--)
+                    <tr class="blank">@for ($c = 0; $c < 14; $c++)<td>&nbsp;</td>@endfor</tr>
+                @endfor
+                <tr class="total">
+                    <td colspan="6">Total del día ({{ $live->count() }} {{ $live->count() === 1 ? 'habitación' : 'habitaciones' }})</td>
+                    <td class="n">{{ $money($lodging) }}</td><td class="n">{{ $money($extrasSum) }}</td><td class="n">{{ $money($revenue) }}</td>
+                    <td class="n">{{ $money($collected) }}</td><td class="n">{{ $money($pending) }}</td><td colspan="3"></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
     @if ($cancelledCount > 0)
         <p class="sub">{{ $cancelledCount }} {{ Str::plural('reserva', $cancelledCount) }} cancelada{{ $cancelledCount > 1 ? 's' : '' }} ese día — no se cuenta en los totales, aparece atenuada en la tabla.</p>
