@@ -101,6 +101,29 @@ class BookingIntegrityTest extends TestCase
         return Coupon::create(array_merge(['internal_name' => 'Oferta prueba', 'auto_apply' => true, 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20], $overrides));
     }
 
+    public function test_monthly_summary_lists_each_sale_and_exports_csv(): void
+    {
+        $booking = $this->booking();
+        $method = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        $payment = app(PaymentService::class)->register($booking, $method, 20000, null, null, auth()->id());
+
+        $page = $this->get(route('sales.monthly', '2026-10'));
+        $page->assertOk()->assertSee($booking->code)->assertSee('Detalle de ventas')->assertSee('Tarjeta');
+
+        $csv = $this->get(route('sales.monthly', ['month' => '2026-10', 'export' => 'detalle']));
+        $csv->assertOk();
+        $this->assertStringContainsString($booking->code, $csv->streamedContent());
+        $this->assertStringContainsString('RUT / documento', $csv->streamedContent());
+
+        $this->put(route('payments.document', $payment), ['voucher_number' => ' 4521 ', 'receipt_number' => ''])->assertSessionHasNoErrors();
+        $payment->refresh();
+        $this->assertSame('4521', $payment->voucher_number);
+        $this->assertNull($payment->receipt_number);
+
+        $again = $this->get(route('sales.monthly', '2026-10'));
+        $again->assertSee('Voucher')->assertSee('4521');
+    }
+
     public function test_customer_deletion_respects_history(): void
     {
         $booking = $this->booking();

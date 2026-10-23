@@ -43,6 +43,7 @@
         <a href="{{ route('rooms.board') }}" class="{{ request()->routeIs('rooms.board') ? 'hh-active' : '' }}">Tablero</a>
         <a href="{{ route('reservations.search') }}" class="{{ request()->routeIs('reservations.search') ? 'hh-active' : '' }}">Buscar reserva</a>
         <a href="{{ route('sales.daily') }}" class="{{ request()->routeIs('sales.daily') ? 'hh-active' : '' }}">Venta de hoy</a>
+        <a href="{{ route('sales.monthly') }}" class="{{ request()->routeIs('sales.monthly') ? 'hh-active' : '' }}">Resumen mensual</a>
         <a href="{{ route('cash.show') }}" class="{{ request()->routeIs('cash.show') ? 'hh-active' : '' }}">Caja</a>
         <a href="{{ route('aseo.daily') }}" class="{{ request()->routeIs('aseo.daily') ? 'hh-active' : '' }}">Aseo del día</a>
         <a href="{{ route('rooms.inspections.panel') }}" class="{{ request()->routeIs('rooms.inspections.*') ? 'hh-active' : '' }}">Mantención</a>

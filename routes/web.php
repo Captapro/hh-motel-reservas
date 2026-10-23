@@ -97,6 +97,8 @@ Route::get('/reservas/{code}/editar', [ReservationController::class, 'edit'])->n
 Route::put('/reservas/{code}', [ReservationController::class, 'update'])->name('reservations.update');
 
 Route::get('/ventas/{date?}', [DailySalesController::class, 'show'])->name('sales.daily');
+Route::put('/pagos/{payment}/documento', [\App\Http\Controllers\PaymentDocumentController::class, 'update'])->name('payments.document');
+Route::get('/resumen-mensual/{month?}', [\App\Http\Controllers\MonthlySalesController::class, 'show'])->name('sales.monthly');
 Route::get('/caja/{date?}', [CashRegisterController::class, 'show'])->name('cash.show');
 Route::post('/caja', [CashRegisterController::class, 'store'])->name('cash.store');
 Route::get('/aseo/semana/{date?}', [AseoSummaryController::class, 'week'])->name('aseo.week');

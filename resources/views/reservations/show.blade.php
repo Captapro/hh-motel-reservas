@@ -352,19 +352,28 @@
             @if ($booking->payments->isNotEmpty())
                 <div class="card">
                     <table class="payments">
-                        <thead><tr><th>Método</th><th>Monto</th><th>Voucher</th><th>Boleta</th><th>Estado</th></tr></thead>
+                        <thead><tr><th>Método</th><th>Monto</th><th colspan="2">N° voucher / boleta</th><th>Estado</th></tr></thead>
                         <tbody>
                             @foreach ($booking->payments as $payment)
                                 <tr>
                                     <td>{{ $payment->paymentMethod->name }}</td>
                                     <td>${{ number_format($payment->amount, 0, ',', '.') }}</td>
-                                    <td>{{ $payment->voucher_number ?? '—' }}</td>
-                                    <td>{{ $payment->receipt_number ?? '—' }}</td>
+                                    <td colspan="2">
+                                        <form method="POST" action="{{ route('payments.document', $payment) }}" style="display:flex;gap:6px;align-items:center;">
+                                            @csrf @method('PUT')
+                                            <input name="voucher_number" value="{{ $payment->voucher_number }}" placeholder="Voucher" maxlength="30" style="width:90px;padding:5px 7px;font-size:12.5px;">
+                                            <input name="receipt_number" value="{{ $payment->receipt_number }}" placeholder="Boleta" maxlength="30" style="width:90px;padding:5px 7px;font-size:12.5px;">
+                                            <button type="submit" style="padding:5px 10px;font-size:12px;cursor:pointer;">Guardar</button>
+                                        </form>
+                                    </td>
                                     <td>{{ $payment->status }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+                    @if (! $booking->customer->documentNumber() || ! $booking->customer->nationality || $booking->customer->age() === null)
+                        <p style="margin:10px 0 0;font-size:12.5px;color:#e8c76f;">Faltan datos del cliente (RUT/documento, nacionalidad o edad). <a href="{{ route('admin.customers.show', $booking->customer) }}" style="color:#ff7918;">Completar en su ficha →</a></p>
+                    @endif
                 </div>
             @endif
         </div>
