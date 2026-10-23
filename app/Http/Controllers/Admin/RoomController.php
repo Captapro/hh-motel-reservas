@@ -96,7 +96,12 @@ class RoomController extends Controller
             'operational_status' => ['required', 'in:activa,mantencion,inactiva,aseo'],
             'operational_note' => ['nullable', 'string', 'max:255'],
             'photos' => ['nullable', 'array'],
-            'photos.*' => ['url', 'max:500'],
+            'photos.*' => ['max:500', function (string $attribute, mixed $value, \Closure $fail) {
+                $isLocalPath = is_string($value) && preg_match('#^/images/[A-Za-z0-9._/-]+$#', $value) && ! str_contains($value, '..');
+                if (! $isLocalPath && ! filter_var($value, FILTER_VALIDATE_URL)) {
+                    $fail('Cada línea de fotos debe ser un link válido (https://...) o una ruta /images/...');
+                }
+            }],
             'videos' => ['nullable', 'array'],
             'videos.*' => ['url', 'max:500'],
             'furniture_present' => ['sometimes', 'in:1'],
@@ -106,7 +111,6 @@ class RoomController extends Controller
             'furniture.*.condition' => ['required', 'in:operativo,reparacion,fuera_de_uso'],
             'furniture.*.notes' => ['nullable', 'string', 'max:255'],
         ], [
-            'photos.*.url' => 'Cada línea de fotos debe ser un link válido (https://...).',
             'videos.*.url' => 'Cada línea de videos debe ser un link válido (https://...).',
         ]);
 
