@@ -2,7 +2,7 @@
 <html lang="es" style="background:#111;color:#eee">
 <head>
     <meta charset="utf-8"><meta name="color-scheme" content="dark">
-    <title>Resumen de {{ $first->locale('es')->isoFormat('MMMM YYYY') }} — HH Motel</title>
+    <title>Historial de ventas — {{ $first->locale('es')->isoFormat('MMMM YYYY') }} — HH Motel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root { color-scheme: dark; }
@@ -32,6 +32,9 @@
         tr:last-child td { border-bottom:none; }
         tr.zero td { color:#555; }
         tr.total td { font-weight:700; color:#fff; background:#202020; border-top:1px solid #444; }
+        tr.today td { background:#241419; }
+        tr.today td:first-child { color:#ff7918; font-weight:700; }
+        tr.cur-month td { background:#241419; }
         tr.weekend td:first-child { color:#e8c76f; }
         td a { color:#ff7918; text-decoration:none; }
         .bar { display:inline-block; height:7px; background:#ff7918; border-radius:4px; vertical-align:middle; margin-left:6px; opacity:.8; }
@@ -58,13 +61,13 @@
 <div class="page-inner">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;">
         <a href="{{ route('sales.daily') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Venta de hoy</a>
-        <a href="{{ route('sales.monthly') }}" style="padding:7px 14px;border-radius:7px;background:#ff7918;color:#111;font-weight:600;font-size:13px;text-decoration:none;">Resumen mensual</a>
+        <a href="{{ route('sales.monthly') }}" style="padding:7px 14px;border-radius:7px;background:#ff7918;color:#111;font-weight:600;font-size:13px;text-decoration:none;">Historial de ventas</a>
         <a href="{{ route('admin.analytics.index') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Analytics</a>
     </div>
     <div class="topline">
         <div>
             <h1>{{ $first->locale('es')->isoFormat('MMMM YYYY') }}</h1>
-            <p class="sub" style="margin-bottom:0;">Resumen del mes · <a href="{{ route('sales.daily') }}">Venta de hoy</a></p>
+            <p class="sub" style="margin-bottom:0;">Historial de ventas · <a href="{{ route('sales.daily') }}">Venta de hoy</a></p>
         </div>
         <div class="nav-day">
             <a href="{{ route('sales.monthly', $prev->format('Y-m')) }}">← {{ $prev->locale('es')->isoFormat('MMM YYYY') }}</a>
@@ -83,13 +86,32 @@
         <div class="card"><div class="label">Canceladas</div><div class="value">{{ $cancelled }}</div></div>
     </div>
 
+
+    <div class="sec-label" style="margin-top:22px;border-top:none;padding-top:0;">Historial por mes</div>
+    <p class="sec-note">Todos los meses con ventas. Toca un mes para ver su registro diario completo.</p>
+    <div class="table-wrap"><table>
+        <thead><tr><th>Mes</th><th class="n">Hab. vendidas</th><th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Venta total</th><th class="n">Cobrado</th></tr></thead>
+        <tbody>
+        @forelse ($history as $h)
+            <tr class="{{ $h['month']->isSameMonth($first) ? 'cur-month' : '' }}">
+                <td><a href="{{ route('sales.monthly', $h['month']->format('Y-m')) }}" style="text-transform:capitalize;">{{ $h['month']->locale('es')->isoFormat('MMMM YYYY') }}</a></td>
+                <td class="n">{{ $h['rooms'] }}</td><td class="n">{{ $money($h['lodging']) }}</td><td class="n">{{ $money($h['extras']) }}</td><td class="n"><b>{{ $money($h['total']) }}</b></td><td class="n">{{ $money($h['cash']) }}</td>
+            </tr>
+        @empty
+            <tr class="zero"><td colspan="6">Todavía no hay ventas registradas.</td></tr>
+        @endforelse
+        @if ($history->count() > 1)
+            <tr class="total"><td>Total histórico</td><td class="n">{{ $history->sum('rooms') }}</td><td class="n">{{ $money($history->sum('lodging')) }}</td><td class="n">{{ $money($history->sum('extras')) }}</td><td class="n">{{ $money($history->sum('total')) }}</td><td class="n">{{ $money($history->sum('cash')) }}</td></tr>
+        @endif
+        </tbody>
+    </table></div>
     <div class="sec-label">Registro diario</div>
     <p class="sec-note">La <b>venta</b> cuenta por el día de la estadía. Lo <b>cobrado</b> cuenta por el día en que entró el pago (puede ser un anticipo o el saldo de otro día). Toca una fecha para ver su detalle.</p>
     <div class="table-wrap"><table>
         <thead><tr><th>Fecha</th><th class="n">Hab. vendidas</th><th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th><th class="n">Otro</th><th class="n">Cobrado</th></tr></thead>
         <tbody>
         @foreach ($daily as $r)
-            <tr class="{{ $r['rooms'] === 0 && $r['cash_total'] === 0 ? 'zero' : '' }} {{ $r['date']->isWeekend() ? 'weekend' : '' }}">
+            <tr class="{{ $r['rooms'] === 0 && $r['cash_total'] === 0 ? 'zero' : '' }} {{ $r['date']->isWeekend() ? 'weekend' : '' }} {{ $r['date']->isToday() ? 'today' : '' }}">
                 <td><a href="{{ route('sales.daily', $r['date']->toDateString()) }}">{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}</a></td>
                 <td class="n">{{ $r['rooms'] }}</td>
                 <td class="n">{{ $money($r['lodging']) }}</td>

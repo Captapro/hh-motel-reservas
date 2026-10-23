@@ -8,7 +8,7 @@
         ['aseo.daily', 'aseo.*,rooms.inspections.*', 'Aseo', 'M8 10l8-8 M6 11l7 7 M3 16l6-6 8 8-6 4z'],
         // Turnos apagado por ahora a pedido explícito -- no va en el tablero
         // general todavía. La ruta sigue viva, solo se saca el ícono del riel.
-        ['sales.daily', 'sales.*', 'Ventas', 'M12 2v20 M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
+        ['sales.monthly', 'sales.*', 'Ventas', 'M12 2v20 M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
         ['admin.analytics.index', 'admin.analytics.*', 'Analytics', 'M4 21V11h4v10 M10 21V6h4v15 M16 21V3h4v18'],
         ['admin.reviews.index', 'admin.reviews.*', 'Opiniones', 'M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z'],
     ];

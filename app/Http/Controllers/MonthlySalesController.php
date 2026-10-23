@@ -86,6 +86,7 @@ class MonthlySalesController extends Controller
         }
 
         $detail = $this->detailRows($bookings);
+        $history = $this->monthHistory();
 
         if ($request->query('export') === 'csv') {
             return $this->csv($first, $daily, $totals, $groups);
@@ -143,10 +144,42 @@ class MonthlySalesController extends Controller
             'isCurrent' => $first->isSameMonth(now(self::TZ)),
             'daily' => $daily, 'totals' => $totals, 'groups' => $groups,
             'byWeekday' => $byWeekday, 'byDuration' => $byDuration, 'byRoom' => $byRoom,
-            'byMethod' => $byMethod, 'extras' => $extras, 'detail' => $detail,
+            'byMethod' => $byMethod, 'extras' => $extras, 'detail' => $detail, 'history' => $history,
             'missingCount' => $detail->where('missing', '!=', [])->count(),
             'avgTicket' => $totals['rooms'] ? (int) round($totals['total'] / $totals['rooms']) : 0,
             'cancelled' => Booking::whereBetween('starts_at', [$first->copy(), $last->copy()])->where('booking_status', 'CANCELADA')->count(),
+        ]);
+    }
+
+    /**
+     * Todos los meses con ventas, del más reciente al más antiguo: venta por
+     * estadía, habitaciones y lo cobrado ese mes. Es el "historial completo"
+     * que se ve al abrir Ventas.
+     */
+    private function monthHistory(): Collection
+    {
+        $addons = \Illuminate\Support\Facades\DB::table('booking_addons')
+            ->selectRaw('booking_id, SUM(amount) as total')->groupBy('booking_id')->pluck('total', 'booking_id');
+
+        $sales = Booking::where('booking_status', '!=', 'CANCELADA')->get(['id', 'starts_at', 'price_final'])
+            ->groupBy(fn (Booking $b) => $b->starts_at->copy()->timezone(self::TZ)->format('Y-m'))
+            ->map(fn (Collection $rows) => [
+                'rooms' => $rows->count(),
+                'lodging' => $rows->sum('price_final'),
+                'extras' => (int) $rows->sum(fn (Booking $b) => (int) ($addons[$b->id] ?? 0)),
+            ]);
+
+        $cash = Payment::where('status', 'aprobado')->get(['amount', 'created_at'])
+            ->groupBy(fn (Payment $p) => $p->created_at->copy()->timezone(self::TZ)->format('Y-m'))
+            ->map(fn (Collection $rows) => $rows->sum('amount'));
+
+        return $sales->keys()->merge($cash->keys())->unique()->sortDesc()->values()->map(fn ($ym) => [
+            'month' => Carbon::createFromFormat('Y-m-d', $ym.'-01', self::TZ),
+            'rooms' => $sales[$ym]['rooms'] ?? 0,
+            'lodging' => $sales[$ym]['lodging'] ?? 0,
+            'extras' => $sales[$ym]['extras'] ?? 0,
+            'total' => ($sales[$ym]['lodging'] ?? 0) + ($sales[$ym]['extras'] ?? 0),
+            'cash' => $cash[$ym] ?? 0,
         ]);
     }
 
