@@ -295,8 +295,6 @@
             <p class="sub">Se actualiza solo cada 30s · <a href="{{ route('rooms.board') }}">actualizar ahora</a></p>
         </div>
         <div class="topline-toolbar">
-            <a class="compact-toggle sales-btn" href="{{ route('sales.monthly') }}">Ventas e historial →</a>
-            <a class="compact-toggle" href="{{ route('calendar.index') }}">Calendario</a>
             <a class="compact-toggle" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
             <a class="compact-toggle" href="{{ route('mucamas.activity') }}">Dónde están las mucamas →</a>
             <a class="compact-toggle" href="{{ route('shift_round.index') }}">Ronda de turno →</a>

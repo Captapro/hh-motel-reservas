@@ -58,4 +58,14 @@ class StaffController extends Controller
 
         return redirect()->route('admin.staff.index')->with('status', 'Datos actualizados.');
     }
+
+    public function destroy(Staff $staff): RedirectResponse
+    {
+        // Se borran también sus turnos programados y su registro de horas.
+        $old = $staff->only(['id', 'name', 'role', 'legal_hours_per_week', 'is_active']);
+        $staff->delete();
+        AuditLog::record(auth()->id(), 'personal.eliminar', 'Staff', $old['id'], $old, null);
+
+        return redirect()->route('admin.staff.index')->with('status', $old['name'].' eliminado/a del personal, junto con sus turnos.');
+    }
 }

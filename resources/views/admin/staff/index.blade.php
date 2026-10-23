@@ -62,6 +62,14 @@
                                     <input type="password" name="password" placeholder="Nueva contraseña (opcional)" autocomplete="new-password">
                                     <button class="btn secondary" type="submit" style="padding:6px 12px; font-size:12.5px;">Guardar</button>
                                 </form>
+                                @if ($account->id !== auth()->id())
+                                    <form method="POST" action="{{ route('admin.accounts.destroy', $account) }}" onsubmit="return confirm('¿Eliminar la cuenta de {{ e($account->name) }}? No se puede deshacer.');" style="margin-top:8px;">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" style="background:#b3202f;color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:12.5px;cursor:pointer;">Eliminar cuenta</button>
+                                    </form>
+                                @else
+                                    <p style="margin:8px 0 0;font-size:12px;color:#888;">Es tu cuenta actual: no se puede eliminar desde aquí.</p>
+                                @endif
                             </details>
                         </td>
                     </tr>
@@ -131,6 +139,10 @@
                                         <option value="0" @selected(!$person->is_active)>Inactivo</option>
                                     </select>
                                     <button class="btn secondary" type="submit" style="padding:6px 12px; font-size:12.5px;">Guardar</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.staff.destroy', $person) }}" onsubmit="return confirm('¿Eliminar a {{ e($person->name) }} del personal? También se borran sus turnos y su registro de horas. No se puede deshacer.');" style="margin-top:8px;">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" style="background:#b3202f;color:#fff;border:0;border-radius:7px;padding:6px 12px;font-size:12.5px;cursor:pointer;">Eliminar del personal</button>
                                 </form>
                             </details>
                         </td>

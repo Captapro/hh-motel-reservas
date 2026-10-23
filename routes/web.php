@@ -234,9 +234,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/personal', [StaffController::class, 'index'])->name('staff.index');
     Route::post('/personal', [StaffController::class, 'store'])->name('staff.store');
     Route::put('/personal/{staff}', [StaffController::class, 'update'])->name('staff.update');
+    Route::delete('/personal/{staff}', [StaffController::class, 'destroy'])->name('staff.destroy');
 
     Route::post('/cuentas', [\App\Http\Controllers\Admin\AccountController::class, 'store'])->name('accounts.store');
     Route::put('/cuentas/{user}', [\App\Http\Controllers\Admin\AccountController::class, 'update'])->name('accounts.update');
+    Route::delete('/cuentas/{user}', [\App\Http\Controllers\Admin\AccountController::class, 'destroy'])->name('accounts.destroy');
 
     Route::get('/turnos', [ShiftController::class, 'index'])->name('shifts.index');
     Route::post('/turnos', [ShiftController::class, 'store'])->name('shifts.store');

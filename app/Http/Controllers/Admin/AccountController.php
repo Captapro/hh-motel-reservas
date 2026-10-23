@@ -57,4 +57,18 @@ class AccountController extends Controller
 
         return redirect()->route('admin.staff.index')->with('status', 'Cuenta actualizada.'.($newPassword ? ' Contraseña reseteada a: '.$newPassword : ''));
     }
+
+    public function destroy(User $user): RedirectResponse
+    {
+        if ($user->id === auth()->id()) {
+            return back()->withErrors(['account' => 'No puedes eliminar tu propia cuenta mientras estás dentro. Entra con otro administrador para hacerlo.']);
+        }
+        // Pagos, reservas y registros de auditoría que esta cuenta hizo se
+        // conservan; solo pierden el nombre de quién los registró.
+        $old = $user->only(['id', 'name', 'email', 'role', 'is_active']);
+        $user->delete();
+        AuditLog::record(auth()->id(), 'cuenta.eliminar', 'User', $old['id'], $old, null);
+
+        return redirect()->route('admin.staff.index')->with('status', 'Cuenta de '.$old['name'].' eliminada.');
+    }
 }
