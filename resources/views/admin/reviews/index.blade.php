@@ -80,6 +80,21 @@
                 &nbsp;·&nbsp;
                 <a class="link" href="{{ route('reviews.create') }}" target="_blank" rel="noopener">Ver página →</a>
             </div>
+
+            @if (auth()->user()?->isAdministrador() && $reviews->isNotEmpty())
+                <div class="card" style="border:1px solid #5a2327; background:#1d1315;">
+                    <strong style="display:block; font-size:15px; margin-bottom:4px;">Borrar historial interno</strong>
+                    <p class="sub" style="margin:0 0 10px;">Elimina las {{ $reviews->count() }} calificaciones internas que hay hoy (por ejemplo, las de prueba). No toca el puntaje de Google. No se puede deshacer.</p>
+                    <form method="POST" action="{{ route('admin.reviews.destroy_all') }}" onsubmit="return confirm('¿Borrar todo el historial interno de calificaciones? No se puede deshacer.');">
+                        @csrf @method('DELETE')
+                        <label style="display:block; font-size:12.5px; color:#bbb; margin-bottom:6px;">Para confirmar, escribe <b>ELIMINAR</b></label>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <input name="confirm_text" autocomplete="off" placeholder="ELIMINAR" style="max-width:180px;">
+                            <button type="submit" style="background:#b3202f; color:#fff; border:0; border-radius:8px; padding:9px 16px; font-weight:700; cursor:pointer;">Borrar historial</button>
+                        </div>
+                    </form>
+                </div>
+            @endif
         </div>
     </div>
 @endsection

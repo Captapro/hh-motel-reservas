@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\GuestReview;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Response;
@@ -24,6 +27,21 @@ class GuestReviewController extends Controller
             'lowCount' => GuestReview::where('rating', '<=', 3)->count(),
             'avgRating' => round((float) GuestReview::avg('rating'), 1),
         ]);
+    }
+
+    /** Borra todo el historial interno de calificaciones (limpiar datos de prueba). */
+    public function destroyAll(Request $request): RedirectResponse
+    {
+        if (trim((string) $request->input('confirm_text')) !== 'ELIMINAR') {
+            return back()->withErrors(['reviews' => 'Para borrar el historial tienes que escribir ELIMINAR en el cuadro de confirmación.']);
+        }
+
+        $count = GuestReview::count();
+        $summary = ['cantidad' => $count, 'promedio' => round((float) GuestReview::avg('rating'), 1), 'bajas' => GuestReview::where('rating', '<=', 3)->count()];
+        GuestReview::query()->delete();
+        AuditLog::record(auth()->id(), 'opiniones.borrar_historial', 'GuestReview', 0, $summary, null);
+
+        return back()->with('status', $count.' calificación(es) internas eliminadas.');
     }
 
     /**

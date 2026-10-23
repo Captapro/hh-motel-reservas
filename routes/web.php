@@ -228,6 +228,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/analytics/exportar', [AnalyticsController::class, 'export'])->name('analytics.export');
 
     Route::get('/opiniones', [\App\Http\Controllers\Admin\GuestReviewController::class, 'index'])->name('reviews.index');
+    Route::delete('/opiniones', [\App\Http\Controllers\Admin\GuestReviewController::class, 'destroyAll'])->middleware('role:administrador')->name('reviews.destroy_all');
     Route::get('/opiniones/qr.png', [\App\Http\Controllers\Admin\GuestReviewController::class, 'qrImage'])->name('reviews.qr_image');
 
     Route::middleware('role:administrador')->group(function () {
