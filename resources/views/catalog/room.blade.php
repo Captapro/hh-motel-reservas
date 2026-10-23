@@ -5,6 +5,7 @@
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $room->name }} — HH Motel</title>
+    @include('partials.social-meta', ['shareTitle' => $room->name.' — HH Motel Santiago', 'shareDescription' => 'Conoce la habitación '.$room->name.' de HH Motel Santiago y reserva en línea.', 'shareImage' => $photos->isNotEmpty() ? url($photos->first()) : null])
     <style>
         :root {
             color-scheme: light;

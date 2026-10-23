@@ -5,6 +5,7 @@
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Reservar — HH Motel</title>
+    @include('partials.social-meta', ['shareTitle' => 'Reservar — HH Motel Santiago', 'shareDescription' => 'Elige tu playroom, fecha y duración, y confirma tu reserva en línea en HH Motel Santiago.'])
     <style>
         :root {
             color-scheme: light;

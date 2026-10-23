@@ -5,6 +5,7 @@
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Playrooms — HH Motel</title>
+    @include('partials.social-meta')
     <style>
         /* Mismos tokens que public/css/hh-theme.css (el tema real del tablero
            interno): lienzo gris claro, tarjetas en superficie oscura, acento
