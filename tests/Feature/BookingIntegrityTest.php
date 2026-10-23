@@ -137,6 +137,33 @@ class BookingIntegrityTest extends TestCase
             ->assertSee('Para asegurar tu reserva')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('Pagar con Mercado Pago');
     }
 
+    public function test_cancelled_booking_can_be_deleted_with_confirmation_but_real_stays_cannot(): void
+    {
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);
+        app(PaymentService::class)->register($booking, $method, 20000, null, null, auth()->id());
+
+        // Vigente: no se puede.
+        $this->delete(route('bookings.destroy', $booking->code), ['confirm_text' => 'ELIMINAR'])->assertSessionHasErrors('booking');
+        $this->assertDatabaseHas('bookings', ['id' => $booking->id]);
+
+        $booking->update(['booking_status' => 'CANCELADA']);
+        // Cancelada pero sin la palabra de confirmación: tampoco.
+        $this->delete(route('bookings.destroy', $booking->code), ['confirm_text' => 'si'])->assertSessionHasErrors('booking');
+        $this->assertDatabaseHas('bookings', ['id' => $booking->id]);
+
+        $this->delete(route('bookings.destroy', $booking->code), ['confirm_text' => 'ELIMINAR'])->assertRedirect(route('rooms.board'));
+        $this->assertDatabaseMissing('bookings', ['id' => $booking->id]);
+        $this->assertDatabaseMissing('payments', ['booking_id' => $booking->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.eliminar', 'entity_id' => $booking->id]);
+
+        // Con check-in nunca, aunque esté cancelada.
+        $stay = $this->booking(['starts_at' => Carbon::parse('2026-10-19 12:00')]);
+        $stay->update(['booking_status' => 'CANCELADA', 'checked_in_at' => now()]);
+        $this->delete(route('bookings.destroy', $stay->code), ['confirm_text' => 'ELIMINAR'])->assertSessionHasErrors('booking');
+        $this->assertDatabaseHas('bookings', ['id' => $stay->id]);
+    }
+
     public function test_force_delete_cleans_test_clients_but_never_real_stays(): void
     {
         foreach (['2026_09_11_090000_add_identity_fields_to_customers_table.php', '2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {

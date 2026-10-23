@@ -379,6 +379,21 @@
         </div>
     </div>
 
+    @if (auth()->user()?->isAdministrador() && $booking->canBeDeleted())
+        <div class="card" style="margin-top:22px;border:1px solid #5a2327;background:#1d1315;">
+            <strong>Eliminar reserva</strong>
+            <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva no llegó a ocurrir ({{ $booking->booking_status }}). Si es un <b>dato de prueba</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}. Esto descuenta sus montos de la caja y de las ventas, y <b>no se puede deshacer</b>. Queda registrada en auditoría.</p>
+            <form method="POST" action="{{ route('bookings.destroy', $booking->code) }}" onsubmit="return confirm('¿Eliminar la reserva {{ $booking->code }}? No se puede deshacer.');">
+                @csrf @method('DELETE')
+                <label style="display:block;font-size:12.5px;color:#bbb;margin-bottom:6px;">Para confirmar, escribe <b>ELIMINAR</b></label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <input name="confirm_text" autocomplete="off" placeholder="ELIMINAR" style="max-width:200px;">
+                    <button type="submit" style="background:#b3202f;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;">Eliminar reserva</button>
+                </div>
+            </form>
+        </div>
+    @endif
+
     @if ($booking->checked_in_at && $booking->balanceDue() <= 0 && ! in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA']))
         <a class="finalize-btn" href="{{ route('bookings.finalize.show', $booking->code) }}">Finalizar reserva — marcar check-out →</a>
         <p class="hint" style="text-align:center;">Marca la salida ahora mismo, aunque sea antes de la hora reservada.</p>

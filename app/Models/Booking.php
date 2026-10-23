@@ -110,6 +110,16 @@ class Booking extends Model
     }
 
     /** Consumo/extras cargados durante la estadía — no altera el snapshot de precio de la habitación. */
+    /**
+     * Se puede eliminar (junto con sus pagos y consumos) solo si nunca
+     * ocurrió: cancelada, vencida o no show, y sin check-in. Sirve para
+     * limpiar reservas de prueba; una estadía real no se borra.
+     */
+    public function canBeDeleted(): bool
+    {
+        return in_array($this->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW'], true) && $this->checked_in_at === null;
+    }
+
     public function addonsTotal(): int
     {
         return (int) $this->addons()->sum('amount');
