@@ -164,7 +164,7 @@
 
     @php
         $bookingCount = $customer->bookings()->count();
-        $redemptionCount = \Illuminate\Support\Facades\DB::table('coupon_redemptions')->where('customer_id', $customer->id)->count();
+        $blockers = $bookingCount > 0 ? $customer->historyBlockers() : [];
     @endphp
     @if ($errors->has('customer'))
         <div class="card" style="border:1px solid #a33;margin-top:22px;"><p style="margin:0;color:#ff9a9a;">{{ $errors->first('customer') }}</p></div>
@@ -172,14 +172,21 @@
     @if (auth()->user()?->role === 'administrador')
         <div class="card danger-zone" style="margin-top:22px;">
             <strong>Eliminar cliente</strong>
-            @if ($bookingCount === 0 && $redemptionCount === 0)
+            @if ($bookingCount === 0)
                 <p class="sub" style="margin:6px 0 12px;">Este cliente nunca reservó, así que se puede eliminar. No se borra de GHL.</p>
                 <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}" onsubmit="return confirm('¿Eliminar a {{ e($customer->name) }}? Esta acción no se puede deshacer.');">
                     @csrf @method('DELETE')
                     <button class="btn" type="submit" style="background:#b3202f;color:#fff;">Eliminar cliente</button>
                 </form>
+            @elseif (empty($blockers))
+                <p class="sub" style="margin:6px 0 12px;">Tiene {{ $bookingCount }} reserva(s), pero ninguna con pagos, consumos, cupones ni estadía realizada (por ejemplo, pruebas o canceladas). Se pueden eliminar junto con el cliente. No se borra de GHL.</p>
+                <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}" onsubmit="return confirm('¿Eliminar a {{ e($customer->name) }} y sus {{ $bookingCount }} reserva(s)? Esta acción no se puede deshacer.');">
+                    @csrf @method('DELETE')
+                    <input type="hidden" name="with_bookings" value="1">
+                    <button class="btn" type="submit" style="background:#b3202f;color:#fff;">Eliminar cliente y sus reservas</button>
+                </form>
             @else
-                <p class="sub" style="margin:6px 0 0;">No se puede eliminar: tiene {{ $bookingCount }} reserva(s){{ $redemptionCount ? ' y '.$redemptionCount.' cupón(es) usado(s)' : '' }} en su historial, y borrarlo dejaría esos cobros sin dueño. Si no quieres que vuelva a reservar, usa <b>Lista negra</b> arriba.</p>
+                <p class="sub" style="margin:6px 0 0;">No se puede eliminar: tiene {{ implode(', ', $blockers) }}. Es historial de caja y no se borra. Si no quieres que vuelva a reservar, usa <b>Lista negra</b> arriba.</p>
             @endif
         </div>
     @endif

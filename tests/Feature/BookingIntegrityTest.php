@@ -101,13 +101,28 @@ class BookingIntegrityTest extends TestCase
         return Coupon::create(array_merge(['internal_name' => 'Oferta prueba', 'auto_apply' => true, 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20], $overrides));
     }
 
-    public function test_customer_without_history_can_be_deleted_but_one_with_bookings_cannot(): void
+    public function test_customer_deletion_respects_history(): void
     {
-        $this->booking();
-        $blocked = $this->delete(route('admin.customers.destroy', $this->customer));
-        $blocked->assertSessionHasErrors('customer');
+        $booking = $this->booking();
+
+        // Con reservas, sin confirmar que se borran también: se rechaza.
+        $this->delete(route('admin.customers.destroy', $this->customer))->assertSessionHasErrors('customer');
         $this->assertDatabaseHas('customers', ['id' => $this->customer->id]);
 
+        // Con un pago registrado nunca se borra, aunque se confirme.
+        $method = PaymentMethod::create(['code' => 'test', 'name' => 'Prueba']);
+        app(PaymentService::class)->register($booking, $method, 5000, null, null, auth()->id());
+        $this->delete(route('admin.customers.destroy', $this->customer), ['with_bookings' => 1])->assertSessionHasErrors('customer');
+        $this->assertDatabaseHas('bookings', ['id' => $booking->id]);
+
+        // Sin pagos ni consumos, con confirmación, se borra el cliente y sus reservas.
+        $other = Customer::create(['name' => 'Solo prueba', 'phone_e164' => '+56933333333']);
+        $test = $this->booking(['customer' => $other, 'starts_at' => Carbon::parse('2026-10-12 12:00')]);
+        $this->delete(route('admin.customers.destroy', $other), ['with_bookings' => 1])->assertRedirect(route('admin.customers.index'));
+        $this->assertDatabaseMissing('customers', ['id' => $other->id]);
+        $this->assertDatabaseMissing('bookings', ['id' => $test->id]);
+
+        // Un cliente que nunca reservó se elimina directo.
         $fresh = Customer::create(['name' => 'Sin reservas', 'phone_e164' => '+56922222222']);
         $this->delete(route('admin.customers.destroy', $fresh))->assertRedirect(route('admin.customers.index'));
         $this->assertDatabaseMissing('customers', ['id' => $fresh->id]);

@@ -33,6 +33,38 @@ class Customer extends Model
         return $this->hasMany(Booking::class);
     }
 
+    /**
+     * Motivos por los que NO se puede borrar al cliente junto con sus
+     * reservas. Vacío = todas son reservas sin movimiento de dinero ni
+     * estadías reales (pruebas, canceladas, vencidas) y se pueden eliminar.
+     *
+     * @return array<int, string>
+     */
+    public function historyBlockers(): array
+    {
+        $ids = $this->bookings()->pluck('id');
+        $reasons = [];
+
+        $withPayments = \Illuminate\Support\Facades\DB::table('payments')->whereIn('booking_id', $ids)->distinct()->count('booking_id');
+        if ($withPayments > 0) {
+            $reasons[] = $withPayments.' reserva(s) con pagos registrados';
+        }
+        $withAddons = \Illuminate\Support\Facades\DB::table('booking_addons')->whereIn('booking_id', $ids)->distinct()->count('booking_id');
+        if ($withAddons > 0) {
+            $reasons[] = $withAddons.' reserva(s) con consumos o extras';
+        }
+        $redemptions = \Illuminate\Support\Facades\DB::table('coupon_redemptions')->where('customer_id', $this->id)->count();
+        if ($redemptions > 0) {
+            $reasons[] = $redemptions.' cupón(es) usado(s)';
+        }
+        $occurred = $this->bookings()->where(fn ($q) => $q->whereIn('booking_status', ['CHECK_IN', 'FINALIZADA'])->orWhereNotNull('checked_in_at'))->count();
+        if ($occurred > 0) {
+            $reasons[] = $occurred.' estadía(s) ya realizada(s)';
+        }
+
+        return $reasons;
+    }
+
     /** Edad en años cumplidos, o null si no se cargó fecha de nacimiento. */
     public function age(): ?int
     {

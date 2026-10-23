@@ -59,27 +59,37 @@ class CustomerController extends Controller
         return back()->with('status', 'Reglas de clasificación actualizadas.');
     }
 
-    public function destroy(Customer $customer): RedirectResponse
+    public function destroy(Request $request, Customer $customer): RedirectResponse
     {
-        // Un cliente con reservas o cupones usados es parte del historial
-        // (cobros, caja, reportes): borrarlo dejaría esos registros sin dueño.
-        // Solo se elimina uno que nunca reservó; para el resto está la lista
-        // negra.
-        $bookings = $customer->bookings()->count();
-        $redemptions = DB::table('coupon_redemptions')->where('customer_id', $customer->id)->count();
-        if ($bookings > 0 || $redemptions > 0) {
-            return back()->withErrors(['customer' => 'No se puede eliminar: este cliente tiene '.$bookings.' reserva(s) y '.$redemptions.' cupón(es) usado(s) en su historial. Si no quieres que vuelva a reservar, bloquéalo en "Lista negra".']);
+        $bookings = $customer->bookings()->get(['id', 'code']);
+        $withBookings = $request->boolean('with_bookings');
+
+        if ($bookings->isNotEmpty()) {
+            if (! $withBookings) {
+                return back()->withErrors(['customer' => 'Este cliente tiene '.$bookings->count().' reserva(s) en su historial. Para eliminarlo hay que confirmar que también se borran sus reservas.']);
+            }
+            // Pagos, consumos, cupones o estadías reales son registros de
+            // dinero o de lo que efectivamente ocurrió: no se borran nunca.
+            $blockers = $customer->historyBlockers();
+            if ($blockers) {
+                return back()->withErrors(['customer' => 'No se puede eliminar: tiene '.implode(', ', $blockers).'. Es historial de caja y no se borra. Si no quieres que vuelva a reservar, usa "Lista negra".']);
+            }
         }
 
-        $old = $customer->only(['id', 'name', 'phone_e164', 'email']);
+        $old = $customer->only(['id', 'name', 'phone_e164', 'email']) + ['booking_codes' => $bookings->pluck('code')->all()];
         try {
-            $customer->delete();
+            DB::transaction(function () use ($customer, $bookings) {
+                if ($bookings->isNotEmpty()) {
+                    $customer->bookings()->delete();
+                }
+                $customer->delete();
+            });
         } catch (QueryException $e) {
             return back()->withErrors(['customer' => 'No se pudo eliminar: el cliente tiene registros asociados. Bloquéalo en "Lista negra" si no quieres que vuelva a reservar.']);
         }
         AuditLog::record(auth()->id(), 'cliente.eliminar', 'Customer', $old['id'], $old, null);
 
-        return redirect()->route('admin.customers.index')->with('status', 'Cliente '.$old['name'].' eliminado. (No se borra de GHL: si hace falta, elimínalo allá.)');
+        return redirect()->route('admin.customers.index')->with('status', 'Cliente '.$old['name'].' eliminado'.($bookings->isNotEmpty() ? ' junto con '.$bookings->count().' reserva(s) sin movimientos' : '').'. (No se borra de GHL: si hace falta, elimínalo allá.)');
     }
 
     public function blacklist(Request $request, Customer $customer): RedirectResponse
