@@ -29,6 +29,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .hh-rail-brand b { color: var(--hh-accent); font-size: 27px; letter-spacing: -2px; }
 .hh-rail-brand span { font-size: 13px; font-weight: 750; letter-spacing: .08em; }
 .hh-rail-brand small { display: block; font-size: 10px; color: #aaa; font-weight: 400; letter-spacing: .02em; margin-top: 2px; }
+.hh-rail-brand:focus-visible { outline: none; }
 .hh-rail nav { display: grid; gap: 7px; }
 .hh-rail-link { display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 8px; color: #bfc1c5; font-size: 12px; text-decoration: none; }
 .hh-rail-link svg { width: 21px; height: 21px; flex-shrink: 0; }
