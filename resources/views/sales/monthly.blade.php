@@ -48,6 +48,17 @@
         .scroll-detail thead th { position:sticky; top:0; background:#1c1c1c; z-index:1; }
         .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
         @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+        /* Cuadrícula tipo Excel */
+        table { border-collapse: collapse; }
+        th { background:#2a2a2a; color:#d6d6d6; font-size:11px; border:1px solid #444; padding:9px 10px; }
+        td { border:1px solid #333; }
+        tr:last-child td { border-bottom:1px solid #333; }
+        tbody tr:nth-child(even) td { background:#202020; }
+        tbody tr:hover td { background:#2a2420; }
+        tr.zero td { color:#7d7d7d; }
+        tr.total td { background:#2e2e2e !important; border-top:2px solid #555; color:#fff; }
+        tr.today td { background:#33201a !important; }
+        tr.cur-month td { background:#33201a !important; }
     </style>
 </head>
 <body>
