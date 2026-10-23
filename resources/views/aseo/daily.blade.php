@@ -55,6 +55,7 @@
 <body>
     @include('partials.navbar')
     <div class="page-inner">
+    @include('partials.aseo-tabs')
     <div class="period-tabs">
         <a href="{{ route('aseo.daily') }}" class="active">Día</a>
         <a href="{{ route('aseo.week') }}">Semana</a>

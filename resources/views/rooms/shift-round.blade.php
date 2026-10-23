@@ -35,6 +35,7 @@
 <body>
 @include('partials.navbar')
 <div class="page-inner">
+    @include('partials.aseo-tabs')
     <h1>HH MOTEL — Ronda de turno</h1>
     <p class="sub">Recorré cada Playroom disponible ahora y dejá la pauta de inspección al día.</p>
 

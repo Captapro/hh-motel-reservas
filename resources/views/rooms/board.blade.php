@@ -296,8 +296,6 @@
         </div>
         <div class="topline-toolbar">
             <a class="compact-toggle" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
-            <a class="compact-toggle" href="{{ route('mucamas.activity') }}">Dónde están las mucamas →</a>
-            <a class="compact-toggle" href="{{ route('shift_round.index') }}">Ronda de turno →</a>
             <button type="button" class="compact-toggle" id="catalog-link-btn" data-room-link="{{ route('catalog.index') }}" onclick="hhCopyRoomLink(this)">Copiar link del catálogo</button>
             <button type="button" class="compact-toggle" id="compact-toggle-btn" onclick="hhToggleCompact()">⊟ Vista compacta</button>
         </div>

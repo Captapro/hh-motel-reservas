@@ -48,6 +48,7 @@
 @include('partials.navbar')
 <div class="toast-wrap" id="toast-wrap"></div>
 <div class="page-inner">
+    @include('partials.aseo-tabs')
     <h1>HH MOTEL — Dónde están las mucamas</h1>
     <p class="sub">Solo las mucamas en turno ahora · última habitación que cada una escaneó por QR y cuándo · se avisa solo, sin recargar · <a href="{{ route('mucamas.activity') }}" style="color:#ff7918;">actualizar ahora</a></p>
 

@@ -29,6 +29,7 @@
 <body>
     @include('partials.navbar')
     <div class="page-inner">
+    @include('partials.aseo-tabs')
     <h1>Rondas e inspecciones</h1>
     <p class="sub">Revisión de habitaciones y mobiliario — registra fallas, observaciones y evidencia.</p>
 

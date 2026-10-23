@@ -5,7 +5,7 @@
         ['admin.customers.index', 'admin.customers.*', 'Clientes', 'M16 7a4 4 0 1 1-8 0a4 4 0 0 1 8 0 M4 21v-3a8 8 0 0 1 16 0v3'],
         ['admin.products.index', 'admin.products.*,admin.combos.*', 'Productos', 'M4 7h16v14H4z M8 7V5a4 4 0 0 1 8 0v2'],
         ['cash.show', 'cash.*,payments.*', 'Caja', 'M3 5h18v16H3z M3 9h18 M15 13h6v4h-6z'],
-        ['aseo.daily', 'aseo.*,rooms.inspections.*', 'Aseo', 'M8 10l8-8 M6 11l7 7 M3 16l6-6 8 8-6 4z'],
+        ['aseo.daily', 'aseo.*,rooms.inspections.*,shift_round.*,mucamas.activity*', 'Aseo', 'M8 10l8-8 M6 11l7 7 M3 16l6-6 8 8-6 4z'],
         // Turnos apagado por ahora a pedido explícito -- no va en el tablero
         // general todavía. La ruta sigue viva, solo se saca el ícono del riel.
         ['sales.monthly', 'sales.*', 'Ventas', 'M12 2v20 M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
