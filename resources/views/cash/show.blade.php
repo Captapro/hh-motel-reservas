@@ -68,6 +68,53 @@
     </div>
     <p class="sub">{{ ucfirst($day->locale('es')->isoFormat('dddd D [de] MMMM')) }}</p>
 
+    <style>
+        .coll-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin:6px 0 22px; }
+        @media (max-width: 720px) { .coll-grid { grid-template-columns: 1fr; } }
+        .coll-box { background:#1c1c1c; border:1px solid #333; border-radius:10px; overflow:hidden; }
+        .coll-box h3 { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#999; margin:0; padding:14px 16px 8px; }
+        .coll-box table { width:100%; border-collapse:collapse; font-size:13.5px; }
+        .coll-box td { padding:8px 16px; border-top:1px solid #262626; }
+        .coll-box td.n { text-align:right; font-variant-numeric:tabular-nums; }
+        .coll-box tr.zero td { color:#555; }
+        .coll-box tr.total td { font-weight:700; color:#fff; background:#202020; border-top:1px solid #444; }
+        .coll-note { font-size:12.5px; color:#999; margin:0 0 8px; }
+    </style>
+    @php $m = fn ($n) => '$'.number_format((int) $n, 0, ',', '.'); @endphp
+    <div class="sec-label" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#888;margin:14px 0 6px;">Cobros del día — todos los medios de pago</div>
+    <p class="coll-note">Plata que entró este día, sin importar de qué reserva es. El efectivo físico del mesón está más abajo.</p>
+    <div class="coll-grid">
+        <div class="coll-box">
+            <h3>Por tipo de pago</h3>
+            <table>
+                @foreach ($collectedByGroup as $label => $amount)
+                    <tr class="{{ $amount === 0 ? 'zero' : '' }}"><td>{{ $label }}</td><td class="n">{{ $m($amount) }}</td></tr>
+                @endforeach
+                <tr class="total"><td>Total cobrado</td><td class="n">{{ $m($collectedTotal) }}</td></tr>
+            </table>
+        </div>
+        <div class="coll-box">
+            <h3>De dónde viene</h3>
+            <table>
+                <tr class="{{ $collectedSameDay === 0 ? 'zero' : '' }}"><td>De reservas de este día</td><td class="n">{{ $m($collectedSameDay) }}</td></tr>
+                <tr class="{{ $collectedAdvance === 0 ? 'zero' : '' }}"><td>Anticipos de reservas futuras</td><td class="n">{{ $m($collectedAdvance) }}</td></tr>
+                <tr class="{{ $collectedLate === 0 ? 'zero' : '' }}"><td>Saldos de estadías de días anteriores</td><td class="n">{{ $m($collectedLate) }}</td></tr>
+                <tr class="total"><td>Total</td><td class="n">{{ $m($collectedTotal) }}</td></tr>
+            </table>
+        </div>
+    </div>
+    @if ($advancePayments->isNotEmpty())
+        <details style="margin:-6px 0 22px;background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:12px 16px;">
+            <summary style="cursor:pointer;color:#e8c76f;font-size:13px;">Anticipos de este día ({{ $advancePayments->count() }}) — a qué estadía corresponde cada uno</summary>
+            @foreach ($advancePayments as $payment)
+                <div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid #262626;font-size:13.5px;">
+                    <span>{{ $payment->booking->room->name ?? '—' }} · {{ $payment->booking->customer->name ?? '—' }} · estadía {{ $payment->booking->starts_at->timezone('America/Santiago')->format('d/m/Y H:i') }} · <a href="{{ route('reservations.show', $payment->booking->code) }}" style="color:#ff7918;text-decoration:none;">{{ $payment->booking->code }}</a></span>
+                    <span>{{ $m($payment->amount) }}</span>
+                </div>
+            @endforeach
+        </details>
+    @endif
+
     @if (session('status'))
         <div class="banner">{{ session('status') }}</div>
     @endif

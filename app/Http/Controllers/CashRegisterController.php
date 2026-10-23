@@ -58,7 +58,35 @@ class CashRegisterController extends Controller
         $dayCashIn = (int) $dayPayments->sum('amount') + (int) $dayMovements->where('type', 'ingreso')->sum('amount');
         $dayCashOut = (int) $dayMovements->where('type', 'egreso')->sum('amount');
 
+        // Todo lo que se cobró este día, en cualquier medio de pago, y de
+        // dónde viene: estadías de este mismo día, anticipos de reservas
+        // futuras o saldos de días anteriores.
+        $dayEnd = $day->copy()->endOfDay();
+        $collected = Payment::with(['paymentMethod', 'booking.room', 'booking.customer'])
+            ->where('status', 'aprobado')
+            ->whereBetween('created_at', [$day->copy(), $dayEnd])
+            ->get();
+        $groupOf = fn (?string $code) => match ($code) {
+            'debito', 'credito', 'mercado_pago' => 'Tarjeta',
+            'efectivo' => 'Efectivo',
+            'transferencia' => 'Transferencia',
+            default => 'Otro',
+        };
+        $collectedByGroup = collect(['Tarjeta', 'Efectivo', 'Transferencia', 'Otro'])->mapWithKeys(
+            fn ($g) => [$g => $collected->filter(fn (Payment $p) => $groupOf($p->paymentMethod?->code) === $g)->sum('amount')]
+        );
+        $stayOf = fn (Payment $p) => $p->booking?->starts_at->copy()->timezone('America/Santiago');
+        $advance = $collected->filter(fn (Payment $p) => $stayOf($p)?->gt($dayEnd));
+        $sameDay = $collected->filter(fn (Payment $p) => $stayOf($p)?->between($day, $dayEnd));
+        $late = $collected->reject(fn (Payment $p) => $stayOf($p)?->gt($dayEnd) || $stayOf($p)?->between($day, $dayEnd));
+
         return view('cash.show', [
+            'collectedByGroup' => $collectedByGroup,
+            'collectedTotal' => $collected->sum('amount'),
+            'collectedSameDay' => $sameDay->sum('amount'),
+            'collectedAdvance' => $advance->sum('amount'),
+            'collectedLate' => $late->sum('amount'),
+            'advancePayments' => $advance->values(),
             'day' => $day,
             'saldoEnCaja' => $saldoEnCaja,
             'totalCashFromSales' => $totalCashFromSales,

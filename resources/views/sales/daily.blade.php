@@ -77,8 +77,6 @@
             $name === 'Transferencia' => 'Transferencia',
             default => 'Otro',
         };
-        $cashGroups = ['Tarjeta' => 0, 'Efectivo' => 0, 'Transferencia' => 0, 'Otro' => 0];
-        foreach ($cashByMethod as $method => $amount) { $cashGroups[$groupOf($method)] += $amount; }
         $live = $bookings->reject(fn ($b) => $b->booking_status === 'CANCELADA');
         $lodging = $live->sum('price_final');
         $extrasSum = $live->sum(fn ($b) => (int) $b->addons->sum('amount'));
@@ -87,7 +85,7 @@
     <div class="topline">
         <div>
             <h1>Venta del día — {{ ucfirst($day->locale('es')->isoFormat('dddd D [de] MMMM')) }}</h1>
-            <p class="sub" style="margin-bottom:0;">Estadías que empiezan este día y plata que entró a caja · <a href="{{ route('sales.monthly', $day->format('Y-m')) }}">ver el mes completo →</a></p>
+            <p class="sub" style="margin-bottom:0;">Estadías que empiezan este día · <a href="{{ route('sales.monthly', $day->format('Y-m')) }}">ver el mes completo →</a> · <a href="{{ route('cash.show', $day->toDateString()) }}">ver la caja de este día →</a></p>
         </div>
         <div class="nav-day">
             <a href="{{ route('sales.daily', $day->copy()->subDay()->toDateString()) }}">← Día anterior</a>
@@ -103,7 +101,6 @@
         <div class="card revenue"><div class="label">Venta total</div><div class="value">{{ $money($revenue) }}</div></div>
         <div class="card collected"><div class="label">Cobrado de esas ventas</div><div class="value">{{ $money($collected) }}</div></div>
         <div class="card pending"><div class="label">Pendiente</div><div class="value">{{ $money($pending) }}</div></div>
-        <div class="card cash-total"><div class="label">Entró a caja hoy</div><div class="value">{{ $money($cashTotal) }}</div></div>
     </div>
 
     <div class="sec-label">Registro del día</div>
@@ -157,43 +154,6 @@
     </div>
     @if ($cancelledCount > 0)
         <p class="sub">{{ $cancelledCount }} {{ Str::plural('reserva', $cancelledCount) }} cancelada{{ $cancelledCount > 1 ? 's' : '' }} ese día — no se cuenta en los totales, aparece atenuada en la tabla.</p>
-    @endif
-
-    <div class="sec-label">Cobros de caja del día — plata que entró, sin importar de qué reserva es</div>
-    <div class="table-wrap">
-        <table>
-            <thead><tr><th>Concepto</th><th class="n">Monto</th></tr></thead>
-            <tbody>
-                @foreach ($cashGroups as $label => $amount)
-                    <tr class="{{ $amount === 0 ? 'zero' : '' }}"><td>{{ $label }}</td><td class="n">{{ $money($amount) }}</td></tr>
-                @endforeach
-                <tr class="total"><td>Total cobrado</td><td class="n">{{ $money($cashTotal) }}</td></tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="table-wrap">
-        <table>
-            <thead><tr><th>De dónde viene lo cobrado</th><th class="n">Monto</th></tr></thead>
-            <tbody>
-                <tr><td>De reservas de este día</td><td class="n">{{ $money($samedayTotal) }}</td></tr>
-                <tr><td>Anticipos de reservas futuras</td><td class="n">{{ $money($advanceTotal) }}</td></tr>
-                <tr><td>Saldos de estadías de días anteriores</td><td class="n">{{ $money($lateTotal) }}</td></tr>
-            </tbody>
-        </table>
-    </div>
-    @if ($collectedInAdvanceForToday > 0)
-        <p class="sec-note">De lo cobrado por las ventas de hoy ({{ $money($collected) }}), {{ $money($collectedInAdvanceForToday) }} ya había entrado a caja en un día anterior como anticipo — no es plata nueva de este día.</p>
-    @endif
-    @if ($advanceBookings->isNotEmpty())
-        <details class="adv">
-            <summary>Anticipos de este día ({{ $advanceBookings->count() }}) — dónde queda registrada esa plata</summary>
-            @foreach ($advanceBookings as $payment)
-                <div class="row">
-                    <span>{{ $payment->booking->room->name ?? '—' }} · {{ $payment->booking->customer->name ?? '—' }} · estadía {{ $payment->booking->starts_at->timezone('America/Santiago')->format('d/m/Y H:i') }} · <a class="code" href="{{ route('reservations.show', $payment->booking->code) }}">{{ $payment->booking->code }}</a></span>
-                    <span>{{ $money($payment->amount) }}</span>
-                </div>
-            @endforeach
-        </details>
     @endif
     </div>
 </body>
