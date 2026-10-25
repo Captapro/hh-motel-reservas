@@ -24,6 +24,28 @@ class BookingCheckInController extends Controller
 {
     private const TERMINAL = ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'];
 
+    /**
+     * Destino del QR del pase. Recepción lo escanea y cae directo en lo que
+     * queda pendiente: cobrar el saldo (si hay) y después el check-in completo
+     * con acompañantes y consumo. Si ya entró o la reserva está cerrada, va a
+     * su ficha.
+     */
+    public function validatePass(string $code): RedirectResponse
+    {
+        $booking = Booking::where('code', $code)->firstOrFail();
+
+        if ($booking->checked_in_at || in_array($booking->booking_status, self::TERMINAL, true)) {
+            return redirect()->route('reservations.show', $booking->code);
+        }
+        if ($booking->balanceDue() > 0) {
+            return redirect()->route('payments.create', ['code' => $booking->code, 'after' => 'pase'])
+                ->with('status', 'Pase de '.$booking->customer->name.' — '.$booking->room->name.'. Falta cobrar el saldo; después se hace el check-in.');
+        }
+
+        return redirect()->route('bookings.checkin.show', $booking->code)
+            ->with('status', 'Pase de '.$booking->customer->name.' — '.$booking->room->name.'. Completa el check-in.');
+    }
+
     public function show(string $code, UpsellResolver $upsells): View|RedirectResponse
     {
         $booking = Booking::with(['room.category', 'customer', 'addons', 'guests'])->where('code', $code)->firstOrFail();

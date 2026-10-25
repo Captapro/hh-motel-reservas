@@ -20,7 +20,7 @@ class BookingPassController extends Controller
         // buscarla a mano.
         $qr = (new Builder(
             writer: new PngWriter(),
-            data: route('reservations.show', $booking->code),
+            data: route('bookings.validate', $booking->code),
             size: 220,
             margin: 0,
         ))->build();

@@ -102,6 +102,25 @@ class BookingIntegrityTest extends TestCase
         return Coupon::create(array_merge(['internal_name' => 'Oferta prueba', 'auto_apply' => true, 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20], $overrides));
     }
 
+    public function test_pass_qr_sends_reception_to_what_is_pending(): void
+    {
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+
+        // Con saldo: primero cobrar, y el pago lleva al check-in completo.
+        $this->get(route('bookings.validate', $booking->code))
+            ->assertRedirect(route('payments.create', ['code' => $booking->code, 'after' => 'pase']));
+        $this->post(route('payments.store', $booking->code), [
+            'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) \Illuminate\Support\Str::uuid(),
+            'receipt_number' => '1', 'after' => 'pase',
+        ])->assertRedirect(route('bookings.checkin.show', $booking->code));
+
+        // Sin saldo: directo al check-in. Con check-in hecho: a la ficha.
+        $this->get(route('bookings.validate', $booking->code))->assertRedirect(route('bookings.checkin.show', $booking->code));
+        $booking->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
+        $this->get(route('bookings.validate', $booking->code))->assertRedirect(route('reservations.show', $booking->code));
+    }
+
     public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void
     {
         $first = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);

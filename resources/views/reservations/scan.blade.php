@@ -94,12 +94,14 @@
                 // Solo seguimos el link si es un pase de reserva de ESTE
                 // sistema -- nunca se navega a un dominio o ruta distinta,
                 // aunque el QR esté dañado o sea de otra cosa.
-                if (url.origin !== allowedOrigin || !/^\/reservas\/[A-Za-z0-9-]+$/.test(url.pathname)) {
+                if (url.origin !== allowedOrigin || !/^\/reservas\/[A-Za-z0-9-]+(\/validar)?$/.test(url.pathname)) {
                     retry('Ese QR no es un pase de reserva de HH Motel -- probá con otro.');
                     return;
                 }
 
                 statusLine.textContent = '¡Listo! Abriendo la reserva…';
+                // Pases viejos traen la ficha; igual se manda a lo pendiente (cobrar / check-in).
+                if (!url.pathname.endsWith('/validar')) url.pathname += '/validar';
                 window.location.href = url.toString();
             }
 

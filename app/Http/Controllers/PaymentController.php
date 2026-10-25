@@ -19,7 +19,7 @@ class PaymentController extends Controller
             ->where('code', $code)->firstOrFail();
 
         $methods = PaymentMethod::where('is_active', true)->orderBy('name')->get();
-        $after = in_array($request->query('after'), ['board', 'checkin'], true) ? $request->query('after') : null;
+        $after = in_array($request->query('after'), ['board', 'checkin', 'pase'], true) ? $request->query('after') : null;
 
         // Recién creada con abono: se sugiere ese monto en vez del saldo
         // completo — recepción puede ajustarlo si corresponde otra cosa.
@@ -68,7 +68,7 @@ class PaymentController extends Controller
             'request_token' => ['required', 'uuid'],
             'external_id' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:255'],
-            'after' => ['nullable', 'in:board,checkin'],
+            'after' => ['nullable', 'in:board,checkin,pase'],
             ...$referenceRules,
         ], [
             'amount.max' => 'El monto no puede superar el saldo pendiente ($'.number_format($booking->balanceDue(), 0, ',', '.').').',
@@ -101,6 +101,11 @@ class PaymentController extends Controller
 
         if (($validated['after'] ?? null) === 'checkin') {
             return redirect()->route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso'])
+                ->with('status', 'Pago registrado — '.$booking->code.' · '.$method->name.' · $'.number_format($validated['amount'], 0, ',', '.').'. Ahora el check-in.');
+        }
+
+        if (($validated['after'] ?? null) === 'pase') {
+            return redirect()->route('bookings.checkin.show', $booking->code)
                 ->with('status', 'Pago registrado — '.$booking->code.' · '.$method->name.' · $'.number_format($validated['amount'], 0, ',', '.').'. Ahora el check-in.');
         }
 
