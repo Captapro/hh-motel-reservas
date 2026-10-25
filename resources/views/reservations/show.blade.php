@@ -79,6 +79,45 @@
         .pending-alert { background:#3a1c26; border:1px solid #7a2d4a; color:#f3a8c4; padding:10px 14px; border-radius:8px; font-size:13.5px; margin: 4px 0 12px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
         .pending-alert a { color:#fff; background:#ff7918; text-decoration:none; font-weight:600; padding:6px 12px; border-radius:6px; font-size:12.5px; white-space:nowrap; }
         ul.guests { margin:0; padding-left:18px; font-size:14px; }
+        .col-primary { background:#ff7918; border-color:#ff7918; color:#111; }
+        .col-primary:hover { background:#ff8f3d; color:#111; }
+        .col-disabled { opacity:.6; cursor:not-allowed; color:#f3a8c4; border-color:#7a2d4a; }
+        .col-disabled:hover { border-color:#7a2d4a; color:#f3a8c4; }
+        /* Venta de consumo durante la estadía */
+        .addon-panel { margin-top:10px; }
+        .addon-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding-bottom:8px; border-bottom:1px solid #2c2c2c; margin-bottom:4px; }
+        .addon-head b { font-size:14px; color:#eee; }
+        .addon-total { font-size:12.5px; font-family:ui-monospace,monospace; color:#888; }
+        .addon-total.has { color:#8fe0ad; font-weight:700; }
+        .addon-cat { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:#888; margin:10px 0 4px; }
+        .addon-combos { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; }
+        .addon-combo { display:flex; flex-direction:column; align-items:center; text-align:center; gap:3px; padding:10px 8px; background:#242424; border:1px solid #363636; border-radius:11px; }
+        .addon-combo.out { opacity:.5; }
+        .addon-combo-name { font-size:13.5px; font-weight:700; color:#fff; line-height:1.2; }
+        .addon-combo-items { font-size:11px; color:#9a9a9a; line-height:1.3; min-height:26px; }
+        .addon-combo-price { font-size:16px; font-weight:800; color:#ff7918; margin:1px 0 3px; }
+        .addon-cols { column-count:2; column-gap:22px; }
+        .addon-block { break-inside:avoid; margin-bottom:4px; }
+        .addon-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; }
+        .addon-name { font-size:13px; font-weight:600; color:#f1f1f1; line-height:1.25; }
+        .addon-price { font-size:11px; color:#8d8f94; margin-top:1px; }
+        .addon-panel .qty { display:flex; align-items:center; gap:2px; flex:none; }
+        .addon-panel .qty button { width:28px; height:28px; margin:0; padding:0; border-radius:7px; background:#262626; border:1px solid #444; color:#ddd; font-size:17px; line-height:1; font-weight:600; cursor:pointer; }
+        .addon-panel .qty button:hover:not(:disabled) { border-color:#ff7918; color:#ff7918; }
+        .addon-panel .qty input[type=number] { width:30px !important; height:28px !important; min-height:0 !important; margin:0 !important; padding:0 !important; text-align:center; background:transparent !important; border:none !important; box-shadow:none !important; color:#9a9a9a !important; font-size:15px; font-weight:700; -moz-appearance:textfield; appearance:textfield; }
+        .addon-panel .qty input::-webkit-inner-spin-button, .addon-panel .qty input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+        .addon-panel .qty.has input[type=number] { color:#ff7918 !important; }
+        .addon-submit { display:block; width:auto; margin:12px 0 0 auto; padding:10px 22px; background:#ff7918; color:#111; border:0; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; }
+        .addon-submit:disabled { background:#2a2a2a; color:#777; cursor:not-allowed; }
+        .addon-more { margin-top:12px; padding-top:12px; border-top:1px solid #2c2c2c; display:flex; flex-direction:column; gap:10px; }
+        .addon-hour { width:auto; background:#2a2410; border:1px solid #6b5a1e; color:#f0d58a; padding:8px 14px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; }
+        .addon-hour:hover { border-color:#f0b84b; color:#fff; }
+        .addon-hour b { color:#f0b84b; margin-left:4px; }
+        .addon-hour-off { padding:9px 12px; border:1px dashed #6b5a1e; border-radius:9px; background:#2a2410; color:#e8c76f; font-size:12.5px; line-height:1.5; }
+        .addon-other summary { cursor:pointer; color:#999; font-size:12.5px; list-style:none; }
+        .addon-other summary::-webkit-details-marker { display:none; }
+        .addon-other summary:hover { color:#ff7918; }
+        @media (max-width: 760px) { .addon-cols { column-count:1; } }
         a.finalize-btn { display:block; text-align:center; margin-top: 16px; background:#2a2a2a; border:1px solid #444; color:#eee; padding:13px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none; }
         .finish-blocked { margin-top:16px; padding:14px 16px; border:1px solid #b87822; border-radius:8px; background:#fff4df; color:#74480f; display:flex; flex-direction:column; gap:4px; text-align:center; }
         .finish-blocked span { font-size:13px; }
@@ -140,6 +179,13 @@
         @unless (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
             <a class="col-btn" href="{{ route('reservations.edit', $booking->code) }}">Modificar</a>
         @endunless
+        @if ($booking->checked_in_at && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
+            @if ($booking->balanceDue() <= 0)
+                <a class="col-btn col-primary" href="{{ route('bookings.finalize.show', $booking->code) }}" title="Marca la salida ahora mismo, aunque sea antes de la hora reservada">Finalizar reserva →</a>
+            @else
+                <span class="col-btn col-disabled" title="Registra el saldo pendiente antes de marcar el check-out">Finalizar · falta cobrar ${{ number_format($booking->balanceDue(), 0, ',', '.') }}</span>
+            @endif
+        @endif
         @unless (in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA', 'NO_SHOW']) || $booking->checked_in_at)
             <details class="col-cancel">
                 <summary class="col-btn">Cancelar</summary>
@@ -403,57 +449,78 @@
                 @endif
 
                 @if ($booking->checked_in_at && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
-                    <div class="addon-label">Agregar producto o combo</div>
-                    <form method="POST" action="{{ route('addons.extra-hour', $booking->code) }}" style="margin:10px 0 14px;">
+                    <form method="POST" action="{{ route('addons.store', $booking->code) }}" class="addon-panel" id="addon-panel">
                         @csrf
-                        @if ($extraHourPrice > 0)
-                            <button type="submit" style="width:100%;background:#f0b84b;color:#241b08;border:none;padding:10px;border-radius:7px;font-weight:700;cursor:pointer;">Vender 1 hora adicional — ${{ number_format($extraHourPrice, 0, ',', '.') }}</button>
-                        @else
-                            <div style="padding:10px 12px;border:1px dashed #6b5a1e;border-radius:7px;background:#2a2410;color:#e8c76f;font-size:12.5px;line-height:1.5;">
-                                <b>Hora adicional sin precio.</b> La tarifa {{ $booking->rate_rule_name_snapshot ?? '' }} no lo tiene configurado, así que no se puede vender.
-                                @if (auth()->user()?->isAdministrador())
-                                    <a href="{{ route('admin.rates.index') }}" style="color:#ff7918;">Configurarlo en Tarifas →</a>
-                                @else
-                                    Avísale a un administrador.
-                                @endif
+                        <div class="addon-head"><b>Agregar al consumo</b><span class="addon-total" id="addon-total">Nada seleccionado</span></div>
+
+                        @if ($combos->isNotEmpty())
+                            <div class="addon-cat">Combos</div>
+                            <div class="addon-combos">
+                                @foreach ($combos as $combo)
+                                    <div class="addon-combo {{ $combo->isOutOfStock() ? 'out' : '' }}">
+                                        <div class="addon-combo-name">{{ $combo->name }}</div>
+                                        <div class="addon-combo-items">{{ $combo->description ?: $combo->items->map(fn ($i) => $i->quantity.' × '.($i->product->name ?? ''))->join(' · ') }}</div>
+                                        <div class="addon-combo-price">${{ number_format($combo->price, 0, ',', '.') }}{!! $combo->isOutOfStock() ? ' <small>agotado</small>' : '' !!}</div>
+                                        <div class="qty">
+                                            <button type="button" class="q-minus" aria-label="Menos" @disabled($combo->isOutOfStock())>−</button>
+                                            <input type="number" name="combo_quantities[{{ $combo->id }}]" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" data-price="{{ $combo->price }}" @disabled($combo->isOutOfStock())>
+                                            <button type="button" class="q-plus" aria-label="Más" @disabled($combo->isOutOfStock())>+</button>
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
                         @endif
-                    </form>
-                    <form class="addon-form" method="POST" action="{{ route('addons.store', $booking->code) }}">
-                        @csrf
-                        <select name="item" required>
-                            <option value="" disabled selected>— Elige un producto o combo —</option>
-                            @if ($combos->isNotEmpty())
-                                <optgroup label="Combos">
-                                    @foreach ($combos as $combo)
-                                        <option value="combo:{{ $combo->id }}" @disabled($combo->isOutOfStock())>
-                                            {{ $combo->name }} — ${{ number_format($combo->price, 0, ',', '.') }}
-                                            {{ $combo->isOutOfStock() ? '(agotado)' : '' }}
-                                        </option>
+
+                        <div class="addon-cols">
+                            @foreach ($products->groupBy('category') as $category => $items)
+                                <div class="addon-block">
+                                    <div class="addon-cat">{{ $category ?? 'Otros' }}</div>
+                                    @foreach ($items as $product)
+                                        <div class="addon-row">
+                                            <div>
+                                                <div class="addon-name">{{ $product->name }}</div>
+                                                <div class="addon-price">${{ number_format($product->price, 0, ',', '.') }}@if ($product->track_inventory) · {{ $product->isOutOfStock() ? 'agotado' : $product->stock.' disp.' }}@endif</div>
+                                            </div>
+                                            <div class="qty">
+                                                <button type="button" class="q-minus" aria-label="Menos" @disabled($product->isOutOfStock())>−</button>
+                                                <input type="number" name="quantities[{{ $product->id }}]" value="0" min="0" max="{{ $product->track_inventory ? min(20, $product->stock) : 20 }}" data-price="{{ $product->price }}" @disabled($product->isOutOfStock())>
+                                                <button type="button" class="q-plus" aria-label="Más" @disabled($product->isOutOfStock())>+</button>
+                                            </div>
+                                        </div>
                                     @endforeach
-                                </optgroup>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <button type="submit" class="addon-submit" id="addon-submit" disabled>Agregar al consumo</button>
+                    </form>
+
+                    <div class="addon-more">
+                        <form method="POST" action="{{ route('addons.extra-hour', $booking->code) }}">
+                            @csrf
+                            @if ($extraHourPrice > 0)
+                                <button type="submit" class="addon-hour">⏱ Vender 1 hora adicional <b>${{ number_format($extraHourPrice, 0, ',', '.') }}</b></button>
+                            @else
+                                <div class="addon-hour-off">
+                                    <b>Hora adicional sin precio.</b> La tarifa {{ $booking->rate_rule_name_snapshot ?? '' }} no lo tiene configurado.
+                                    @if (auth()->user()?->isAdministrador())
+                                        <a href="{{ route('admin.rates.index') }}" style="color:#ff7918;">Configurarlo →</a>
+                                    @else
+                                        Avísale a un administrador.
+                                    @endif
+                                </div>
                             @endif
-                            <optgroup label="Productos individuales">
-                                @foreach ($products as $product)
-                                    <option value="product:{{ $product->id }}" @disabled($product->isOutOfStock())>
-                                        {{ $product->name }} — ${{ number_format($product->price, 0, ',', '.') }}
-                                        @if ($product->track_inventory)
-                                            {{ $product->isOutOfStock() ? '(agotado)' : '('.$product->stock.' disp.)' }}
-                                        @endif
-                                    </option>
-                                @endforeach
-                            </optgroup>
-                        </select>
-                        <input type="number" name="quantity" value="1" min="1" max="20">
-                        <button type="submit">Agregar</button>
-                    </form>
-                    <div class="addon-sep">O algo que no está en la lista</div>
-                    <form class="addon-form" method="POST" action="{{ route('addons.store', $booking->code) }}">
-                        @csrf
-                        <input type="text" name="description" placeholder="Descripción">
-                        <input type="number" name="amount" placeholder="$" min="1">
-                        <button type="submit">Agregar</button>
-                    </form>
+                        </form>
+                        <details class="addon-other">
+                            <summary>+ Otro concepto que no está en la lista</summary>
+                            <form class="addon-form" method="POST" action="{{ route('addons.store', $booking->code) }}">
+                                @csrf
+                                <input type="text" name="description" placeholder="Descripción">
+                                <input type="number" name="amount" placeholder="$" min="1">
+                                <button type="submit">Agregar</button>
+                            </form>
+                        </details>
+                    </div>
                 @endif
             </div>
             @endif
@@ -485,14 +552,6 @@
         </div>
     @endif
 
-    @if ($booking->checked_in_at && $booking->balanceDue() <= 0 && ! in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA']))
-        <a class="finalize-btn" href="{{ route('bookings.finalize.show', $booking->code) }}">Finalizar reserva — marcar check-out →</a>
-        <p class="hint" style="text-align:center;">Marca la salida ahora mismo, aunque sea antes de la hora reservada.</p>
-    @elseif ($booking->checked_in_at && $booking->balanceDue() > 0 && ! in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA']))
-        <div class="finish-blocked"><strong>No se puede finalizar todavía</strong><span>Registra el saldo pendiente de ${{ number_format($booking->balanceDue(), 0, ',', '.') }} antes de marcar el check-out.</span></div>
-    @elseif (! $booking->checked_in_at && ! in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA', 'NO_SHOW']))
-        <p class="sub" style="text-align:center; margin-top:16px;">Falta marcar el check-in antes de poder finalizar esta reserva.</p>
-    @endif
 
 
     </div>
@@ -545,6 +604,41 @@
                 try { show(document.execCommand('copy')); } catch (e) { show(false); }
             }
         }
+    </script>
+    <script>
+        // Consumo durante la estadía: se eligen cantidades y se agrega todo junto.
+        (function () {
+            const form = document.getElementById('addon-panel');
+            if (!form) return;
+            const inputs = Array.from(form.querySelectorAll('.qty input'));
+            const total = document.getElementById('addon-total');
+            const submit = document.getElementById('addon-submit');
+            const money = (n) => '$' + Number(n).toLocaleString('es-CL');
+            function refresh() {
+                let sum = 0, items = 0;
+                inputs.forEach((i) => {
+                    const q = Math.max(0, Number(i.value) || 0);
+                    sum += q * (Number(i.dataset.price) || 0);
+                    items += q;
+                    i.closest('.qty').classList.toggle('has', q > 0);
+                });
+                total.textContent = items ? (money(sum) + ' · ' + items + (items === 1 ? ' ítem' : ' ítems')) : 'Nada seleccionado';
+                total.classList.toggle('has', items > 0);
+                submit.disabled = items === 0;
+                submit.textContent = items ? ('Agregar ' + items + (items === 1 ? ' ítem' : ' ítems') + ' · ' + money(sum)) : 'Agregar al consumo';
+            }
+            form.querySelectorAll('.qty').forEach((box) => {
+                const input = box.querySelector('input');
+                const step = (d) => {
+                    const min = Number(input.min) || 0, max = Number(input.max) || 20;
+                    input.value = Math.min(max, Math.max(min, (Number(input.value) || 0) + d));
+                    refresh();
+                };
+                box.querySelector('.q-minus').addEventListener('click', () => step(-1));
+                box.querySelector('.q-plus').addEventListener('click', () => step(1));
+            });
+            refresh();
+        })();
     </script>
 </body>
 </html>

@@ -74,6 +74,10 @@ class BookingAddonController extends Controller
     {
         $validated = $request->validate([
             'item' => ['nullable', 'string'],
+            'quantities' => ['nullable', 'array'],
+            'quantities.*' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'combo_quantities' => ['nullable', 'array'],
+            'combo_quantities.*' => ['nullable', 'integer', 'min:0', 'max:20'],
             'quantity' => ['nullable', 'integer', 'min:1', 'max:20'],
             'description' => ['nullable', 'string', 'max:255'],
             'amount' => ['nullable', 'integer', 'min:1', 'max:200000'],
@@ -82,12 +86,15 @@ class BookingAddonController extends Controller
             'amount.max' => 'Ese monto parece demasiado alto para un ítem de consumo — revísalo.',
         ]);
         [$type, $id] = array_pad(explode(':', $validated['item'] ?? '', 2), 2, null);
-        if (! (($type === 'combo' || $type === 'product') && $id)) {
+        $productQuantities = collect($validated['quantities'] ?? [])->map(fn ($q) => (int) $q)->filter(fn ($q) => $q > 0);
+        $comboQuantities = collect($validated['combo_quantities'] ?? [])->map(fn ($q) => (int) $q)->filter(fn ($q) => $q > 0);
+        $several = $productQuantities->isNotEmpty() || $comboQuantities->isNotEmpty();
+        if (! $several && ! (($type === 'combo' || $type === 'product') && $id)) {
             $request->validate(['description' => ['required'], 'amount' => ['required']]);
         }
 
         try {
-            return DB::transaction(function () use ($type, $id, $validated, $code, $consumption) {
+            return DB::transaction(function () use ($type, $id, $validated, $code, $consumption, $productQuantities, $comboQuantities, $several) {
                 // Bloqueo de fila: mismo motivo que en BookingFinalizeController
                 // -- si finalizar corre al mismo tiempo, uno de los dos tiene
                 // que esperar al otro para que ninguno vea un estado a medio
@@ -103,7 +110,15 @@ class BookingAddonController extends Controller
 
                 $quantity = (int) ($validated['quantity'] ?? 1);
 
-                if ($type === 'combo' && $id) {
+                if ($several) {
+                    // Todo o nada: si un producto no tiene stock, no se agrega nada de este envío.
+                    foreach ($comboQuantities as $comboId => $qty) {
+                        $consumption->addCombo($booking, Combo::findOrFail($comboId), $qty, auth()->id());
+                    }
+                    foreach ($productQuantities as $productId => $qty) {
+                        $consumption->addProduct($booking, Product::findOrFail($productId), $qty, auth()->id());
+                    }
+                } elseif ($type === 'combo' && $id) {
                     $consumption->addCombo($booking, Combo::findOrFail($id), $quantity, auth()->id());
                 } elseif ($type === 'product' && $id) {
                     $consumption->addProduct($booking, Product::findOrFail($id), $quantity, auth()->id());

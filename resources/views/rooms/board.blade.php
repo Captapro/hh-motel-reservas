@@ -268,13 +268,18 @@
         .chips .card-head b { font-size: 12.5px; }
         .chips .cat { font-size: 9.5px; margin-bottom: 5px; }
         .chips .pill { font-size: 9px; padding: 2px 6px; margin-bottom: 0; }
-        .chips .eta, .chips .code, .chips .offer-badge, .chips .maintenance-badge,
-        .chips a.reserve-btn, .chips .aseo-ready-btn, .chips .bookings-btn, .chips .copy-link-btn,
+        .chips .eta:not(.aseo-help), .chips .code, .chips .offer-badge, .chips .maintenance-badge,
+        .chips a.reserve-btn, .chips .bookings-btn, .chips .copy-link-btn,
         .chips a.checkout-btn, .chips .checkin-btn, .chips a.consumo-btn, .chips a.inspect-btn,
         /* Acotado a las tarjetas -- un selector ".chips form" a secas también
            escondía los formularios de los toggles de Ala Sur/categoría de
            más arriba, que no tienen nada que ver con la densidad de tarjetas. */
-        .chips .card details, .chips .card form { display: none !important; }
+        .chips .card details, .chips .card form:not(.aseo-ready-form) { display: none !important; }
+        /* En aseo, la acción de reactivar es lo único que recepción necesita hacer: se mantiene visible. */
+        .chips .aseo-ready-form { margin-top:6px; }
+        .chips .aseo-cleaner-input { font-size:10px; padding:3px 4px; margin-bottom:4px; }
+        .chips .aseo-ready-btn { font-size:10px; padding:4px; }
+        .chips .eta.aseo-help { font-size:10px; }
         .chips .proxima-card { padding: 8px 10px; margin-bottom: 8px; }
             #pass-scans:empty { display:none; }
         #pass-scans { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }

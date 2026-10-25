@@ -156,6 +156,26 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('CONFIRMADA', $paid->fresh()->booking_status);
     }
 
+    public function test_several_products_can_be_added_at_once_during_the_stay_all_or_nothing(): void
+    {
+        (require database_path('migrations/2026_08_19_150001_add_inventory_to_products_table.php'))->up();
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
+        $water = Product::create(['name' => 'Agua', 'price' => 2000, 'track_inventory' => true, 'stock' => 5, 'is_active' => true]);
+        $beer = Product::create(['name' => 'Cerveza', 'price' => 3000, 'track_inventory' => true, 'stock' => 1, 'is_active' => true]);
+
+        // Una cerveza de más: no se agrega nada, ni siquiera el agua.
+        $this->post(route('addons.store', $booking->code), ['quantities' => [$water->id => 2, $beer->id => 2]])->assertSessionHasErrors('booking');
+        $this->assertSame(0, $booking->fresh()->addons()->count());
+        $this->assertSame(5, $water->fresh()->stock);
+
+        $this->post(route('addons.store', $booking->code), ['quantities' => [$water->id => 2, $beer->id => 1]])
+            ->assertRedirect(route('payments.create', ['code' => $booking->code, 'after' => 'board']));
+        $this->assertSame(2, $booking->fresh()->addons()->count());
+        $this->assertSame(7000, (int) $booking->fresh()->addons()->sum('amount'));
+        $this->assertSame(3, $water->fresh()->stock);
+    }
+
     public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void
     {
         $first = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);

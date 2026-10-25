@@ -42,7 +42,7 @@
                 <button type="submit" class="aseo-ready-btn">Marcar aseo listo — reactivar</button>
             </form>
         @else
-            <div class="eta" style="color:#e88a9a;">No hay mucamas activas cargadas en <a href="{{ route('admin.staff.index') }}" style="color:#e88a9a;">Personal</a> — agrega al menos una para poder marcar el aseo.</div>
+            <div class="eta aseo-help" style="color:#e88a9a;">No hay mucamas activas cargadas en <a href="{{ route('admin.staff.index') }}" style="color:#e88a9a;">Personal</a> — agrega al menos una para poder marcar el aseo.</div>
         @endif
     @elseif ($room->operational_status !== 'activa')
         @if ($room->operational_note)
