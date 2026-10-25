@@ -21,6 +21,29 @@
         a.back { display:block; text-align:center; margin-top: 16px; color:#999; font-size: 13px; text-decoration:none; }
         a.skip-btn { display:block; text-align:center; margin-top: 16px; background:#2a2a2a; border:1px solid #555; color:#eee; padding:13px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none; }
         a.skip-btn:hover { border-color:#ff7918; color:#ff7918; }
+        /* Pantalla de pago compacta: medios como botones, campos en parejas */
+        .page-inner { max-width: 1250px; padding-top:16px; padding-bottom:20px; }
+        .hh-payment-page .hh-payment-layout { grid-template-columns: minmax(280px,.7fr) minmax(0,1.3fr); gap:18px; }
+        .hh-payment-page .hh-payment-layout > .card { padding:18px 22px 20px; }
+        .hh-payment-layout h2 { margin:0 0 12px; }
+        .hh-payment-summary .row { padding:9px 0; gap:14px; border-top:1px solid #292929; }
+        .hh-payment-summary .row:first-of-type { border-top:none; }
+        .hh-payment-summary .row span:last-child { text-align:right; }
+        .muted { color:#777; font-weight:400; }
+        .sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); border:0; opacity:0; }
+        .method-chips, .quick-amounts { display:flex; flex-wrap:wrap; gap:8px; }
+        .quick-amounts { margin-top:8px; }
+        .chip { width:auto; margin:0; padding:10px 18px; background:#1c1c1c; border:1.5px solid #3a3a3a; color:#ccc; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
+        .chip:hover { border-color:#ff7918; color:#fff; }
+        .chip.active { background:#ff7918; border-color:#ff7918; color:#111; }
+        .chip.small { padding:6px 12px; font-size:12.5px; font-weight:600; }
+        .chip-error { margin-top:8px; color:#f3b8b8; font-size:13px; }
+        .pay-grid { display:grid; grid-template-columns: 1fr 1fr; gap:0 16px; align-items:start; }
+        @media (max-width: 700px) { .pay-grid { grid-template-columns: 1fr; } }
+        .pay-actions { display:flex; align-items:center; gap:18px; margin-top:20px; flex-wrap:wrap; }
+        .pay-actions button.primary { width:auto; min-width:280px; margin:0; padding:13px 28px; }
+        a.skip-inline { color:#bbb; font-size:14px; text-decoration:none; font-weight:600; }
+        a.skip-inline:hover { color:#ff7918; }
     </style>
 </head>
 <body>
@@ -37,15 +60,26 @@
         </div>
     @endif
 
+    @php
+        $balance = $booking->balanceDue();
+        $consumos = $booking->addonsTotal();
+        $tz = 'America/Santiago';
+    @endphp
     <div class="hh-payment-layout">
     <div class="card hh-payment-summary">
         <h2>Resumen de la reserva</h2>
+        <div class="row"><span>Cliente</span><span>{{ $booking->customer->name }}</span></div>
+        <div class="row"><span>Habitación</span><span>{{ $booking->room->name }} · {{ $booking->room->category->name }}</span></div>
+        <div class="row"><span>Horario</span><span>{{ $booking->starts_at->timezone($tz)->format('d/m H:i') }} — {{ $booking->ends_at->timezone($tz)->format('H:i') }}</span></div>
         <div class="row"><span>Precio final</span><span>${{ number_format($booking->price_final, 0, ',', '.') }}</span></div>
+        @if ($consumos > 0)
+            <div class="row"><span>Consumos</span><span>${{ number_format($consumos, 0, ',', '.') }}</span></div>
+        @endif
         <div class="row"><span>Pagado</span><span>${{ number_format($booking->paidAmount(), 0, ',', '.') }}</span></div>
-        <div class="row balance"><span>Saldo</span><span>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</span></div>
+        <div class="row balance"><span>Saldo</span><span>${{ number_format($balance, 0, ',', '.') }}</span></div>
     </div>
 
-    <form class="card hh-form-card" method="POST" action="{{ route('payments.store', $booking->code) }}">
+    <form class="card hh-form-card" method="POST" action="{{ route('payments.store', $booking->code) }}" id="payment-form">
         <h2>Datos del pago</h2>
         @csrf
         <input type="hidden" name="request_token" value="{{ old('request_token', $requestToken) }}">
@@ -53,40 +87,65 @@
             <input type="hidden" name="after" value="{{ $after }}">
         @endif
 
-        <label for="payment-method">Medio de pago</label>
-        <select id="payment-method" name="payment_method_id" required>
+        <label>Medio de pago</label>
+        <div class="method-chips" id="method-chips" role="group" aria-label="Medio de pago">
+            @php $order = ['efectivo', 'transferencia', 'debito', 'credito', 'mercado_pago', 'otro']; @endphp
+            @foreach ($methods->sortBy(fn ($m) => ($i = array_search($m->code, $order, true)) === false ? 99 : $i) as $method)
+                <button type="button" class="chip" data-id="{{ $method->id }}" data-code="{{ $method->code }}">{{ $method->name }}</button>
+            @endforeach
+        </div>
+        <select id="payment-method" name="payment_method_id" class="sr-only" tabindex="-1" aria-hidden="true">
             <option value="" disabled selected>— Elige un medio —</option>
             @foreach ($methods as $method)
                 <option value="{{ $method->id }}" data-code="{{ $method->code }}" @selected(old('payment_method_id') == $method->id)>{{ $method->name }}</option>
             @endforeach
         </select>
+        <div class="chip-error" id="chip-error" hidden>Elige un medio de pago para continuar.</div>
 
-        <label for="amount-display">Monto (CLP)</label>
-        <input type="text" inputmode="numeric" id="amount-display" placeholder="0" required>
-        <input type="hidden" name="amount" id="amount-input" value="{{ old('amount', $suggestedAmount) }}">
-
-        <label for="payment-reference">Referencia / N° de operación (opcional — si la dejas vacía, generamos una)</label>
-        <input id="payment-reference" type="text" name="external_id" value="{{ old('external_id') }}">
-
-        <div id="voucher-field">
-            <label for="voucher-number">N° voucher <span id="voucher-hint" style="color:#777; font-weight:400;"></span></label>
-            <input id="voucher-number" type="text" name="voucher_number" value="{{ old('voucher_number') }}" placeholder="Ej. 146">
+        <div class="pay-grid">
+            <div>
+                <label for="amount-display">Monto (CLP)</label>
+                <input type="text" inputmode="numeric" id="amount-display" placeholder="0" required>
+                <input type="hidden" name="amount" id="amount-input" value="{{ old('amount', $suggestedAmount) }}">
+                @if ($balance > 0)
+                    <div class="quick-amounts">
+                        <button type="button" class="chip small" data-amount="{{ $balance }}">Saldo completo · ${{ number_format($balance, 0, ',', '.') }}</button>
+                        @if ($balance >= 2000)
+                            <button type="button" class="chip small" data-amount="{{ (int) round($balance / 2) }}">Mitad · ${{ number_format((int) round($balance / 2), 0, ',', '.') }}</button>
+                        @endif
+                    </div>
+                @endif
+            </div>
+            <div>
+                <label for="payment-reference">Referencia / N° de operación <span class="muted">(opcional)</span></label>
+                <input id="payment-reference" type="text" name="external_id" value="{{ old('external_id') }}" placeholder="Si la dejas vacía, generamos una">
+            </div>
         </div>
 
-        <div id="receipt-field">
-            <label for="receipt-number">N° boleta <span id="receipt-hint" style="color:#777; font-weight:400;"></span></label>
-            <input id="receipt-number" type="text" name="receipt_number" value="{{ old('receipt_number') }}" placeholder="Ej. 96302">
+        <div class="pay-grid">
+            <div id="voucher-field">
+                <label for="voucher-number">N° voucher <span id="voucher-hint" class="muted"></span></label>
+                <input id="voucher-number" type="text" name="voucher_number" value="{{ old('voucher_number') }}" placeholder="Ej. 146">
+            </div>
+            <div id="receipt-field">
+                <label for="receipt-number">N° boleta <span id="receipt-hint" class="muted"></span></label>
+                <input id="receipt-number" type="text" name="receipt_number" value="{{ old('receipt_number') }}" placeholder="Ej. 96302">
+            </div>
         </div>
 
-        <label for="payment-notes">Observaciones (opcional)</label>
+        <label for="payment-notes">Observaciones <span class="muted">(opcional)</span></label>
         <input id="payment-notes" type="text" name="notes" value="{{ old('notes') }}">
 
-        <button type="submit">Registrar pago</button>
+        <div class="pay-actions">
+            <button type="submit" class="primary">Registrar pago</button>
+            @if ($after === 'board')
+                <a class="skip-inline" href="{{ route('reservations.show', $booking->code) }}">Saltar por ahora →</a>
+            @endif
+        </div>
     </form>
     </div>
 
     @if ($after === 'board')
-        <a class="skip-btn" href="{{ route('reservations.show', $booking->code) }}">Saltar por ahora →</a>
         <a class="back" href="{{ route('rooms.board') }}">← Volver al tablero</a>
     @else
         <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver a la reserva</a>
@@ -147,6 +206,40 @@
             select.addEventListener('change', apply);
             apply();
         })();
+
+        // Medio de pago como botones: llenan el <select> real (que es el que se envía).
+        (function () {
+            const select = document.getElementById('payment-method');
+            const chips = Array.from(document.querySelectorAll('#method-chips .chip'));
+            const error = document.getElementById('chip-error');
+            if (!select || !chips.length) return;
+
+            function paint() { chips.forEach((c) => c.classList.toggle('active', c.dataset.id === select.value)); }
+            chips.forEach((chip) => chip.addEventListener('click', function () {
+                select.value = chip.dataset.id;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                error.hidden = true;
+                paint();
+                const next = document.getElementById('voucher-number').offsetParent ? 'voucher-number' : 'receipt-number';
+                document.getElementById(next)?.focus();
+            }));
+            paint();
+
+            document.getElementById('payment-form').addEventListener('submit', function (e) {
+                if (!select.value) {
+                    e.preventDefault();
+                    error.hidden = false;
+                    chips[0].focus();
+                }
+            });
+        })();
+
+        // Montos rápidos: saldo completo o la mitad.
+        document.querySelectorAll('[data-amount]').forEach((btn) => btn.addEventListener('click', function () {
+            const display = document.getElementById('amount-display');
+            display.value = btn.dataset.amount;
+            display.dispatchEvent(new Event('input', { bubbles: true }));
+        }));
     </script>
 </body>
 </html>
