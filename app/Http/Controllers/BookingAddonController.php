@@ -122,7 +122,7 @@ class BookingAddonController extends Controller
     private function toPaymentIfOwed(Booking $booking, string $message): RedirectResponse
     {
         if ($booking->fresh()->balanceDue() > 0) {
-            return redirect()->route('payments.create', $booking->code)
+            return redirect()->route('payments.create', ['code' => $booking->code, 'after' => 'board'])
                 ->with('status', $message.' Registra el pago.');
         }
 
