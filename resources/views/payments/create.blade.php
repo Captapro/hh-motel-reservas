@@ -107,9 +107,12 @@
                 <label for="amount-display">Monto (CLP)</label>
                 <input type="text" inputmode="numeric" id="amount-display" placeholder="0" required>
                 <input type="hidden" name="amount" id="amount-input" value="{{ old('amount', $suggestedAmount) }}">
-                @if ($balance > 0)
+                {{-- En el ingreso presencial se paga el total: el monto ya viene completo y no hay nada que fraccionar. --}}
+                @if ($balance > 0 && $after !== 'checkin')
                     <div class="quick-amounts">
-                        <button type="button" class="chip small" data-amount="{{ $balance }}">Saldo completo · ${{ number_format($balance, 0, ',', '.') }}</button>
+                        @if ((int) $suggestedAmount !== (int) $balance)
+                            <button type="button" class="chip small" data-amount="{{ $balance }}">Saldo completo · ${{ number_format($balance, 0, ',', '.') }}</button>
+                        @endif
                         @if ($balance >= 2000)
                             <button type="button" class="chip small" data-amount="{{ (int) round($balance / 2) }}">Mitad · ${{ number_format((int) round($balance / 2), 0, ',', '.') }}</button>
                         @endif
