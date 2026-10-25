@@ -100,7 +100,7 @@ class PaymentController extends Controller
         }
 
         if (($validated['after'] ?? null) === 'checkin') {
-            return redirect()->route('bookings.checkin.show', $booking->code)
+            return redirect()->route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso'])
                 ->with('status', 'Pago registrado — '.$booking->code.' · '.$method->name.' · $'.number_format($validated['amount'], 0, ',', '.').'. Ahora el check-in.');
         }
 

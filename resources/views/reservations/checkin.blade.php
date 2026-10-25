@@ -101,6 +101,8 @@
         .page-inner > .code { display:inline-block; margin:0; }
         .page-inner > .meta { margin:0 0 10px; }
         .hint-box { padding:8px 12px; margin-bottom:12px; }
+        .ci-grid.express { grid-template-columns: minmax(0, 560px); }
+        .express-sum .existing-row { display:flex; justify-content:space-between; gap:14px; padding:5px 0; font-size:14px; }
         @media (max-width: 860px) { .ci-grid { grid-template-columns: 1fr; }  .offer-block { column-count:1; } }
     </style>
 </head>
@@ -119,8 +121,13 @@
         </div>
     @endif
 
+    @php $express = request('flujo') === 'ingreso'; @endphp
     <div class="hint-box">
-        Momento de ofrecerle los extras al cliente — lo que cargues acá se suma a la reserva junto con el check-in.
+        @if ($express)
+            Último paso: confirma el ingreso. Ya se registró el pago y se ofreció el consumo.
+        @else
+            Momento de ofrecerle los extras al cliente — lo que cargues acá se suma a la reserva junto con el check-in.
+        @endif
         @php $delay = (int) round($booking->starts_at->diffInMinutes(now(), false)); @endphp
         @if ($delay > 5)
             <div class="late-box">Llega {{ $delay }} min después de la hora reservada — queda registrado como atraso.</div>
@@ -129,11 +136,29 @@
 
     <form method="POST" action="{{ route('bookings.checkin', $booking->code) }}">
         @csrf
+        @if ($express)
+            <input type="hidden" name="flujo" value="ingreso">
+        @endif
 
-        <div class="ci-grid">
+        <div class="ci-grid{{ $express ? ' express' : '' }}">
             <div class="ci-col">
-        @php $requiredGuests = max(0, $booking->guests_count - 1); @endphp
-        <div class="card guests-required">
+        @php $requiredGuests = max(0, $booking->guests_count - 1); $guestsReady = $express && $booking->guests->count() >= $requiredGuests; @endphp
+        @if ($express)
+            <div class="card express-sum">
+                <div class="cat-label" style="margin-top:0;">Ingreso presencial</div>
+                <div class="existing-row"><span>Habitación</span><b>{{ $booking->room->name }}</b></div>
+                <div class="existing-row"><span>Horario</span><b>{{ $booking->starts_at->timezone('America/Santiago')->format('H:i') }} — {{ $booking->ends_at->timezone('America/Santiago')->format('H:i') }}</b></div>
+                <div class="existing-row"><span>Personas</span><b>{{ $booking->guests_count }}</b></div>
+                @if ($guestsReady && $booking->guests->isNotEmpty())
+                    <div class="existing-row"><span>Acompañantes</span><b>{{ $booking->guests->pluck('name')->implode(', ') }}</b></div>
+                @endif
+                <div class="existing-row"><span>Pagado</span><b>${{ number_format($booking->paidAmount(), 0, ',', '.') }}</b></div>
+                @if ($booking->balanceDue() > 0)
+                    <div class="existing-row" style="color:#f0b27a;"><span>Saldo pendiente</span><b>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</b></div>
+                @endif
+            </div>
+        @endif
+        <div class="card guests-required" @if ($guestsReady) style="display:none" @endif>
             <div class="cat-label" style="margin-top:0;">Registro de acompañantes — obligatorio</div>
             <p>
                 Esta reserva es para <b>{{ $booking->guests_count }}</b> {{ Str::plural('persona', $booking->guests_count) }}.
@@ -161,9 +186,13 @@
             </div>
         @endif
 
-                <button type="submit" class="save">Registrar check-in</button>
+                <button type="submit" class="save">{{ $express ? 'Confirmar ingreso' : 'Registrar check-in' }}</button>
+                @if ($express)
+                    <a class="back" href="{{ route('bookings.checkin.show', $booking->code) }}">+ Ofrecer algo más antes de entrar</a>
+                @endif
                 <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver sin registrar</a>
             </div>
+            @unless ($express)
             <div class="ci-col">
         <div class="offer-panel">
                 <div class="offer-head">
@@ -224,6 +253,7 @@
             </div>
 
             </div>
+            @endunless
         </div>
     </form>
 

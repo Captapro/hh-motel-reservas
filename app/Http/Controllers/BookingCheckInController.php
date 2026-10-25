@@ -174,6 +174,10 @@ class BookingCheckInController extends Controller
         $this->applyUpsells($booking, $validated['accepted_upsells'] ?? [], $consumption, $availability, $rateRules);
 
         $status = $delay > 0 ? "Check-in registrado — {$delay} min de atraso." : 'Check-in registrado.';
+        if ($request->input('flujo') === 'ingreso') {
+            // Ingreso presencial: el cierre del flujo crear -> cobrar -> entrar.
+            $status = '✓ Ingreso registrado con éxito · '.$booking->customer->name;
+        }
 
         try {
             foreach ($validated['combo_quantities'] ?? [] as $comboId => $qty) {

@@ -321,7 +321,7 @@ class ReservationController extends Controller
         }
 
         if ($walkIn) {
-            return redirect()->route('bookings.checkin.show', $booking->code)
+            return redirect()->route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso'])
                 ->with('status', 'Reserva '.$booking->code.' creada — '.$finalRoomName.' · '.$customerName.'.');
         }
 

@@ -412,7 +412,7 @@ class BookingIntegrityTest extends TestCase
         $this->post(route('payments.store', $booking->code), [
             'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) \Illuminate\Support\Str::uuid(),
             'receipt_number' => '4411', 'after' => 'checkin',
-        ])->assertRedirect(route('bookings.checkin.show', $booking->code));
+        ])->assertRedirect(route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso']));
         $this->assertSame(0, $booking->fresh()->balanceDue());
     }
 

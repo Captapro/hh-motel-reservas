@@ -136,7 +136,7 @@
             @if ($after === 'board')
                 <a class="skip-inline" href="{{ route('reservations.show', $booking->code) }}">Saltar por ahora →</a>
             @elseif ($after === 'checkin')
-                <a class="skip-inline" href="{{ route('bookings.checkin.show', $booking->code) }}">Cobrar después, ir al check-in →</a>
+                <a class="skip-inline" href="{{ route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso']) }}">Cobrar después, ir al check-in →</a>
             @endif
         </div>
     </form>
