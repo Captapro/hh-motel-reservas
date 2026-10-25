@@ -43,6 +43,7 @@ class BookingIntegrityTest extends TestCase
         foreach ([
             '0001_01_01_000000_create_users_table.php',
             '2026_08_18_120001_add_role_to_users_table.php',
+            '2026_10_23_210000_allow_soporte_role_on_users.php',
             '2026_08_18_120002_create_room_categories_table.php',
             '2026_08_18_120003_create_rooms_table.php',
             '2026_08_18_120004_create_rate_rules_table.php',
@@ -167,8 +168,14 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(10000, (int) $booking->fresh()->addons()->sum('amount'));
     }
 
-    public function test_booking_can_be_deleted_with_confirmation_even_after_check_in_and_restores_stock(): void
+    public function test_only_soporte_can_delete_bookings_even_after_check_in_and_stock_is_restored(): void
     {
+        $booking0 = $this->booking(['starts_at' => Carbon::parse('2026-10-26 12:00')]);
+        // Un administrador común no puede eliminar reservas.
+        $this->delete(route('bookings.destroy', $booking0->code), ['confirm_text' => 'ELIMINAR'])->assertForbidden();
+        $this->assertDatabaseHas('bookings', ['id' => $booking0->id]);
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+
         (require database_path('migrations/2026_08_19_150001_add_inventory_to_products_table.php'))->up();
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);

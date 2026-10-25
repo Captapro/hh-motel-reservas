@@ -127,7 +127,7 @@ Route::post('/reservas/{code}/hora-adicional', [BookingAddonController::class, '
 Route::get('/reservas/{code}/checkin', [BookingCheckInController::class, 'show'])->name('bookings.checkin.show');
 Route::post('/reservas/{code}/checkin', [BookingCheckInController::class, 'store'])->name('bookings.checkin');
 Route::post('/reservas/{code}/cancelar', [BookingCancelController::class, 'store'])->name('bookings.cancel');
-Route::delete('/reservas/{code}', [\App\Http\Controllers\BookingDeleteController::class, 'destroy'])->middleware('role:administrador')->name('bookings.destroy');
+Route::delete('/reservas/{code}', [\App\Http\Controllers\BookingDeleteController::class, 'destroy'])->middleware('role:soporte')->name('bookings.destroy');
 Route::post('/reservas/{code}/fidelizacion', [CustomerLoyaltyController::class, 'store'])->name('customers.loyalty');
 Route::post('/reservas/{code}/instrucciones-pago', [BookingPaymentInstructionsController::class, 'store'])->name('bookings.payment_instructions');
 Route::get('/reservas/{code}/finalizar', [BookingFinalizeController::class, 'show'])->name('bookings.finalize.show');

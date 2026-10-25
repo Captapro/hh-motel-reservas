@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 class BookingDeleteController extends Controller
 {
     /**
-     * Eliminar una reserva (solo administrador): pruebas, errores o limpieza
+     * Eliminar una reserva (solo soporte / master): pruebas, errores o limpieza
      * durante la puesta en marcha. Incluye las que ya tuvieron check-in o
      * quedaron finalizadas: se borran con sus pagos y consumos (sale de caja
      * y de ventas), se devuelve al inventario lo que se había consumido y

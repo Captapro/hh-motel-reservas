@@ -206,10 +206,9 @@
                 ."¿Nos regalas 30 segundos para contarnos cómo fue tu experiencia?\n\n"
                 .$reviewUrl;
         @endphp
-        <textarea id="review-message-text" class="visually-hidden" readonly>{{ $reviewMessage }}</textarea>
+        {{-- Abre el chat con el mensaje ya escrito: solo queda apretar enviar. --}}
         <div class="payment-actions">
-            <button type="button" class="copy-btn" onclick="hhCopyText('review-message-text', this)">Copiar texto</button>
-            <a class="whatsapp-btn" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener">Pedir reseña por WhatsApp</a>
+            <a class="whatsapp-btn" href="{{ $whatsappContactUrl.'?text='.rawurlencode($reviewMessage) }}" target="_blank" rel="noopener">Pedir reseña por WhatsApp</a>
         </div>
     @endif
 
@@ -437,7 +436,7 @@
         </div>
     </div>
 
-    @if (auth()->user()?->isAdministrador())
+    @if (auth()->user()?->isSoporte())
         @php
             $closed = in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW'], true);
             $hadStay = ! $booking->canBeDeleted();
@@ -445,7 +444,7 @@
         <div class="card" style="margin-top:22px;border:1px solid #5a2327;background:#1d1315;">
             <strong>Eliminar reserva</strong>
             @if ($hadStay)
-                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva ya tuvo check-in{{ $booking->booking_status === 'FINALIZADA' ? ' y está finalizada' : '' }}. Elimínala solo si es una <b>prueba o un error de carga</b>: se borra{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos ($'.number_format($booking->paidAmount(), 0, ',', '.').')' : '' }}{{ $booking->addons->isNotEmpty() ? ' y sus consumos' : '' }}, <b>descuenta sus montos de la caja y de las ventas</b>, devuelve al inventario lo consumido y <b>no se puede deshacer</b>. Queda registrada en auditoría. La habitación no cambia de estado.</p>
+                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva ya tuvo check-in{{ $booking->booking_status === 'FINALIZADA' ? ' y está finalizada' : '' }}. Solo soporte puede borrarla. Hazlo únicamente si es una <b>prueba o un error de carga</b>: se borra{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos ($'.number_format($booking->paidAmount(), 0, ',', '.').')' : '' }}{{ $booking->addons->isNotEmpty() ? ' y sus consumos' : '' }}, <b>descuenta sus montos de la caja y de las ventas</b>, devuelve al inventario lo consumido y <b>no se puede deshacer</b>. Queda registrada en auditoría. La habitación no cambia de estado.</p>
             @elseif ($closed)
                 <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva no llegó a ocurrir ({{ $booking->booking_status }}). Si es un <b>dato de prueba</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}. Esto descuenta sus montos de la caja y de las ventas, y <b>no se puede deshacer</b>. Queda registrada en auditoría.</p>
             @else
