@@ -57,6 +57,8 @@
         details.pop { position:relative; display:inline-block; }
         details.pop > summary { cursor:pointer; color:#ff7918; font-size:13px; list-style:none; }
         details.pop > summary::-webkit-details-marker { display:none; }
+        details.pop > summary.btn { display:inline-block; background:#ff7918; color:#fff; padding:9px 16px; border-radius:7px; font-size:13.5px; font-weight:600; }
+        details.pop > summary.btn.secondary { background:#2a2a2a; }
         .pop-body { position:absolute; right:0; top:calc(100% + 6px); z-index:30; width:380px; max-width:86vw; background:#232323; border:1px solid #444; border-radius:10px; padding:14px; box-shadow:0 14px 34px #000a; text-align:left; }
         .pop-body form.pop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
         .pop-body form.pop-grid .full { grid-column:1 / -1; }
