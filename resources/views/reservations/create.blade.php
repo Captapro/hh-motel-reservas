@@ -323,7 +323,7 @@
                         <label>Personas</label>
                         <input type="number" name="guests_count" min="1" max="10" value="{{ old('guests_count', 2) }}" required>
                     </div>
-                    <div>
+                    <div id="deposit-wrap">
                         <label>Abono <span class="hint" style="margin:0;">— si el cliente paga solo una parte ahora, opcional</span></label>
                         <input type="number" name="deposit_amount" id="deposit-amount" min="0" step="1" value="{{ old('deposit_amount') }}" placeholder="Ej. 10000">
                     </div>
@@ -1395,7 +1395,23 @@
                     && !!val('document-type') && !!doc && !doc.disabled && !!val('document-number');
             }
 
+            // Un cliente que llega presencial paga al ingresar: el abono solo
+            // tiene sentido cuando la reserva es para más tarde. Si la hora
+            // elegida es de aquí a una hora o menos, se oculta y no se envía.
+            const WALK_IN_MINUTES = 60;
+            function syncDeposit() {
+                const wrap = document.getElementById('deposit-wrap');
+                const input = document.getElementById('deposit-amount');
+                const d = val('date-input'), h = val('time-hour'), m = val('time-minute');
+                if (!wrap || !input || !d || h === '' || m === '') return;
+                const start = new Date(d + 'T' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':00');
+                const walkIn = (start.getTime() - Date.now()) / 60000 <= WALK_IN_MINUTES;
+                wrap.hidden = walkIn;
+                if (walkIn) input.value = '';
+            }
+
             function update() {
+                syncDeposit();
                 const done = [stayDone(), false, false];
                 done[1] = done[0] && clientDone();
                 let active = done[0] ? (done[1] ? 3 : 2) : 1;
@@ -1414,6 +1430,7 @@
             const box = document.getElementById('price-box');
             if (box) new MutationObserver(update).observe(box, { childList: true, subtree: true, attributes: true });
             document.addEventListener('click', (e) => { if (e.target.closest('#dur-quick, .wheel, .time-quick, #room-cat-quick')) setTimeout(update, 60); });
+            setInterval(syncDeposit, 1500);
             update();
             setTimeout(update, 600);
         })();
