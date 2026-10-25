@@ -48,6 +48,7 @@
         .pending-row .pinfo strong { display:block; font-size:13.5px; }
         .pending-row .pinfo small { color:#6b7280; font-size:11.5px; }
         .pending-row .page { font-size:11.5px; color:#8a7256; white-space:nowrap; }
+        .pending-row .ptags { display:flex; gap:6px; align-items:center; justify-content:flex-end; }
         .pending-row .ptag { font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
         .pending-row .ptag.sent { background:#e7f7ef; color:#0e9f6e; }
         .pending-row .ptag.unsent { background:#fdecdc; color:#b64c0a; border:1px solid #f0c89a; }
@@ -369,16 +370,18 @@
                     <span class="pcode">{{ $booking->code }}</span>
                     <span class="pinfo"><strong>{{ $booking->customer->name }}</strong><small>{{ $booking->room->name }} · {{ $booking->room->category->name }} · llegó {{ $booking->created_at->timezone('America/Santiago')->diffForHumans() }}</small></span>
                     <span class="page">{{ $booking->starts_at->timezone('America/Santiago')->isToday() ? 'hoy '.$booking->starts_at->timezone('America/Santiago')->format('H:i') : $booking->starts_at->timezone('America/Santiago')->format('d/m H:i') }}</span>
-                    @if ($booking->expires_at)
-                        <span class="ptag {{ $booking->expires_at->diffInMinutes(now(), false) > -3 ? 'unsent' : 'sent' }}">⏳ vence {{ $booking->expires_at->diffForHumans() }}</span>
-                    @else
-                        <span class="ptag sent">Sin vencimiento</span>
-                    @endif
-                    @if ($booking->payment_instructions_sent_at)
-                        <span class="ptag sent">✓ Ya se le avisó</span>
-                    @else
-                        <span class="ptag unsent">Sin contactar</span>
-                    @endif
+                    <span class="ptags">
+                        @if ($booking->expires_at)
+                            <span class="ptag {{ $booking->expires_at->diffInMinutes(now(), false) > -3 ? 'unsent' : 'sent' }}">⏳ vence {{ $booking->expires_at->diffForHumans() }}</span>
+                        @else
+                            <span class="ptag sent">Sin vencimiento</span>
+                        @endif
+                        @if ($booking->payment_instructions_sent_at)
+                            <span class="ptag sent">✓ Ya se le avisó</span>
+                        @else
+                            <span class="ptag unsent">Sin contactar</span>
+                        @endif
+                    </span>
                     <span class="arrow">→</span>
                 </a>
             @endforeach
