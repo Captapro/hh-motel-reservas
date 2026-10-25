@@ -204,6 +204,9 @@
         button { background:#2a2a2a; color:#eee; border:1px solid #444; border-radius:6px; font-size:11.5px; padding:4px 10px; cursor:pointer; }
         button:hover { border-color:#ff7918; }
         a.reserve-btn { display:block; text-align:center; margin-top:10px; background:#ff7918; border:1px solid #ff7918; color:#fff; text-decoration:none; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; }
+        a.reserve-alt { display:block; text-align:center; margin-top:6px; color:#9a9ca1; font-size:11.5px; text-decoration:none; }
+        a.reserve-alt:hover { color:#ff7918; }
+        .compact a.reserve-alt, .chips a.reserve-alt { display:none; }
         .aseo-ready-form { margin-top:8px; display:block; }
         .aseo-cleaner-input { display:block; width:100%; box-sizing:border-box; margin-bottom:6px; }
         .aseo-cleaner-input:focus { outline:none; border-color:#e8c76f; }

@@ -73,7 +73,8 @@
         @endif
 
         @if ($status['occupancy'] === 'libre')
-            <a class="reserve-btn" href="{{ route('reservations.create', ['room_id' => $room->id]) }}">Reservar →</a>
+            <a class="reserve-btn" href="{{ route('reservations.create', ['room_id' => $room->id, 'modo' => 'ingreso']) }}">Ingresar →</a>
+            <a class="reserve-alt" href="{{ route('reservations.create', ['room_id' => $room->id]) }}">o reservar para más tarde</a>
         @endif
     @endif
 

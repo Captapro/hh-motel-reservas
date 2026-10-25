@@ -206,6 +206,8 @@
         .panel-summary.step-active button.submit { animation: stepPulse 1.8s ease-in-out infinite; }
         @keyframes stepPulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,121,24,.5); } 50% { box-shadow:0 0 0 8px rgba(255,121,24,0); } }
         @media (prefers-reduced-motion: reduce) { .panel-summary.step-active button.submit { animation:none; } }
+        .walkin-now { margin-top:14px; padding:10px 14px; border:1px solid #6b3a14; background:#2a1a0c; color:#ffb379; border-radius:9px; font-size:14px; }
+        .walkin-now b { color:#ff7918; }
         @media (max-width: 1280px) { .form-grid { grid-template-columns: 1fr 1fr; } .panel-summary { grid-column: 1 / -1; position:static; margin-top:16px; } }
         @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
@@ -214,8 +216,13 @@
     @include('partials.navbar')
     <div class="page-inner">
     <div class="page-head">
-        <h1>Nueva reserva</h1>
-        <p class="sub">Recepción · completa la estadía y los datos del cliente</p>
+        @if ($walkInMode)
+            <h1>Ingreso presencial</h1>
+            <p class="sub">El cliente está en recepción: se registra, se cobra y se hace el check-in · <a href="{{ route('reservations.create') }}" style="color:#ff7918;">¿Es para más tarde? Hacer una reserva</a></p>
+        @else
+            <h1>Nueva reserva</h1>
+            <p class="sub">Para una hora más adelante · <a href="{{ route('reservations.create', ['modo' => 'ingreso']) }}" style="color:#ff7918;">¿El cliente está aquí? Ingreso presencial</a></p>
+        @endif
     </div>
 
     @if ($errors->any())
@@ -229,7 +236,7 @@
     <form method="POST" action="{{ route('reservations.store') }}">
         @csrf
 
-        <input type="hidden" name="walk_in" id="walk-in-flag" value="0">
+        <input type="hidden" name="walk_in" id="walk-in-flag" value="{{ $walkInMode ? 1 : 0 }}">
         <div class="form-grid">
             <div class="panel step-panel" data-step="1">
                 <div class="form-col-head"><span class="step-num">1</span>La estadía<span class="step-tag"></span></div>
@@ -263,7 +270,7 @@
                 </select>
                 <div class="hint">El estado es el de <strong>ahora mismo</strong> — si reservas para más adelante, puede estar libre igual aunque diga ocupada.</div>
 
-                <div class="row row-datetime">
+                <div class="row row-datetime"@if ($walkInMode) style="display:none"@endif>
                     <div>
                         <label>Fecha <span id="date-wheel-month" class="date-month-badge"></span></label>
                         <div class="wheel wheel-date" id="date-wheel">
@@ -305,6 +312,10 @@
                         <div class="time-warning" id="time-warning">⚠ Ese horario (u hora + duración) no corresponde a ninguna tarifa vigente — no se va a poder crear la reserva.</div>
                     </div>
                 </div>
+
+                @if ($walkInMode)
+                    <div class="walkin-now">Ingresa <b>ahora</b> · <span id="walkin-clock"></span></div>
+                @endif
 
                 <label>Duración <span class="hint" style="margin:0;">— según la categoría</span></label>
                 @php
@@ -1400,13 +1411,15 @@
             // tiene sentido cuando la reserva es para más tarde. Si la hora
             // elegida es de aquí a una hora o menos, se oculta y no se envía.
             const WALK_IN_MINUTES = 60;
+            const FIXED_WALK_IN = {{ $walkInMode ? 'true' : 'false' }};
             function syncDeposit() {
                 const wrap = document.getElementById('deposit-wrap');
                 const input = document.getElementById('deposit-amount');
                 const d = val('date-input'), h = val('time-hour'), m = val('time-minute');
-                if (!wrap || !input || !d || h === '' || m === '') return;
-                const start = new Date(d + 'T' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':00');
-                const walkIn = (start.getTime() - Date.now()) / 60000 <= WALK_IN_MINUTES;
+                if (!wrap || !input) return;
+                if (!FIXED_WALK_IN && (!d || h === '' || m === '')) return;
+                const start = FIXED_WALK_IN ? new Date() : new Date(d + 'T' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':00');
+                const walkIn = FIXED_WALK_IN || (start.getTime() - Date.now()) / 60000 <= WALK_IN_MINUTES;
                 wrap.hidden = walkIn;
                 if (walkIn) input.value = '';
                 const flag = document.getElementById('walk-in-flag');
@@ -1438,6 +1451,22 @@
             setInterval(syncDeposit, 1500);
             update();
             setTimeout(update, 600);
+        })();
+
+        // Ingreso presencial: la hora es la de este instante, no la de cuando se abrió el formulario.
+        (function () {
+            if (!{{ $walkInMode ? 'true' : 'false' }}) return;
+            const form = document.querySelector('.form-grid').closest('form');
+            const clock = document.getElementById('walkin-clock');
+            const pad = (n) => String(n).padStart(2, '0');
+            const tick = () => { if (clock) { const n = new Date(); clock.textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()); } };
+            tick(); setInterval(tick, 20000);
+            form.addEventListener('submit', function () {
+                const n = new Date();
+                document.getElementById('date-input').value = n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
+                document.getElementById('time-hour').value = String(n.getHours());
+                document.getElementById('time-minute').value = String(Math.floor(n.getMinutes() / 5) * 5);
+            }, true);
         })();
     </script>
 </body>

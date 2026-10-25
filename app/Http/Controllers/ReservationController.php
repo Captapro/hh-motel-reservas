@@ -97,6 +97,7 @@ class ReservationController extends Controller
 
         return view('reservations.create', [
             'rooms' => $rooms, 'selectedRoomId' => $selectedRoomId, 'coupons' => $coupons,
+            'walkInMode' => $request->query('modo') === 'ingreso',
             'showTariff' => true,
             'tariff' => $tariff,
             'closesLabel' => $tariff ? TimeFormat::minutes((int) max(0, $now->diffInMinutes($tariff['closes_at'], false))) : null,

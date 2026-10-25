@@ -7,6 +7,8 @@
     .hh-navbar .hh-spacer { flex:1; }
     .hh-navbar .hh-new-btn { background:#ff7918; color:#fff !important; padding:9px 16px; border-radius:7px; font-size:13.5px; font-weight:600; white-space:nowrap; }
     .hh-navbar .hh-new-btn:hover { background:#df6209; }
+    .hh-navbar .hh-new-btn.hh-alt-btn { background:transparent !important; border:1px solid #ff7918; color:#ff7918 !important; box-shadow:none; }
+    .hh-navbar .hh-new-btn.hh-alt-btn:hover { background:#ff791822 !important; }
     .hh-tariff-chip {
         display:flex; align-items:center; gap:7px; white-space:nowrap;
         background:#1c2f1c; border:1px solid #2e5a2e; border-radius:8px;
@@ -70,7 +72,8 @@
             @endif
         @endif
         @stack('nav-actions')
-        <a class="hh-new-btn" href="{{ route('reservations.create') }}">+ Nueva reserva</a>
+        <a class="hh-new-btn" href="{{ route('reservations.create', ['modo' => 'ingreso']) }}">+ Ingreso presencial</a>
+        <a class="hh-new-btn hh-alt-btn" href="{{ route('reservations.create') }}">+ Reserva</a>
         @auth
             <span style="color:#aaa; font-size:12.5px; padding:0 4px;">{{ auth()->user()->name }}</span>
             <form method="POST" action="{{ route('logout') }}" style="display:inline;">
