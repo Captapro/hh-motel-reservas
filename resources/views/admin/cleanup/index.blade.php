@@ -1,6 +1,10 @@
 @extends('admin.layout')
 @section('title', 'Limpieza')
 @section('content')
+    <style>
+        /* Casillas del mismo tamaño y alineadas con el título, sin heredar el ancho de los campos de texto. */
+        input.clean-check { flex:none; width:18px; height:18px; min-width:18px; padding:0; margin:2px 0 0; accent-color:#ff7918; cursor:pointer; }
+    </style>
     <div class="page-head">
         <div>
             <h1>Limpiar historial de pruebas</h1>
@@ -14,7 +18,7 @@
             <h2>Qué limpiar</h2>
             @foreach ($options as $key => $option)
                 <label style="display:flex; gap:10px; align-items:flex-start; margin:0 0 12px; font-size:14px; color:#eee; cursor:pointer;">
-                    <input type="checkbox" name="what[]" value="{{ $key }}" style="width:auto; margin-top:3px;" @checked(in_array($key, old('what', [])))>
+                    <input type="checkbox" name="what[]" value="{{ $key }}" class="clean-check" @checked(in_array($key, old('what', [])))>
                     <span>
                         <b>{{ $option['title'] }}</b> <span class="pill">{{ $option['count'] }} registros</span>
                         <span style="display:block; color:#999; font-size:12.5px; margin-top:2px;">{{ $option['help'] }}</span>
