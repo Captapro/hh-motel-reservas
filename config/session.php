@@ -32,7 +32,9 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    // Recepción abre el sistema desde el celular al escanear pases: 14 días sin actividad
+    // antes de pedir la clave otra vez (la sesión se renueva con cada uso).
+    'lifetime' => (int) env('SESSION_LIFETIME', 20160),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

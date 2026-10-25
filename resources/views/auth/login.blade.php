@@ -43,7 +43,7 @@
             <label for="password">Contraseña</label>
             <input type="password" id="password" name="password" required>
 
-            <label class="remember"><input type="checkbox" name="remember"> Mantener sesión iniciada</label>
+            <label class="remember"><input type="checkbox" name="remember" checked> Mantener sesión iniciada</label>
 
             <button type="submit">Entrar</button>
         </form>
