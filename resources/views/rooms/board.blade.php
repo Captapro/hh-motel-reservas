@@ -652,6 +652,17 @@
             const pc = document.querySelector('.summary .chip.proximas b'); if (pc) pc.textContent = proximas;
             const sc = document.querySelector('.sidebar-title .count'); if (sc) sc.textContent = proximas;
         }
+        // Los contadores de arriba llevan a su sección (útil con "En aseo" debajo de "Disponibles").
+        document.querySelectorAll('.summary .chip').forEach(function (chip) {
+            const name = ['ocupadas', 'aseo', 'disponibles', 'fuera'].find(function (n) { return chip.classList.contains(n); });
+            if (!name) return;
+            chip.style.cursor = 'pointer';
+            chip.title = 'Ir a la sección';
+            chip.addEventListener('click', function () {
+                const sec = document.querySelector('.section.' + name);
+                if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
         hhApplyWingFilter();
         hhApplyCategoryFilter();
     </script>
