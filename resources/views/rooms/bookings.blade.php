@@ -13,7 +13,10 @@
         .sub { color:#999; font-size: 13px; margin-bottom: 22px; }
         .sub a { color:#ff7918; text-decoration:none; }
         a.back-btn { display:inline-block; background:#1c1c1c; border:1px solid #333; color:#ccc; text-decoration:none; padding:8px 13px; border-radius:7px; font-size:12.5px; font-weight:600; margin-bottom:16px; }
-        a.back-btn:hover { border-color:#ff7918; color:#ff7918; }
+        a.back-btn:hover, button.back-btn:hover { border-color:#ff7918; color:#ff7918; }
+        button.back-btn { cursor:pointer; font-family:inherit; }
+        .top-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+        .top-actions .back-btn { margin-bottom:0; }
         .sec-label { font-size: 11px; color:#888; text-transform:uppercase; letter-spacing:.05em; margin: 22px 0 10px; }
         .sec-label:first-of-type { margin-top:0; }
         a.row-card { display:block; background:#1c1c1c; border:1px solid #333; border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; text-decoration:none; color:#eee; }
@@ -30,7 +33,11 @@
 <body>
     @include('partials.navbar')
     <div class="page-inner hh-room-history">
-    <a class="back-btn" href="{{ route('rooms.board') }}">← Volver al tablero</a>
+    <div class="top-actions">
+        <a class="back-btn" href="{{ route('rooms.board') }}">← Volver al tablero</a>
+        <button type="button" class="back-btn" id="copy-room-link" data-link="{{ route('catalog.room', $room) }}">📋 Copiar link de la ficha</button>
+        <a class="back-btn" href="{{ route('catalog.room', $room) }}" target="_blank" rel="noopener">Ver ficha ↗</a>
+    </div>
     <h1>{{ $room->name }} — reservas</h1>
     <p class="sub">Categoría {{ $room->category->name }} · <a href="{{ route('reservations.create', ['room_id' => $room->id]) }}">nueva reserva aquí</a></p>
 
@@ -65,5 +72,25 @@
         @endforeach
     @endif
     </div>
+    <script>
+        // Copia el link público de la ficha de esta habitación, para pegarlo en WhatsApp.
+        (function () {
+            const btn = document.getElementById('copy-room-link');
+            if (!btn) return;
+            const original = btn.textContent;
+            const show = (ok) => { btn.textContent = ok ? '¡Copiado!' : 'No se pudo copiar'; setTimeout(() => { btn.textContent = original; }, 1800); };
+            btn.addEventListener('click', function () {
+                const url = btn.dataset.link;
+                const fallback = () => {
+                    const tmp = document.createElement('input');
+                    tmp.value = url; document.body.appendChild(tmp); tmp.select();
+                    try { show(document.execCommand('copy')); } catch (e) { show(false); }
+                    document.body.removeChild(tmp);
+                };
+                if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(() => show(true)).catch(fallback);
+                else fallback();
+            });
+        })();
+    </script>
 </body>
 </html>
