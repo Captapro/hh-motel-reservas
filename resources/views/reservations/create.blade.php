@@ -377,9 +377,9 @@
                         <label>Personas</label>
                         <input type="number" name="guests_count" min="1" max="10" value="{{ old('guests_count', 2) }}" required>
                     </div>
-                    <div id="deposit-wrap">
+                    <div id="deposit-wrap" hidden>{{-- el abono ya no se pide: el pago se registra en el paso siguiente --}}
                         <label>Abono <span class="hint" style="margin:0;">— si el cliente paga solo una parte ahora, opcional</span></label>
-                        <input type="number" name="deposit_amount" id="deposit-amount" min="0" step="1" value="{{ old('deposit_amount') }}" placeholder="Ej. 10000">
+                        <input type="number" name="deposit_amount" id="deposit-amount" min="0" step="1" value="" placeholder="Ej. 10000" disabled>
                     </div>
                 </div>
             </div>
@@ -1545,8 +1545,8 @@
                 // Una reserva para dentro de una hora o menos no lleva abono, pero sigue siendo reserva:
                 // el ingreso presencial solo se activa desde su propia entrada (?modo=ingreso).
                 const forNow = FIXED_WALK_IN || (start.getTime() - Date.now()) / 60000 <= WALK_IN_MINUTES;
-                wrap.hidden = forNow;
-                if (forNow) input.value = '';
+                wrap.hidden = true;
+                input.value = '';
                 const flag = document.getElementById('walk-in-flag');
                 if (flag) flag.value = FIXED_WALK_IN ? '1' : '0';
                 const btn = document.getElementById('submit-btn');
