@@ -142,7 +142,11 @@ class BookingService
                         'ends_at' => $endsAt,
                         'duration_minutes' => $durationMinutes,
                         'guests_count' => $data['guests_count'],
-                        'booking_status' => 'PENDIENTE_PAGO',
+                        // Ingreso presencial: el cliente ya está en recepción, no es una
+                        // reserva a la espera de que alguien le cobre ni la persigue
+                        // "Pendientes de gestionar" -- nace confirmada; el saldo se
+                        // sigue viendo como NO_PAGADA hasta que se cobre.
+                        'booking_status' => ! empty($data['walk_in']) ? 'CONFIRMADA' : 'PENDIENTE_PAGO',
                         'payment_status' => 'NO_PAGADA',
                         'rate_rule_id' => $pricing['rate_rule']->id,
                         'rate_rule_name_snapshot' => $pricing['rate_rule']->name,

@@ -397,6 +397,7 @@ class BookingIntegrityTest extends TestCase
 
         // Reserva normal: sigue yendo al pago y de ahí al tablero.
         $this->post('/reservar', $data)->assertRedirect(route('payments.create', ['code' => Booking::first()->code, 'after' => 'board']));
+        $this->assertSame('PENDIENTE_PAGO', Booking::first()->booking_status);
 
         // Ingreso presencial: pago y de ahí directo al check-in.
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
@@ -404,6 +405,9 @@ class BookingIntegrityTest extends TestCase
         $this->post('/reservar', $data + ['walk_in' => 1])
             ->assertRedirect(route('payments.create', ['code' => Booking::first()->code, 'after' => 'checkin']));
         $booking = Booking::first();
+        // Un ingreso presencial no queda "pendiente de gestionar": nace confirmado.
+        $this->assertSame('CONFIRMADA', $booking->booking_status);
+        $this->assertSame('NO_PAGADA', $booking->payment_status);
 
         $this->post(route('payments.store', $booking->code), [
             'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) \Illuminate\Support\Str::uuid(),

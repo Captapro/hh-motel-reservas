@@ -259,6 +259,7 @@ class ReservationController extends Controller
                 'guests_count' => (int) $validated['guests_count'],
                 'coupon_code' => $validated['coupon_code'] ?? null,
                 'deposit_amount' => (int) ($validated['deposit_amount'] ?? 0),
+                'walk_in' => $walkIn,
                 'created_by' => auth()->id(),
                 'verified_by' => auth()->id(),
                 'notes' => null,
