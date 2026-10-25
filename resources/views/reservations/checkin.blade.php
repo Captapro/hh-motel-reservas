@@ -64,6 +64,27 @@
         .upsell-add { width:100%; margin:0 0 8px; background:#ff7918; color:#fff; border:none; padding:13px; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; }
         .upsell-skip { width:100%; margin:0; background:transparent; border:1px solid #444; color:#aaa; padding:11px; border-radius:8px; font-size:13.5px; cursor:pointer; }
         .upsell-skip:hover { border-color:#666; color:#ccc; }
+        /* Dos columnas en pantalla ancha: registro de acompañantes y acción | consumo para ofrecer */
+        .page-inner { max-width: 1100px; }
+        .ci-grid { display:grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: 0 28px; align-items:start; }
+        .ci-col .manual-extras .card { column-count:2; column-gap:24px; padding:12px 16px; margin-bottom:12px; }
+        .ci-col .manual-extras .card .cat-label { margin:8px 0 2px; break-after:avoid; }
+        .ci-col .manual-extras .card .cat-label:first-child { margin-top:0; }
+        .ci-col .manual-extras .prod-row { break-inside:avoid; padding:4px 0; gap:8px; }
+        .ci-col .manual-extras .prod-row .name { font-size:13px; line-height:1.25; }
+        .ci-col .manual-extras .prod-row .price { font-size:11px; }
+        .ci-col .manual-extras .prod-row input { width:48px; padding:5px 4px; font-size:13px; }
+        .ci-col .card:first-child, .ci-col .existing-box:first-child { margin-top:0; }
+        button.save { width:100%; margin-top:6px; }
+        .ci-col details.manual-extras { margin-top:0; }
+        /* Cabecera compacta para que todo quepa en una pantalla */
+        .page-inner { padding-top:14px; padding-bottom:16px; }
+        .page-inner > h1 { display:inline-block; margin:0 14px 4px 0; }
+        .page-inner > .code { display:inline-block; margin:0; }
+        .page-inner > .meta { margin:0 0 10px; }
+        .hint-box { padding:8px 12px; margin-bottom:12px; }
+        .ci-col .manual-extras summary { padding:8px 4px; }
+        @media (max-width: 860px) { .ci-grid { grid-template-columns: 1fr; } .ci-col .manual-extras .card { column-count:1; } }
     </style>
 </head>
 <body>
@@ -92,6 +113,8 @@
     <form method="POST" action="{{ route('bookings.checkin', $booking->code) }}">
         @csrf
 
+        <div class="ci-grid">
+            <div class="ci-col">
         @php $requiredGuests = max(0, $booking->guests_count - 1); @endphp
         <div class="card guests-required">
             <div class="cat-label" style="margin-top:0;">Registro de acompañantes — obligatorio</div>
@@ -121,7 +144,11 @@
             </div>
         @endif
 
-        <details class="manual-extras">
+                <button type="submit" class="save">Registrar check-in</button>
+                <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver sin registrar</a>
+            </div>
+            <div class="ci-col">
+        <details class="manual-extras" open>
             <summary>Ofrecer productos y combos · Agregar consumo</summary>
 
             @if ($combos->isNotEmpty())
@@ -166,10 +193,10 @@
             </div>
         </details>
 
-        <button type="submit">Registrar check-in</button>
+            </div>
+        </div>
     </form>
 
-    <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver sin registrar</a>
     </div>
 
     <script>

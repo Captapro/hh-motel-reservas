@@ -47,6 +47,12 @@
         .dur-quick button.dur-60.active { background:#4ecdc4; } .dur-quick button.dur-120.active { background:#5b9dd9; }
         .dur-quick button.dur-180.active { background:#b088e8; } .dur-quick button.dur-360.active { background:#f2994a; }
         .dur-quick button.dur-720.active { background:#ff7918; }
+        /* Dos columnas en pantalla ancha: habitación y duración | fecha, hora y personas */
+        .page-inner { max-width: 1100px; }
+        .edit-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items:start; }
+        .edit-col > label:first-child { margin-top:0; }
+        button.save { width:auto; min-width:300px; padding:12px 28px; margin-top:22px; }
+        @media (max-width: 860px) { .edit-grid { grid-template-columns: 1fr; } button.save { width:100%; } }
     </style>
 </head>
 <body>
@@ -75,6 +81,8 @@
         @csrf
         @method('PUT')
 
+        <div class="edit-grid">
+            <div class="edit-col">
         <label>Habitación</label>
         @php $roomCats = $rooms->pluck('category')->unique('id')->sortBy('display_order')->values(); @endphp
         @if ($roomCats->count() > 1)
@@ -103,6 +111,21 @@
         </select>
         <div class="hint">El estado es el de <strong>ahora mismo</strong> — si reprogramas para más adelante, puede estar libre igual aunque diga ocupada.</div>
 
+        <label>Duración <span class="hint" style="margin:0;">— según la categoría</span></label>
+        @php
+            $selDur = (int) old('duration_minutes', $booking->duration_minutes);
+            $durLabels = [60 => '1 h', 120 => '2 h', 180 => '3 h', 360 => '6 h', 720 => '12 h'];
+            $allDurs = collect($categoryDurations)->flatten()->map(fn ($m) => (int) $m)->unique()->sort()->values();
+        @endphp
+        <input type="hidden" name="duration_minutes" id="duration-select" value="{{ $selDur }}" required>
+        <div class="dur-quick" id="dur-quick">
+            @foreach ($allDurs as $mins)
+                <button type="button" data-mins="{{ $mins }}" class="dur-{{ $mins }} {{ $selDur === $mins ? 'active' : '' }}" onclick="hhSetDuration({{ $mins }})">{{ $durLabels[$mins] ?? ($mins / 60).' h' }}</button>
+            @endforeach
+        </div>
+
+            </div>
+            <div class="edit-col">
         <div class="row">
             <div>
                 <label>Fecha</label>
@@ -141,23 +164,13 @@
             </div>
         </div>
 
-        <label>Duración <span class="hint" style="margin:0;">— según la categoría</span></label>
-        @php
-            $selDur = (int) old('duration_minutes', $booking->duration_minutes);
-            $durLabels = [60 => '1 h', 120 => '2 h', 180 => '3 h', 360 => '6 h', 720 => '12 h'];
-            $allDurs = collect($categoryDurations)->flatten()->map(fn ($m) => (int) $m)->unique()->sort()->values();
-        @endphp
-        <input type="hidden" name="duration_minutes" id="duration-select" value="{{ $selDur }}" required>
-        <div class="dur-quick" id="dur-quick">
-            @foreach ($allDurs as $mins)
-                <button type="button" data-mins="{{ $mins }}" class="dur-{{ $mins }} {{ $selDur === $mins ? 'active' : '' }}" onclick="hhSetDuration({{ $mins }})">{{ $durLabels[$mins] ?? ($mins / 60).' h' }}</button>
-            @endforeach
-        </div>
-
         <label>Personas</label>
         <input type="number" name="guests_count" min="1" max="10" value="{{ old('guests_count', $booking->guests_count) }}" required>
 
-        <button type="submit">Recalcular y guardar cambios</button>
+            </div>
+        </div>
+
+        <button type="submit" class="save">Recalcular y guardar cambios</button>
     </form>
 
     <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver sin modificar</a>

@@ -36,6 +36,17 @@
         .manual-extras summary::before { content:'+ '; color:#ff7918; font-weight:700; }
         .manual-extras[open] summary::before { content:'− '; }
         .manual-extras summary:hover { color:#eee; }
+        /* Dos columnas en pantalla ancha: confirmación y acción | consumo de último momento */
+        .page-inner { max-width: 1100px; padding-top:14px; }
+        .fin-grid { display:grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: 0 28px; align-items:start; }
+        .fin-col > label.confirm:first-child, .fin-col > .card:first-child { margin-top:0; }
+        button.save { width:100%; margin-top:14px; }
+        .fin-col .manual-extras .card { column-count:2; column-gap:24px; padding:12px 16px; margin-bottom:12px; }
+        .fin-col .manual-extras .prod-row { break-inside:avoid; padding:4px 0; gap:8px; }
+        .fin-col .manual-extras .prod-row .name { font-size:13px; line-height:1.25; }
+        .fin-col .manual-extras .prod-row .price { font-size:11px; }
+        .fin-col .manual-extras .prod-row input { width:48px; padding:5px 4px; font-size:13px; }
+        @media (max-width: 860px) { .fin-grid { grid-template-columns: 1fr; } .fin-col .manual-extras .card { column-count:1; } }
     </style>
 </head>
 <body>
@@ -57,6 +68,8 @@
     <form method="POST" action="{{ route('bookings.finalize.store', $booking->code) }}">
         @csrf
 
+        <div class="fin-grid">
+            <div class="fin-col">
         @if ($booking->addons->isNotEmpty())
             <div class="card">
                 <div class="cat-label">Ya cargado en esta reserva</div>
@@ -71,6 +84,10 @@
             <span><strong>Confirmación necesaria</strong>Confirmo que revisé la habitación, sus instalaciones, artículos y estado general, y está todo OK.</span>
         </label>
 
+                <button type="submit" class="save">Confirmar y finalizar reserva</button>
+                <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver sin finalizar</a>
+            </div>
+            <div class="fin-col">
         <details class="manual-extras">
             <summary>Se consumió algo de último momento que falta cargar (combos, bebidas, etc.)</summary>
 
@@ -116,10 +133,10 @@
             </div>
         </details>
 
-        <button type="submit" style="margin-top:20px;">Confirmar y finalizar reserva</button>
+            </div>
+        </div>
     </form>
 
-    <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver sin finalizar</a>
     </div>
 </body>
 </html>
