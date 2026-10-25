@@ -17,6 +17,7 @@ use App\Services\Pricing\CouponValidator;
 use App\Services\Pricing\PriceCalculator;
 use App\Services\Pricing\PromotionResolver;
 use App\Services\Pricing\RateRuleResolver;
+use App\Support\GuestLine;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -165,9 +166,10 @@ class BookingService
                         'expires_at' => ! empty($data['hold_minutes']) && empty($data['walk_in']) ? now()->addMinutes((int) $data['hold_minutes']) : null,
                     ]);
 
-                    foreach ($data['guest_names'] ?? [] as $guestName) {
-                        if (trim($guestName) !== '') {
-                            BookingGuest::create(['booking_id' => $booking->id, 'name' => trim($guestName)]);
+                    foreach ($data['guest_names'] ?? [] as $guestLine) {
+                        $guest = GuestLine::parse((string) $guestLine);
+                        if ($guest['name'] !== '') {
+                            BookingGuest::create(['booking_id' => $booking->id, 'name' => $guest['name'], 'id_document' => $guest['document']]);
                         }
                     }
 

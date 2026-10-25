@@ -15,6 +15,7 @@ use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\UpsellResolver;
+use App\Support\GuestLine;
 use App\Support\PassScans;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -203,8 +204,9 @@ class BookingCheckInController extends Controller
         // reemplaza lo que hubiera quedado (de la creación, si algo) por lo
         // recién confirmado con el huésped presente.
         $booking->guests()->delete();
-        foreach ($guestNames as $name) {
-            BookingGuest::create(['booking_id' => $booking->id, 'name' => $name]);
+        foreach ($guestNames as $line) {
+            $guest = GuestLine::parse($line);
+            BookingGuest::create(['booking_id' => $booking->id, 'name' => $guest['name'], 'id_document' => $guest['document']]);
         }
 
         $this->applyUpsells($booking, $validated['accepted_upsells'] ?? [], $consumption, $availability, $rateRules);

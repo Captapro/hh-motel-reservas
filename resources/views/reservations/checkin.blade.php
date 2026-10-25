@@ -36,7 +36,7 @@
         .guests-required { border-color:#6b5a1e; }
         .guests-required .cat-label { color:#e8c76f; }
         .guests-required p { font-size:13px; color:#bbb; margin:0 0 12px; line-height:1.4; }
-        .guest-row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+        .guest-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; align-items:center; }
         .guest-row input { flex:1; min-width:0; background:#111; border:1px solid #333; color:#fff; padding:9px 10px; border-radius:6px; font-size:14px; }
         .guest-row .guest-remove { flex:none; width:auto; background:#241717; border:1px solid #4a2a2a; color:#c47a7a; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:14px; }
         .guest-row .guest-remove:hover { border-color:#a83a3a; color:#e88a8a; }
@@ -172,7 +172,7 @@
             @if ($requiredGuests > 0)
                 <button type="button" class="guest-add-btn" onclick="hhAddGuestRow()">+ Agregar acompañante</button>
             @endif
-            <textarea name="guest_names" id="guest-names-hidden" hidden>{{ old('guest_names', $booking->guests->pluck('name')->implode("\n")) }}</textarea>
+            <textarea name="guest_names" id="guest-names-hidden" hidden>{{ old('guest_names', $booking->guests->map(fn ($g) => \App\Support\GuestLine::format($g->name, $g->id_document))->implode("\n")) }}</textarea>
             <div class="guests-error" id="guests-error" hidden></div>
         </div>
 
@@ -271,11 +271,12 @@
                 const first = row.querySelector('.guest-first').value.trim();
                 const last = row.querySelector('.guest-last').value.trim();
                 const full = (first + ' ' + last).trim();
-                if (full) names.push(full);
+                const doc = (row.querySelector('.guest-doc')?.value || '').trim().replace(/\|/g, '');
+                if (full) names.push(doc ? full + ' | ' + doc : full);
             });
             document.getElementById('guest-names-hidden').value = names.join('\n');
         }
-        function hhAddGuestRow(first, last) {
+        function hhAddGuestRow(first, last, doc) {
             const container = document.getElementById('guest-rows');
             const row = document.createElement('div');
             row.className = 'guest-row';
@@ -289,22 +290,31 @@
             lastInput.placeholder = 'Apellido';
             lastInput.className = 'guest-last';
             lastInput.value = last || '';
+            const docInput = document.createElement('input');
+            docInput.type = 'text';
+            docInput.placeholder = 'RUT (opcional)';
+            docInput.className = 'guest-doc';
+            docInput.maxLength = 20;
+            docInput.value = doc || '';
+            docInput.style.flex = '1 1 100%';
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'guest-remove';
             removeBtn.textContent = '✕';
             removeBtn.addEventListener('click', function () { row.remove(); hhSyncGuestNames(); });
-            [firstInput, lastInput].forEach(function (inp) { inp.addEventListener('input', hhSyncGuestNames); });
+            [firstInput, lastInput, docInput].forEach(function (inp) { inp.addEventListener('input', hhSyncGuestNames); });
             row.appendChild(firstInput);
             row.appendChild(lastInput);
             row.appendChild(removeBtn);
+            row.appendChild(docInput);
             container.appendChild(row);
         }
         (function () {
             const existing = document.getElementById('guest-names-hidden').value.split(/\r\n|\r|\n/).map(function (s) { return s.trim(); }).filter(Boolean);
             existing.forEach(function (name) {
-                const parts = name.split(' ');
-                hhAddGuestRow(parts[0], parts.slice(1).join(' '));
+                const pieces = name.split('|');
+                const parts = pieces[0].trim().split(' ');
+                hhAddGuestRow(parts[0], parts.slice(1).join(' '), (pieces[1] || '').trim());
             });
             const required = {{ $requiredGuests }};
             while (document.querySelectorAll('#guest-rows .guest-row').length < required) {

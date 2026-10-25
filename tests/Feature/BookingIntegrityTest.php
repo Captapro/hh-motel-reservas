@@ -23,6 +23,7 @@ use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\PaymentService;
 use App\Services\Integrations\GhlBookingSync;
+use App\Support\GuestLine;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -197,6 +198,20 @@ class BookingIntegrityTest extends TestCase
         // Se van los clientes que quedaron sin reservas, tanto el de la reserva borrada como el suelto.
         $this->assertDatabaseMissing('customers', ['id' => $extra->id]);
         $this->assertDatabaseMissing('customers', ['id' => $this->customer->id]);
+    }
+
+    public function test_companion_document_is_optional_and_saved_when_given(): void
+    {
+        $booking = $this->booking([
+            'starts_at' => Carbon::parse('2026-11-02 12:00'),
+            'guest_names' => ['Ana Pérez | 12.345.678-5', 'Luis Gómez'],
+        ]);
+
+        $guests = $booking->guests()->orderBy('id')->get();
+        $this->assertSame(['Ana Pérez', 'Luis Gómez'], $guests->pluck('name')->all());
+        $this->assertSame('12.345.678-5', $guests[0]->id_document);
+        $this->assertNull($guests[1]->id_document);
+        $this->assertSame('Ana Pérez | 12.345.678-5', GuestLine::format($guests[0]->name, $guests[0]->id_document));
     }
 
     public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void

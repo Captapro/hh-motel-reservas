@@ -350,7 +350,7 @@
                     <div class="row" style="border-bottom:none; padding-bottom:4px;"><span class="muted">Acompañantes</span><span></span></div>
                     <ul class="guests">
                         @foreach ($booking->guests as $guest)
-                            <li>{{ $guest->name }}</li>
+                            <li>{{ $guest->name }}@if ($guest->id_document) <span style="color:#999; font-family:ui-monospace,monospace; font-size:12px;">· {{ $guest->id_document }}</span>@endif</li>
                         @endforeach
                     </ul>
                 </div>
