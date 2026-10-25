@@ -28,7 +28,7 @@ class BookingAllocationService
 
             $occupancyStartsAt = $locked->checked_in_at && $locked->checked_in_at->lt($locked->starts_at)
                 ? $locked->checked_in_at : $locked->starts_at;
-            $target = $rooms->first(function (Room $room) use ($locked, $offer, $occupancyStartsAt) {
+            $target = $rooms->sortBy(fn (Room $room) => [$room->wingPriority(), $room->name])->values()->first(function (Room $room) use ($locked, $offer, $occupancyStartsAt) {
                 return $room->id !== $locked->room_id
                     && (int) $room->room_category_id === (int) $offer->to_room_category_id
                     && $room->isOperational() && $room->category->is_active

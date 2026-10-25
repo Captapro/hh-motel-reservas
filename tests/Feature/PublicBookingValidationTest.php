@@ -53,6 +53,7 @@ class PublicBookingValidationTest extends TestCase
             '2026_08_19_090001_create_products_table.php',
             '2026_08_20_110001_create_combos_table.php',
             '2026_09_10_140000_create_upsell_offers_table.php',
+            '2026_09_16_040000_add_wing_to_rooms.php',
             '2026_09_16_040100_create_operational_settings_table.php',
             '2026_09_17_002913_add_floor_toggles_to_operational_settings.php',
             '2026_09_21_135116_split_floor_toggles_by_wing_in_operational_settings.php',
@@ -125,6 +126,20 @@ class PublicBookingValidationTest extends TestCase
 
         $this->assertSame(1, Booking::count());
         $this->assertSame($first->headers->get('Location'), $second->headers->get('Location'));
+    }
+
+    public function test_catalog_fills_the_north_wing_before_the_south_wing(): void
+    {
+        // GO 102 (sur) va antes que GO 103 (norte) por nombre; igual se asigna el norte.
+        $this->room->update(['name' => 'GO 101', 'wing' => 'sur']);
+        $north = Room::create(['room_category_id' => $this->category->id, 'name' => 'GO 103', 'wing' => 'norte', 'operational_status' => 'activa']);
+
+        $this->post('/catalogo/reservar', $this->bookingPayload())->assertSessionHasNoErrors();
+        $this->assertSame($north->id, Booking::first()->room_id);
+
+        // Con el norte ocupado en ese horario, recién ahí se usa el sur.
+        $this->post('/catalogo/reservar', $this->bookingPayload(['phone' => '+56933333333', 'first_name' => 'Otra']))->assertSessionHasNoErrors();
+        $this->assertSame($this->room->id, Booking::orderByDesc('id')->first()->room_id);
     }
 
     public function test_catalog_booking_is_held_for_ten_minutes_and_then_releases_the_room(): void

@@ -198,6 +198,7 @@ class ReservationController extends Controller
                 $target = Room::where('room_category_id', $u->to_room_category_id)
                     ->where('operational_status', 'activa')->where('id', '!=', $room->id)
                     ->orderBy('name')->get()
+                    ->sortBy(fn (Room $r) => $r->wingPriority())->values()
                     ->first(fn (Room $r) => $availability->isAvailable($r, $startsAt, $endsAt));
                 if ($target) {
                     $upgradeTargetRoomId = $target->id;

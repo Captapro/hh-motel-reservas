@@ -333,6 +333,9 @@ class PublicBookingController extends Controller
             $roomQuery->whereKey($roomId);
         }
 
-        return $roomQuery->orderBy('name')->get()->first(fn (Room $r) => $availability->isAvailable($r, $startsAt, $endsAt));
+        // Si el cliente no eligió una pieza concreta, se llena primero el ala norte.
+        return $roomQuery->orderBy('name')->get()
+            ->sortBy(fn (Room $r) => $r->wingPriority())->values()
+            ->first(fn (Room $r) => $availability->isAvailable($r, $startsAt, $endsAt));
     }
 }

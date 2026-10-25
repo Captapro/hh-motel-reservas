@@ -52,6 +52,19 @@ class Room extends Model
         return $this->hasOne(RoomInspection::class)->latestOfMany();
     }
 
+    /**
+     * Preferencia al asignar sola una habitación libre: primero el ala norte, después el
+     * primer piso (sin ala) y al final el ala sur, para llenar el norte antes que el sur.
+     */
+    public function wingPriority(): int
+    {
+        return match ($this->wing) {
+            'norte' => 0,
+            'sur' => 2,
+            default => 1,
+        };
+    }
+
     public function isOperational(): bool
     {
         return $this->operational_status === 'activa';
