@@ -321,8 +321,16 @@
                             </form>
                         </div>
                     @endforeach
-                    @if (! $booking->customer->documentNumber() || ! $booking->customer->nationality || $booking->customer->age() === null)
-                        <p style="margin:10px 0 0;font-size:12.5px;color:#e8c76f;">Faltan datos del cliente (RUT/documento, nacionalidad o edad). <a href="{{ route('admin.customers.show', $booking->customer) }}" style="color:#ff7918;">Completar en su ficha →</a></p>
+                    @php
+                        $cust = $booking->customer;
+                        $faltan = array_values(array_filter([
+                            $cust->documentNumber() ? null : 'RUT o pasaporte',
+                            $cust->nationality ? null : 'nacionalidad',
+                            $cust->birth_date ? null : 'fecha de nacimiento',
+                        ]));
+                    @endphp
+                    @if ($faltan)
+                        <p style="margin:10px 0 0;font-size:12.5px;color:#e8c76f;">Falta en la ficha del cliente: <b>{{ implode(', ', $faltan) }}</b>. <a href="{{ route('admin.customers.show', $cust) }}" style="color:#ff7918;">Completar en su ficha →</a></p>
                     @endif
                 </div>
             @endif
