@@ -170,6 +170,28 @@
         .manual-extras[open] summary::before { content:'− '; }
         .manual-extras summary:hover { color:#eee; }
         .manual-extras .cat-label:first-of-type { margin-top:14px; }
+        /* Distribución en pantalla ancha: estadía | cliente | resumen, sin scroll en un notebook */
+        .page-inner { max-width: 1760px; padding-bottom: 28px; }
+        .page-head { margin-bottom:16px; padding-bottom:12px; }
+        .form-grid { grid-template-columns: minmax(0,1.45fr) minmax(0,1.05fr) minmax(300px,.8fr); gap: 0 16px; align-items:start; }
+        .form-grid > .panel { height:auto; padding:16px 20px 18px; }
+        .form-col-head { padding-bottom:10px; margin-bottom:2px; }
+        .panel label { margin:12px 0 6px; }
+        .panel input, .panel select { padding:9px 12px; font-size:14.5px; }
+        .panel .hint { margin-top:4px; }
+        .panel-summary { position:sticky; top:12px; }
+        .panel-summary .price-box { margin:6px 0 4px; }
+        .row-id { gap:12px; flex-wrap:wrap; }
+        .row-id > div { min-width:150px; }
+        .guest-details { margin-top:14px; }
+        .guest-details summary { cursor:pointer; list-style:none; font-size:12.5px; font-weight:600; text-transform:uppercase; letter-spacing:.045em; color:#999; padding:4px 0; }
+        .guest-details summary::-webkit-details-marker { display:none; }
+        .guest-details summary::before { content:'+ '; color:#ff7918; font-weight:700; }
+        .guest-details[open] summary::before { content:'− '; }
+        .panel-summary .extras-card { background:transparent; border:none; padding:0; margin-top:12px; }
+        .panel-summary button.submit { margin-top:16px; }
+        @media (max-width: 1280px) { .form-grid { grid-template-columns: 1fr 1fr; } .panel-summary { grid-column: 1 / -1; position:static; margin-top:16px; } }
+        @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -223,8 +245,6 @@
                     @endforeach
                 </select>
                 <div class="hint">El estado es el de <strong>ahora mismo</strong> — si reservas para más adelante, puede estar libre igual aunque diga ocupada.</div>
-
-                <div class="price-box" id="price-box" hidden></div>
 
                 <div class="row row-datetime">
                     <div>
@@ -282,11 +302,16 @@
                     @endforeach
                 </div>
 
-                <label>Personas</label>
-                <input type="number" name="guests_count" min="1" max="10" value="{{ old('guests_count', 2) }}" required>
-
-                <label>Abono <span class="hint" style="margin:0;">— si el cliente paga solo una parte ahora, opcional</span></label>
-                <input type="number" name="deposit_amount" id="deposit-amount" min="0" step="1" value="{{ old('deposit_amount') }}" placeholder="Ej. 10000">
+                <div class="row">
+                    <div>
+                        <label>Personas</label>
+                        <input type="number" name="guests_count" min="1" max="10" value="{{ old('guests_count', 2) }}" required>
+                    </div>
+                    <div>
+                        <label>Abono <span class="hint" style="margin:0;">— si el cliente paga solo una parte ahora, opcional</span></label>
+                        <input type="number" name="deposit_amount" id="deposit-amount" min="0" step="1" value="{{ old('deposit_amount') }}" placeholder="Ej. 10000">
+                    </div>
+                </div>
             </div>
 
             <div class="panel">
@@ -321,6 +346,8 @@
 
                     <div class="sub-head">Identificación <span>— el documento es obligatorio; nacionalidad y fecha de nacimiento no, salvo para cupones que la exigen</span></div>
 
+                    <div class="row row-id">
+                        <div>
                     <label>Nacionalidad</label>
                     <select id="nationality-select" onchange="hhSyncNationality()">
                         <option value="Chilena">Chilena</option>
@@ -338,6 +365,8 @@
                     <input type="text" id="nationality-other" placeholder="Escribe la nacionalidad" hidden style="margin-top:8px;">
                     <input type="hidden" name="nationality" id="customer-nationality" value="{{ old('nationality', 'Chilena') }}">
 
+                        </div>
+                        <div>
                     <label>Fecha de nacimiento</label>
                     <div class="dob-row">
                         <select id="birth-day" onchange="hhSyncBirthDate()">
@@ -360,6 +389,8 @@
                         </select>
                     </div>
                     <input type="hidden" name="birth_date" id="customer-birth-date" value="{{ old('birth_date') }}">
+                        </div>
+                    </div>
                 </div>
 
                 <div id="cust-document-fields">
@@ -375,13 +406,12 @@
                     </div>
                     <div class="hint" id="document-hint">&nbsp;</div>
                 </div>
+            </div>
 
-                <div class="sub-head">Detalles de la reserva</div>
+            <div class="panel panel-summary">
+                <div class="form-col-head">Resumen</div>
 
-                <label>Acompañantes (opcional) <span class="hint" style="margin:0;">— registro obligatorio para mayores de 18 años</span></label>
-                <div id="guest-rows"></div>
-                <button type="button" class="guest-add-btn" onclick="hhAddGuestRow()">+ Agregar acompañante</button>
-                <textarea name="guest_names" id="guest-names-hidden" hidden>{{ old('guest_names') }}</textarea>
+                <div class="price-box" id="price-box" hidden></div>
 
                 <label>Código promocional (opcional)</label>
                 <select name="coupon_code" id="coupon-select" onchange="hhQuotePrice()">
@@ -398,8 +428,15 @@
                     @endforeach
                 </select>
                 <div class="hint">Si exige cédula o credencial, verifícala antes de aplicarlo. Los que piden edad mínima no quedan activos si falta la fecha de nacimiento del cliente.</div>
-            </div>
-        </div>
+
+                <details class="guest-details"{{ old('guest_names') ? ' open' : '' }}>
+                    <summary>Acompañantes (opcional)</summary>
+                <label>Acompañantes (opcional) <span class="hint" style="margin:0;">— registro obligatorio para mayores de 18 años</span></label>
+                <div id="guest-rows"></div>
+                <button type="button" class="guest-add-btn" onclick="hhAddGuestRow()">+ Agregar acompañante</button>
+                <textarea name="guest_names" id="guest-names-hidden" hidden>{{ old('guest_names') }}</textarea>
+
+                </details>
 
         @if ($combos->isNotEmpty() || $products->isNotEmpty())
             <div class="extras-card">
@@ -448,7 +485,11 @@
             </div>
         @endif
 
-        <button class="submit" id="submit-btn" type="submit">Calcular y crear reserva</button>
+
+                <button class="submit" id="submit-btn" type="submit">Calcular y crear reserva</button>
+            </div>
+        </div>
+
     </form>
     </div>
 
