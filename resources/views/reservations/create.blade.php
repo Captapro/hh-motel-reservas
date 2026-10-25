@@ -208,6 +208,42 @@
         @media (prefers-reduced-motion: reduce) { .panel-summary.step-active button.submit { animation:none; } }
         .walkin-now { margin-top:14px; padding:10px 14px; border:1px solid #6b3a14; background:#2a1a0c; color:#ffb379; border-radius:9px; font-size:14px; }
         .walkin-now b { color:#ff7918; }
+        /* Ingreso presencial: estadía | cliente + acompañantes | ofrecer consumo | resumen */
+        .consumo-panel .cat-label { font-size:10.5px; color:#888; text-transform:uppercase; letter-spacing:.06em; margin:10px 0 4px; }
+        .consumo-total { font-size:12.5px; font-family:ui-monospace,monospace; color:#888; margin:2px 0 6px; }
+        .consumo-total.has { color:#8fe0ad; font-weight:700; }
+        .consumo-panel .combo-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; margin-bottom:8px; }
+        .consumo-panel .combo-card { display:flex; flex-direction:column; align-items:center; text-align:center; gap:3px; padding:10px 8px; background:#202020; border:1px solid #333; border-radius:11px; }
+        .consumo-panel .combo-card.out { opacity:.5; }
+        .consumo-panel .combo-name { font-size:13.5px; font-weight:700; color:#fff; line-height:1.2; }
+        .consumo-panel .combo-items { font-size:11px; color:#9a9a9a; line-height:1.3; min-height:28px; }
+        .consumo-panel .combo-price { font-size:16px; font-weight:800; color:#ff7918; margin:1px 0 3px; }
+        .consumo-panel .prod-cols { column-count:2; column-gap:22px; }
+        .consumo-panel .cat-block { break-inside:avoid; margin-bottom:4px; }
+        .consumo-panel .prod-row { padding:3px 0; gap:8px; border-top:none; }
+        .consumo-panel .prod-row .name { font-size:13px; line-height:1.25; color:#f1f1f1; font-weight:600; }
+        .consumo-panel .prod-row .price { font-size:11px; color:#8d8f94; margin-top:1px; }
+        .qty { display:flex; align-items:center; gap:2px; flex:none; }
+        .consumo-panel .qty button { width:28px; height:28px; margin:0; padding:0; border-radius:7px; background:#262626; border:1px solid #444; color:#ddd; font-size:17px; line-height:1; font-weight:600; min-height:0; cursor:pointer; }
+        .consumo-panel .qty button:hover:not(:disabled) { border-color:#ff7918; color:#ff7918; }
+        .consumo-panel .qty input[type=number] { width:30px !important; height:28px !important; min-height:0 !important; margin:0 !important; padding:0 !important; text-align:center; background:transparent !important; border:none !important; border-radius:0 !important; box-shadow:none !important; color:#9a9a9a !important; font-size:15px; line-height:28px; font-weight:700; -moz-appearance:textfield; appearance:textfield; }
+        .consumo-panel .qty input::-webkit-inner-spin-button, .consumo-panel .qty input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+        .consumo-panel .qty.has input[type=number] { color:#ff7918 !important; }
+        .step-panel.step-offer { border-color:#8a5a2b; }
+        .step-panel.step-offer .step-tag { color:#d9a066; }
+        .consumo-sum { margin:0 0 4px; padding:8px 14px; border-radius:8px; background:#1c1c1c; border:1px solid #333; font-size:13.5px; }
+        .consumo-sum .p-sum { display:flex; justify-content:space-between; padding:2px 0; color:#bbb; }
+        .consumo-sum .p-sum.total { border-top:1px solid #333; margin-top:4px; padding-top:6px; color:#eee; font-weight:700; }
+        .consumo-sum .p-sum.total span:last-child { font-family:ui-monospace,monospace; font-size:18px; }
+        @media (min-width: 1500px) { .form-grid.walkin-grid { grid-template-columns: minmax(0,.95fr) minmax(0,1.15fr) minmax(0,1.45fr) minmax(235px,.65fr); } .form-grid.walkin-grid .panel .row > div { flex:1 1 130px; min-width:0; } .form-grid.walkin-grid .panel .row-id > div { min-width:0; } }
+        .form-grid.walkin-grid .panel input:not([type=checkbox]), .form-grid.walkin-grid .panel select { padding:7px 11px; font-size:14px; }
+        .form-grid.walkin-grid .panel label { margin:9px 0 4px; }
+        .form-grid.walkin-grid .sub-head { margin:12px 0 2px; padding-top:10px; }
+        .form-grid.walkin-grid .sub-head span { display:none; }
+        .form-grid.walkin-grid .panel .hint { font-size:11.5px; margin-top:3px; }
+        .form-grid.walkin-grid .guest-row input { padding:7px 11px; }
+        @media (max-width: 1499px) and (min-width: 701px) { .form-grid.walkin-grid { grid-template-columns: 1fr 1fr; gap:16px; } .form-grid.walkin-grid .panel-summary { grid-column:auto; position:static; margin-top:0; } }
+        @media (max-width: 700px) { .consumo-panel .prod-cols { column-count:1; } }
         @media (max-width: 1280px) { .form-grid { grid-template-columns: 1fr 1fr; } .panel-summary { grid-column: 1 / -1; position:static; margin-top:16px; } }
         @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
@@ -237,7 +273,7 @@
         @csrf
 
         <input type="hidden" name="walk_in" id="walk-in-flag" value="{{ $walkInMode ? 1 : 0 }}">
-        <div class="form-grid">
+        <div class="form-grid{{ $walkInMode ? ' walkin-grid' : '' }}">
             <div class="panel step-panel" data-step="1">
                 <div class="form-col-head"><span class="step-num">1</span>La estadía<span class="step-tag"></span></div>
 
@@ -434,12 +470,73 @@
                     </div>
                     <div class="hint" id="document-hint">&nbsp;</div>
                 </div>
+
+                @if ($walkInMode)
+                    <div class="sub-head">Acompañantes <span>— nombre y apellido de quienes entran con el cliente</span></div>
+                    <div id="guest-rows"></div>
+                    <button type="button" class="guest-add-btn" onclick="hhAddGuestRow()">+ Agregar acompañante</button>
+                    <textarea name="guest_names" id="guest-names-hidden" hidden>{{ old('guest_names') }}</textarea>
+                @endif
             </div>
 
-            <div class="panel panel-summary step-panel" data-step="3">
-                <div class="form-col-head"><span class="step-num">3</span>Resumen<span class="step-tag"></span></div>
+            @if ($walkInMode)
+                <div class="panel step-panel consumo-panel" data-step="3" data-optional="1">
+                    <div class="form-col-head"><span class="step-num">3</span>Ofrecer productos y combos<span class="step-tag"></span></div>
+                    <div class="consumo-total" id="consumo-total">Sin consumo todavía</div>
+
+                    @if ($combos->isNotEmpty())
+                        <div class="cat-label">Combos</div>
+                        <div class="combo-cards">
+                            @foreach ($combos as $combo)
+                                <div class="combo-card {{ $combo->isOutOfStock() ? 'out' : '' }}">
+                                    <div class="combo-name">{{ $combo->name }}</div>
+                                    <div class="combo-items">{{ $combo->description ?: $combo->items->map(fn ($i) => $i->quantity.' × '.($i->product->name ?? ''))->join(' · ') }}</div>
+                                    <div class="combo-price">${{ number_format($combo->price, 0, ',', '.') }}{!! $combo->isOutOfStock() ? ' <small>agotado</small>' : '' !!}</div>
+                                    <div class="qty">
+                                        <button type="button" class="q-minus" aria-label="Menos" @disabled($combo->isOutOfStock())>−</button>
+                                        <input type="number" name="combo_quantities[{{ $combo->id }}]" value="{{ old('combo_quantities.'.$combo->id, 0) }}" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" data-price="{{ $combo->price }}" @disabled($combo->isOutOfStock())>
+                                        <button type="button" class="q-plus" aria-label="Más" @disabled($combo->isOutOfStock())>+</button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="prod-cols">
+                        @foreach ($products->groupBy('category') as $category => $items)
+                            <div class="cat-block">
+                                <div class="cat-label">{{ $category ?? 'Otros' }}</div>
+                                @foreach ($items as $product)
+                                    <div class="prod-row">
+                                        <div>
+                                            <div class="name">{{ $product->name }}</div>
+                                            <div class="price">
+                                                ${{ number_format($product->price, 0, ',', '.') }}
+                                                @if ($product->track_inventory)
+                                                    · {{ $product->isOutOfStock() ? 'agotado' : $product->stock.' disp.' }}
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="qty">
+                                            <button type="button" class="q-minus" aria-label="Menos" @disabled($product->isOutOfStock())>−</button>
+                                            <input type="number" name="quantities[{{ $product->id }}]" value="{{ old('quantities.'.$product->id, 0) }}" min="0" max="{{ $product->track_inventory ? min(20, $product->stock) : 20 }}" data-price="{{ $product->price }}" @disabled($product->isOutOfStock())>
+                                            <button type="button" class="q-plus" aria-label="Más" @disabled($product->isOutOfStock())>+</button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            <div class="panel panel-summary step-panel" data-step="{{ $walkInMode ? 4 : 3 }}">
+                <div class="form-col-head"><span class="step-num">{{ $walkInMode ? 4 : 3 }}</span>Resumen<span class="step-tag"></span></div>
 
                 <div class="price-box" id="price-box" hidden></div>
+                @if ($walkInMode)
+                    <div class="consumo-sum" id="consumo-sum" hidden></div>
+                @endif
 
                 <label>Código promocional (opcional)</label>
                 <select name="coupon_code" id="coupon-select" onchange="hhQuotePrice()">
@@ -457,6 +554,7 @@
                 </select>
                 <div class="hint">Si exige cédula o credencial, verifícala antes de aplicarlo. Los que piden edad mínima no quedan activos si falta la fecha de nacimiento del cliente.</div>
 
+                @unless ($walkInMode)
                 <details class="guest-details"{{ old('guest_names') ? ' open' : '' }}>
                     <summary>Acompañantes (opcional)</summary>
                 <label>Acompañantes (opcional) <span class="hint" style="margin:0;">— registro obligatorio para mayores de 18 años</span></label>
@@ -465,8 +563,9 @@
                 <textarea name="guest_names" id="guest-names-hidden" hidden>{{ old('guest_names') }}</textarea>
 
                 </details>
+                @endunless
 
-        @if ($combos->isNotEmpty() || $products->isNotEmpty())
+        @if (! $walkInMode && ($combos->isNotEmpty() || $products->isNotEmpty()))
             <div class="extras-card">
                 <details class="manual-extras">
                     <summary>Agregar consumo manualmente (combos, bebidas, etc.)</summary>
@@ -824,6 +923,8 @@
 
                 box.className = 'price-box' + (hasDiscount ? ' has-offer' : '');
                 box.innerHTML = rows + note;
+                box.dataset.final = finalPrice;
+                if (window.hhRefreshConsumo) window.hhRefreshConsumo();
                 hhLatestUpsells = Array.isArray(d.upsells) ? d.upsells : [];
             } catch (e) { box.className = 'price-box'; box.innerHTML = '<div class="p-wait">—</div>'; }
         }
@@ -1309,6 +1410,7 @@
                 return n;
             }
 
+            const FIXED_WALK_IN_UPSELL = {{ $walkInMode ? 'true' : 'false' }};
             const ICONS = { category_upgrade: '⬆️', time_extension: '⏰', combo: '🎁' };
 
             function buildCard(id, kind, name, price, detail) {
@@ -1329,6 +1431,9 @@
 
             // Devuelve las cards a mostrar (upsells del quote, o combos como fallback).
             function options() {
+                if (FIXED_WALK_IN_UPSELL) {
+                    return (Array.isArray(hhLatestUpsells) ? hhLatestUpsells : []).filter(u => u.type !== 'combo').map(u => ({ id: u.id, kind: 'upsell:' + u.type, name: u.label, price: u.price, detail: u.detail }));
+                }
                 if (Array.isArray(hhLatestUpsells) && hhLatestUpsells.length) {
                     return hhLatestUpsells.map(u => ({ id: u.id, kind: 'upsell:' + u.type, name: u.label, price: u.price, detail: u.detail }));
                 }
@@ -1430,16 +1535,19 @@
 
             function update() {
                 syncDeposit();
-                const done = [stayDone(), false, false];
-                done[1] = done[0] && clientDone();
-                let active = done[0] ? (done[1] ? 3 : 2) : 1;
+                const last = panels.length;
+                const stay = stayDone();
+                const client = stay && clientDone();
+                const active = stay ? (client ? last : 2) : 1;
                 panels.forEach((panel) => {
                     const n = Number(panel.dataset.step);
-                    const isDone = n < active || (n === 3 && false);
+                    const optional = panel.dataset.optional === '1';
+                    const isDone = !optional && n < active;
                     panel.classList.toggle('step-active', n === active);
                     panel.classList.toggle('step-done', isDone);
-                    panel.classList.toggle('step-pending', n > active);
-                    panel.querySelector('.step-tag').textContent = n === active ? 'Paso actual' : (isDone ? 'Listo' : '');
+                    panel.classList.toggle('step-offer', optional && client);
+                    panel.classList.toggle('step-pending', optional ? !client : n > active);
+                    panel.querySelector('.step-tag').textContent = optional ? (client ? 'Ofrece' : '') : (n === active ? 'Paso actual' : (isDone ? 'Listo' : ''));
                 });
             }
 
@@ -1451,6 +1559,49 @@
             setInterval(syncDeposit, 1500);
             update();
             setTimeout(update, 600);
+        })();
+
+        // Ingreso presencial: ofrecer consumo antes de cobrar. Lo elegido se suma
+        // al total que se cobra en el pago (el servidor lo carga como consumo).
+        (function () {
+            const panel = document.querySelector('.consumo-panel');
+            if (!panel) return;
+            const inputs = Array.from(panel.querySelectorAll('.qty input'));
+            const money = (n) => '$' + Number(n).toLocaleString('es-CL');
+            function refresh() {
+                let total = 0, items = 0;
+                inputs.forEach((i) => {
+                    const q = Math.max(0, Number(i.value) || 0);
+                    total += q * (Number(i.dataset.price) || 0);
+                    items += q;
+                    i.closest('.qty').classList.toggle('has', q > 0);
+                });
+                const head = document.getElementById('consumo-total');
+                head.textContent = items ? ('A cargar: ' + money(total) + ' · ' + items + (items === 1 ? ' ítem' : ' ítems')) : 'Sin consumo todavía';
+                head.classList.toggle('has', items > 0);
+                const sum = document.getElementById('consumo-sum');
+                const final = Number(document.getElementById('price-box').dataset.final);
+                if (items && final) {
+                    sum.hidden = false;
+                    sum.innerHTML = '<div class="p-sum"><span>Consumo · ' + items + (items === 1 ? ' ítem' : ' ítems') + '</span><span>+' + money(total) + '</span></div>'
+                        + '<div class="p-sum total"><span>Total a cobrar</span><span>' + money(final + total) + '</span></div>';
+                } else {
+                    sum.hidden = true;
+                }
+            }
+            window.hhRefreshConsumo = refresh;
+            panel.querySelectorAll('.qty').forEach((box) => {
+                const input = box.querySelector('input');
+                const step = (d) => {
+                    const min = Number(input.min) || 0, max = Number(input.max) || 20;
+                    input.value = Math.min(max, Math.max(min, (Number(input.value) || 0) + d));
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                box.querySelector('.q-minus').addEventListener('click', () => step(-1));
+                box.querySelector('.q-plus').addEventListener('click', () => step(1));
+                input.addEventListener('input', refresh);
+            });
+            refresh();
         })();
 
         // Ingreso presencial: la hora es la de este instante, no la de cuando se abrió el formulario.
