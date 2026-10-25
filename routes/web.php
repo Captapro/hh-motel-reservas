@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AccessController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\CleanupController;
 use App\Http\Controllers\Admin\ComboController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
@@ -265,8 +266,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::put('/turnos/{shift}', [ShiftController::class, 'update'])->name('shifts.update');
         Route::delete('/turnos/{shift}', [ShiftController::class, 'destroy'])->name('shifts.destroy');
 
-        Route::get('/limpieza', [\App\Http\Controllers\Admin\CleanupController::class, 'index'])->middleware('role:soporte')->name('cleanup.index');
-        Route::delete('/limpieza', [\App\Http\Controllers\Admin\CleanupController::class, 'destroy'])->middleware('role:soporte')->name('cleanup.destroy');
+        Route::get('/limpieza', [CleanupController::class, 'index'])->middleware('role:soporte')->name('cleanup.index');
+        Route::delete('/limpieza', [CleanupController::class, 'destroy'])->middleware('role:soporte')->name('cleanup.destroy');
 
         Route::get('/integraciones/ghl', [GhlTestController::class, 'index'])->middleware('role:soporte')->name('ghl.index');
         Route::post('/integraciones/ghl/probar', [GhlTestController::class, 'test'])->middleware('role:soporte')->name('ghl.test');
