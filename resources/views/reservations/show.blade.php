@@ -47,6 +47,17 @@
         button.copy-btn:hover { border-color:#ff7918; color:#ff7918; }
         .sent-tag { display:flex; align-items:center; background:#0f2b22; border:1px solid #1c9169; color:#6ee7b7; font-size:12px; font-weight:600; padding:6px 12px; border-radius:20px; margin-right:auto; }
         .visually-hidden { position:absolute; left:-9999px; top:-9999px; }
+        .pay-title { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; }
+        .pay-block { padding:12px 0; border-top:1px solid #292929; }
+        .pay-block:first-of-type { border-top:none; padding-top:0; }
+        .pay-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+        .pay-method { font-weight:600; }
+        .pay-amount { font-family: ui-monospace, monospace; color:#6fd39a; }
+        .pay-status { margin-left:auto; font-size:10.5px; font-family: ui-monospace, monospace; text-transform:uppercase; background:#16301f; color:#6fd39a; padding:2px 9px; border-radius:20px; }
+        .pay-docs { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+        .pay-docs label { display:flex; flex-direction:column; gap:4px; font-size:11px; color:#999; text-transform:uppercase; letter-spacing:.04em; }
+        .pay-docs input { width:130px; padding:8px 10px; background:#111; border:1px solid #3a3a3a; border-radius:7px; color:#eee; font-size:13.5px; }
+        .pay-docs button { padding:9px 16px; background:#ff7918; color:#111; border:0; border-radius:7px; font-weight:700; font-size:13px; cursor:pointer; }
         table.payments { width:100%; border-collapse: collapse; font-size: 13px; }
         table.payments th { text-align:left; color:#888; font-weight:500; font-size:11px; text-transform:uppercase; padding-bottom:6px; }
         table.payments td { padding: 6px 0; border-top: 1px solid #292929; }
@@ -351,26 +362,22 @@
 
             @if ($booking->payments->isNotEmpty())
                 <div class="card">
-                    <table class="payments">
-                        <thead><tr><th>Método</th><th>Monto</th><th colspan="2">N° voucher / boleta</th><th>Estado</th></tr></thead>
-                        <tbody>
-                            @foreach ($booking->payments as $payment)
-                                <tr>
-                                    <td>{{ $payment->paymentMethod->name }}</td>
-                                    <td>${{ number_format($payment->amount, 0, ',', '.') }}</td>
-                                    <td colspan="2">
-                                        <form method="POST" action="{{ route('payments.document', $payment) }}" style="display:flex;gap:6px;align-items:center;">
-                                            @csrf @method('PUT')
-                                            <input name="voucher_number" value="{{ $payment->voucher_number }}" placeholder="Voucher" maxlength="30" style="width:90px;padding:5px 7px;font-size:12.5px;">
-                                            <input name="receipt_number" value="{{ $payment->receipt_number }}" placeholder="Boleta" maxlength="30" style="width:90px;padding:5px 7px;font-size:12.5px;">
-                                            <button type="submit" style="padding:5px 10px;font-size:12px;cursor:pointer;">Guardar</button>
-                                        </form>
-                                    </td>
-                                    <td>{{ $payment->status }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <div class="pay-title">Pagos registrados</div>
+                    @foreach ($booking->payments as $payment)
+                        <div class="pay-block">
+                            <div class="pay-head">
+                                <span class="pay-method">{{ $payment->paymentMethod->name }}</span>
+                                <span class="pay-amount">${{ number_format($payment->amount, 0, ',', '.') }}</span>
+                                <span class="pay-status">{{ $payment->status }}</span>
+                            </div>
+                            <form method="POST" action="{{ route('payments.document', $payment) }}" class="pay-docs">
+                                @csrf @method('PUT')
+                                <label>N° voucher <input name="voucher_number" value="{{ $payment->voucher_number }}" placeholder="Voucher" maxlength="30"></label>
+                                <label>N° boleta <input name="receipt_number" value="{{ $payment->receipt_number }}" placeholder="Boleta" maxlength="30"></label>
+                                <button type="submit">Guardar</button>
+                            </form>
+                        </div>
+                    @endforeach
                     @if (! $booking->customer->documentNumber() || ! $booking->customer->nationality || $booking->customer->age() === null)
                         <p style="margin:10px 0 0;font-size:12.5px;color:#e8c76f;">Faltan datos del cliente (RUT/documento, nacionalidad o edad). <a href="{{ route('admin.customers.show', $booking->customer) }}" style="color:#ff7918;">Completar en su ficha →</a></p>
                     @endif
@@ -379,19 +386,28 @@
         </div>
     </div>
 
-    @if (auth()->user()?->isAdministrador() && $booking->canBeDeleted())
-        <div class="card" style="margin-top:22px;border:1px solid #5a2327;background:#1d1315;">
-            <strong>Eliminar reserva</strong>
-            <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva no llegó a ocurrir ({{ $booking->booking_status }}). Si es un <b>dato de prueba</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}. Esto descuenta sus montos de la caja y de las ventas, y <b>no se puede deshacer</b>. Queda registrada en auditoría.</p>
-            <form method="POST" action="{{ route('bookings.destroy', $booking->code) }}" onsubmit="return confirm('¿Eliminar la reserva {{ $booking->code }}? No se puede deshacer.');">
-                @csrf @method('DELETE')
-                <label style="display:block;font-size:12.5px;color:#bbb;margin-bottom:6px;">Para confirmar, escribe <b>ELIMINAR</b></label>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <input name="confirm_text" autocomplete="off" placeholder="ELIMINAR" style="max-width:200px;">
-                    <button type="submit" style="background:#b3202f;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;">Eliminar reserva</button>
-                </div>
-            </form>
-        </div>
+    @if (auth()->user()?->isAdministrador())
+        @if ($booking->canBeDeleted())
+            @php $closed = in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW'], true); @endphp
+            <div class="card" style="margin-top:22px;border:1px solid #5a2327;background:#1d1315;">
+                <strong>Eliminar reserva</strong>
+                @if ($closed)
+                    <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva no llegó a ocurrir ({{ $booking->booking_status }}). Si es un <b>dato de prueba</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}. Esto descuenta sus montos de la caja y de las ventas, y <b>no se puede deshacer</b>. Queda registrada en auditoría.</p>
+                @else
+                    <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva sigue vigente ({{ $booking->booking_status }}) y todavía no tuvo check-in. Si fue una <b>prueba o un error</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}: libera la habitación y descuenta sus montos de la caja y de las ventas. Si el cliente solo canceló, mejor usa <b>Cancelar</b> para conservar el registro. <b>No se puede deshacer.</b></p>
+                @endif
+                <form method="POST" action="{{ route('bookings.destroy', $booking->code) }}" onsubmit="return confirm('¿Eliminar la reserva {{ $booking->code }}? No se puede deshacer.');">
+                    @csrf @method('DELETE')
+                    <label style="display:block;font-size:12.5px;color:#bbb;margin-bottom:6px;">Para confirmar, escribe <b>ELIMINAR</b></label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <input name="confirm_text" autocomplete="off" placeholder="ELIMINAR" style="max-width:200px;">
+                        <button type="submit" style="background:#b3202f;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;">Eliminar reserva</button>
+                    </div>
+                </form>
+            </div>
+        @else
+            <p class="hint" style="margin-top:22px;">Esta reserva ya tuvo check-in o fue finalizada: es una estadía real y no se puede eliminar.</p>
+        @endif
     @endif
 
     @if ($booking->checked_in_at && $booking->balanceDue() <= 0 && ! in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA']))

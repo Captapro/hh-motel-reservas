@@ -16,7 +16,7 @@ class BookingDeleteController extends Controller
         $booking = Booking::with(['payments', 'addons', 'customer', 'room'])->where('code', $code)->firstOrFail();
 
         if (! $booking->canBeDeleted()) {
-            return back()->withErrors(['booking' => 'Solo se puede eliminar una reserva cancelada, vencida o no show que nunca tuvo check-in. Si es una reserva vigente, primero cancélala.']);
+            return back()->withErrors(['booking' => 'Esta reserva ya tuvo check-in o fue finalizada: es una estadía real y no se elimina.']);
         }
         if (trim((string) $request->input('confirm_text')) !== 'ELIMINAR') {
             return back()->withErrors(['booking' => 'Para eliminar la reserva tienes que escribir ELIMINAR en el cuadro de confirmación.']);

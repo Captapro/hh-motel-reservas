@@ -137,18 +137,13 @@ class BookingIntegrityTest extends TestCase
             ->assertSee('Para asegurar tu reserva')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('Pagar con Mercado Pago');
     }
 
-    public function test_cancelled_booking_can_be_deleted_with_confirmation_but_real_stays_cannot(): void
+    public function test_booking_without_check_in_can_be_deleted_with_confirmation_but_real_stays_cannot(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);
         app(PaymentService::class)->register($booking, $method, 20000, null, null, auth()->id());
 
-        // Vigente: no se puede.
-        $this->delete(route('bookings.destroy', $booking->code), ['confirm_text' => 'ELIMINAR'])->assertSessionHasErrors('booking');
-        $this->assertDatabaseHas('bookings', ['id' => $booking->id]);
-
-        $booking->update(['booking_status' => 'CANCELADA']);
-        // Cancelada pero sin la palabra de confirmación: tampoco.
+        // Sin la palabra de confirmación: no se borra, aunque esté vigente.
         $this->delete(route('bookings.destroy', $booking->code), ['confirm_text' => 'si'])->assertSessionHasErrors('booking');
         $this->assertDatabaseHas('bookings', ['id' => $booking->id]);
 
