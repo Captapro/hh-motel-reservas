@@ -159,7 +159,10 @@ class CheckoutPendingBalanceTest extends TestCase
             'amount' => 20000,
             'status' => 'aprobado',
         ]);
-        $this->post("/reservas/{$this->booking->code}/finalizar", ['confirm_room_checked' => '1'])->assertRedirect();
+        // Sin saldo pendiente, finalizar cierra y vuelve al tablero con el mensaje de éxito.
+        $this->post("/reservas/{$this->booking->code}/finalizar", ['confirm_room_checked' => '1'])
+            ->assertRedirect(route('rooms.board'))
+            ->assertSessionHas('status', fn ($m) => str_contains($m, 'Reserva finalizada con éxito'));
         $finalized = $this->booking->fresh();
         $this->assertSame('FINALIZADA', $finalized->booking_status);
         $originalEndsAt = $finalized->ends_at;

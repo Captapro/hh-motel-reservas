@@ -121,7 +121,8 @@ class BookingFinalizeController extends Controller
                     AuditLog::record(auth()->id(), 'habitacion.enviar_aseo', 'Room', $room->id, $roomOld, ['operational_status' => 'aseo']);
                 }
 
-                return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva finalizada.');
+                return redirect()->route('rooms.board')
+                    ->with('status', '✓ Reserva finalizada con éxito · '.$booking->customer->name.' — '.$room->name.' queda en aseo.');
             }, 3);
         } catch (InsufficientStockException $e) {
             return back()->withErrors(['booking' => $e->getMessage().' No se agregó nada de este envío — ajusta la cantidad y vuelve a intentar.']);
