@@ -415,29 +415,25 @@
             @if ($grouped['ocupadas']->isNotEmpty())
             <div class="section ocupadas">
                 <div class="section-head"><h2>Ocupadas</h2><span class="count">{{ $grouped['ocupadas']->count() }}</span><span class="bar"></span></div>
-                @if (false)
-                @else
                     <div class="grid">
                         @foreach ($grouped['ocupadas'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
                         @endforeach
                     </div>
-                @endif
+
             </div>
             @endif
 
             @if ($grouped['en_aseo']->isNotEmpty())
             <div class="section aseo">
                 <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span><span class="bar"></span></div>
-                @if (false)
-                @else
                     <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
                     <div class="grid">
                         @foreach ($grouped['en_aseo'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
                         @endforeach
                     </div>
-                @endif
+
             </div>
             @endif
 
@@ -473,14 +469,12 @@
             @if ($grouped['fuera_de_servicio']->isNotEmpty())
             <div class="section fuera">
                 <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span><span class="bar"></span></div>
-                @if (false)
-                @else
                     <div class="grid">
                         @foreach ($grouped['fuera_de_servicio'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
                         @endforeach
                     </div>
-                @endif
+
             </div>
             @endif
         </div>
@@ -489,23 +483,7 @@
         <div class="sidebar">
             <div class="sidebar-title"><h2>Por llegar</h2><span class="count">{{ $grouped['proximas']->count() }}</span></div>
             <p class="sidebar-hint">Libres ahora, con una reserva próxima: no las asignes a clientes sin reserva.</p>
-            @if (true)
-                @foreach ($grouped['proximas'] as $entry)
-                    @php $mins = $entry['status']['minutes_until_next']; @endphp
-                    <div class="proxima-card cat-{{ Str::slug($entry['room']->category->name) }}">
-                        <div class="card-head"><b>{{ $entry['room']->name }}</b></div>
-                        <div class="cat">{{ $entry['room']->category->name }}</div>
-                        <div class="guest">{{ $entry['status']['next_booking']->customer->name }}</div>
-                        <div class="when">
-                            @if ($mins > 0) llega en {{ \App\Support\TimeFormat::minutes($mins) }}
-                            @elseif ($mins === 0) llegando ahora
-                            @else atrasada {{ \App\Support\TimeFormat::minutes(abs($mins)) }} — sin check-in
-                            @endif
-                        </div>
-                        <a class="checkin-btn" href="{{ route('bookings.checkin.show', $entry['status']['next_booking']->code) }}">Marcar check-in</a>
-                    </div>
-                @endforeach
-            @endif
+
         </div>
         @endif
     </div>
@@ -635,7 +613,9 @@
                 } catch (e) { /* sin red: se reintenta */ }
             }
             poll();
-            setInterval(poll, 4000);
+            // Solo consulta con la pestaña a la vista: varias pantallas abiertas no cargan al servidor.
+            setInterval(() => { if (!document.hidden) poll(); }, 6000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
         })();
     </script>
 </body>

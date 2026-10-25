@@ -27,8 +27,23 @@ fi
 # cuenta que ya existe.
 php artisan app:soporte-sincronizar || true
 
+# Apache escucha en el puerto que asigna Render (PORT).
+PORT="${PORT:-10000}"
+sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf
+export PORT
+
+# Cachés de configuración, rutas, eventos y vistas: el arranque de cada solicitud
+# no vuelve a leer ni compilar nada. Va al final, con las variables de entorno ya definidas.
+php artisan config:cache || true
+php artisan route:cache || true
+php artisan event:cache || true
+php artisan view:cache || true
+
+# Todo lo anterior corrió como root: Apache (www-data) tiene que poder escribir logs, caché y sesiones.
+chown -R www-data:www-data /app/storage /app/bootstrap/cache
+
 # Barrido de retenciones: cada 30 s libera las reservas del catálogo que no pagaron a tiempo
 # (además se libera al crear reservas y al abrir el tablero).
-( while true; do sleep 30; php artisan app:reservas-expirar >/dev/null 2>&1 || true; done ) &
+( while true; do sleep 30; runuser -u www-data -- php artisan app:reservas-expirar >/dev/null 2>&1 || true; done ) &
 
-exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"
+exec apache2-foreground

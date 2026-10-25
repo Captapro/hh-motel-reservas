@@ -58,6 +58,12 @@ return [
         'mercadopago_link' => env('HH_MERCADOPAGO_LINK'),
     ],
 
+    // Cuenta de soporte (master) que se crea/repara al arrancar (docker/entrypoint.sh).
+    'support' => [
+        'email' => env('SUPPORT_EMAIL'),
+        'password' => env('SUPPORT_PASSWORD'),
+    ],
+
     'hh_reviews' => [
         'google_review_link' => env('HH_GOOGLE_REVIEW_LINK'),
         'widget_url' => env('HH_REVIEWS_WIDGET_URL', 'https://link.hhmotel.cl/reputation/widgets/review_widget/ksYYfSiY8nP4YFvkrJFJ'),

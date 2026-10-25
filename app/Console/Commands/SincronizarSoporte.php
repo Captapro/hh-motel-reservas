@@ -13,8 +13,8 @@ class SincronizarSoporte extends Command
 
     public function handle(): int
     {
-        $email = env('SUPPORT_EMAIL');
-        $password = env('SUPPORT_PASSWORD');
+        $email = config('services.support.email');
+        $password = config('services.support.password');
         if (! $email || ! $password) {
             $this->line('SUPPORT_EMAIL / SUPPORT_PASSWORD no están definidos: no se hace nada.');
 
