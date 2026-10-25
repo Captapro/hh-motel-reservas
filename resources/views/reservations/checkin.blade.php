@@ -77,14 +77,14 @@
         .offer-block .cat-block { break-inside:avoid; margin-bottom:6px; }
         .offer-block .cat-label { margin:6px 0 2px; font-size:10.5px; letter-spacing:.06em; }
         .hh-checkin-page .offer-panel .prod-row { padding:3px 0; gap:10px; align-items:center; }
-        .hh-checkin-page .offer-panel .prod-row .name { font-size:13.5px; line-height:1.25; }
+        .hh-checkin-page .offer-panel .prod-row .name { font-size:13.5px; line-height:1.25; color:#f1f1f1; font-weight:600; }
         .hh-checkin-page .offer-panel .prod-row .price { font-size:11.5px; margin-top:2px; color:#8d8f94; }
         .qty { display:flex; align-items:center; gap:2px; flex:none; }
         .hh-checkin-page .offer-panel .qty button { width:28px; height:28px; margin:0; padding:0; border-radius:7px; background:#262626; border:1px solid #444; color:#ddd; font-size:17px; line-height:1; font-weight:600; min-height:0; }
         .hh-checkin-page .offer-panel .qty button:hover:not(:disabled) { border-color:#ff7918; color:#ff7918; }
-        .hh-checkin-page .offer-panel .qty input { width:34px; padding:0; text-align:center; background:transparent; border:none; color:#888; font-size:15px; font-weight:700; -moz-appearance:textfield; appearance:textfield; }
+        .hh-checkin-page .offer-panel .qty input[type=number] { width:34px !important; height:28px !important; min-height:0 !important; margin:0 !important; padding:0 !important; text-align:center; background:transparent !important; border:none !important; border-radius:0 !important; box-shadow:none !important; color:#9a9a9a !important; font-size:15px; line-height:28px; font-weight:700; -moz-appearance:textfield; appearance:textfield; }
         .hh-checkin-page .offer-panel .qty input::-webkit-inner-spin-button, .hh-checkin-page .offer-panel .qty input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
-        .hh-checkin-page .offer-panel .qty.has input { color:#ff7918; }
+        .hh-checkin-page .offer-panel .qty.has input[type=number] { color:#ff7918 !important; }
         .ci-col .card:first-child, .ci-col .existing-box:first-child { margin-top:0; }
         button.save { width:100%; margin-top:6px; }
         /* Cabecera compacta para que todo quepa en una pantalla */
