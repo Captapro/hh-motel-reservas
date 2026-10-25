@@ -301,6 +301,8 @@
         .wing-filter button:hover { color:#fff; }
         .wing-filter button.active { background:#ff7918; color:#111; }
         .wing-hidden { display:none !important; }
+        .summary .chip { transition: border-color .12s, transform .12s; }
+        .summary .chip:hover { border-color:#ff7918; transform: translateY(-1px); }
         .stats-row { display:flex; gap:14px; align-items:stretch; flex-wrap:wrap; margin-bottom:18px; }
         .stats-row .summary { margin-bottom:0; gap:8px; }
         .stats-row .summary .chip { padding:7px 12px; }
