@@ -358,6 +358,11 @@
                     <span class="pcode">{{ $booking->code }}</span>
                     <span class="pinfo"><strong>{{ $booking->customer->name }}</strong><small>{{ $booking->room->name }} · {{ $booking->room->category->name }} · llegó {{ $booking->created_at->timezone('America/Santiago')->diffForHumans() }}</small></span>
                     <span class="page">{{ $booking->starts_at->timezone('America/Santiago')->isToday() ? 'hoy '.$booking->starts_at->timezone('America/Santiago')->format('H:i') : $booking->starts_at->timezone('America/Santiago')->format('d/m H:i') }}</span>
+                    @if ($booking->expires_at)
+                        <span class="ptag {{ $booking->expires_at->diffInMinutes(now(), false) > -3 ? 'unsent' : 'sent' }}">⏳ vence {{ $booking->expires_at->diffForHumans() }}</span>
+                    @else
+                        <span class="ptag sent">Sin vencimiento</span>
+                    @endif
                     @if ($booking->payment_instructions_sent_at)
                         <span class="ptag sent">✓ Ya se le avisó</span>
                     @else

@@ -175,6 +175,7 @@ class PublicBookingController extends Controller
                     'guests_count' => (int) $validated['guests_count'],
                     'coupon_code' => $validated['coupon_code'] ?? null,
                     'deposit_amount' => 0,
+                    'hold_minutes' => Booking::HOLD_MINUTES,
                     'created_by' => null,
                     'verified_by' => null,
                     'notes' => 'Reserva online desde el catálogo público.',
@@ -253,6 +254,7 @@ class PublicBookingController extends Controller
 
     public function booked(string $token): View
     {
+        Booking::releaseExpired();
         $booking = Booking::with(['room.category', 'addons'])->where('pass_token', $token)->firstOrFail();
 
         // Mismo QR del pase PDF: recepción lo escanea y abre la ficha.
@@ -303,6 +305,9 @@ class PublicBookingController extends Controller
 
     private function findAvailableRoom(int $categoryId, ?int $roomId, Carbon $startsAt, Carbon $endsAt, AvailabilityChecker $availability, RateRuleResolver $rateRules): ?Room
     {
+        // Una retención vencida no debe seguir bloqueando la habitación.
+        Booking::releaseExpired();
+
         // Usada tanto por el chequeo en vivo (checkAvailability) como por
         // store() -- si acá falta alguna regla que store() sí aplica
         // después (categoría deshabilitada, fuera de la ventana operativa

@@ -107,9 +107,11 @@ class PaymentService
             $bookingStatus = 'CONFIRMADA';
         }
 
-        $booking->update([
-            'payment_status' => $paymentStatus,
-            'booking_status' => $bookingStatus,
-        ]);
+        $update = ['payment_status' => $paymentStatus, 'booking_status' => $bookingStatus];
+        // Con un pago registrado la reserva queda firme: ya no hay retención que venza.
+        if ($paid > 0 && $booking->expires_at) {
+            $update['expires_at'] = null;
+        }
+        $booking->update($update);
     }
 }

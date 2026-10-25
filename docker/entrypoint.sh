@@ -27,4 +27,8 @@ fi
 # cuenta que ya existe.
 php artisan app:soporte-sincronizar || true
 
+# Barrido de retenciones: cada 30 s libera las reservas del catálogo que no pagaron a tiempo
+# (además se libera al crear reservas y al abrir el tablero).
+( while true; do sleep 30; php artisan app:reservas-expirar >/dev/null 2>&1 || true; done ) &
+
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"

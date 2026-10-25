@@ -51,8 +51,19 @@
 <body>
     <div class="wrap">
         <div class="check">✓</div>
-        <h1>¡Reserva creada!</h1>
-        <p class="sub">Guarda el código — te lo vamos a pedir al llegar.</p>
+        @php
+            $expired = $booking->booking_status === 'EXPIRADA';
+            $confirmed = in_array($booking->booking_status, ['CONFIRMADA', 'CHECK_IN', 'FINALIZADA'], true);
+            $holdOpen = $booking->booking_status === 'PENDIENTE_PAGO' && $booking->expires_at && $booking->expires_at->isFuture();
+        @endphp
+        <h1>{{ $expired ? 'Reserva vencida' : ($confirmed ? '¡Reserva confirmada!' : '¡Reserva creada!') }}</h1>
+        <p class="sub">{{ $expired ? 'No recibimos el pago a tiempo y la habitación se liberó.' : 'Guarda el código — te lo vamos a pedir al llegar.' }}</p>
+        @if ($holdOpen)
+            <div class="next-steps" style="background:#3a2a12; border-color:#7a5a1f; color:#ffd699;">⏳ Tu habitación está retenida hasta las <b>{{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}</b> ({{ \App\Models\Booking::HOLD_MINUTES }} minutos). Realiza el pago antes de ese horario para confirmarla; si no, se libera.</div>
+        @elseif ($expired)
+            <style>.qr-box, .pay-box { display:none; }</style>
+            <div class="next-steps" style="background:#3a1c1c; border-color:#7a2d2d; color:#f3b8b8;">Puedes hacer una nueva reserva cuando quieras: <a href="{{ route('catalog.reserve') }}" style="color:#ffd699;">reservar de nuevo →</a></div>
+        @endif
 
         @if (session('warning'))
             <div class="next-steps" style="background:#3a2a12; border-color:#7a5a1f; color:#ffd699;">{{ session('warning') }}</div>
@@ -60,7 +71,7 @@
 
         <div class="card">
             <div class="row"><span class="muted">Código</span><span class="code">{{ $booking->code }}</span></div>
-            <div class="row"><span class="muted">Estado</span><span class="status-badge">Pendiente de pago</span></div>
+            <div class="row"><span class="muted">Estado</span><span class="status-badge">{{ $expired ? 'Vencida' : ($confirmed ? 'Confirmada' : 'Pendiente de pago') }}</span></div>
             <div class="row"><span class="muted">Habitación</span><span>{{ $booking->room->name }} · {{ $booking->room->category->name }}</span></div>
             <div class="row"><span class="muted">Fecha</span><span>{{ $booking->starts_at->timezone('America/Santiago')->locale('es')->isoFormat('D [de] MMMM, HH:mm') }}</span></div>
             <div class="row"><span class="muted">Duración</span><span>{{ $booking->duration_minutes >= 60 ? intdiv($booking->duration_minutes, 60).' h' : $booking->duration_minutes.' min' }}</span></div>

@@ -131,6 +131,30 @@ class BookingIntegrityTest extends TestCase
         $this->getJson(route('rooms.pass_scans'))->assertExactJson([]);
     }
 
+    public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void
+    {
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $held = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $held->update(['expires_at' => now()->addMinutes(10)]);
+        $paid = $this->booking(['starts_at' => Carbon::parse('2026-11-02 15:00')]);
+        $paid->update(['expires_at' => now()->addMinutes(10)]);
+
+        // Recepción: "pagará en recepción" -> sin vencimiento.
+        $this->post(route('bookings.hold', $held->code), ['reason' => 'recepcion'])->assertSessionHasNoErrors();
+        $this->assertNull($held->fresh()->expires_at);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.mantener_retencion', 'entity_id' => $held->id]);
+
+        // Un pago registrado también deja la reserva firme.
+        app(PaymentService::class)->register($paid, $method, 1000, null, null, auth()->id());
+        $this->assertNull($paid->fresh()->expires_at);
+
+        // Pasado el límite, ninguna de las dos se libera.
+        $this->travel(30)->minutes();
+        $this->assertSame(0, Booking::releaseExpired());
+        $this->assertSame('PENDIENTE_PAGO', $held->fresh()->booking_status);
+        $this->assertSame('CONFIRMADA', $paid->fresh()->booking_status);
+    }
+
     public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void
     {
         $first = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);

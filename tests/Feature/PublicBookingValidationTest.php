@@ -127,6 +127,24 @@ class PublicBookingValidationTest extends TestCase
         $this->assertSame($first->headers->get('Location'), $second->headers->get('Location'));
     }
 
+    public function test_catalog_booking_is_held_for_ten_minutes_and_then_releases_the_room(): void
+    {
+        $this->post('/catalogo/reservar', $this->bookingPayload())->assertSessionHasNoErrors();
+        $booking = Booking::first();
+        $this->assertSame('PENDIENTE_PAGO', $booking->booking_status);
+        $this->assertEqualsWithDelta(now()->addMinutes(10)->timestamp, $booking->expires_at->timestamp, 5);
+
+        // Dentro de los 10 minutos la habitación sigue tomada.
+        $this->post('/catalogo/reservar', $this->bookingPayload(['phone' => '+56933333333', 'first_name' => 'Otra']))->assertSessionHasErrors('duration_minutes');
+        $this->assertSame(1, Booking::count());
+
+        // Vencida la retención sin pago, se libera y otra persona la puede reservar.
+        $this->travel(11)->minutes();
+        $this->post('/catalogo/reservar', $this->bookingPayload(['phone' => '+56933333333', 'first_name' => 'Otra']))->assertSessionHasNoErrors();
+        $this->assertSame('EXPIRADA', $booking->fresh()->booking_status);
+        $this->assertSame(2, Booking::count());
+    }
+
     public function test_check_availability_agrees_with_store_outside_the_operating_window(): void
     {
         $payload = [

@@ -93,6 +93,9 @@ class BookingService
             throw new RoomNotAvailableException('Ese horario con el tiempo extra incluido pasa la hora de cierre.');
         }
 
+        // Una retención vencida no debe bloquear la habitación mientras no corra el barrido periódico.
+        Booking::releaseExpired();
+
         if (! $this->availabilityChecker->isAvailable($room, $startsAt, $endsAt)) {
             throw new RoomNotAvailableException("La habitación {$room->name} ya no está disponible en ese horario.");
         }
@@ -158,6 +161,8 @@ class BookingService
                         'price_final' => $priceFinal,
                         'deposit_amount' => $data['deposit_amount'] ?? 0,
                         'notes' => $data['notes'] ?? null,
+                        // Reservas del catálogo: retenidas unos minutos hasta que se registre el pago.
+                        'expires_at' => ! empty($data['hold_minutes']) && empty($data['walk_in']) ? now()->addMinutes((int) $data['hold_minutes']) : null,
                     ]);
 
                     foreach ($data['guest_names'] ?? [] as $guestName) {

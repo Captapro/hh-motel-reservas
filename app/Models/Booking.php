@@ -116,6 +116,28 @@ class Booking extends Model
      * (vigente, cancelada, vencida o no show). Sirve para
      * limpiar reservas de prueba; una estadía real no se borra.
      */
+    /** Minutos que una reserva del catálogo queda retenida esperando el pago. */
+    public const HOLD_MINUTES = 10;
+
+    /**
+     * Libera las reservas pendientes cuya retención venció: pasan a EXPIRADA y la
+     * habitación vuelve a estar disponible. Las que recepción marcó como "pagará
+     * en recepción / pago tardío" no tienen vencimiento y no se tocan.
+     */
+    public static function releaseExpired(): int
+    {
+        $expired = static::where('booking_status', 'PENDIENTE_PAGO')
+            ->whereNotNull('expires_at')->where('expires_at', '<=', now())
+            ->get();
+
+        foreach ($expired as $booking) {
+            $booking->update(['booking_status' => 'EXPIRADA', 'notes' => trim(($booking->notes ? $booking->notes."\n" : '').'Retención vencida: no se registró el pago a tiempo.')]);
+            \App\Models\AuditLog::record(null, 'reserva.expirar', 'Booking', $booking->id, ['booking_status' => 'PENDIENTE_PAGO'], ['booking_status' => 'EXPIRADA']);
+        }
+
+        return $expired->count();
+    }
+
     public function canBeDeleted(): bool
     {
         return ! in_array($this->booking_status, ['CHECK_IN', 'FINALIZADA'], true) && $this->checked_in_at === null;

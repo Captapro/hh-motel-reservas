@@ -93,11 +93,17 @@
         .col-btn { display:inline-block; background:#2a2a2a; border:1px solid #444; color:#eee; padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:600; text-decoration:none; cursor:pointer; white-space:nowrap; list-style:none; }
         .col-btn:hover { border-color:#ff7918; color:#ff7918; }
         .col-btn::-webkit-details-marker { display:none; }
-        details.col-cancel { flex:0 0 auto; }
-        details.col-cancel[open] { flex:1 1 100%; }
+        details.col-cancel { flex:0 0 auto; position:relative; }
+        details.col-cancel .cancel-form { position:absolute; right:0; top:calc(100% + 6px); width:340px; max-width:90vw; z-index:30; box-shadow:0 12px 30px #0008; }
         details.col-cancel .col-btn { background:transparent; border-color:#4a2a2a; color:#c47a7a; }
         details.col-cancel .col-btn:hover { border-color:#a83a3a; color:#e88a8a; }
-        details.col-cancel[open] .col-btn { border-color:#a83a3a; color:#e88a8a; margin-bottom:8px; }
+        details.col-cancel[open] .col-btn { border-color:#a83a3a; color:#e88a8a; }
+        .hold-box { display:flex; align-items:center; gap:12px 16px; flex-wrap:wrap; background:#2a2410; border:1px solid #6b5a1e; color:#e8c76f; border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:13.5px; }
+        .hold-box.free { background:#14241b; border-color:#2e6e45; color:#8fe0ad; }
+        .hold-box b { color:#fff; }
+        .hold-box form { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+        .hold-box button { background:#1c1c1c; border:1px solid #6b5a1e; color:#f0d58a; padding:7px 12px; border-radius:7px; font-size:12.5px; font-weight:600; cursor:pointer; }
+        .hold-box button:hover { border-color:#ff7918; color:#ff7918; }
         /* Tres columnas: estadía | dinero y pagos | consumo */
         .page-inner { max-width: 1760px; padding-top:16px; padding-bottom:8px; }
         .page-inner > .finish-blocked, .page-inner > a.finalize-btn { margin-top:12px; }
@@ -148,6 +154,21 @@
         @endunless
     </div>
     </div>
+
+    @if ($booking->booking_status === 'PENDIENTE_PAGO')
+        @if ($booking->expires_at)
+            <div class="hold-box">
+                <span>⏳ Retenida hasta las <b>{{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}</b> ({{ $booking->expires_at->isFuture() ? 'vence '.$booking->expires_at->diffForHumans() : 'vencida' }}). Si no se registra el pago, se libera la habitación.</span>
+                <form method="POST" action="{{ route('bookings.hold', $booking->code) }}">
+                    @csrf
+                    <button type="submit" name="reason" value="recepcion">Pagará en recepción</button>
+                    <button type="submit" name="reason" value="tardio">Pago tardío</button>
+                </form>
+            </div>
+        @else
+            <div class="hold-box free">✓ Reserva mantenida sin vencimiento: la habitación queda tomada hasta que se registre el pago o se cancele.</div>
+        @endif
+    @endif
 
     @php
         $hhPayment = config('services.hh_payment');

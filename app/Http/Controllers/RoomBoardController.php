@@ -20,6 +20,9 @@ class RoomBoardController extends Controller
 {
     public function index(RoomBoardService $board, RateRuleResolver $rates): View
     {
+        // Libera las reservas pendientes que no pagaron a tiempo antes de armar el tablero.
+        Booking::releaseExpired();
+
         $entries = collect($board->board());
 
         $isProxima = fn (array $e) => $e['status']['occupancy'] === 'libre' && $e['status']['imminent'];
