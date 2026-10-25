@@ -326,7 +326,6 @@
                         $faltan = array_values(array_filter([
                             $cust->documentNumber() ? null : 'RUT o pasaporte',
                             $cust->nationality ? null : 'nacionalidad',
-                            $cust->birth_date ? null : 'fecha de nacimiento',
                         ]));
                     @endphp
                     @if ($faltan)

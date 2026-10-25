@@ -204,7 +204,7 @@
     </div>
 
     <div class="sec-label">Detalle de ventas</div>
-    <p class="sec-note">Una fila por habitación vendida y una por cada extra, en el orden de tu Excel. Toca el código de la reserva para <b>completar lo que falte</b> (documento, RUT, nacionalidad, edad).</p>
+    <p class="sec-note">Una fila por habitación vendida y una por cada extra, en el orden de tu Excel. Toca el código de la reserva para <b>completar lo que falte</b> (documento, RUT, nacionalidad).</p>
     <div class="filter">
         <label><input type="checkbox" id="only-missing"> Mostrar solo reservas con datos faltantes ({{ $missingCount }})</label>
         <a class="lnk" href="{{ route('sales.monthly', ['month' => $first->format('Y-m'), 'export' => 'detalle']) }}">Exportar detalle a Excel (CSV)</a>

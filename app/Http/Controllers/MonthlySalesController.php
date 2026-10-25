@@ -194,7 +194,7 @@ class MonthlySalesController extends Controller
     /**
      * Una fila por habitación vendida y una por cada extra, en el mismo orden
      * del "Detalle de Ventas" del Excel. 'missing' lista lo que falta
-     * completar (documento, RUT, nacionalidad, edad) para destacarlo.
+     * completar (documento, RUT, nacionalidad) para destacarlo.
      */
     private function detailRows(Collection $bookings): Collection
     {
@@ -231,9 +231,6 @@ class MonthlySalesController extends Controller
             }
             if (! $c?->nationality) {
                 $missing[] = 'nacionalidad';
-            }
-            if ($c?->age() === null) {
-                $missing[] = 'edad';
             }
 
             $base = [
