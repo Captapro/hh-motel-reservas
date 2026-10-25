@@ -29,6 +29,8 @@
         .hh-payment-summary .row { padding:9px 0; gap:14px; border-top:1px solid #292929; }
         .hh-payment-summary .row:first-of-type { border-top:none; }
         .hh-payment-summary .row span:last-child { text-align:right; }
+        .hh-payment-summary .row.item { padding:3px 0 3px 14px; border-top:none; font-size:13px; color:#bbb; }
+        .hh-payment-summary .row.item em { font-style:normal; color:#888; margin-left:4px; }
         .muted { color:#777; font-weight:400; }
         .sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); border:0; opacity:0; }
         .method-chips { display:flex; flex-wrap:wrap; gap:8px; }
@@ -72,6 +74,9 @@
         <div class="row"><span>Precio final</span><span>${{ number_format($booking->price_final, 0, ',', '.') }}</span></div>
         @if ($consumos > 0)
             <div class="row"><span>Consumos</span><span>${{ number_format($consumos, 0, ',', '.') }}</span></div>
+            @foreach ($booking->addons as $addon)
+                <div class="row item"><span>{{ $addon->description }}@if ($addon->quantity > 1) <em>× {{ $addon->quantity }}</em>@endif</span><span>${{ number_format($addon->amount, 0, ',', '.') }}</span></div>
+            @endforeach
         @endif
         <div class="row"><span>Pagado</span><span>${{ number_format($booking->paidAmount(), 0, ',', '.') }}</span></div>
         <div class="row balance"><span>Saldo</span><span>${{ number_format($balance, 0, ',', '.') }}</span></div>

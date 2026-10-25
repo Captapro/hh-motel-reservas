@@ -15,7 +15,7 @@ class PaymentController extends Controller
 {
     public function create(Request $request, string $code): View
     {
-        $booking = Booking::with(['room.category', 'customer', 'payments.paymentMethod'])
+        $booking = Booking::with(['room.category', 'customer', 'payments.paymentMethod', 'addons'])
             ->where('code', $code)->firstOrFail();
 
         $methods = PaymentMethod::where('is_active', true)->orderBy('name')->get();
