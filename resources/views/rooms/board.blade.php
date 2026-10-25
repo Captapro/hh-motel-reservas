@@ -15,7 +15,7 @@
         .scan-bridge img { width:110px; height:110px; border-radius:6px; display:block; }
         @media print, (max-width: 720px) { .scan-bridge { display:none; } }
         .flash-status { background:#0f2b22; border:1px solid #1c9169; color:#6ee7b7; padding:12px 16px; border-radius:9px; font-size:14px; font-weight:600; margin-bottom:20px; }
-        .topline { margin-bottom: 26px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+        .topline { margin-bottom: 14px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
         .topline-toolbar { display:flex; gap:8px; flex-wrap:wrap; min-width:0; }
         a.compact-toggle { text-decoration:none; display:inline-flex; align-items:center; }
         h1 { font-size: 18px; letter-spacing: .04em; margin-bottom: 2px; }
@@ -282,6 +282,22 @@
         .pass-scan .ps-main small { display:block; color:#7fd8b6; font-size:12.5px; margin-top:2px; }
         .pass-scan a { background:#ff7918; color:#111; text-decoration:none; font-weight:700; padding:10px 18px; border-radius:8px; font-size:14px; white-space:nowrap; }
         @keyframes passPulse { 0%,100% { box-shadow:0 0 0 0 rgba(45,212,160,.5); } 50% { box-shadow:0 0 0 8px rgba(45,212,160,0); } }
+        /* Más lugar para las habitaciones: encabezado, métricas y avisos en poco alto. */
+        .topline h1 { font-size:20px; }
+        .topline .sub { margin:2px 0 0; font-size:12px; }
+        .topline-toolbar { align-items:center; }
+        .topline-toolbar .scan-bridge { flex-direction:row-reverse; gap:10px; padding:5px 10px; }
+        .topline-toolbar .scan-bridge img { width:54px; height:54px; }
+        .topline-toolbar .scan-bridge .label { text-align:right; max-width:70px; white-space:normal; }
+        .stats-row { display:flex; gap:14px; align-items:stretch; flex-wrap:wrap; margin-bottom:18px; }
+        .stats-row .summary { margin-bottom:0; gap:8px; }
+        .stats-row .summary .chip { padding:7px 12px; }
+        .stats-row .daily-summary { flex:1; min-width:480px; margin-bottom:0; gap:6px; }
+        .stats-row .dsum-tile { padding:6px 10px; }
+        .pending-row-wrap { margin-bottom:14px; }
+        .page-grid.no-sidebar { grid-template-columns: 1fr; }
+        .section { margin-bottom:22px; }
+        .section-head { margin-bottom:10px; }
 </style>
     <script>
         // Tres niveles de densidad: normal → compacta → chips → normal.
@@ -312,6 +328,13 @@
             <a class="compact-toggle" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
             <button type="button" class="compact-toggle" id="catalog-link-btn" data-room-link="{{ route('catalog.index') }}" onclick="hhCopyRoomLink(this)">Copiar link del catálogo</button>
             <button type="button" class="compact-toggle" id="compact-toggle-btn" onclick="hhToggleCompact()">⊟ Vista compacta</button>
+        {{-- Puente PC → celular: la cámara para escanear el pase de un huésped
+         está en el celular, no en este monitor -- recepción escanea este QR
+         con su celular y ahí se le abre directo /reservas/escanear. --}}
+    <div class="scan-bridge">
+        <span class="label">Validador de tickets</span>
+        <img src="{{ route('reservations.scan_qr_image') }}" alt="Escaneá con el celular para abrir la cámara de reservas">
+    </div>
         </div>
     </div>
 
@@ -322,9 +345,8 @@
          de administración (Categorías) -- no es responsabilidad de quien
          está en el tablero prender o apagar disponibilidad. --}}
 
-    <div class="pending-row-wrap {{ $pendingBookings->isEmpty() ? 'no-pending' : '' }}">
-    {{-- Sin pendientes no se muestra el panel: solo aparece cuando hay algo por gestionar. --}}
     @if ($pendingBookings->isNotEmpty())
+    <div class="pending-row-wrap">
     <div class="pending-panel">
         <div class="pending-head"><h2>⚠ Pendientes de gestionar</h2><span class="count">{{ $pendingBookings->count() }}</span></div>
         @if ($pendingBookings->isEmpty())
@@ -346,17 +368,10 @@
             @endforeach
         @endif
     </div>
+    </div>
     @endif
 
-    {{-- Puente PC → celular: la cámara para escanear el pase de un huésped
-         está en el celular, no en este monitor -- recepción escanea este QR
-         con su celular y ahí se le abre directo /reservas/escanear. --}}
-    <div class="scan-bridge">
-        <span class="label">Validador de tickets</span>
-        <img src="{{ route('reservations.scan_qr_image') }}" alt="Escaneá con el celular para abrir la cámara de reservas">
-    </div>
-    </div>
-
+    <div class="stats-row">
     <div class="summary">
         <div class="chip ocupadas"><b>{{ $grouped['ocupadas']->count() }}</b><span>Ocupadas</span></div>
         <div class="chip aseo"><b>{{ $grouped['en_aseo']->count() }}</b><span>En aseo</span></div>
@@ -388,12 +403,14 @@
         </a>
     </div>
 
-    <div class="page-grid">
+    </div>
+
+    <div class="page-grid {{ $grouped['proximas']->isEmpty() ? 'no-sidebar' : '' }}">
         <div class="main-col">
+            @if ($grouped['ocupadas']->isNotEmpty())
             <div class="section ocupadas">
                 <div class="section-head"><h2>Ocupadas</h2><span class="count">{{ $grouped['ocupadas']->count() }}</span><span class="bar"></span></div>
-                @if ($grouped['ocupadas']->isEmpty())
-                    <p class="section-empty">Ninguna habitación ocupada en este momento.</p>
+                @if (false)
                 @else
                     <div class="grid">
                         @foreach ($grouped['ocupadas'] as $entry)
@@ -402,13 +419,14 @@
                     </div>
                 @endif
             </div>
+            @endif
 
+            @if ($grouped['en_aseo']->isNotEmpty())
             <div class="section aseo">
                 <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span><span class="bar"></span></div>
-                @if ($grouped['en_aseo']->isEmpty())
-                    <p class="section-empty">Ninguna habitación esperando aseo.</p>
+                @if (false)
                 @else
-                    <p class="section-empty" style="margin-bottom:12px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
+                    <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
                     <div class="grid">
                         @foreach ($grouped['en_aseo'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
@@ -416,6 +434,7 @@
                     </div>
                 @endif
             </div>
+            @endif
 
             <div class="section disponibles">
                 <div class="section-head"><h2>Disponibles</h2><span class="count" id="disponibles-count">{{ $grouped['disponibles']->count() }}</span><span class="bar"></span></div>
@@ -446,10 +465,10 @@
                 @endif
             </div>
 
+            @if ($grouped['fuera_de_servicio']->isNotEmpty())
             <div class="section fuera">
                 <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span><span class="bar"></span></div>
-                @if ($grouped['fuera_de_servicio']->isEmpty())
-                    <p class="section-empty">Ninguna habitación fuera de servicio.</p>
+                @if (false)
                 @else
                     <div class="grid">
                         @foreach ($grouped['fuera_de_servicio'] as $entry)
@@ -458,14 +477,14 @@
                     </div>
                 @endif
             </div>
+            @endif
         </div>
 
+        @if ($grouped['proximas']->isNotEmpty())
         <div class="sidebar">
             <div class="sidebar-title"><h2>Por llegar</h2><span class="count">{{ $grouped['proximas']->count() }}</span></div>
-            <p class="sidebar-hint">Habitaciones actualmente libres, pero con una reserva próxima. No las asignes a clientes sin reserva. Marca el check-in cuando llegue el cliente reservado.</p>
-            @if ($grouped['proximas']->isEmpty())
-                <p class="sidebar-empty">Ninguna por ahora.</p>
-            @else
+            <p class="sidebar-hint">Libres ahora, con una reserva próxima: no las asignes a clientes sin reserva.</p>
+            @if (true)
                 @foreach ($grouped['proximas'] as $entry)
                     @php $mins = $entry['status']['minutes_until_next']; @endphp
                     <div class="proxima-card cat-{{ Str::slug($entry['room']->category->name) }}">
@@ -483,6 +502,7 @@
                 @endforeach
             @endif
         </div>
+        @endif
     </div>
     </div>
     <script>
