@@ -54,6 +54,11 @@
         .pay-method { font-weight:600; }
         .pay-amount { font-family: ui-monospace, monospace; color:#6fd39a; }
         .pay-status { margin-left:auto; font-size:10.5px; font-family: ui-monospace, monospace; text-transform:uppercase; background:#16301f; color:#6fd39a; padding:2px 9px; border-radius:20px; }
+        .pay-doc-done { display:flex; gap:16px; align-items:center; flex-wrap:wrap; font-size:13.5px; color:#bbb; padding-top:4px; }
+        .pay-doc-done b { color:#eee; font-family:ui-monospace,monospace; }
+        .pay-doc-edit { margin-left:auto; background:transparent; border:0; color:#888; font-size:12.5px; cursor:pointer; padding:2px 4px; }
+        .pay-doc-edit:hover { color:#ff7918; }
+        .pay-docs[hidden] { display:none; }
         .pay-docs { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
         .pay-docs label { display:flex; flex-direction:column; gap:4px; font-size:11px; color:#999; text-transform:uppercase; letter-spacing:.04em; }
         .pay-docs input { width:130px; padding:8px 10px; background:#111; border:1px solid #3a3a3a; border-radius:7px; color:#eee; font-size:13.5px; }
@@ -316,7 +321,16 @@
                                 <span class="pay-amount">${{ number_format($payment->amount, 0, ',', '.') }}</span>
                                 <span class="pay-status">{{ $payment->status }}</span>
                             </div>
-                            <form method="POST" action="{{ route('payments.document', $payment) }}" class="pay-docs">
+                            @php $hasDoc = filled($payment->voucher_number) || filled($payment->receipt_number); @endphp
+                            @if ($hasDoc)
+                                {{-- Ya registrado: se muestra como dato; corregirlo es una acción aparte. --}}
+                                <div class="pay-doc-done">
+                                    @if (filled($payment->voucher_number))<span>Voucher <b>{{ $payment->voucher_number }}</b></span>@endif
+                                    @if (filled($payment->receipt_number))<span>Boleta <b>{{ $payment->receipt_number }}</b></span>@endif
+                                    <button type="button" class="pay-doc-edit" onclick="this.closest('.pay-block').querySelector('.pay-docs').hidden = false; this.hidden = true;">✎ Corregir</button>
+                                </div>
+                            @endif
+                            <form method="POST" action="{{ route('payments.document', $payment) }}" class="pay-docs" @if ($hasDoc) hidden @endif>
                                 @csrf @method('PUT')
                                 <label>N° voucher <input name="voucher_number" value="{{ $payment->voucher_number }}" placeholder="Voucher" maxlength="30"></label>
                                 <label>N° boleta <input name="receipt_number" value="{{ $payment->receipt_number }}" placeholder="Boleta" maxlength="30"></label>
