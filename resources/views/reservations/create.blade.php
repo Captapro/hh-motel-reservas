@@ -1587,7 +1587,9 @@
             const box = document.getElementById('price-box');
             if (box) new MutationObserver(update).observe(box, { childList: true, subtree: true, attributes: true });
             document.addEventListener('click', (e) => { if (e.target.closest('#dur-quick, .wheel, .time-quick, #room-cat-quick')) setTimeout(update, 60); });
-            setInterval(syncDeposit, 1500);
+            // El cliente existente se carga solo (sin tocar ningún campo): sin esto el paso
+            // siguiente no se enciende hasta que recepción haga otra cosa en el formulario.
+            setInterval(update, 700);
             update();
             setTimeout(update, 600);
         })();
