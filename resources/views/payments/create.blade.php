@@ -31,12 +31,10 @@
         .hh-payment-summary .row span:last-child { text-align:right; }
         .muted { color:#777; font-weight:400; }
         .sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); border:0; opacity:0; }
-        .method-chips, .quick-amounts { display:flex; flex-wrap:wrap; gap:8px; }
-        .quick-amounts { margin-top:8px; }
+        .method-chips { display:flex; flex-wrap:wrap; gap:8px; }
         .chip { width:auto; margin:0; padding:10px 18px; background:#1c1c1c; border:1.5px solid #3a3a3a; color:#ccc; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
         .chip:hover { border-color:#ff7918; color:#fff; }
         .chip.active { background:#ff7918; border-color:#ff7918; color:#111; }
-        .chip.small { padding:6px 12px; font-size:12.5px; font-weight:600; }
         .chip-error { margin-top:8px; color:#f3b8b8; font-size:13px; }
         .pay-grid { display:grid; grid-template-columns: 1fr 1fr; gap:0 16px; align-items:start; }
         @media (max-width: 700px) { .pay-grid { grid-template-columns: 1fr; } }
@@ -107,17 +105,6 @@
                 <label for="amount-display">Monto (CLP)</label>
                 <input type="text" inputmode="numeric" id="amount-display" placeholder="0" required>
                 <input type="hidden" name="amount" id="amount-input" value="{{ old('amount', $suggestedAmount) }}">
-                {{-- En el ingreso presencial se paga el total: el monto ya viene completo y no hay nada que fraccionar. --}}
-                @if ($balance > 0 && $after !== 'checkin')
-                    <div class="quick-amounts">
-                        @if ((int) $suggestedAmount !== (int) $balance)
-                            <button type="button" class="chip small" data-amount="{{ $balance }}">Saldo completo · ${{ number_format($balance, 0, ',', '.') }}</button>
-                        @endif
-                        @if ($balance >= 2000)
-                            <button type="button" class="chip small" data-amount="{{ (int) round($balance / 2) }}">Mitad · ${{ number_format((int) round($balance / 2), 0, ',', '.') }}</button>
-                        @endif
-                    </div>
-                @endif
             </div>
             <div>
                 <label for="payment-reference">Referencia / N° de operación <span class="muted">(opcional)</span></label>
@@ -238,13 +225,6 @@
                 }
             });
         })();
-
-        // Montos rápidos: saldo completo o la mitad.
-        document.querySelectorAll('[data-amount]').forEach((btn) => btn.addEventListener('click', function () {
-            const display = document.getElementById('amount-display');
-            display.value = btn.dataset.amount;
-            display.dispatchEvent(new Event('input', { bubbles: true }));
-        }));
     </script>
 </body>
 </html>
