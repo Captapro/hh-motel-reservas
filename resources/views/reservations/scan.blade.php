@@ -99,7 +99,7 @@
                     return;
                 }
 
-                statusLine.textContent = '¡Listo! Abriendo la reserva…';
+                statusLine.textContent = '¡Listo! Verificando el pase…';
                 // Pases viejos traen la ficha; igual se manda a lo pendiente (cobrar / check-in).
                 if (!url.pathname.endsWith('/validar')) url.pathname += '/validar';
                 window.location.href = url.toString();

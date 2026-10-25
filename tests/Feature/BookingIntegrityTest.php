@@ -102,23 +102,33 @@ class BookingIntegrityTest extends TestCase
         return Coupon::create(array_merge(['internal_name' => 'Oferta prueba', 'auto_apply' => true, 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20], $overrides));
     }
 
-    public function test_pass_qr_sends_reception_to_what_is_pending(): void
+    public function test_pass_qr_verifies_on_the_phone_and_alerts_the_desktop_which_then_goes_to_what_is_pending(): void
     {
+        \Illuminate\Support\Facades\Cache::flush();
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
 
-        // Con saldo: primero cobrar, y el pago lleva al check-in completo.
+        // Celular: solo verifica el pase, no pide hacer nada ahí.
         $this->get(route('bookings.validate', $booking->code))
-            ->assertRedirect(route('payments.create', ['code' => $booking->code, 'after' => 'pase']));
+            ->assertOk()->assertSee('Pase válido')->assertSee('No necesitas hacer nada en el celular');
+        // El computador de recepción recibe el aviso.
+        $this->getJson(route('rooms.pass_scans'))->assertOk()->assertJsonFragment(['code' => $booking->code]);
+
+        // Desde el aviso: con saldo, primero cobrar, y el pago lleva al check-in completo.
+        $go = route('bookings.validate', ['code' => $booking->code, 'ir' => 1]);
+        $this->get($go)->assertRedirect(route('payments.create', ['code' => $booking->code, 'after' => 'pase']));
+        $this->getJson(route('rooms.pass_scans'))->assertExactJson([]);
         $this->post(route('payments.store', $booking->code), [
             'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) \Illuminate\Support\Str::uuid(),
             'receipt_number' => '1', 'after' => 'pase',
         ])->assertRedirect(route('bookings.checkin.show', $booking->code));
 
-        // Sin saldo: directo al check-in. Con check-in hecho: a la ficha.
-        $this->get(route('bookings.validate', $booking->code))->assertRedirect(route('bookings.checkin.show', $booking->code));
+        // Sin saldo: directo al check-in. Con check-in hecho: el pase ya no es válido y va a la ficha.
+        $this->get($go)->assertRedirect(route('bookings.checkin.show', $booking->code));
         $booking->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
-        $this->get(route('bookings.validate', $booking->code))->assertRedirect(route('reservations.show', $booking->code));
+        $this->get($go)->assertRedirect(route('reservations.show', $booking->code));
+        $this->get(route('bookings.validate', $booking->code))->assertOk()->assertSee('Pase no válido');
+        $this->getJson(route('rooms.pass_scans'))->assertExactJson([]);
     }
 
     public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void

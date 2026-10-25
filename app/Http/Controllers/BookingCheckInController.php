@@ -17,6 +17,7 @@ use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\UpsellResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Support\PassScans;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -30,9 +31,22 @@ class BookingCheckInController extends Controller
      * con acompañantes y consumo. Si ya entró o la reserva está cerrada, va a
      * su ficha.
      */
-    public function validatePass(string $code): RedirectResponse
+    public function validatePass(Request $request, string $code): View|RedirectResponse
     {
-        $booking = Booking::where('code', $code)->firstOrFail();
+        $booking = Booking::with(['customer', 'room'])->where('code', $code)->firstOrFail();
+
+        // Escaneo con el celular: solo verifica el pase y avisa en el computador
+        // de recepción, donde se hace el cobro y el check-in. Nada que hacer acá.
+        if (! $request->boolean('ir')) {
+            $valid = ! $booking->checked_in_at && ! in_array($booking->booking_status, self::TERMINAL, true);
+            if ($valid) {
+                PassScans::record($booking->code);
+            }
+
+            return view('reservations.pass-check', ['booking' => $booking, 'valid' => $valid]);
+        }
+
+        PassScans::forget($booking->code);
 
         if ($booking->checked_in_at || in_array($booking->booking_status, self::TERMINAL, true)) {
             return redirect()->route('reservations.show', $booking->code);

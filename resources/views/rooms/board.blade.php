@@ -271,7 +271,14 @@
            más arriba, que no tienen nada que ver con la densidad de tarjetas. */
         .chips .card details, .chips .card form { display: none !important; }
         .chips .proxima-card { padding: 8px 10px; margin-bottom: 8px; }
-    </style>
+            #pass-scans:empty { display:none; }
+        #pass-scans { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+        .pass-scan { display:flex; align-items:center; gap:14px; background:#0f2b22; border:1px solid #1c9169; border-left:5px solid #2dd4a0; color:#d6fff0; padding:12px 16px; border-radius:10px; animation:passPulse 1.6s ease-in-out 3; }
+        .pass-scan .ps-main { flex:1; font-size:15px; }
+        .pass-scan .ps-main small { display:block; color:#7fd8b6; font-size:12.5px; margin-top:2px; }
+        .pass-scan a { background:#ff7918; color:#111; text-decoration:none; font-weight:700; padding:10px 18px; border-radius:8px; font-size:14px; white-space:nowrap; }
+        @keyframes passPulse { 0%,100% { box-shadow:0 0 0 0 rgba(45,212,160,.5); } 50% { box-shadow:0 0 0 8px rgba(45,212,160,0); } }
+</style>
     <script>
         // Tres niveles de densidad: normal → compacta → chips → normal.
         // Se aplica antes de pintar para no hacer parpadear el layout.
@@ -303,6 +310,9 @@
             <button type="button" class="compact-toggle" id="compact-toggle-btn" onclick="hhToggleCompact()">⊟ Vista compacta</button>
         </div>
     </div>
+
+    {{-- Pases escaneados con el celular: aviso para atenderlos acá, en el computador. --}}
+    <div id="pass-scans"></div>
 
     {{-- Los interruptores de Ala Sur / categoría / piso se movieron al panel
          de administración (Categorías) -- no es responsabilidad de quien
@@ -572,6 +582,29 @@
             if (none) none.classList.toggle('cat-hidden', shown > 0);
         }
         hhApplyCategoryFilter();
+    </script>
+
+    <script>
+        // Avisos de pases escaneados con el celular (se consulta cada pocos segundos).
+        (function () {
+            const box = document.getElementById('pass-scans');
+            if (!box) return;
+            const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+            let last = '';
+            async function poll() {
+                try {
+                    const r = await fetch('{{ route('rooms.pass_scans') }}', { headers: { 'Accept': 'application/json' } });
+                    if (!r.ok) return;
+                    const list = await r.json();
+                    const sig = JSON.stringify(list);
+                    if (sig === last) return;
+                    last = sig;
+                    box.innerHTML = list.map((p) => '<div class="pass-scan"><div class="ps-main"><b>📲 Pase escaneado — ' + esc(p.customer) + '</b><small>' + esc(p.room) + ' · ' + esc(p.code) + (p.balance > 0 ? ' · falta cobrar $' + Number(p.balance).toLocaleString('es-CL') : ' · pagado') + '</small></div><a href="' + esc(p.url) + '">' + (p.balance > 0 ? 'Cobrar y hacer check-in →' : 'Hacer check-in →') + '</a></div>').join('');
+                } catch (e) { /* sin red: se reintenta */ }
+            }
+            poll();
+            setInterval(poll, 4000);
+        })();
     </script>
 </body>
 </html>

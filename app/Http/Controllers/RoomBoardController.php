@@ -78,6 +78,29 @@ class RoomBoardController extends Controller
      * mandaron los datos de pago (payment_instructions_sent_at) o si todavía
      * nadie la tocó desde que se creó.
      */
+    /**
+     * Pases escaneados con el celular que esperan atención en este computador.
+     * El tablero lo consulta cada pocos segundos y muestra el aviso.
+     */
+    public function passScans(): \Illuminate\Http\JsonResponse
+    {
+        $recent = \App\Support\PassScans::recent();
+        $bookings = Booking::with(['customer', 'room'])->whereIn('code', array_keys($recent))
+            ->whereNull('checked_in_at')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'])
+            ->get()
+            ->sortByDesc(fn ($b) => $recent[$b->code])
+            ->values();
+
+        return response()->json($bookings->map(fn ($b) => [
+            'code' => $b->code,
+            'customer' => $b->customer->name,
+            'room' => $b->room->name,
+            'balance' => $b->balanceDue(),
+            'url' => route('bookings.validate', ['code' => $b->code, 'ir' => 1]),
+        ])->all());
+    }
+
     private function pendingBookings(): \Illuminate\Support\Collection
     {
         return Booking::with(['room.category', 'customer'])
