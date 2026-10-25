@@ -312,6 +312,22 @@
         }
 
         document.getElementById('reserve-form').addEventListener('submit', hhSyncTime);
+        // Un solo envío: sin esto, un doble toque creaba dos reservas en dos habitaciones.
+        (function () {
+            const form = document.getElementById('reserve-form');
+            const btn = form.querySelector('button.submit');
+            let sending = false;
+            form.addEventListener('submit', function (e) {
+                if (sending) { e.preventDefault(); return; }
+                sending = true;
+                if (btn) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = 'Enviando…'; }
+            });
+            // Al volver atrás desde la confirmación, el botón debe quedar usable otra vez.
+            window.addEventListener('pageshow', function () {
+                sending = false;
+                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Solicitar reserva'; }
+            });
+        })();
         ['room_category_id','date','time-hour12','time-minute','time-period','duration_minutes'].forEach(id => document.getElementById(id).addEventListener('change', () => { hhSyncTime(); hhUpdateSummary(); hhCheckCouponWindow(); hhCheckAvailability(); }));
         hhUpdateDurations();
         hhUpdateSummary();

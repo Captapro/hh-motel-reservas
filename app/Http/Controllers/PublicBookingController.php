@@ -25,7 +25,9 @@ use App\Support\Phone;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 /**
@@ -116,110 +118,137 @@ class PublicBookingController extends Controller
             'website' => ['prohibited'],
         ]);
 
-        $startsAt = Carbon::parse($validated['date'].' '.sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']));
-        $endsAt = $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
-
-        $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules);
-
-        if (! $room) {
-            return back()->withInput()->withErrors(['duration_minutes' => 'No hay habitaciones libres de ese tipo para ese horario — prueba otra fecha, hora o duración.']);
-        }
-
-        $phone = Phone::toE164($validated['phone']);
-        $customerName = trim($validated['first_name'].' '.$validated['last_name']);
-        $customer = Customer::firstOrCreate(
-            ['phone_e164' => $phone],
-            ['name' => $customerName, 'email' => $validated['email'] ?? null, 'birth_date' => $validated['birth_date'] ?? null]
-        );
-        if ($customer->blacklist_status === 'blocked') {
-            return back()->withInput()->withErrors(['phone' => 'No es posible solicitar la reserva con los datos ingresados.']);
-        }
-        // Cliente ya existía pero le faltaba la fecha de nacimiento (ej.
-        // para el cupón de Expertos en Vida) -- se completa ahora.
-        if (! empty($validated['birth_date']) && ! $customer->birth_date) {
-            $customer->update(['birth_date' => $validated['birth_date']]);
+        // Un solo envío a la vez por persona y horario: el segundo espera y ve la reserva ya creada.
+        $lock = Cache::lock('catalog-booking:'.md5(Phone::toE164($validated['phone']).'|'.$validated['date'].'|'.$validated['time_hour'].':'.$validated['time_minute'].'|'.$validated['duration_minutes']), 20);
+        try {
+            $lock->block(10);
+        } catch (LockTimeoutException $e) {
+            return back()->withInput()->withErrors(['duration_minutes' => 'Estamos procesando tu solicitud, espera unos segundos y revisa si ya quedó creada.']);
         }
 
         try {
-            $booking = $bookingService->create([
-                'room' => $room,
-                'customer' => $customer,
-                'starts_at' => $startsAt,
-                'duration_minutes' => (int) $validated['duration_minutes'],
-                'guests_count' => (int) $validated['guests_count'],
-                'coupon_code' => $validated['coupon_code'] ?? null,
-                'deposit_amount' => 0,
-                'created_by' => null,
-                'verified_by' => null,
-                'notes' => 'Reserva online desde el catálogo público.',
-            ]);
-        } catch (RoomNotAvailableException|PricingException|InvalidCouponException $e) {
-            return back()->withInput()->withErrors(['duration_minutes' => $e->getMessage()]);
-        }
+            $startsAt = Carbon::parse($validated['date'].' '.sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']));
+            $endsAt = $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
 
-        // Los extras se vuelven a resolver desde la base de datos: el navegador
-        // solo envía IDs y cantidades, nunca precios. Se guardan como consumo
-        // de la reserva y el stock se descuenta con la misma lógica de recepción.
-        // Cada ítem se intenta por separado -- que uno se haya agotado justo
-        // antes de enviar no debe tumbar los demás que sí tenían stock.
-        $soldOut = false;
-
-        $productQuantities = collect($validated['quantities'] ?? [])
-            ->mapWithKeys(fn ($quantity, $id) => [(int) $id => (int) $quantity])
-            ->filter(fn ($quantity) => $quantity > 0);
-        $products = Product::where('is_active', true)->whereIn('id', $productQuantities->keys())->get()->keyBy('id');
-        foreach ($productQuantities as $productId => $quantity) {
-            if (! isset($products[$productId])) {
-                continue;
+            // Doble toque / doble envío: si esta misma persona ya pidió exactamente este horario hace
+            // un momento, se le muestra esa reserva en vez de crear una segunda en otra habitación.
+            $knownCustomer = Customer::where('phone_e164', Phone::toE164($validated['phone']))->first();
+            if ($knownCustomer) {
+                $duplicate = Booking::where('customer_id', $knownCustomer->id)
+                    ->where('starts_at', $startsAt)
+                    ->where('duration_minutes', (int) $validated['duration_minutes'])
+                    ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
+                    ->where('created_at', '>=', now()->subMinutes(3))
+                    ->latest('id')->first();
+                if ($duplicate) {
+                    return redirect()->route('catalog.booked', $duplicate->pass_token);
+                }
             }
+
+            $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules);
+
+            if (! $room) {
+                return back()->withInput()->withErrors(['duration_minutes' => 'No hay habitaciones libres de ese tipo para ese horario — prueba otra fecha, hora o duración.']);
+            }
+
+            $phone = Phone::toE164($validated['phone']);
+            $customerName = trim($validated['first_name'].' '.$validated['last_name']);
+            $customer = Customer::firstOrCreate(
+                ['phone_e164' => $phone],
+                ['name' => $customerName, 'email' => $validated['email'] ?? null, 'birth_date' => $validated['birth_date'] ?? null]
+            );
+            if ($customer->blacklist_status === 'blocked') {
+                return back()->withInput()->withErrors(['phone' => 'No es posible solicitar la reserva con los datos ingresados.']);
+            }
+            // Cliente ya existía pero le faltaba la fecha de nacimiento (ej.
+            // para el cupón de Expertos en Vida) -- se completa ahora.
+            if (! empty($validated['birth_date']) && ! $customer->birth_date) {
+                $customer->update(['birth_date' => $validated['birth_date']]);
+            }
+
             try {
-                $consumption->addProduct($booking, $products[$productId], $quantity, null);
-            } catch (InsufficientStockException $e) {
-                $soldOut = true;
+                $booking = $bookingService->create([
+                    'room' => $room,
+                    'customer' => $customer,
+                    'starts_at' => $startsAt,
+                    'duration_minutes' => (int) $validated['duration_minutes'],
+                    'guests_count' => (int) $validated['guests_count'],
+                    'coupon_code' => $validated['coupon_code'] ?? null,
+                    'deposit_amount' => 0,
+                    'created_by' => null,
+                    'verified_by' => null,
+                    'notes' => 'Reserva online desde el catálogo público.',
+                ]);
+            } catch (RoomNotAvailableException|PricingException|InvalidCouponException $e) {
+                return back()->withInput()->withErrors(['duration_minutes' => $e->getMessage()]);
             }
-        }
 
-        $comboQuantities = collect($validated['combo_quantities'] ?? [])
-            ->mapWithKeys(fn ($quantity, $id) => [(int) $id => (int) $quantity])
-            ->filter(fn ($quantity) => $quantity > 0);
-        $combos = Combo::with('items.product')->where('is_active', true)->whereIn('id', $comboQuantities->keys())->get()->keyBy('id');
-        foreach ($comboQuantities as $comboId => $quantity) {
-            if (! isset($combos[$comboId]) || $combos[$comboId]->isOutOfStock()) {
-                if (isset($combos[$comboId])) {
+            // Los extras se vuelven a resolver desde la base de datos: el navegador
+            // solo envía IDs y cantidades, nunca precios. Se guardan como consumo
+            // de la reserva y el stock se descuenta con la misma lógica de recepción.
+            // Cada ítem se intenta por separado -- que uno se haya agotado justo
+            // antes de enviar no debe tumbar los demás que sí tenían stock.
+            $soldOut = false;
+
+            $productQuantities = collect($validated['quantities'] ?? [])
+                ->mapWithKeys(fn ($quantity, $id) => [(int) $id => (int) $quantity])
+                ->filter(fn ($quantity) => $quantity > 0);
+            $products = Product::where('is_active', true)->whereIn('id', $productQuantities->keys())->get()->keyBy('id');
+            foreach ($productQuantities as $productId => $quantity) {
+                if (! isset($products[$productId])) {
+                    continue;
+                }
+                try {
+                    $consumption->addProduct($booking, $products[$productId], $quantity, null);
+                } catch (InsufficientStockException $e) {
                     $soldOut = true;
                 }
-
-                continue;
             }
-            try {
-                $consumption->addCombo($booking, $combos[$comboId], $quantity, null);
-            } catch (InsufficientStockException $e) {
-                $soldOut = true;
+
+            $comboQuantities = collect($validated['combo_quantities'] ?? [])
+                ->mapWithKeys(fn ($quantity, $id) => [(int) $id => (int) $quantity])
+                ->filter(fn ($quantity) => $quantity > 0);
+            $combos = Combo::with('items.product')->where('is_active', true)->whereIn('id', $comboQuantities->keys())->get()->keyBy('id');
+            foreach ($comboQuantities as $comboId => $quantity) {
+                if (! isset($combos[$comboId]) || $combos[$comboId]->isOutOfStock()) {
+                    if (isset($combos[$comboId])) {
+                        $soldOut = true;
+                    }
+
+                    continue;
+                }
+                try {
+                    $consumption->addCombo($booking, $combos[$comboId], $quantity, null);
+                } catch (InsufficientStockException $e) {
+                    $soldOut = true;
+                }
             }
-        }
 
-        if ($soldOut) {
-            // La reserva ya tiene su habitación bloqueada; informamos para que
-            // recepción pueda agregar el extra disponible manualmente. Los
-            // demás extras que sí tenían stock ya quedaron agregados arriba.
-            return redirect()->route('catalog.booked', $booking->pass_token)
-                ->with('warning', 'La reserva quedó creada, pero uno de los extras seleccionados se agotó. Recepción podrá ofrecerte otra alternativa.');
-        }
+            if ($soldOut) {
+                // La reserva ya tiene su habitación bloqueada; informamos para que
+                // recepción pueda agregar el extra disponible manualmente. Los
+                // demás extras que sí tenían stock ya quedaron agregados arriba.
+                return redirect()->route('catalog.booked', $booking->pass_token)
+                    ->with('warning', 'La reserva quedó creada, pero uno de los extras seleccionados se agotó. Recepción podrá ofrecerte otra alternativa.');
+            }
 
-        // from_room_category_id sin comprobar acá dejaba aceptar CUALQUIER
-        // upsell de upgrade activo por su ID, aunque fuera de una categoría
-        // de origen distinta a la que el cliente realmente reservó --
-        // UpsellResolver::evaluate() sí lo valida para el panel interno,
-        // este flujo público arma la reserva a mano y se lo saltaba.
-        $upgrade = UpsellOffer::active()->where('type', 'category_upgrade')
-            ->where('from_room_category_id', $booking->room->room_category_id)
-            ->with('toCategory')
-            ->whereIn('id', $validated['accepted_upsells'] ?? [])->first();
-        if ($upgrade?->to_room_category_id) {
-            app(BookingAllocationService::class)->upgrade($booking, $upgrade, null);
-        }
+            // from_room_category_id sin comprobar acá dejaba aceptar CUALQUIER
+            // upsell de upgrade activo por su ID, aunque fuera de una categoría
+            // de origen distinta a la que el cliente realmente reservó --
+            // UpsellResolver::evaluate() sí lo valida para el panel interno,
+            // este flujo público arma la reserva a mano y se lo saltaba.
+            $upgrade = UpsellOffer::active()->where('type', 'category_upgrade')
+                ->where('from_room_category_id', $booking->room->room_category_id)
+                ->with('toCategory')
+                ->whereIn('id', $validated['accepted_upsells'] ?? [])->first();
+            if ($upgrade?->to_room_category_id) {
+                app(BookingAllocationService::class)->upgrade($booking, $upgrade, null);
+            }
 
-        return redirect()->route('catalog.booked', $booking->pass_token);
+            return redirect()->route('catalog.booked', $booking->pass_token);
+        } finally {
+            $lock->release();
+        }
     }
 
     public function booked(string $token): View

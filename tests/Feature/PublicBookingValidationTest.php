@@ -115,6 +115,18 @@ class PublicBookingValidationTest extends TestCase
         $this->assertSame(0, Booking::count());
     }
 
+    public function test_double_submit_from_the_catalog_creates_a_single_booking(): void
+    {
+        // Con una segunda habitación libre, el segundo envío antes tomaba esa y quedaban dos reservas.
+        Room::create(['room_category_id' => $this->category->id, 'name' => 'GO 102', 'operational_status' => 'activa']);
+
+        $first = $this->post('/catalogo/reservar', $this->bookingPayload());
+        $second = $this->post('/catalogo/reservar', $this->bookingPayload());
+
+        $this->assertSame(1, Booking::count());
+        $this->assertSame($first->headers->get('Location'), $second->headers->get('Location'));
+    }
+
     public function test_check_availability_agrees_with_store_outside_the_operating_window(): void
     {
         $payload = [
