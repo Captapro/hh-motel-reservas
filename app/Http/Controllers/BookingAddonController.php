@@ -55,7 +55,12 @@ class BookingAddonController extends Controller
             return back()->withErrors(['booking' => 'No se puede vender la hora adicional porque existe otra reserva después.']);
         }
         $rateName = strtoupper($booking->rate_rule_name_snapshot ?? 'HH');
-        $amount = (int) (RateRule::where('name', $rateName)->value('extra_hour_price') ?? (str_contains($rateName, 'HOT') ? 15000 : 10000));
+        $amount = (int) RateRule::where('name', $rateName)->value('extra_hour_price');
+        // Sin precio configurado en la tarifa, vender la hora la dejaba
+        // cargada a $0 sin avisar -- mejor frenar y decir dónde se configura.
+        if ($amount <= 0) {
+            return back()->withErrors(['booking' => 'La tarifa '.$rateName.' no tiene precio de hora adicional. Configúralo en Administración, Tarifas, y vuelve a intentar.']);
+        }
         $booking->update(['ends_at' => $newEndsAt]);
         $consumption->addCustom($booking, 'Hora adicional (1 hora)', $amount, auth()->id());
 

@@ -137,6 +137,23 @@ class BookingIntegrityTest extends TestCase
             ->assertSee('Para asegurar tu reserva')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('Pagar con Mercado Pago');
     }
 
+    public function test_extra_hour_is_blocked_when_the_rate_has_no_price(): void
+    {
+        (require database_path('migrations/2026_09_16_001000_add_extra_hour_price_to_rate_rules.php'))->up();
+        $booking = $this->booking();
+        $endsAt = $booking->ends_at->copy();
+        $rule = \App\Models\RateRule::where('name', 'HH')->first();
+
+        $rule->update(['extra_hour_price' => 0]);
+        $this->post(route('addons.extra-hour', $booking->code))->assertSessionHasErrors('booking');
+        $this->assertTrue($booking->fresh()->ends_at->eq($endsAt));
+        $this->assertSame(0, $booking->fresh()->addons()->count());
+
+        $rule->update(['extra_hour_price' => 10000]);
+        $this->post(route('addons.extra-hour', $booking->code))->assertSessionHasNoErrors();
+        $this->assertSame(10000, (int) $booking->fresh()->addons()->sum('amount'));
+    }
+
     public function test_booking_without_check_in_can_be_deleted_with_confirmation_but_real_stays_cannot(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);

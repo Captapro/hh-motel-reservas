@@ -13,12 +13,14 @@ class RoomCategorySeeder extends Seeder
 
         DB::table('room_categories')->insert([
             [
+                'sales_tip' => 'Ambiente íntimo con mobiliario seleccionado para disfrutar una experiencia diferente.',
                 'max_capacity' => 6, 'name' => 'GO', 'former_name' => 'ex-S',
                 'description' => null, 'features' => json_encode([]),
                 'base_capacity' => 2, 'extra_guest_from' => 3, 'display_order' => 1,
                 'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
             ],
             [
+                'sales_tip' => 'Privacidad y comodidad en un ambiente equipado para compartir sin apuros.',
                 'max_capacity' => 4, 'name' => 'LITE', 'former_name' => 'ex-S',
                 'description' => null,
                 'features' => json_encode(['Baño exterior privado', 'Uso exclusivo de la habitación']),
@@ -26,12 +28,14 @@ class RoomCategorySeeder extends Seeder
                 'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
             ],
             [
+                'sales_tip' => 'Un espacio preparado para disfrutar su mobiliario y vivir una experiencia más intensa.',
                 'max_capacity' => 8, 'name' => 'PLUS', 'former_name' => 'ex Estándar',
                 'description' => null, 'features' => json_encode(['LED']),
                 'base_capacity' => 2, 'extra_guest_from' => 3, 'display_order' => 3,
                 'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
             ],
             [
+                'sales_tip' => 'Ambiente amplio para explorar y disfrutar en compañía; una de las preferidas para grupos de más de dos personas.',
                 'max_capacity' => 12, 'name' => 'MAX', 'former_name' => 'ex XL',
                 'description' => null, 'features' => json_encode([]),
                 'base_capacity' => 2, 'extra_guest_from' => 3, 'display_order' => 4,

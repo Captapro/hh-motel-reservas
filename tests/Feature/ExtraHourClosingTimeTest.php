@@ -63,7 +63,7 @@ class ExtraHourClosingTimeTest extends TestCase
         $starts = Carbon::parse('2026-10-05 01:00'); // lunes
         $this->closesAt = Carbon::parse('2026-10-05 03:00');
 
-        $rateRule = RateRule::create(['name' => 'HH', 'is_active' => true]);
+        $rateRule = RateRule::create(['name' => 'HH', 'is_active' => true, 'extra_hour_price' => 10000]);
         RateRuleWindow::create([
             'rate_rule_id' => $rateRule->id,
             'weekday' => $starts->dayOfWeek,

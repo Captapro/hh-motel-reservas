@@ -34,6 +34,7 @@ class CouponSeeder extends Seeder
             [
                 'code' => 'EXPERTOS EN VIDA',
                 'internal_name' => 'Expertos en Vida (65+)',
+                'min_age' => 65,
                 'discount_type' => 'percentage',
                 'discount_value' => 25,
                 'min_amount' => null, 'max_discount_amount' => null,

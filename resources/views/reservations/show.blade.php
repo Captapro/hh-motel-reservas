@@ -367,7 +367,18 @@
                     <div class="addon-label">Agregar producto o combo</div>
                     <form method="POST" action="{{ route('addons.extra-hour', $booking->code) }}" style="margin:10px 0 14px;">
                         @csrf
-                        <button type="submit" style="width:100%;background:#f0b84b;color:#241b08;border:none;padding:10px;border-radius:7px;font-weight:700;cursor:pointer;">Vender 1 hora adicional — ${{ number_format($extraHourPrice, 0, ',', '.') }}</button>
+                        @if ($extraHourPrice > 0)
+                            <button type="submit" style="width:100%;background:#f0b84b;color:#241b08;border:none;padding:10px;border-radius:7px;font-weight:700;cursor:pointer;">Vender 1 hora adicional — ${{ number_format($extraHourPrice, 0, ',', '.') }}</button>
+                        @else
+                            <div style="padding:10px 12px;border:1px dashed #6b5a1e;border-radius:7px;background:#2a2410;color:#e8c76f;font-size:12.5px;line-height:1.5;">
+                                <b>Hora adicional sin precio.</b> La tarifa {{ $booking->rate_rule_name_snapshot ?? '' }} no lo tiene configurado, así que no se puede vender.
+                                @if (auth()->user()?->isAdministrador())
+                                    <a href="{{ route('admin.rates.index') }}" style="color:#ff7918;">Configurarlo en Tarifas →</a>
+                                @else
+                                    Avísale a un administrador.
+                                @endif
+                            </div>
+                        @endif
                     </form>
                     <form class="addon-form" method="POST" action="{{ route('addons.store', $booking->code) }}">
                         @csrf
