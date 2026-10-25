@@ -35,7 +35,7 @@
             <h1>Entrar como mucama</h1>
 
             @if ($errors->any())
-                @foreach ($errors->all() as $error)
+                @foreach (array_unique($errors->all()) as $error)
                     <div class="banner error">{{ $error }}</div>
                 @endforeach
             @endif
