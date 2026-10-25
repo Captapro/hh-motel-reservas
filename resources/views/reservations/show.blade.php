@@ -120,8 +120,11 @@
             <span class="pill pill-status">{{ $booking->payment_status }}</span>
         </div>
         <div class="col-actions">
-        <a class="col-btn" href="{{ route('bookings.pass.preview', $booking->pass_token) }}" target="_blank">Ver pase PDF</a>
-        <a class="col-btn" href="{{ route('bookings.pass.pdf', $booking->pass_token) }}">Descargar pase</a>
+        {{-- El pase es para entrar: una vez hecho el check-in o cerrada la reserva ya no sirve. --}}
+        @unless ($booking->checked_in_at || in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA', 'NO_SHOW']))
+            <a class="col-btn" href="{{ route('bookings.pass.preview', $booking->pass_token) }}" target="_blank">Ver pase PDF</a>
+            <a class="col-btn" href="{{ route('bookings.pass.pdf', $booking->pass_token) }}">Descargar pase</a>
+        @endunless
         <a class="col-btn" href="{{ route('rooms.board') }}">← Tablero</a>
         @unless (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
             <a class="col-btn" href="{{ route('reservations.edit', $booking->code) }}">Modificar</a>
