@@ -67,7 +67,7 @@ class BookingAddonController extends Controller
         $booking->update(['ends_at' => $newEndsAt]);
         $consumption->addCustom($booking, 'Hora adicional (1 hora)', $amount, auth()->id());
 
-        return back()->with('status', 'Hora adicional agregada por $'.number_format($amount, 0, ',', '.').'. Nueva salida: '.$newEndsAt->timezone('America/Santiago')->format('H:i').'.');
+        return $this->toPaymentIfOwed($booking, 'Hora adicional agregada por $'.number_format($amount, 0, ',', '.').'. Nueva salida: '.$newEndsAt->timezone('America/Santiago')->format('H:i').'.');
     }
 
     public function store(Request $request, string $code, ConsumptionService $consumption): RedirectResponse
@@ -111,10 +111,21 @@ class BookingAddonController extends Controller
                     $consumption->addCustom($booking, $validated['description'], (int) $validated['amount'], auth()->id());
                 }
 
-                return redirect()->route('reservations.show', $booking->code);
+                return $this->toPaymentIfOwed($booking, 'Consumo agregado.');
             }, 3);
         } catch (InsufficientStockException $e) {
             return back()->withErrors(['booking' => $e->getMessage()]);
         }
+    }
+
+    /** Lo que se agrega durante la estadía queda por cobrar: se pasa directo a registrar ese pago. */
+    private function toPaymentIfOwed(Booking $booking, string $message): RedirectResponse
+    {
+        if ($booking->fresh()->balanceDue() > 0) {
+            return redirect()->route('payments.create', $booking->code)
+                ->with('status', $message.' Registra el pago.');
+        }
+
+        return redirect()->route('reservations.show', $booking->code)->with('status', $message);
     }
 }

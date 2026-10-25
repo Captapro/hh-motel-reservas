@@ -196,7 +196,8 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(0, $booking->fresh()->addons()->count());
 
         $rule->update(['extra_hour_price' => 10000]);
-        $this->post(route('addons.extra-hour', $booking->code))->assertSessionHasNoErrors();
+        // Lo agregado en la estadía queda por cobrar: va directo a registrar el pago.
+        $this->post(route('addons.extra-hour', $booking->code))->assertSessionHasNoErrors()->assertRedirect(route('payments.create', $booking->code));
         $this->assertSame(10000, (int) $booking->fresh()->addons()->sum('amount'));
     }
 
