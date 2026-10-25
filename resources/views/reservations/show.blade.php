@@ -421,27 +421,28 @@
     </div>
 
     @if (auth()->user()?->isAdministrador())
-        @if ($booking->canBeDeleted())
-            @php $closed = in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW'], true); @endphp
-            <div class="card" style="margin-top:22px;border:1px solid #5a2327;background:#1d1315;">
-                <strong>Eliminar reserva</strong>
-                @if ($closed)
-                    <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva no llegó a ocurrir ({{ $booking->booking_status }}). Si es un <b>dato de prueba</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}. Esto descuenta sus montos de la caja y de las ventas, y <b>no se puede deshacer</b>. Queda registrada en auditoría.</p>
-                @else
-                    <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva sigue vigente ({{ $booking->booking_status }}) y todavía no tuvo check-in. Si fue una <b>prueba o un error</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}: libera la habitación y descuenta sus montos de la caja y de las ventas. Si el cliente solo canceló, mejor usa <b>Cancelar</b> para conservar el registro. <b>No se puede deshacer.</b></p>
-                @endif
-                <form method="POST" action="{{ route('bookings.destroy', $booking->code) }}" onsubmit="return confirm('¿Eliminar la reserva {{ $booking->code }}? No se puede deshacer.');">
-                    @csrf @method('DELETE')
-                    <label style="display:block;font-size:12.5px;color:#bbb;margin-bottom:6px;">Para confirmar, escribe <b>ELIMINAR</b></label>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <input name="confirm_text" autocomplete="off" placeholder="ELIMINAR" style="max-width:200px;">
-                        <button type="submit" style="background:#b3202f;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;">Eliminar reserva</button>
-                    </div>
-                </form>
-            </div>
-        @else
-            <p class="hint" style="margin-top:22px;">Esta reserva ya tuvo check-in o fue finalizada: es una estadía real y no se puede eliminar.</p>
-        @endif
+        @php
+            $closed = in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW'], true);
+            $hadStay = ! $booking->canBeDeleted();
+        @endphp
+        <div class="card" style="margin-top:22px;border:1px solid #5a2327;background:#1d1315;">
+            <strong>Eliminar reserva</strong>
+            @if ($hadStay)
+                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva ya tuvo check-in{{ $booking->booking_status === 'FINALIZADA' ? ' y está finalizada' : '' }}. Elimínala solo si es una <b>prueba o un error de carga</b>: se borra{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos ($'.number_format($booking->paidAmount(), 0, ',', '.').')' : '' }}{{ $booking->addons->isNotEmpty() ? ' y sus consumos' : '' }}, <b>descuenta sus montos de la caja y de las ventas</b>, devuelve al inventario lo consumido y <b>no se puede deshacer</b>. Queda registrada en auditoría. La habitación no cambia de estado.</p>
+            @elseif ($closed)
+                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva no llegó a ocurrir ({{ $booking->booking_status }}). Si es un <b>dato de prueba</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}. Esto descuenta sus montos de la caja y de las ventas, y <b>no se puede deshacer</b>. Queda registrada en auditoría.</p>
+            @else
+                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva sigue vigente ({{ $booking->booking_status }}) y todavía no tuvo check-in. Si fue una <b>prueba o un error</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}: libera la habitación y descuenta sus montos de la caja y de las ventas. Si el cliente solo canceló, mejor usa <b>Cancelar</b> para conservar el registro. <b>No se puede deshacer.</b></p>
+            @endif
+            <form method="POST" action="{{ route('bookings.destroy', $booking->code) }}" onsubmit="return confirm('¿Eliminar la reserva {{ $booking->code }}? No se puede deshacer.');">
+                @csrf @method('DELETE')
+                <label style="display:block;font-size:12.5px;color:#bbb;margin-bottom:6px;">Para confirmar, escribe <b>ELIMINAR</b></label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <input name="confirm_text" autocomplete="off" placeholder="ELIMINAR" style="max-width:200px;">
+                    <button type="submit" style="background:#b3202f;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;">Eliminar reserva</button>
+                </div>
+            </form>
+        </div>
     @endif
 
     @if ($booking->checked_in_at && $booking->balanceDue() <= 0 && ! in_array($booking->booking_status, ['FINALIZADA', 'CANCELADA', 'EXPIRADA']))

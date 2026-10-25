@@ -167,8 +167,9 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(10000, (int) $booking->fresh()->addons()->sum('amount'));
     }
 
-    public function test_booking_without_check_in_can_be_deleted_with_confirmation_but_real_stays_cannot(): void
+    public function test_booking_can_be_deleted_with_confirmation_even_after_check_in_and_restores_stock(): void
     {
+        (require database_path('migrations/2026_08_19_150001_add_inventory_to_products_table.php'))->up();
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);
         app(PaymentService::class)->register($booking, $method, 20000, null, null, auth()->id());
@@ -182,11 +183,19 @@ class BookingIntegrityTest extends TestCase
         $this->assertDatabaseMissing('payments', ['booking_id' => $booking->id]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.eliminar', 'entity_id' => $booking->id]);
 
-        // Con check-in nunca, aunque esté cancelada.
+        // Una estadía con check-in, finalizada, con pago y consumo también se puede limpiar (puesta en marcha).
+        $product = Product::create(['name' => 'Bebida prueba', 'price' => 2000, 'track_inventory' => true, 'stock' => 10, 'is_active' => true]);
         $stay = $this->booking(['starts_at' => Carbon::parse('2026-10-19 12:00')]);
-        $stay->update(['booking_status' => 'CANCELADA', 'checked_in_at' => now()]);
-        $this->delete(route('bookings.destroy', $stay->code), ['confirm_text' => 'ELIMINAR'])->assertSessionHasErrors('booking');
-        $this->assertDatabaseHas('bookings', ['id' => $stay->id]);
+        app(ConsumptionService::class)->addProduct($stay, $product, 3, auth()->id());
+        $this->assertSame(7, $product->fresh()->stock);
+        app(PaymentService::class)->register($stay->fresh(), $method, $stay->fresh()->balanceDue(), null, null, auth()->id());
+        $stay->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => now(), 'checked_out_at' => now()]);
+
+        $this->delete(route('bookings.destroy', $stay->code), ['confirm_text' => 'ELIMINAR'])->assertRedirect(route('rooms.board'));
+        $this->assertDatabaseMissing('bookings', ['id' => $stay->id]);
+        $this->assertDatabaseMissing('payments', ['booking_id' => $stay->id]);
+        $this->assertSame(10, $product->fresh()->stock);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.eliminar', 'entity_id' => $stay->id]);
     }
 
     public function test_force_delete_cleans_test_clients_but_never_real_stays(): void
