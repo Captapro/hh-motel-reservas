@@ -11,7 +11,7 @@ class CalendarController extends Controller
 {
     public function index(Request $request): View
     {
-        $view = in_array($request->query('view'), ['month', 'week', 'day'], true) ? $request->query('view') : 'month';
+        $view = in_array($request->query('view'), ['month', 'week', 'day'], true) ? $request->query('view') : 'day';
         $date = Carbon::parse($request->query('date', now()->toDateString()), config('app.timezone'));
         $rangeStart = $view === 'month' ? $date->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY) : $date->copy()->startOf($view === 'week' ? 'week' : 'day');
         $rangeEnd = $view === 'month' ? $date->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY) : $date->copy()->endOf($view === 'week' ? 'week' : 'day');
