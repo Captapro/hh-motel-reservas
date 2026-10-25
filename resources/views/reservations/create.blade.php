@@ -190,6 +190,22 @@
         .guest-details[open] summary::before { content:'− '; }
         .panel-summary .extras-card { background:transparent; border:none; padding:0; margin-top:12px; }
         .panel-summary button.submit { margin-top:16px; }
+        /* Guía de pasos: se enciende el panel donde toca trabajar */
+        .step-panel { transition: border-color .25s, box-shadow .25s, opacity .25s; }
+        .form-col-head { display:flex; align-items:center; }
+        .step-num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-right:9px; border-radius:50%; background:#2f2f2f; color:#aaa; font-size:12px; font-weight:800; letter-spacing:0; }
+        .step-tag { margin-left:auto; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:transparent; }
+        .step-panel.step-active { border-color:#ff7918; box-shadow:0 0 0 1px #ff7918, 0 0 30px rgba(255,121,24,.16); }
+        .step-panel.step-active .step-num { background:#ff7918; color:#111; }
+        .step-panel.step-active .step-tag { color:#ff7918; }
+        .step-panel.step-pending { opacity:.7; }
+        .step-panel.step-done { border-color:#2e6e45; }
+        .step-panel.step-done .step-num { background:#2e6e45; color:#fff; font-size:0; }
+        .step-panel.step-done .step-num::after { content:'✓'; font-size:13px; }
+        .step-panel.step-done .step-tag { color:#6fd39a; }
+        .panel-summary.step-active button.submit { animation: stepPulse 1.8s ease-in-out infinite; }
+        @keyframes stepPulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,121,24,.5); } 50% { box-shadow:0 0 0 8px rgba(255,121,24,0); } }
+        @media (prefers-reduced-motion: reduce) { .panel-summary.step-active button.submit { animation:none; } }
         @media (max-width: 1280px) { .form-grid { grid-template-columns: 1fr 1fr; } .panel-summary { grid-column: 1 / -1; position:static; margin-top:16px; } }
         @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
@@ -214,8 +230,8 @@
         @csrf
 
         <div class="form-grid">
-            <div class="panel">
-                <div class="form-col-head">La estadía</div>
+            <div class="panel step-panel" data-step="1">
+                <div class="form-col-head"><span class="step-num">1</span>La estadía<span class="step-tag"></span></div>
 
                 <label>Habitación</label>
                 @php $roomCats = $rooms->pluck('category')->unique('id')->sortBy('display_order')->values(); @endphp
@@ -314,8 +330,8 @@
                 </div>
             </div>
 
-            <div class="panel">
-                <div class="form-col-head">El cliente</div>
+            <div class="panel step-panel" data-step="2">
+                <div class="form-col-head"><span class="step-num">2</span>El cliente<span class="step-tag"></span></div>
 
                 <label>Teléfono / WhatsApp</label>
                 <input type="text" name="customer_phone" id="customer-phone" placeholder="Pega el número del cliente — +56 9 ..." value="{{ old('customer_phone') }}" autocomplete="off" required>
@@ -408,8 +424,8 @@
                 </div>
             </div>
 
-            <div class="panel panel-summary">
-                <div class="form-col-head">Resumen</div>
+            <div class="panel panel-summary step-panel" data-step="3">
+                <div class="form-col-head"><span class="step-num">3</span>Resumen<span class="step-tag"></span></div>
 
                 <div class="price-box" id="price-box" hidden></div>
 
@@ -1352,6 +1368,54 @@
             overlay.addEventListener('click', function (e) {
                 if (e.target === overlay) hhCloseUpsell();
             });
+        })();
+    </script>
+    <script>
+        // Guía de pasos: 1 La estadía -> 2 El cliente -> 3 Resumen.
+        // Un paso está "listo" cuando tiene lo mínimo para avanzar; el primero
+        // que no está listo es el activo, y el resto se atenúa o se marca listo.
+        (function () {
+            const panels = Array.from(document.querySelectorAll('.step-panel'));
+            const val = (id) => (document.getElementById(id)?.value || '').trim();
+
+            function stayDone() {
+                const box = document.getElementById('price-box');
+                const warn = document.getElementById('time-warning');
+                const quoteOk = box && !box.hidden && !box.querySelector('.p-err, .p-wait');
+                const warned = warn && getComputedStyle(warn).display !== 'none';
+                return !!val('room-select') && !!val('duration-select') && quoteOk && !warned;
+            }
+
+            function clientDone() {
+                const email = document.getElementById('customer-email');
+                const doc = document.getElementById('document-number');
+                return val('customer-phone').replace(/\D/g, '').length >= 8
+                    && !!val('customer-first-name') && !!val('customer-last-name')
+                    && !!email && email.validity.valid && !!val('customer-email')
+                    && !!val('document-type') && !!doc && !doc.disabled && !!val('document-number');
+            }
+
+            function update() {
+                const done = [stayDone(), false, false];
+                done[1] = done[0] && clientDone();
+                let active = done[0] ? (done[1] ? 3 : 2) : 1;
+                panels.forEach((panel) => {
+                    const n = Number(panel.dataset.step);
+                    const isDone = n < active || (n === 3 && false);
+                    panel.classList.toggle('step-active', n === active);
+                    panel.classList.toggle('step-done', isDone);
+                    panel.classList.toggle('step-pending', n > active);
+                    panel.querySelector('.step-tag').textContent = n === active ? 'Paso actual' : (isDone ? 'Listo' : '');
+                });
+            }
+
+            const form = document.querySelector('.form-grid').closest('form');
+            ['input', 'change'].forEach((evt) => form.addEventListener(evt, update));
+            const box = document.getElementById('price-box');
+            if (box) new MutationObserver(update).observe(box, { childList: true, subtree: true, attributes: true });
+            document.addEventListener('click', (e) => { if (e.target.closest('#dur-quick, .wheel, .time-quick, #room-cat-quick')) setTimeout(update, 60); });
+            update();
+            setTimeout(update, 600);
         })();
     </script>
 </body>
