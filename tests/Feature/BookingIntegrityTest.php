@@ -176,6 +176,29 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(3, $water->fresh()->stock);
     }
 
+    public function test_cleanup_can_remove_all_sales_history_and_orphan_clients_restoring_stock(): void
+    {
+        (require database_path('migrations/2026_08_19_150001_add_inventory_to_products_table.php'))->up();
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $product = Product::create(['name' => 'Agua', 'price' => 2000, 'track_inventory' => true, 'stock' => 10, 'is_active' => true]);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        app(ConsumptionService::class)->addProduct($booking, $product, 3, auth()->id());
+        app(PaymentService::class)->register($booking->fresh(), $method, 5000, null, null, auth()->id());
+        $this->assertSame(7, $product->fresh()->stock);
+        $extra = Customer::create(['name' => 'Sin reservas', 'phone_e164' => '+56977777777']);
+
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+        $this->delete(route('admin.cleanup.destroy'), ['what' => ['ventas', 'clientes'], 'confirm_text' => 'ELIMINAR'])->assertRedirect(route('admin.cleanup.index'));
+
+        $this->assertSame(0, Booking::count());
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertDatabaseCount('booking_addons', 0);
+        $this->assertSame(10, $product->fresh()->stock);
+        // Se van los clientes que quedaron sin reservas, tanto el de la reserva borrada como el suelto.
+        $this->assertDatabaseMissing('customers', ['id' => $extra->id]);
+        $this->assertDatabaseMissing('customers', ['id' => $this->customer->id]);
+    }
+
     public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void
     {
         $first = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);

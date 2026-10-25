@@ -20,7 +20,7 @@
                 <label style="display:flex; gap:10px; align-items:flex-start; margin:0 0 12px; font-size:14px; color:#eee; cursor:pointer;">
                     <input type="checkbox" name="what[]" value="{{ $key }}" class="clean-check" @checked(in_array($key, old('what', [])))>
                     <span>
-                        <b>{{ $option['title'] }}</b> <span class="pill">{{ $option['count'] }} registros</span>
+                        <b>{{ $option['title'] }}</b> <span class="pill">{{ $option['count'] }} registros</span>@if ($key === 'ventas') <span class="pill">${{ number_format($paid, 0, ',', '.') }} cobrados</span>@endif
                         <span style="display:block; color:#999; font-size:12.5px; margin-top:2px;">{{ $option['help'] }}</span>
                     </span>
                 </label>

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Booking;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 /**
@@ -22,6 +24,9 @@ class CleanupController extends Controller
     ];
 
     private const OPTIONS = [
+        'ventas' => ['Reservas, pagos y ventas', 'Todas las reservas con sus pagos, consumos y acompañantes: salen de Ventas, del Resumen mensual y de la Caja del día. El stock de lo consumido vuelve al inventario. Con fecha, solo las reservas que empiezan antes de ese día.'],
+        'caja' => ['Movimientos manuales de caja', 'Los ingresos y egresos que se anotaron a mano en Caja.'],
+        'clientes' => ['Clientes sin ninguna reserva', 'Contactos que no tienen reservas (por ejemplo, después de borrar las reservas de prueba). No borra clientes con historial.'],
         'aseo' => ['Aseo y rondas de mucamas', 'Aseos reportados y confirmados, visitas por QR, rondas de turno y cambios de estado de habitaciones. Es lo que alimenta Operaciones → Aseo del día y la actividad de mucamas.'],
         'inspecciones' => ['Inspecciones y mantención', 'Las revisiones de habitación y los avisos de mantención pendientes.'],
         'turnos' => ['Entradas y salidas del personal', 'El registro de horas (cada inicio y cierre de sesión), usado para el cálculo de horas.'],
@@ -32,6 +37,7 @@ class CleanupController extends Controller
     {
         return view('admin.cleanup.index', [
             'options' => collect(self::OPTIONS)->map(fn ($o, $key) => ['title' => $o[0], 'help' => $o[1], 'count' => $this->query($key, null)->count()]),
+            'paid' => (int) DB::table('payments')->where('status', 'aprobado')->sum('amount'),
         ]);
     }
 
@@ -51,8 +57,9 @@ class CleanupController extends Controller
         $before = ! empty($data['before']) ? $data['before'].' 00:00:00' : null;
         $deleted = [];
         DB::transaction(function () use ($data, $before, &$deleted) {
-            foreach ($data['what'] as $key) {
-                $deleted[$key] = $this->query($key, $before)->delete();
+            // Siempre en el orden del listado: las reservas primero, después los clientes que quedan sin ninguna.
+            foreach (array_values(array_intersect(array_keys(self::OPTIONS), $data['what'])) as $key) {
+                $deleted[$key] = $key === 'ventas' ? $this->deleteSales($before) : $this->query($key, $before)->delete();
                 if ($key === 'aseo') {
                     // Lo que las mucamas "dejaron visto" también forma parte del historial de aseo.
                     DB::table('staff')->update(['last_qr_room_id' => null, 'last_qr_seen_at' => null]);
@@ -68,9 +75,34 @@ class CleanupController extends Controller
         return redirect()->route('admin.cleanup.index')->with('status', 'Historial limpiado — '.$summary.'.');
     }
 
+    /** Borra las reservas (con pagos, consumos y acompañantes) devolviendo el stock; devuelve cuántas. */
+    private function deleteSales(?string $before): int
+    {
+        $count = 0;
+        Booking::with('addons')
+            ->when($before, fn ($q) => $q->where('starts_at', '<', $before))
+            ->chunkById(100, function ($bookings) use (&$count) {
+                foreach ($bookings as $booking) {
+                    $booking->restoreConsumedStock();
+                    $paymentIds = DB::table('payments')->where('booking_id', $booking->id)->pluck('id');
+                    if (Schema::hasTable('refunds')) {
+                        DB::table('refunds')->whereIn('payment_id', $paymentIds)->delete();
+                    }
+                    DB::table('payments')->where('booking_id', $booking->id)->delete();
+                    $booking->delete();
+                    $count++;
+                }
+            });
+
+        return $count;
+    }
+
     private function query(string $key, ?string $before)
     {
         $query = match ($key) {
+            'ventas' => DB::table('bookings'),
+            'caja' => DB::table('cash_movements'),
+            'clientes' => DB::table('customers')->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('bookings')->whereColumn('bookings.customer_id', 'customers.id')),
             'aseo' => DB::table('audit_logs')->whereIn('action', self::ASEO_ACTIONS),
             'inspecciones' => DB::table('room_inspections'),
             'turnos' => DB::table('staff_shift_logs'),
