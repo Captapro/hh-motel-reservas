@@ -8,13 +8,15 @@
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
-        .wrap { max-width: 880px; margin: 0; padding: 26px 24px 70px; }
+        .wrap { max-width: 1560px; margin: 0; padding: 18px 24px 48px; }
         h1 { font-size: 19px; margin: 0 0 4px; }
-        .sub { color:#999; font-size:13px; margin-bottom:22px; }
-        .card { background:#1c1c1c; border:1px solid #333; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+        .sub { color:#999; font-size:13px; margin-bottom:14px; }
+        .card { background:#1c1c1c; border:1px solid #333; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+        h2 { font-size:14.5px; margin:0 0 8px; }
+        h3 { font-size:14px; margin:0 0 8px; }
         table { width:100%; border-collapse: collapse; font-size: 14px; }
         th { text-align:left; color:#888; font-weight:500; font-size:11px; text-transform:uppercase; padding: 6px 8px; border-bottom:1px solid #333; }
-        td { padding: 9px 8px; border-bottom:1px solid #262626; vertical-align: middle; }
+        td { padding: 6px 8px; border-bottom:1px solid #262626; vertical-align: middle; }
         tr:last-child td { border-bottom:none; }
         a.btn, button.btn { display:inline-block; background:#ff7918; color:#fff; border:none; padding:9px 16px; border-radius:7px; font-size:13.5px; font-weight:600; text-decoration:none; cursor:pointer; }
         a.btn.secondary, button.btn.secondary { background:#2a2a2a; }
@@ -32,6 +34,38 @@
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:12px 14px; border-radius:8px; margin-bottom: 18px; font-size:14px; }
         .actions { display:flex; gap:16px; align-items:center; }
         form.inline { display:inline; }
+        /* Estructura común de las pantallas de administración */
+        .page-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px 20px; flex-wrap:wrap; margin-bottom:14px; }
+        .page-head .sub { margin:2px 0 0; }
+        .cols { display:grid; gap:16px; align-items:start; }
+        .cols-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+        .cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+        .cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+        @media (max-width:1200px) { .cols-3, .cols-4 { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+        @media (max-width:820px) { .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } }
+        .cols > .card { margin-bottom:0; }
+        .masonry { column-count:3; column-gap:16px; }
+        .masonry > .card { break-inside:avoid; margin-bottom:14px; }
+        @media (max-width:1200px) { .masonry { column-count:2; } }
+        @media (max-width:820px) { .masonry { column-count:1; } }
+        .cols-h { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:8px; }
+        .cols-h h2 { margin:0; }
+        .tbl-compact td { font-size:13.5px; }
+        .add-row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+        .add-row > div { flex:1 1 130px; min-width:0; }
+        .add-row label { margin:0 0 4px; }
+        .add-row button { flex:none; }
+        /* Edición en una ventanita flotante, sin estirar la fila */
+        details.pop { position:relative; display:inline-block; }
+        details.pop > summary { cursor:pointer; color:#ff7918; font-size:13px; list-style:none; }
+        details.pop > summary::-webkit-details-marker { display:none; }
+        .pop-body { position:absolute; right:0; top:calc(100% + 6px); z-index:30; width:380px; max-width:86vw; background:#232323; border:1px solid #444; border-radius:10px; padding:14px; box-shadow:0 14px 34px #000a; text-align:left; }
+        .pop-body form.pop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .pop-body form.pop-grid .full { grid-column:1 / -1; }
+        .pop-body input, .pop-body select { padding:7px 9px; font-size:13.5px; }
+        .pop-body label { margin:0 0 3px; }
+        .pop-body .danger { margin-top:10px; padding-top:10px; border-top:1px solid #3a3a3a; }
+        .danger-btn { background:#b3202f; color:#fff; border:0; border-radius:7px; padding:6px 12px; font-size:12.5px; cursor:pointer; }
     </style>
 </head>
 <body>
@@ -49,5 +83,11 @@
         @endif
         @yield('content')
     </div>
+<script>
+        // Las ventanitas de edición se cierran al tocar fuera de ellas.
+        document.addEventListener('click', function (e) {
+            document.querySelectorAll('details.pop[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+        });
+    </script>
 </body>
 </html>

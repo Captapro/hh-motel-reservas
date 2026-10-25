@@ -289,6 +289,12 @@
         .topline-toolbar .scan-bridge { flex-direction:row-reverse; gap:10px; padding:5px 10px; }
         .topline-toolbar .scan-bridge img { width:54px; height:54px; }
         .topline-toolbar .scan-bridge .label { text-align:right; max-width:70px; white-space:normal; }
+        .wing-filter { display:inline-flex; border:1px solid #333; border-radius:8px; overflow:hidden; background:#1c1c1c; }
+        .wing-filter button { background:transparent; border:0; border-right:1px solid #333; color:#999; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; }
+        .wing-filter button:last-child { border-right:0; }
+        .wing-filter button:hover { color:#fff; }
+        .wing-filter button.active { background:#ff7918; color:#111; }
+        .wing-hidden { display:none !important; }
         .stats-row { display:flex; gap:14px; align-items:stretch; flex-wrap:wrap; margin-bottom:18px; }
         .stats-row .summary { margin-bottom:0; gap:8px; }
         .stats-row .summary .chip { padding:7px 12px; }
@@ -327,6 +333,11 @@
         <div class="topline-toolbar">
             <a class="compact-toggle" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
             <button type="button" class="compact-toggle" id="catalog-link-btn" data-room-link="{{ route('catalog.index') }}" onclick="hhCopyRoomLink(this)">Copiar link del catálogo</button>
+            <div class="wing-filter" id="wing-filter" role="group" aria-label="Filtrar por ala">
+                <button type="button" data-wing="todas" onclick="hhSetWing('todas')">Todas las alas</button>
+                <button type="button" data-wing="norte" onclick="hhSetWing('norte')">Ala norte</button>
+                <button type="button" data-wing="sur" onclick="hhSetWing('sur')">Ala sur</button>
+            </div>
             <button type="button" class="compact-toggle" id="compact-toggle-btn" onclick="hhToggleCompact()">⊟ Vista compacta</button>
         {{-- Puente PC → celular: la cámara para escanear el pase de un huésped
          está en el celular, no en este monitor -- recepción escanea este QR
@@ -483,7 +494,21 @@
         <div class="sidebar">
             <div class="sidebar-title"><h2>Por llegar</h2><span class="count">{{ $grouped['proximas']->count() }}</span></div>
             <p class="sidebar-hint">Libres ahora, con una reserva próxima: no las asignes a clientes sin reserva.</p>
-
+            @foreach ($grouped['proximas'] as $entry)
+                @php $mins = $entry['status']['minutes_until_next']; @endphp
+                <div class="proxima-card cat-{{ Str::slug($entry['room']->category->name) }}" data-wing="{{ $entry['room']->wing ?? 'none' }}">
+                    <div class="card-head"><b>{{ $entry['room']->name }}</b></div>
+                    <div class="cat">{{ $entry['room']->category->name }}</div>
+                    <div class="guest">{{ $entry['status']['next_booking']->customer->name }}</div>
+                    <div class="when">
+                        @if ($mins > 0) llega en {{ \App\Support\TimeFormat::minutes($mins) }}
+                        @elseif ($mins === 0) llegando ahora
+                        @else atrasada {{ \App\Support\TimeFormat::minutes(abs($mins)) }} — sin check-in
+                        @endif
+                    </div>
+                    <a class="checkin-btn" href="{{ route('bookings.checkin.show', $entry['status']['next_booking']->code) }}">Marcar check-in</a>
+                </div>
+            @endforeach
         </div>
         @endif
     </div>
@@ -583,14 +608,43 @@
                 const match = (cat === 'todas' || card.classList.contains('cat-' + cat))
                     && (!onlyUpcoming || card.classList.contains('has-upcoming'));
                 card.classList.toggle('cat-hidden', !match);
-                if (match) shown++;
+                if (match && !card.classList.contains('wing-hidden')) shown++;
             });
 
-            const total = grid.dataset.total;
+            const total = grid.querySelectorAll('.card:not(.wing-hidden)').length;
             if (countEl) countEl.textContent = (cat === 'todas' && !onlyUpcoming) ? total : (shown + ' de ' + total);
             const none = document.getElementById('disponibles-none');
             if (none) none.classList.toggle('cat-hidden', shown > 0);
         }
+        // Filtro por ala (norte / sur): oculta las tarjetas de las otras alas en todo el tablero
+        // y recalcula los contadores. Se recuerda en este navegador.
+        function hhSetWing(w) {
+            localStorage.setItem('hh-board-wing', w);
+            hhApplyWingFilter();
+            hhApplyCategoryFilter();
+        }
+        function hhApplyWingFilter() {
+            const w = localStorage.getItem('hh-board-wing') || 'todas';
+            document.querySelectorAll('[data-wing]').forEach(function (el) {
+                if (el.closest('#wing-filter')) return;
+                el.classList.toggle('wing-hidden', w !== 'todas' && el.dataset.wing !== w);
+            });
+            document.querySelectorAll('#wing-filter button').forEach(function (b) { b.classList.toggle('active', b.dataset.wing === w); });
+            ['ocupadas', 'aseo', 'fuera', 'disponibles'].forEach(function (name) {
+                const sec = document.querySelector('.section.' + name);
+                if (!sec) return;
+                const n = sec.querySelectorAll('.card:not(.wing-hidden)').length;
+                const count = sec.querySelector('.section-head .count');
+                if (count && name !== 'disponibles') count.textContent = n;
+                if (name !== 'disponibles') sec.classList.toggle('wing-hidden', n === 0);
+                const chip = document.querySelector('.summary .chip.' + name + ' b');
+                if (chip) chip.textContent = n;
+            });
+            const proximas = document.querySelectorAll('.sidebar .proxima-card:not(.wing-hidden)').length;
+            const pc = document.querySelector('.summary .chip.proximas b'); if (pc) pc.textContent = proximas;
+            const sc = document.querySelector('.sidebar-title .count'); if (sc) sc.textContent = proximas;
+        }
+        hhApplyWingFilter();
         hhApplyCategoryFilter();
     </script>
 
