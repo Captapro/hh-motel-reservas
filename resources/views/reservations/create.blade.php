@@ -566,6 +566,7 @@
                 <div class="hint">Si exige cédula o credencial, verifícala antes de aplicarlo. Los que piden edad mínima no quedan activos si falta la fecha de nacimiento del cliente.</div>
 
                 @unless ($walkInMode)
+                <div hidden>{{-- acompañantes y consumo se piden en el check-in --}}
                 <details class="guest-details"{{ old('guest_names') ? ' open' : '' }}>
                     <summary>Acompañantes (opcional)</summary>
                 <label>Acompañantes (opcional) <span class="hint" style="margin:0;">— registro obligatorio para mayores de 18 años</span></label>
@@ -574,7 +575,7 @@
                 <textarea name="guest_names" id="guest-names-hidden" hidden>{{ old('guest_names') }}</textarea>
 
                 </details>
-                @endunless
+
 
         @if (! $walkInMode && ($combos->isNotEmpty() || $products->isNotEmpty()))
             <div class="extras-card">
@@ -622,9 +623,11 @@
                 </details>
             </div>
         @endif
+                </div>
+                @endunless
 
 
-                <button class="submit" id="submit-btn" type="submit">Calcular y crear reserva</button>
+                <button class="submit" id="submit-btn" type="submit">Crear reserva</button>
                 @if ($walkInMode)
                     <div class="offer-needed" id="offer-needed" hidden>Antes de cobrar, ofrece productos y combos (paso 3).</div>
                 @endif
@@ -1481,7 +1484,8 @@
             };
 
             form.addEventListener('submit', async function (e) {
-                if (resolved || extrasTotal() > 0) return;
+                // La reserva anticipada se crea directo: acompañantes y consumo se piden en el check-in.
+                if (resolved || !FIXED_WALK_IN_UPSELL || extrasTotal() > 0) return;
                 // Formulario incompleto: que el navegador muestre su validación, sin modal.
                 if (!form.checkValidity()) { form.reportValidity(); e.preventDefault(); return; }
                 e.preventDefault();
@@ -1538,13 +1542,15 @@
                 if (!wrap || !input) return;
                 if (!FIXED_WALK_IN && (!d || h === '' || m === '')) return;
                 const start = FIXED_WALK_IN ? new Date() : new Date(d + 'T' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':00');
-                const walkIn = FIXED_WALK_IN || (start.getTime() - Date.now()) / 60000 <= WALK_IN_MINUTES;
-                wrap.hidden = walkIn;
-                if (walkIn) input.value = '';
+                // Una reserva para dentro de una hora o menos no lleva abono, pero sigue siendo reserva:
+                // el ingreso presencial solo se activa desde su propia entrada (?modo=ingreso).
+                const forNow = FIXED_WALK_IN || (start.getTime() - Date.now()) / 60000 <= WALK_IN_MINUTES;
+                wrap.hidden = forNow;
+                if (forNow) input.value = '';
                 const flag = document.getElementById('walk-in-flag');
-                if (flag) flag.value = walkIn ? '1' : '0';
+                if (flag) flag.value = FIXED_WALK_IN ? '1' : '0';
                 const btn = document.getElementById('submit-btn');
-                if (btn) btn.textContent = walkIn ? 'Crear, cobrar y hacer check-in →' : 'Calcular y crear reserva';
+                if (btn) btn.textContent = FIXED_WALK_IN ? 'Crear, cobrar y hacer check-in →' : 'Crear reserva';
             }
 
             function update() {

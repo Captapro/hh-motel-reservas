@@ -101,6 +101,19 @@ class BookingIntegrityTest extends TestCase
         return Coupon::create(array_merge(['internal_name' => 'Oferta prueba', 'auto_apply' => true, 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20], $overrides));
     }
 
+    public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void
+    {
+        $first = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $second = $this->booking(['starts_at' => Carbon::parse('2026-10-05 14:00')]);
+        $third = $this->booking(['starts_at' => Carbon::parse('2026-10-05 16:00')]);
+        $this->assertSame(['00001', '00002', '00003'], [substr($first->code, -5), substr($second->code, -5), substr($third->code, -5)]);
+
+        $first->delete();
+        // Antes: contaba 2 reservas y volvía a generar ...00003, que ya existe (error 500).
+        $fourth = $this->booking(['starts_at' => Carbon::parse('2026-10-05 18:00')]);
+        $this->assertSame('00004', substr($fourth->code, -5));
+    }
+
     public function test_monthly_summary_lists_each_sale_and_exports_csv(): void
     {
         $booking = $this->booking();

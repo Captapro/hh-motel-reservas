@@ -11,8 +11,12 @@ class BookingCodeGenerator
     {
         $prefix = 'HH-'.$date->format('Ymd').'-';
 
-        $countToday = Booking::where('code', 'like', $prefix.'%')->count();
+        // El siguiente número sale del mayor código del día, no de cuántas hay:
+        // si se eliminó una reserva del medio, contar chocaba con una que ya existe.
+        $last = Booking::where('code', 'like', $prefix.'%')->pluck('code')
+            ->map(fn (string $code) => (int) substr($code, strlen($prefix)))
+            ->max() ?? 0;
 
-        return $prefix.str_pad((string) ($countToday + 1), 5, '0', STR_PAD_LEFT);
+        return $prefix.str_pad((string) ($last + 1), 5, '0', STR_PAD_LEFT);
     }
 }
