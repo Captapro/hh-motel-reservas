@@ -67,24 +67,33 @@
         /* Dos columnas en pantalla ancha: registro de acompañantes y acción | consumo para ofrecer */
         .page-inner { max-width: 1100px; }
         .ci-grid { display:grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: 0 28px; align-items:start; }
-        .ci-col .manual-extras .card { column-count:2; column-gap:24px; padding:12px 16px; margin-bottom:12px; }
-        .ci-col .manual-extras .card .cat-label { margin:8px 0 2px; break-after:avoid; }
-        .ci-col .manual-extras .card .cat-label:first-child { margin-top:0; }
-        .ci-col .manual-extras .prod-row { break-inside:avoid; padding:4px 0; gap:8px; }
-        .ci-col .manual-extras .prod-row .name { font-size:13px; line-height:1.25; }
-        .ci-col .manual-extras .prod-row .price { font-size:11px; }
-        .ci-col .manual-extras .prod-row input { width:48px; padding:5px 4px; font-size:13px; }
+        /* Panel de oferta: oscuro como el resto, categorías en bloques y cantidades con − / + */
+        .hh-checkin-page .offer-panel { background:#1c1c1c; border:1px solid #333; border-radius:12px; padding:12px 18px 4px; }
+        .offer-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:10px; margin-bottom:6px; border-bottom:1px solid #2c2c2c; }
+        .offer-title { font-size:14px; font-weight:700; color:#eee; }
+        .offer-total { font-size:13px; color:#888; font-family: ui-monospace, monospace; }
+        .offer-total.has { color:#8fe0ad; font-weight:700; }
+        .offer-block { column-count:2; column-gap:26px; margin-bottom:6px; }
+        .offer-block .cat-block { break-inside:avoid; margin-bottom:6px; }
+        .offer-block .cat-label { margin:6px 0 2px; font-size:10.5px; letter-spacing:.06em; }
+        .hh-checkin-page .offer-panel .prod-row { padding:3px 0; gap:10px; align-items:center; }
+        .hh-checkin-page .offer-panel .prod-row .name { font-size:13.5px; line-height:1.25; }
+        .hh-checkin-page .offer-panel .prod-row .price { font-size:11.5px; margin-top:2px; color:#8d8f94; }
+        .qty { display:flex; align-items:center; gap:2px; flex:none; }
+        .hh-checkin-page .offer-panel .qty button { width:28px; height:28px; margin:0; padding:0; border-radius:7px; background:#262626; border:1px solid #444; color:#ddd; font-size:17px; line-height:1; font-weight:600; min-height:0; }
+        .hh-checkin-page .offer-panel .qty button:hover:not(:disabled) { border-color:#ff7918; color:#ff7918; }
+        .hh-checkin-page .offer-panel .qty input { width:34px; padding:0; text-align:center; background:transparent; border:none; color:#888; font-size:15px; font-weight:700; -moz-appearance:textfield; appearance:textfield; }
+        .hh-checkin-page .offer-panel .qty input::-webkit-inner-spin-button, .hh-checkin-page .offer-panel .qty input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+        .hh-checkin-page .offer-panel .qty.has input { color:#ff7918; }
         .ci-col .card:first-child, .ci-col .existing-box:first-child { margin-top:0; }
         button.save { width:100%; margin-top:6px; }
-        .ci-col details.manual-extras { margin-top:0; }
         /* Cabecera compacta para que todo quepa en una pantalla */
         .page-inner { padding-top:14px; padding-bottom:16px; }
         .page-inner > h1 { display:inline-block; margin:0 14px 4px 0; }
         .page-inner > .code { display:inline-block; margin:0; }
         .page-inner > .meta { margin:0 0 10px; }
         .hint-box { padding:8px 12px; margin-bottom:12px; }
-        .ci-col .manual-extras summary { padding:8px 4px; }
-        @media (max-width: 860px) { .ci-grid { grid-template-columns: 1fr; } .ci-col .manual-extras .card { column-count:1; } }
+        @media (max-width: 860px) { .ci-grid { grid-template-columns: 1fr; }  .offer-block { column-count:1; } }
     </style>
 </head>
 <body>
@@ -148,50 +157,65 @@
                 <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver sin registrar</a>
             </div>
             <div class="ci-col">
-        <details class="manual-extras" open>
-            <summary>Ofrecer productos y combos · Agregar consumo</summary>
+        <div class="offer-panel">
+                <div class="offer-head">
+                    <span class="offer-title">Ofrecer productos y combos</span>
+                    <span class="offer-total" id="offer-total">Sin consumo todavía</span>
+                </div>
 
-            @if ($combos->isNotEmpty())
-                <div class="card">
-                    <div class="cat-label">Combos</div>
-                    @foreach ($combos as $combo)
-                        <div class="prod-row">
-                            <div>
-                                <div class="name">{{ $combo->name }}</div>
-                                <div class="price">
-                                    ${{ number_format($combo->price, 0, ',', '.') }}
-                                    @if ($combo->description)
-                                        · {{ $combo->description }}
-                                    @endif
-                                    {{ $combo->isOutOfStock() ? '· agotado' : '' }}
+                @if ($combos->isNotEmpty())
+                    <div class="offer-block">
+                        <div class="cat-block">
+                            <div class="cat-label">Combos</div>
+                            @foreach ($combos as $combo)
+                                <div class="prod-row">
+                                    <div>
+                                        <div class="name">{{ $combo->name }}</div>
+                                        <div class="price">
+                                            ${{ number_format($combo->price, 0, ',', '.') }}
+                                            @if ($combo->description)
+                                                · {{ $combo->description }}
+                                            @endif
+                                            {{ $combo->isOutOfStock() ? '· agotado' : '' }}
+                                        </div>
+                                    </div>
+                                    <div class="qty">
+                                        <button type="button" class="q-minus" aria-label="Menos" @disabled($combo->isOutOfStock())>−</button>
+                                        <input type="number" name="combo_quantities[{{ $combo->id }}]" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" data-price="{{ $combo->price }}" @disabled($combo->isOutOfStock())>
+                                        <button type="button" class="q-plus" aria-label="Más" @disabled($combo->isOutOfStock())>+</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <input type="number" name="combo_quantities[{{ $combo->id }}]" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" @disabled($combo->isOutOfStock())>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <div class="offer-block">
+                    @foreach ($products->groupBy('category') as $category => $items)
+                        <div class="cat-block">
+                            <div class="cat-label">{{ $category ?? 'Otros' }}</div>
+                            @foreach ($items as $product)
+                                <div class="prod-row">
+                                    <div>
+                                        <div class="name">{{ $product->name }}</div>
+                                        <div class="price">
+                                            ${{ number_format($product->price, 0, ',', '.') }}
+                                            @if ($product->track_inventory)
+                                                · {{ $product->isOutOfStock() ? 'agotado' : $product->stock.' disp.' }}
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="qty">
+                                        <button type="button" class="q-minus" aria-label="Menos" @disabled($product->isOutOfStock())>−</button>
+                                        <input type="number" name="quantities[{{ $product->id }}]" value="0" min="0" max="{{ $product->track_inventory ? min(20, $product->stock) : 20 }}" data-price="{{ $product->price }}" @disabled($product->isOutOfStock())>
+                                        <button type="button" class="q-plus" aria-label="Más" @disabled($product->isOutOfStock())>+</button>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                     @endforeach
                 </div>
-            @endif
-
-            <div class="card">
-                @foreach ($products->groupBy('category') as $category => $items)
-                    <div class="cat-label">{{ $category ?? 'Otros' }}</div>
-                    @foreach ($items as $product)
-                        <div class="prod-row">
-                            <div>
-                                <div class="name">{{ $product->name }}</div>
-                                <div class="price">
-                                    ${{ number_format($product->price, 0, ',', '.') }}
-                                    @if ($product->track_inventory)
-                                        · {{ $product->isOutOfStock() ? 'agotado' : $product->stock.' disp.' }}
-                                    @endif
-                                </div>
-                            </div>
-                            <input type="number" name="quantities[{{ $product->id }}]" value="0" min="0" max="{{ $product->track_inventory ? min(20, $product->stock) : 20 }}" @disabled($product->isOutOfStock())>
-                        </div>
-                    @endforeach
-                @endforeach
             </div>
-        </details>
 
             </div>
         </div>
@@ -348,5 +372,41 @@
             })();
         </script>
     @endif
+
+    <script>
+        // Cantidades con − / + y total del consumo a cargar, en vivo.
+        (function () {
+            const inputs = Array.from(document.querySelectorAll('.offer-panel .qty input'));
+            const totalEl = document.getElementById('offer-total');
+            if (!inputs.length || !totalEl) return;
+            const money = (n) => '$' + Number(n).toLocaleString('es-CL');
+
+            function refresh() {
+                let total = 0, items = 0;
+                inputs.forEach((i) => {
+                    const q = Math.max(0, Number(i.value) || 0);
+                    total += q * (Number(i.dataset.price) || 0);
+                    items += q;
+                    i.closest('.qty').classList.toggle('has', q > 0);
+                });
+                totalEl.textContent = items ? ('A cargar: ' + money(total) + ' · ' + items + (items === 1 ? ' ítem' : ' ítems')) : 'Sin consumo todavía';
+                totalEl.classList.toggle('has', items > 0);
+            }
+            window.hhRefreshOffer = refresh;
+
+            document.querySelectorAll('.offer-panel .qty').forEach((box) => {
+                const input = box.querySelector('input');
+                const step = (d) => {
+                    const min = Number(input.min) || 0, max = Number(input.max) || 20;
+                    input.value = Math.min(max, Math.max(min, (Number(input.value) || 0) + d));
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                box.querySelector('.q-minus').addEventListener('click', () => step(-1));
+                box.querySelector('.q-plus').addEventListener('click', () => step(1));
+                input.addEventListener('input', refresh);
+            });
+            refresh();
+        })();
+    </script>
 </body>
 </html>
