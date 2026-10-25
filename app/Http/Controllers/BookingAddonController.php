@@ -42,6 +42,9 @@ class BookingAddonController extends Controller
         if (in_array($booking->booking_status, self::CLOSED, true)) {
             return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más tiempo.']);
         }
+        if (! $booking->checked_in_at) {
+            return back()->withErrors(['booking' => 'La reserva todavía no tiene check-in — la hora adicional se vende durante la estadía.']);
+        }
 
         $newEndsAt = $booking->ends_at->copy()->addHour();
         // isAvailable() solo pelea por otra reserva encima -- sin esto se
@@ -93,6 +96,9 @@ class BookingAddonController extends Controller
 
                 if (in_array($booking->booking_status, self::CLOSED, true)) {
                     return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más consumo.']);
+                }
+                if (! $booking->checked_in_at) {
+                    return back()->withErrors(['booking' => 'La reserva todavía no tiene check-in — el consumo se ofrece en el check-in o durante la estadía.']);
                 }
 
                 $quantity = (int) ($validated['quantity'] ?? 1);

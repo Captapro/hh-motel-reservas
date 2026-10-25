@@ -355,6 +355,8 @@
         <div class="col">
             @php $consumo = $booking->addonsByPaymentStatus(); @endphp
 
+            {{-- Antes del check-in no se vende nada: solo se muestra el consumo ya cargado, si lo hay. --}}
+            @if ($booking->checked_in_at || $booking->addons->isNotEmpty())
             <div class="card" id="consumo">
                 <div class="row" style="border-bottom:none; padding-bottom:4px;"><span class="muted">Consumo / extras</span><span></span></div>
 
@@ -379,7 +381,7 @@
                     @endforeach
                 @endif
 
-                @unless (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
+                @if ($booking->checked_in_at && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
                     <div class="addon-label">Agregar producto o combo</div>
                     <form method="POST" action="{{ route('addons.extra-hour', $booking->code) }}" style="margin:10px 0 14px;">
                         @csrf
@@ -431,8 +433,9 @@
                         <input type="number" name="amount" placeholder="$" min="1">
                         <button type="submit">Agregar</button>
                     </form>
-                @endunless
+                @endif
             </div>
+            @endif
         </div>
     </div>
 

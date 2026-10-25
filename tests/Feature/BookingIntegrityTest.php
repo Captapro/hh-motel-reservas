@@ -155,6 +155,9 @@ class BookingIntegrityTest extends TestCase
     {
         (require database_path('migrations/2026_09_16_001000_add_extra_hour_price_to_rate_rules.php'))->up();
         $booking = $this->booking();
+        // La hora adicional se vende durante la estadía, no antes del check-in.
+        $this->post(route('addons.extra-hour', $booking->code))->assertSessionHasErrors('booking');
+        $booking->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
         $endsAt = $booking->ends_at->copy();
         $rule = \App\Models\RateRule::where('name', 'HH')->first();
 
