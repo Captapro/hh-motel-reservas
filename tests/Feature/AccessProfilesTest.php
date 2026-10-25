@@ -108,6 +108,22 @@ class AccessProfilesTest extends TestCase
 
     }
 
+    public function test_host_sync_command_creates_a_reception_account_and_never_overwrites_it(): void
+    {
+        config(['services.host.email' => 'recepcion@prueba.cl', 'services.host.password' => 'clave-host-123']);
+
+        $this->artisan('app:anfitrion-sincronizar')->assertSuccessful();
+        $user = User::where('email', 'recepcion@prueba.cl')->firstOrFail();
+        $this->assertSame('recepcion', $user->role);
+        $hash = $user->password;
+
+        // Si ya existe, no se cambia ni la clave ni el rol.
+        $user->update(['role' => 'marketing']);
+        $this->artisan('app:anfitrion-sincronizar')->assertSuccessful();
+        $this->assertSame('marketing', $user->fresh()->role);
+        $this->assertSame($hash, $user->fresh()->password);
+    }
+
     public function test_only_administrators_can_edit_access(): void
     {
         $host = User::factory()->create(['role' => 'recepcion']);

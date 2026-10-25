@@ -27,6 +27,9 @@ fi
 # cuenta que ya existe.
 php artisan app:soporte-sincronizar || true
 
+# Cuenta de anfitrión (recepción): se crea desde HOST_EMAIL / HOST_PASSWORD solo si no existe.
+php artisan app:anfitrion-sincronizar || true
+
 # Apache escucha en el puerto que asigna Render (PORT).
 PORT="${PORT:-10000}"
 sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf

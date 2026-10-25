@@ -64,6 +64,12 @@ return [
         'password' => env('SUPPORT_PASSWORD'),
     ],
 
+    // Cuenta de anfitrión (recepción) que se crea al arrancar si no existe (docker/entrypoint.sh).
+    'host' => [
+        'email' => env('HOST_EMAIL'),
+        'password' => env('HOST_PASSWORD'),
+    ],
+
     'hh_reviews' => [
         'google_review_link' => env('HH_GOOGLE_REVIEW_LINK'),
         'widget_url' => env('HH_REVIEWS_WIDGET_URL', 'https://link.hhmotel.cl/reputation/widgets/review_widget/ksYYfSiY8nP4YFvkrJFJ'),
