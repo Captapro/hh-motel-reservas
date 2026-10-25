@@ -384,6 +384,34 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, Booking::count());
     }
 
+    public function test_walk_in_booking_goes_to_payment_then_check_in(): void
+    {
+        (require database_path('migrations/2026_09_11_090000_add_identity_fields_to_customers_table.php'))->up();
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $data = [
+            'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 0,
+            'duration_minutes' => 60, 'guests_count' => 1, 'customer_first_name' => 'Cliente',
+            'customer_last_name' => 'Prueba', 'customer_phone' => $this->customer->phone_e164,
+            'customer_email' => 'test@example.test', 'document_type' => 'pasaporte', 'document_number' => 'TEST123',
+        ];
+
+        // Reserva normal: sigue yendo al pago y de ahí al tablero.
+        $this->post('/reservar', $data)->assertRedirect(route('payments.create', ['code' => Booking::first()->code, 'after' => 'board']));
+
+        // Ingreso presencial: pago y de ahí directo al check-in.
+        $this->travelTo(Carbon::parse('2026-10-05 11:00'));
+        Booking::query()->delete();
+        $this->post('/reservar', $data + ['walk_in' => 1])
+            ->assertRedirect(route('payments.create', ['code' => Booking::first()->code, 'after' => 'checkin']));
+        $booking = Booking::first();
+
+        $this->post(route('payments.store', $booking->code), [
+            'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) \Illuminate\Support\Str::uuid(),
+            'receipt_number' => '4411', 'after' => 'checkin',
+        ])->assertRedirect(route('bookings.checkin.show', $booking->code));
+        $this->assertSame(0, $booking->fresh()->balanceDue());
+    }
+
     public function test_reschedule_rejects_disabled_category_and_floor_without_changes(): void
     {
         $booking = $this->booking();

@@ -229,6 +229,7 @@
     <form method="POST" action="{{ route('reservations.store') }}">
         @csrf
 
+        <input type="hidden" name="walk_in" id="walk-in-flag" value="0">
         <div class="form-grid">
             <div class="panel step-panel" data-step="1">
                 <div class="form-col-head"><span class="step-num">1</span>La estadía<span class="step-tag"></span></div>
@@ -1408,6 +1409,10 @@
                 const walkIn = (start.getTime() - Date.now()) / 60000 <= WALK_IN_MINUTES;
                 wrap.hidden = walkIn;
                 if (walkIn) input.value = '';
+                const flag = document.getElementById('walk-in-flag');
+                if (flag) flag.value = walkIn ? '1' : '0';
+                const btn = document.getElementById('submit-btn');
+                if (btn) btn.textContent = walkIn ? 'Crear, cobrar y hacer check-in →' : 'Calcular y crear reserva';
             }
 
             function update() {

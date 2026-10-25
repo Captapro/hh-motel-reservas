@@ -140,6 +140,8 @@
             <button type="submit" class="primary">Registrar pago</button>
             @if ($after === 'board')
                 <a class="skip-inline" href="{{ route('reservations.show', $booking->code) }}">Saltar por ahora →</a>
+            @elseif ($after === 'checkin')
+                <a class="skip-inline" href="{{ route('bookings.checkin.show', $booking->code) }}">Cobrar después, ir al check-in →</a>
             @endif
         </div>
     </form>

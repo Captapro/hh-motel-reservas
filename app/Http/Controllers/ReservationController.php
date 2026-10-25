@@ -154,6 +154,7 @@ class ReservationController extends Controller
             'birth_date' => ['nullable', 'date', 'before:today'],
             'coupon_code' => ['nullable', 'string'],
             'deposit_amount' => ['nullable', 'integer', 'min:0'],
+            'walk_in' => ['nullable', 'boolean'],
             'guest_names' => ['nullable', 'string'],
             'quantities' => ['nullable', 'array'],
             'quantities.*' => ['nullable', 'integer', 'min:0', 'max:20'],
@@ -162,6 +163,8 @@ class ReservationController extends Controller
             'accepted_upsells' => ['nullable', 'array'],
             'accepted_upsells.*' => ['integer', 'exists:upsell_offers,id'],
         ]);
+        // Ingreso presencial: después de crear se cobra y se pasa directo al check-in.
+        $walkIn = (bool) ($validated['walk_in'] ?? false);
 
         $room = Room::with('category')->findOrFail($validated['room_id']);
         $time = sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']);
@@ -297,7 +300,7 @@ class ReservationController extends Controller
             $stockStatus = 'Reserva '.$booking->code.' creada — '.$finalRoomName.'. '.$e->getMessage().' No se pudo agregar ese consumo — agrégalo manualmente si corresponde.';
 
             if ($booking->fresh()->balanceDue() > 0) {
-                return redirect()->route('payments.create', ['code' => $booking->code, 'after' => 'board'])
+                return redirect()->route('payments.create', ['code' => $booking->code, 'after' => $walkIn ? 'checkin' : 'board'])
                     ->with('status', $stockStatus.' Registrá el medio de pago.');
             }
 
@@ -311,8 +314,13 @@ class ReservationController extends Controller
         // si queda saldo por cobrar. Sin saldo (p. ej. cortesía) se salta
         // directo al tablero, porque no hay nada que registrar.
         if ($booking->fresh()->balanceDue() > 0) {
-            return redirect()->route('payments.create', ['code' => $booking->code, 'after' => 'board'])
+            return redirect()->route('payments.create', ['code' => $booking->code, 'after' => $walkIn ? 'checkin' : 'board'])
                 ->with('status', 'Reserva '.$booking->code.' creada — '.$finalRoomName.' · '.$customerName.'. Registrá el medio de pago.');
+        }
+
+        if ($walkIn) {
+            return redirect()->route('bookings.checkin.show', $booking->code)
+                ->with('status', 'Reserva '.$booking->code.' creada — '.$finalRoomName.' · '.$customerName.'.');
         }
 
         return redirect()->route('rooms.board')->with('status', 'Reserva '.$booking->code.' creada — '.$finalRoomName.' · '.$customerName.'.');
