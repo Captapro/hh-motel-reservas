@@ -443,19 +443,6 @@
             </div>
             @endif
 
-            @if ($grouped['en_aseo']->isNotEmpty())
-            <div class="section aseo">
-                <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span><span class="bar"></span></div>
-                    <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
-                    <div class="grid">
-                        @foreach ($grouped['en_aseo'] as $entry)
-                            @include('rooms._card', ['entry' => $entry])
-                        @endforeach
-                    </div>
-
-            </div>
-            @endif
-
             <div class="section disponibles">
                 <div class="section-head"><h2>Disponibles</h2><span class="count" id="disponibles-count">{{ $grouped['disponibles']->count() }}</span><span class="bar"></span></div>
                 @php
@@ -484,6 +471,19 @@
                     <p class="section-empty cat-hidden" id="disponibles-none">Ninguna habitación disponible en esa categoría ahora mismo.</p>
                 @endif
             </div>
+
+            @if ($grouped['en_aseo']->isNotEmpty())
+            <div class="section aseo">
+                <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span><span class="bar"></span></div>
+                    <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
+                    <div class="grid">
+                        @foreach ($grouped['en_aseo'] as $entry)
+                            @include('rooms._card', ['entry' => $entry])
+                        @endforeach
+                    </div>
+
+            </div>
+            @endif
 
             @if ($grouped['fuera_de_servicio']->isNotEmpty())
             <div class="section fuera">
