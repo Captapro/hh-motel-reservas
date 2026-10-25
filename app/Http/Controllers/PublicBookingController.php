@@ -23,9 +23,11 @@ use App\Services\Booking\ConsumptionService;
 use App\Services\Pricing\RateRuleResolver;
 use App\Support\Phone;
 use Carbon\Carbon;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
@@ -258,8 +260,8 @@ class PublicBookingController extends Controller
         $booking = Booking::with(['room.category', 'addons'])->where('pass_token', $token)->firstOrFail();
 
         // Mismo QR del pase PDF: recepción lo escanea y abre la ficha.
-        $qr = (new \Endroid\QrCode\Builder\Builder(
-            writer: new \Endroid\QrCode\Writer\PngWriter(),
+        $qr = (new Builder(
+            writer: new PngWriter,
             data: route('bookings.validate', $booking->code),
             size: 220,
             margin: 0,

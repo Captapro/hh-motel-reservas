@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\AccessSections;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -47,13 +48,13 @@ class User extends Authenticatable
     /** Si este perfil puede entrar a la sección (el administrador siempre puede). */
     public function canAccess(string $section): bool
     {
-        return \App\Support\AccessSections::allows($this->role, $section);
+        return AccessSections::allows($this->role, $section);
     }
 
     /** Primera sección a la que este perfil puede entrar, para después del login. */
     public function homeRoute(): string
     {
-        foreach (\App\Support\AccessSections::SECTIONS as $key => [, $route]) {
+        foreach (AccessSections::SECTIONS as $key => [, $route]) {
             if ($this->canAccess($key)) {
                 return $route;
             }

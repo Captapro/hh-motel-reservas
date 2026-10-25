@@ -63,7 +63,7 @@ class RoomCategoryController extends Controller
 
     public function create(): View
     {
-        return view('admin.categories.form', ['category' => new RoomCategory()]);
+        return view('admin.categories.form', ['category' => new RoomCategory]);
     }
 
     public function edit(RoomCategory $category): View
@@ -73,7 +73,7 @@ class RoomCategoryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        return $this->save($request, new RoomCategory());
+        return $this->save($request, new RoomCategory);
     }
 
     public function update(Request $request, RoomCategory $category): RedirectResponse

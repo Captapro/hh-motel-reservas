@@ -29,9 +29,7 @@ class GhlBookingSync
 {
     public const TAG_PREFIX = 'Reservó:';
 
-    public function __construct(private readonly GhlClient $client)
-    {
-    }
+    public function __construct(private readonly GhlClient $client) {}
 
     /**
      * Nunca lanza -- una reserva ya confirmada en la base de datos no puede

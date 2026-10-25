@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 #[Fillable([
     'code', 'pass_token', 'customer_id', 'room_id', 'created_by', 'starts_at', 'ends_at', 'duration_minutes', 'guests_count',
@@ -132,7 +133,7 @@ class Booking extends Model
 
         foreach ($expired as $booking) {
             $booking->update(['booking_status' => 'EXPIRADA', 'notes' => trim(($booking->notes ? $booking->notes."\n" : '').'Retención vencida: no se registró el pago a tiempo.')]);
-            \App\Models\AuditLog::record(null, 'reserva.expirar', 'Booking', $booking->id, ['booking_status' => 'PENDIENTE_PAGO'], ['booking_status' => 'EXPIRADA']);
+            AuditLog::record(null, 'reserva.expirar', 'Booking', $booking->id, ['booking_status' => 'PENDIENTE_PAGO'], ['booking_status' => 'EXPIRADA']);
         }
 
         return $expired->count();
@@ -161,7 +162,7 @@ class Booking extends Model
      * cada ítem — el dinero ya pagado cubre primero la habitación y luego
      * el consumo más antiguo, línea por línea.
      *
-     * @return array{paid: \Illuminate\Support\Collection, pending: \Illuminate\Support\Collection}
+     * @return array{paid: Collection, pending: Collection}
      */
     public function addonsByPaymentStatus(): array
     {

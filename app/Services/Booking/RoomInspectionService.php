@@ -40,9 +40,15 @@ class RoomInspectionService
             'needs_maintenance' => $needsMaintenance,
             'notes' => $validated['notes'] ?? null,
         ];
-        if (Schema::hasColumn('room_inspections', 'shift')) $data['shift'] = $validated['shift'] ?? null;
-        if (Schema::hasColumn('room_inspections', 'defects')) $data['defects'] = $validated['defects'] ?? null;
-        if (Schema::hasColumn('room_inspections', 'photos')) $data['photos'] = $photos;
+        if (Schema::hasColumn('room_inspections', 'shift')) {
+            $data['shift'] = $validated['shift'] ?? null;
+        }
+        if (Schema::hasColumn('room_inspections', 'defects')) {
+            $data['defects'] = $validated['defects'] ?? null;
+        }
+        if (Schema::hasColumn('room_inspections', 'photos')) {
+            $data['photos'] = $photos;
+        }
 
         return RoomInspection::create($data);
     }

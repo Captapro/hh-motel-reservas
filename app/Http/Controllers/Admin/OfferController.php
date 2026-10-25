@@ -52,7 +52,7 @@ class OfferController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        return $this->save($request, new Coupon());
+        return $this->save($request, new Coupon);
     }
 
     public function update(Request $request, Coupon $offer): RedirectResponse

@@ -2,6 +2,7 @@
 
 namespace App\Services\Booking;
 
+use App\Models\Booking;
 use App\Models\RateRulePrice;
 use App\Models\Room;
 use Carbon\Carbon;
@@ -35,7 +36,7 @@ class RoomBoardService
     }
 
     /**
-     * @return array{occupancy: string, eta_minutes: ?int, current_booking: ?\App\Models\Booking, next_booking: ?\App\Models\Booking, upcoming_count: int, imminent: bool, minutes_until_next: ?int}
+     * @return array{occupancy: string, eta_minutes: ?int, current_booking: ?Booking, next_booking: ?Booking, upcoming_count: int, imminent: bool, minutes_until_next: ?int}
      */
     public function statusFor(Room $room, ?Carbon $now = null): array
     {

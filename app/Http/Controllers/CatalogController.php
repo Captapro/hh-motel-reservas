@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Coupon;
 use App\Models\Room;
 use App\Models\RoomCategory;
-use App\Models\Coupon;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -31,7 +31,7 @@ class CatalogController extends Controller
         // acá solo se filtra por vigencia de fecha.
         $coupons = Coupon::where('auto_apply', false)->where('is_active', true)
             ->get()
-            ->filter(fn (Coupon $c) => (!$c->starts_at || $today->greaterThanOrEqualTo($c->starts_at)) && (!$c->ends_at || $today->lessThanOrEqualTo($c->ends_at)))
+            ->filter(fn (Coupon $c) => (! $c->starts_at || $today->greaterThanOrEqualTo($c->starts_at)) && (! $c->ends_at || $today->lessThanOrEqualTo($c->ends_at)))
             ->map(function (Coupon $c) use ($catalogFallbackPhoto) {
                 $benefit = $c->discount_type === 'percentage'
                     ? '-'.$c->discount_value.'%'
@@ -41,6 +41,7 @@ class CatalogController extends Controller
                     $c->min_age ? $c->min_age.'+ años' : null,
                     $c->requires_verification ? 'pide verificar en recepción' : null,
                 ]);
+
                 return [
                     'code' => $c->code,
                     'name' => $c->internal_name,
@@ -55,7 +56,7 @@ class CatalogController extends Controller
         $liveOffers = Coupon::offers()->where('is_active', true)
             ->with(['rooms:id,name,room_category_id,photos', 'roomCategories:id'])
             ->get()
-            ->filter(fn (Coupon $offer) => (!$offer->starts_at || $today->greaterThanOrEqualTo($offer->starts_at)) && (!$offer->ends_at || $today->lessThanOrEqualTo($offer->ends_at)));
+            ->filter(fn (Coupon $offer) => (! $offer->starts_at || $today->greaterThanOrEqualTo($offer->starts_at)) && (! $offer->ends_at || $today->lessThanOrEqualTo($offer->ends_at)));
         $categories = RoomCategory::where('is_active', true)
             ->orderBy('display_order')
             ->with([
@@ -71,6 +72,7 @@ class CatalogController extends Controller
                 $offer = $liveOffers->first(function (Coupon $offer) use ($category) {
                     $categoryIds = $offer->roomCategories->pluck('id');
                     $roomCategoryIds = $offer->rooms->pluck('room_category_id');
+
                     return ($categoryIds->isEmpty() && $roomCategoryIds->isEmpty()) || $categoryIds->contains($category->id) || $roomCategoryIds->contains($category->id);
                 });
                 // Precio de referencia para mostrar "antes/ahora" en la
@@ -82,6 +84,7 @@ class CatalogController extends Controller
                     'precio_fijo' => (int) $offer->discount_value,
                     default => null,
                 };
+
                 return [
                     'category' => $category,
                     'photos' => $photos,

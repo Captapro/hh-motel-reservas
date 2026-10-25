@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Models\Product;
 use App\Models\Room;
 use App\Models\RoomCategory;
 use App\Models\User;
@@ -113,7 +114,7 @@ class CheckoutPendingBalanceTest extends TestCase
         ]);
         $this->assertSame(0, $this->booking->fresh()->balanceDue());
 
-        $product = \App\Models\Product::create(['name' => 'Espumante', 'price' => 15000, 'is_active' => true]);
+        $product = Product::create(['name' => 'Espumante', 'price' => 15000, 'is_active' => true]);
 
         $response = $this->post("/reservas/{$this->booking->code}/finalizar", [
             'confirm_room_checked' => '1',
@@ -171,7 +172,7 @@ class CheckoutPendingBalanceTest extends TestCase
         $hourResponse->assertSessionHasErrors('booking');
         $this->assertTrue($originalEndsAt->eq($finalized->fresh()->ends_at));
 
-        $product = \App\Models\Product::create(['name' => 'Espumante', 'price' => 15000, 'is_active' => true]);
+        $product = Product::create(['name' => 'Espumante', 'price' => 15000, 'is_active' => true]);
         $addonResponse = $this->post("/reservas/{$this->booking->code}/consumo", ['item' => 'product:'.$product->id, 'quantity' => 1]);
         $addonResponse->assertSessionHasErrors('booking');
         $this->assertSame(0, $finalized->fresh()->addons()->count());

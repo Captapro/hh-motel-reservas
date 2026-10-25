@@ -92,10 +92,7 @@ class AccessProfilesTest extends TestCase
 
     public function test_support_sync_command_creates_the_account_without_overwriting_it(): void
     {
-        putenv('SUPPORT_EMAIL=soporte@prueba.cl');
-        putenv('SUPPORT_PASSWORD=clave-inicial-123');
-        $_ENV['SUPPORT_EMAIL'] = 'soporte@prueba.cl';
-        $_ENV['SUPPORT_PASSWORD'] = 'clave-inicial-123';
+        config(['services.support.email' => 'soporte@prueba.cl', 'services.support.password' => 'clave-inicial-123']);
 
         $this->artisan('app:soporte-sincronizar')->assertSuccessful();
         $user = User::where('email', 'soporte@prueba.cl')->firstOrFail();
@@ -109,9 +106,6 @@ class AccessProfilesTest extends TestCase
         $this->assertSame('soporte', $user->role);
         $this->assertSame($hash, $user->password);
 
-        putenv('SUPPORT_EMAIL');
-        putenv('SUPPORT_PASSWORD');
-        unset($_ENV['SUPPORT_EMAIL'], $_ENV['SUPPORT_PASSWORD']);
     }
 
     public function test_only_administrators_can_edit_access(): void

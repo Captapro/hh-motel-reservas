@@ -5,17 +5,16 @@ namespace App\Services\Pricing;
 use App\Exceptions\PricingException;
 use App\Models\RateRule;
 use App\Models\Room;
+use Carbon\Carbon;
 
 class PriceCalculator
 {
-    public function __construct(private RateRuleResolver $resolver)
-    {
-    }
+    public function __construct(private RateRuleResolver $resolver) {}
 
     /**
      * @return array{rate_rule: RateRule, price_original: int, extra_guests_fee: int}
      */
-    public function calculate(Room $room, \Carbon\Carbon $startsAt, \Carbon\Carbon $endsAt, int $durationMinutes, int $guestsCount): array
+    public function calculate(Room $room, Carbon $startsAt, Carbon $endsAt, int $durationMinutes, int $guestsCount): array
     {
         $rateRule = $this->resolver->resolve($startsAt, $endsAt);
 

@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable(['room_category_id', 'name', 'wing', 'photos', 'videos', 'buffer_minutes', 'operational_status', 'operational_note', 'aseo_override_at', 'aseo_started_at', 'aseo_reported_by', 'aseo_reported_at'])]
 class Room extends Model

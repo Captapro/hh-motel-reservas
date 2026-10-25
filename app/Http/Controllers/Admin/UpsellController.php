@@ -32,7 +32,7 @@ class UpsellController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        return $this->save($request, new UpsellOffer());
+        return $this->save($request, new UpsellOffer);
     }
 
     public function update(Request $request, UpsellOffer $upsell): RedirectResponse
@@ -53,6 +53,7 @@ class UpsellController extends Controller
         $old = $upsell->toArray();
         $upsell->delete();
         AuditLog::record(auth()->id(), 'upsell.eliminar', 'UpsellOffer', $upsell->id, $old, null);
+
         return redirect()->route('admin.upsells.index')->with('status', 'Upsell eliminado.');
     }
 

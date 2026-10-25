@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\FurnitureCategory;
 use App\Models\Room;
 use App\Models\RoomCategory;
-use App\Models\FurnitureCategory;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class RoomController extends Controller
@@ -42,7 +42,7 @@ class RoomController extends Controller
 
     public function create(): View
     {
-        return $this->form(new Room());
+        return $this->form(new Room);
     }
 
     public function edit(Room $room): View
@@ -53,6 +53,7 @@ class RoomController extends Controller
     private function form(Room $room): View
     {
         $room->load('furniture');
+
         return view('admin.rooms.form', [
             'room' => $room,
             'categories' => RoomCategory::orderBy('display_order')->get(),
@@ -62,7 +63,7 @@ class RoomController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        return $this->save($request, new Room());
+        return $this->save($request, new Room);
     }
 
     public function update(Request $request, Room $room): RedirectResponse

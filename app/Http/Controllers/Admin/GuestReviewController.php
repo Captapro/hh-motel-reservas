@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\GuestReview;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class GuestReviewController extends Controller
@@ -53,16 +55,16 @@ class GuestReviewController extends Controller
      */
     private function googleSummary(): ?array
     {
-        return \Illuminate\Support\Facades\Cache::remember('google_reviews_summary', 3600, function () {
+        return Cache::remember('google_reviews_summary', 3600, function () {
             try {
-                $html = \Illuminate\Support\Facades\Http::timeout(5)->get(config('services.hh_reviews.widget_url'))->body();
+                $html = Http::timeout(5)->get(config('services.hh_reviews.widget_url'))->body();
                 if (preg_match('/"totalRating":\s*([0-9.]+)/', $html, $r) && preg_match('/"totalReviews":\s*(\d+)/', $html, $c)) {
                     return ['rating' => (float) $r[1], 'count' => (int) $c[1]];
                 }
             } catch (\Throwable $e) {
                 // se muestra sin el dato de Google
             }
-            \Illuminate\Support\Facades\Cache::put('google_reviews_summary', null, 300);
+            Cache::put('google_reviews_summary', null, 300);
 
             return null;
         });
@@ -75,7 +77,7 @@ class GuestReviewController extends Controller
     public function qrImage(): Response
     {
         $result = (new Builder(
-            writer: new PngWriter(),
+            writer: new PngWriter,
             data: route('reviews.create'),
             size: 400,
             margin: 12,

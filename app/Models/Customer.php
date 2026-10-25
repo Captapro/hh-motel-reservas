@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable([
     'name', 'phone_e164', 'email', 'rut', 'document_type', 'passport_number',
@@ -45,15 +47,15 @@ class Customer extends Model
         $ids = $this->bookings()->pluck('id');
         $reasons = [];
 
-        $withPayments = \Illuminate\Support\Facades\DB::table('payments')->whereIn('booking_id', $ids)->distinct()->count('booking_id');
+        $withPayments = DB::table('payments')->whereIn('booking_id', $ids)->distinct()->count('booking_id');
         if ($withPayments > 0) {
             $reasons[] = $withPayments.' reserva(s) con pagos registrados';
         }
-        $withAddons = \Illuminate\Support\Facades\DB::table('booking_addons')->whereIn('booking_id', $ids)->distinct()->count('booking_id');
+        $withAddons = DB::table('booking_addons')->whereIn('booking_id', $ids)->distinct()->count('booking_id');
         if ($withAddons > 0) {
             $reasons[] = $withAddons.' reserva(s) con consumos o extras';
         }
-        $redemptions = \Illuminate\Support\Facades\DB::table('coupon_redemptions')->where('customer_id', $this->id)->count();
+        $redemptions = DB::table('coupon_redemptions')->where('customer_id', $this->id)->count();
         if ($redemptions > 0) {
             $reasons[] = $redemptions.' cupón(es) usado(s)';
         }
@@ -130,7 +132,7 @@ class Customer extends Model
      *   vuelve cada 45 días o menos.
      * - ocasional: tiene historial reciente pero con más espacio entre visitas que lo anterior.
      *
-     * @return array{type: string, label: string, total_stays: int, last_visit_at: ?\Carbon\Carbon, days_since_last: ?int, avg_interval_days: ?int}
+     * @return array{type: string, label: string, total_stays: int, last_visit_at: ?Carbon, days_since_last: ?int, avg_interval_days: ?int}
      */
     public function segment(): array
     {
@@ -148,6 +150,7 @@ class Customer extends Model
             // clientes tira "Undefined array key stars" apenas hay un
             // cliente nuevo real (0 o 1 estadía, el caso más común).
             $nuevo = CustomerSegmentRule::where('segment', 'nuevo')->first();
+
             return [
                 'type' => 'nuevo', 'label' => $nuevo->label ?? 'Cliente nuevo', 'total_stays' => $total,
                 'last_visit_at' => $stays->last(), 'days_since_last' => null, 'avg_interval_days' => null,
@@ -169,14 +172,21 @@ class Customer extends Model
         // antigüedad de la última visita, no por cantidad de visitas recientes.
         $matched = null;
         foreach ($rules as $rule) {
-            if (in_array($rule->segment, ['esporadico', 'nuevo'], true)) continue;
+            if (in_array($rule->segment, ['esporadico', 'nuevo'], true)) {
+                continue;
+            }
             $window = $rule->analysis_window_days;
             $visits = $window ? $stays->filter(fn ($date) => $date->greaterThanOrEqualTo(now()->subDays($window)))->count() : $total;
-            if ($visits >= (int) $rule->minimum_stays) { $matched = $rule; break; }
+            if ($visits >= (int) $rule->minimum_stays) {
+                $matched = $rule;
+                break;
+            }
         }
         if ($matched === null) {
             $stale = $rules->firstWhere('segment', 'esporadico');
-            if ($stale && $daysSinceLast > ($stale->stale_after_days ?? 120)) { $matched = $stale; }
+            if ($stale && $daysSinceLast > ($stale->stale_after_days ?? 120)) {
+                $matched = $stale;
+            }
         }
         // Si ni un umbral de visitas ni el de inactividad calzó (ej. 90-120 días
         // sin volver), cae al criterio "ocasional" real de la base, no a un

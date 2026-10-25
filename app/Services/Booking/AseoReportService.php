@@ -4,6 +4,7 @@ namespace App\Services\Booking;
 
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Models\Room;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -17,7 +18,7 @@ use Illuminate\Support\Collection;
 class AseoReportService
 {
     /**
-     * @return Collection<int, array{booking: Booking, room: \App\Models\Room, checkout_at: Carbon, ready_at: ?Carbon, pending: bool, cleaned_by: ?string}>
+     * @return Collection<int, array{booking: Booking, room: Room, checkout_at: Carbon, ready_at: ?Carbon, pending: bool, cleaned_by: ?string}>
      */
     public function rowsBetween(Carbon $start, Carbon $end): Collection
     {
@@ -71,8 +72,8 @@ class AseoReportService
      * Filas que suman a la carga de ropa de cama — todo menos GO, que son
      * cápsulas sin cama.
      *
-     * @param  Collection<int, array{room: \App\Models\Room}>  $rows
-     * @return Collection<int, array{room: \App\Models\Room}>
+     * @param  Collection<int, array{room: Room}>  $rows
+     * @return Collection<int, array{room: Room}>
      */
     public function linenRows(Collection $rows): Collection
     {

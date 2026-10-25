@@ -7,8 +7,9 @@ use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MonthlySalesController extends Controller
 {
@@ -158,7 +159,7 @@ class MonthlySalesController extends Controller
      */
     private function monthHistory(): Collection
     {
-        $addons = \Illuminate\Support\Facades\DB::table('booking_addons')
+        $addons = DB::table('booking_addons')
             ->selectRaw('booking_id, SUM(amount) as total')->groupBy('booking_id')->pluck('total', 'booking_id');
 
         $sales = Booking::where('booking_status', '!=', 'CANCELADA')->get(['id', 'starts_at', 'price_final'])

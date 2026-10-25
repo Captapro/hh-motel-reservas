@@ -9,8 +9,8 @@ use App\Models\RateRulePrice;
 use App\Models\RateRuleWindow;
 use App\Models\Room;
 use App\Models\RoomCategory;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**

@@ -16,9 +16,7 @@ use Illuminate\Support\Collection;
  */
 class UpsellResolver
 {
-    public function __construct(private AvailabilityChecker $availability)
-    {
-    }
+    public function __construct(private AvailabilityChecker $availability) {}
 
     /**
      * @return Collection<int, array{offer: UpsellOffer, target_room_id: ?int, label: string, price: int, detail: string}>

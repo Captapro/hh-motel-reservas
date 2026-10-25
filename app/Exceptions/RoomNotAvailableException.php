@@ -4,6 +4,4 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-class RoomNotAvailableException extends RuntimeException
-{
-}
+class RoomNotAvailableException extends RuntimeException {}

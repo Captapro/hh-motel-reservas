@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -111,7 +112,7 @@ class Coupon extends Model
      * solo fecha, día de la semana y alcance. Requiere rooms/roomCategories
      * precargados para no pegarle a la BD por habitación.
      */
-    public function offerLiveFor(Room $room, \Carbon\Carbon $when): bool
+    public function offerLiveFor(Room $room, Carbon $when): bool
     {
         if (! $this->auto_apply || ! $this->is_active) {
             return false;

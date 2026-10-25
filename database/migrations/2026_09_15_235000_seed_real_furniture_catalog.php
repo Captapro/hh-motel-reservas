@@ -27,7 +27,9 @@ return new class extends Migration
             $id = DB::table('furniture_items')->where('furniture_category_id', $categoryId)->where('name', $name)->value('id');
             if (! $id) {
                 $data = ['furniture_category_id' => $categoryId, 'name' => $name, 'created_at' => now(), 'updated_at' => now()];
-                if (Schema::hasColumn('furniture_items', 'icon')) $data['icon'] = $icon;
+                if (Schema::hasColumn('furniture_items', 'icon')) {
+                    $data['icon'] = $icon;
+                }
                 DB::table('furniture_items')->insert($data);
             } elseif (Schema::hasColumn('furniture_items', 'icon')) {
                 DB::table('furniture_items')->where('id', $id)->update(['icon' => $icon, 'updated_at' => now()]);

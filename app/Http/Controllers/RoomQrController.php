@@ -8,6 +8,7 @@ use App\Models\Staff;
 use App\Services\Booking\RoomBoardService;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -83,7 +84,7 @@ class RoomQrController extends Controller
      * tipeando o guardando el link de la habitación -- hay que haber
      * pasado por la cámara de verdad.
      */
-    public function confirmScan(Request $request, Room $room): \Illuminate\Http\JsonResponse
+    public function confirmScan(Request $request, Room $room): JsonResponse
     {
         $request->session()->put('qr_scanned_at.'.$room->id, now()->timestamp);
 
@@ -148,7 +149,7 @@ class RoomQrController extends Controller
     private function qrPng(string $url, string $label): Response
     {
         $result = (new Builder(
-            writer: new PngWriter(),
+            writer: new PngWriter,
             data: $url,
             size: 400,
             margin: 12,

@@ -4,6 +4,4 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-class PricingException extends RuntimeException
-{
-}
+class PricingException extends RuntimeException {}

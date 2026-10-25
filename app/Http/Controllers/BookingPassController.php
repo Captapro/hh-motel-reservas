@@ -19,7 +19,7 @@ class BookingPassController extends Controller
         // escanee con /reservas/escanear y la identifique al toque, sin
         // buscarla a mano.
         $qr = (new Builder(
-            writer: new PngWriter(),
+            writer: new PngWriter,
             data: route('bookings.validate', $booking->code),
             size: 220,
             margin: 0,

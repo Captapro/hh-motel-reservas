@@ -19,6 +19,7 @@ class FurnitureController extends Controller
     {
         $categories = FurnitureCategory::with(['items' => fn ($q) => $q->with('rooms')->orderBy('name')])->orderBy('name')->get();
         $items = $categories->flatMap->items;
+
         return view('admin.furniture.index', [
             'categories' => $categories,
             // El selector de ícono era una lista fija de 10 emojis genéricos
@@ -44,19 +45,20 @@ class FurnitureController extends Controller
 
     public function category(Request $request, ?FurnitureCategory $category = null): RedirectResponse
     {
-        $category ??= new FurnitureCategory();
+        $category ??= new FurnitureCategory;
         $data = $request->validate(['name' => ['required', 'string', 'max:100', Rule::unique('furniture_categories')->ignore($category->id)]]);
         DB::transaction(function () use ($category, $data) {
             $old = $category->exists ? $category->toArray() : null;
             $category->fill($data)->save();
             AuditLog::record(auth()->id(), 'mobiliario.categoria_guardar', 'FurnitureCategory', $category->id, $old, $category->toArray());
         });
+
         return redirect()->route('admin.furniture.index')->with('status', 'Categoría de mobiliario guardada.');
     }
 
     public function item(Request $request, ?FurnitureItem $item = null): RedirectResponse
     {
-        $item ??= new FurnitureItem();
+        $item ??= new FurnitureItem;
         $data = $request->validate([
             'furniture_category_id' => ['required', 'integer', 'exists:furniture_categories,id'],
             'name' => ['required', 'string', 'max:100', Rule::unique('furniture_items')->where('furniture_category_id', $request->input('furniture_category_id'))->ignore($item->id)],
@@ -67,6 +69,7 @@ class FurnitureController extends Controller
             $item->fill($data)->save();
             AuditLog::record(auth()->id(), 'mobiliario.elemento_guardar', 'FurnitureItem', $item->id, $old, $item->toArray());
         });
+
         return redirect()->route('admin.furniture.index')->with('status', 'Elemento guardado. Ya puedes asignarlo a las habitaciones.');
     }
 
@@ -78,6 +81,7 @@ class FurnitureController extends Controller
         $old = $category->toArray();
         $category->delete();
         AuditLog::record(auth()->id(), 'mobiliario.categoria_eliminar', 'FurnitureCategory', $category->id, $old, null);
+
         return back()->with('status', 'Categoría de mobiliario eliminada.');
     }
 
@@ -89,6 +93,7 @@ class FurnitureController extends Controller
         $old = $item->toArray();
         $item->delete();
         AuditLog::record(auth()->id(), 'mobiliario.elemento_eliminar', 'FurnitureItem', $item->id, $old, null);
+
         return back()->with('status', 'Elemento eliminado.');
     }
 }

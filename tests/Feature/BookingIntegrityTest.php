@@ -25,6 +25,7 @@ use App\Services\Booking\PaymentService;
 use App\Services\Integrations\GhlBookingSync;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -104,7 +105,7 @@ class BookingIntegrityTest extends TestCase
 
     public function test_pass_qr_verifies_on_the_phone_and_alerts_the_desktop_which_then_goes_to_what_is_pending(): void
     {
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
 
@@ -119,7 +120,7 @@ class BookingIntegrityTest extends TestCase
         $this->get($go)->assertRedirect(route('payments.create', ['code' => $booking->code, 'after' => 'pase']));
         $this->getJson(route('rooms.pass_scans'))->assertExactJson([]);
         $this->post(route('payments.store', $booking->code), [
-            'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) \Illuminate\Support\Str::uuid(),
+            'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) Str::uuid(),
             'receipt_number' => '1', 'after' => 'pase',
         ])->assertRedirect(route('bookings.checkin.show', $booking->code));
 
@@ -212,7 +213,7 @@ class BookingIntegrityTest extends TestCase
         $this->post(route('addons.extra-hour', $booking->code))->assertSessionHasErrors('booking');
         $booking->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
         $endsAt = $booking->ends_at->copy();
-        $rule = \App\Models\RateRule::where('name', 'HH')->first();
+        $rule = RateRule::where('name', 'HH')->first();
 
         $rule->update(['extra_hour_price' => 0]);
         $this->post(route('addons.extra-hour', $booking->code))->assertSessionHasErrors('booking');
@@ -496,7 +497,7 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('NO_PAGADA', $booking->payment_status);
 
         $this->post(route('payments.store', $booking->code), [
-            'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) \Illuminate\Support\Str::uuid(),
+            'payment_method_id' => $method->id, 'amount' => $booking->balanceDue(), 'request_token' => (string) Str::uuid(),
             'receipt_number' => '4411', 'after' => 'checkin',
         ])->assertRedirect(route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso']));
         $this->assertSame(0, $booking->fresh()->balanceDue());

@@ -12,9 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class ConsumptionService
 {
-    public function __construct(private PaymentService $paymentService)
-    {
-    }
+    public function __construct(private PaymentService $paymentService) {}
 
     public function addProduct(Booking $booking, Product $product, int $quantity, ?int $userId): BookingAddon
     {

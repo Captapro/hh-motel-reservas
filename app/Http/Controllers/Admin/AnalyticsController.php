@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-use App\Models\RoomCategory;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
+use App\Models\RoomCategory;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AnalyticsController extends Controller
 {
@@ -79,7 +80,7 @@ class AnalyticsController extends Controller
      * tablas dinámicas y cruces en Excel/Sheets -- no intentamos adivinar
      * qué cruce quiere ver el usuario, le damos el detalle crudo.
      */
-    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function export(Request $request): StreamedResponse
     {
         [$start, $end] = $this->resolveRange($request);
         $categoryId = (int) $request->query('category', 0) ?: null;
@@ -352,7 +353,10 @@ class AnalyticsController extends Controller
     private function segments(): array
     {
         $counts = ['nuevo' => 0, 'frecuente' => 0, 'ocasional' => 0, 'esporadico' => 0];
-        Customer::query()->get()->each(function (Customer $customer) use (&$counts) { $counts[$customer->segment()['type']]++; });
+        Customer::query()->get()->each(function (Customer $customer) use (&$counts) {
+            $counts[$customer->segment()['type']]++;
+        });
+
         return $counts;
     }
 }

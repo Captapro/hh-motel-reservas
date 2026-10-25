@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Coupon;
 use App\Models\OperationalSetting;
@@ -10,9 +11,13 @@ use App\Models\RoomCategory;
 use App\Models\Staff;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Pricing\RateRuleResolver;
+use App\Support\PassScans;
 use App\Support\TimeFormat;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -85,9 +90,9 @@ class RoomBoardController extends Controller
      * Pases escaneados con el celular que esperan atención en este computador.
      * El tablero lo consulta cada pocos segundos y muestra el aviso.
      */
-    public function passScans(): \Illuminate\Http\JsonResponse
+    public function passScans(): JsonResponse
     {
-        $recent = \App\Support\PassScans::recent();
+        $recent = PassScans::recent();
         $bookings = Booking::with(['customer', 'room'])->whereIn('code', array_keys($recent))
             ->whereNull('checked_in_at')
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'])
@@ -104,7 +109,7 @@ class RoomBoardController extends Controller
         ])->all());
     }
 
-    private function pendingBookings(): \Illuminate\Support\Collection
+    private function pendingBookings(): Collection
     {
         return Booking::with(['room.category', 'customer'])
             ->where('booking_status', 'PENDIENTE_PAGO')
@@ -144,7 +149,7 @@ class RoomBoardController extends Controller
      *
      * @return array<int, array{label: string, tag: string}>
      */
-    private function activeOffersByRoom(\Illuminate\Support\Collection $entries, \Carbon\Carbon $now): array
+    private function activeOffersByRoom(Collection $entries, Carbon $now): array
     {
         $offers = Coupon::offers()->where('is_active', true)
             ->with(['rooms:id', 'roomCategories:id'])
@@ -170,7 +175,7 @@ class RoomBoardController extends Controller
         return $result;
     }
 
-    private function formatCountdown(\Carbon\Carbon $now, \Carbon\Carbon $target): string
+    private function formatCountdown(Carbon $now, Carbon $target): string
     {
         return TimeFormat::minutes((int) max(0, $now->diffInMinutes($target, false)));
     }
@@ -247,7 +252,7 @@ class RoomBoardController extends Controller
         $old = $room->only(['operational_status', 'operational_note']);
         $room->update($validated);
 
-        \App\Models\AuditLog::record(auth()->id(), 'habitacion.estado_operativo', 'Room', $room->id, $old, $validated);
+        AuditLog::record(auth()->id(), 'habitacion.estado_operativo', 'Room', $room->id, $old, $validated);
 
         return redirect()->route('rooms.board');
     }
@@ -262,7 +267,7 @@ class RoomBoardController extends Controller
      * hizo el aseo?" -- antes era una lista fija (App\Support\AseoStaff)
      * porque no existía un padrón real; ahora sale directo de /admin/personal.
      */
-    private function cleaningStaffNames(): \Illuminate\Support\Collection
+    private function cleaningStaffNames(): Collection
     {
         return Staff::activeMucamas()->orderBy('name')->pluck('name');
     }
@@ -291,7 +296,7 @@ class RoomBoardController extends Controller
 
         // "Quién hizo el aseo" queda en el propio registro de auditoría de
         // este evento -- no hace falta una tabla aparte para la huella.
-        \App\Models\AuditLog::record(auth()->id(), 'habitacion.aseo_listo', 'Room', $room->id, $old, [
+        AuditLog::record(auth()->id(), 'habitacion.aseo_listo', 'Room', $room->id, $old, [
             ...$room->fresh()->only(['operational_status']),
             'cleaned_by' => $validated['cleaned_by'],
         ]);
@@ -304,7 +309,7 @@ class RoomBoardController extends Controller
         $old = $room->only(['operational_status']);
         $room->update(['operational_status' => 'aseo', 'aseo_started_at' => now(), 'aseo_override_at' => null]);
 
-        \App\Models\AuditLog::record(auth()->id(), 'habitacion.enviar_aseo', 'Room', $room->id, $old, ['operational_status' => 'aseo']);
+        AuditLog::record(auth()->id(), 'habitacion.enviar_aseo', 'Room', $room->id, $old, ['operational_status' => 'aseo']);
 
         return redirect()->route('rooms.board');
     }

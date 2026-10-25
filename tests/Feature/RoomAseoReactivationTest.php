@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Booking;
+use App\Models\Customer;
 use App\Models\Room;
 use App\Models\RoomCategory;
 use App\Models\Staff;
+use App\Models\StaffShiftLog;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -189,8 +192,8 @@ class RoomAseoReactivationTest extends TestCase
     public function test_logged_in_maid_can_confirm_room_ready_for_next_booking(): void
     {
         $activeRoom = Room::create(['room_category_id' => $this->room->room_category_id, 'name' => 'GO 102', 'operational_status' => 'activa']);
-        $customer = \App\Models\Customer::create(['name' => 'Cliente Prueba', 'phone_e164' => '+56911112222']);
-        $booking = \App\Models\Booking::create([
+        $customer = Customer::create(['name' => 'Cliente Prueba', 'phone_e164' => '+56911112222']);
+        $booking = Booking::create([
             'code' => 'HH-TEST-0002',
             'customer_id' => $customer->id,
             'room_id' => $activeRoom->id,
@@ -230,12 +233,12 @@ class RoomAseoReactivationTest extends TestCase
         // Un segundo login (por ejemplo, la sesión expiró en el celular pero
         // no cerró sesión a propósito) no abre un turno duplicado.
         $this->post('/qr/mucamas/entrar', ['staff_id' => $mucama->id, 'pin' => '1234']);
-        $this->assertSame(1, \App\Models\StaffShiftLog::where('staff_id', $mucama->id)->count());
+        $this->assertSame(1, StaffShiftLog::where('staff_id', $mucama->id)->count());
 
         $this->withSession(['mucama_staff_id' => $mucama->id])->post('/qr/mucamas/salir');
 
         $this->assertNull($mucama->openShiftLog());
-        $log = \App\Models\StaffShiftLog::where('staff_id', $mucama->id)->firstOrFail();
+        $log = StaffShiftLog::where('staff_id', $mucama->id)->firstOrFail();
         $this->assertNotNull($log->ended_at);
     }
 }

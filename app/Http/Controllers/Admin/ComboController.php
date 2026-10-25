@@ -20,7 +20,7 @@ class ComboController extends Controller
 
     public function create(): View
     {
-        return view('admin.combos.form', ['combo' => new Combo()]);
+        return view('admin.combos.form', ['combo' => new Combo]);
     }
 
     public function edit(Combo $combo): View
@@ -34,7 +34,7 @@ class ComboController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $combo = $this->save($request, new Combo());
+        $combo = $this->save($request, new Combo);
 
         return redirect()->route('admin.combos.edit', $combo)->with('status', 'Combo creado — ahora agrégale productos.');
     }
@@ -98,6 +98,7 @@ class ComboController extends Controller
         $combo->items()->delete();
         $combo->delete();
         AuditLog::record(auth()->id(), 'combo.eliminar', 'Combo', $combo->id, $old, null);
+
         return redirect()->route('admin.combos.index')->with('status', 'Combo eliminado.');
     }
 }

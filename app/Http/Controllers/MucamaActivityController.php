@@ -6,7 +6,9 @@ use App\Models\AuditLog;
 use App\Models\Room;
 use App\Models\Staff;
 use App\Models\StaffShiftLog;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
@@ -79,9 +81,9 @@ class MucamaActivityController extends Controller
      * new_value, así que se mezclan en una sola línea de tiempo por orden
      * de hora real, cada uno con su propia etiqueta.
      *
-     * @return \Illuminate\Support\Collection<int, \Illuminate\Support\Collection>
+     * @return Collection<int, Collection>
      */
-    private function todaysRoutes(\Carbon\Carbon $today): \Illuminate\Support\Collection
+    private function todaysRoutes(Carbon $today): Collection
     {
         $labels = [
             'habitacion.qr_visita' => ['icon' => '🚪', 'text' => 'entrada'],

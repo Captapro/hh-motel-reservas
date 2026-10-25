@@ -16,9 +16,11 @@ use Illuminate\Support\Facades\Http;
 class GhlClient
 {
     private const BASE_URL = 'https://services.leadconnectorhq.com';
+
     private const API_VERSION = '2021-07-28';
 
     private readonly string $token;
+
     private readonly string $locationId;
 
     public function __construct(?string $token = null, ?string $locationId = null)

@@ -22,6 +22,7 @@ use Tests\TestCase;
 class CouponScopeAndWindowTest extends TestCase
 {
     private Room $roomA;
+
     private Room $roomB;
 
     protected function setUp(): void

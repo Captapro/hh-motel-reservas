@@ -15,9 +15,9 @@ use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\UpsellResolver;
+use App\Support\PassScans;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Support\PassScans;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 

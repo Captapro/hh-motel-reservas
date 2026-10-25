@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Middleware\EnsureMucamaSession;
+use App\Http\Middleware\EnsureSectionAccess;
+use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,15 +24,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
-            'mucama' => \App\Http\Middleware\EnsureMucamaSession::class,
-            'section' => \App\Http\Middleware\EnsureSectionAccess::class,
+            'role' => EnsureUserHasRole::class,
+            'mucama' => EnsureMucamaSession::class,
+            'section' => EnsureSectionAccess::class,
         ]);
 
         // Global (no solo en rutas 'auth'): así una cuenta desactivada a
         // mitad de sesión pierde el acceso en el siguiente click, sin
         // depender de que cada grupo de rutas la incluya a mano.
-        $middleware->web(append: [\App\Http\Middleware\EnsureUserIsActive::class]);
+        $middleware->web(append: [EnsureUserIsActive::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

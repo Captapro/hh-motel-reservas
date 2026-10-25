@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Integrations\GhlBookingSync;
 use App\Services\Integrations\GhlClient;
 use App\Support\Phone;
 use Illuminate\Http\Request;
@@ -42,8 +43,8 @@ class GhlTestController extends Controller
             $contactId = $client->upsertContact($phone, $validated['name']);
             $log[] = "Contacto en GHL: {$contactId}";
 
-            $tag = \App\Services\Integrations\GhlBookingSync::TAG_PREFIX.now()->timezone('America/Santiago')->toDateString();
-            $client->replaceTagWithPrefix($contactId, \App\Services\Integrations\GhlBookingSync::TAG_PREFIX, $tag);
+            $tag = GhlBookingSync::TAG_PREFIX.now()->timezone('America/Santiago')->toDateString();
+            $client->replaceTagWithPrefix($contactId, GhlBookingSync::TAG_PREFIX, $tag);
             $log[] = "Tag aplicado: {$tag}";
 
             $tags = $client->getTags($contactId);

@@ -18,7 +18,7 @@ class CouponController extends Controller
 
     public function create(): View
     {
-        return view('admin.coupons.form', ['coupon' => new Coupon()]);
+        return view('admin.coupons.form', ['coupon' => new Coupon]);
     }
 
     public function edit(Coupon $coupon): View
@@ -30,7 +30,7 @@ class CouponController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        return $this->save($request, new Coupon());
+        return $this->save($request, new Coupon);
     }
 
     public function update(Request $request, Coupon $coupon): RedirectResponse
