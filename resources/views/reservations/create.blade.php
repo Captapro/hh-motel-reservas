@@ -229,8 +229,14 @@
         .consumo-panel .qty input[type=number] { width:30px !important; height:28px !important; min-height:0 !important; margin:0 !important; padding:0 !important; text-align:center; background:transparent !important; border:none !important; border-radius:0 !important; box-shadow:none !important; color:#9a9a9a !important; font-size:15px; line-height:28px; font-weight:700; -moz-appearance:textfield; appearance:textfield; }
         .consumo-panel .qty input::-webkit-inner-spin-button, .consumo-panel .qty input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
         .consumo-panel .qty.has input[type=number] { color:#ff7918 !important; }
-        .step-panel.step-offer { border-color:#8a5a2b; }
-        .step-panel.step-offer .step-tag { color:#d9a066; }
+        .offer-actions { margin-top:14px; display:flex; gap:10px; }
+        .offer-actions button { flex:1; margin:0; padding:11px 14px; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; }
+        .offer-none { background:#262626; border:1px solid #4a4a4a; color:#ddd; }
+        .offer-none:hover { border-color:#ff7918; color:#fff; }
+        .offer-ok { background:#ff7918; border:1px solid #ff7918; color:#111; }
+        .step-panel.step-done .offer-actions { display:none; }
+        #submit-btn:disabled { opacity:.4; cursor:not-allowed; animation:none; }
+        .offer-needed { margin-top:8px; font-size:12px; color:#e8c76f; text-align:center; }
         .consumo-sum { margin:0 0 4px; padding:8px 14px; border-radius:8px; background:#1c1c1c; border:1px solid #333; font-size:13.5px; }
         .consumo-sum .p-sum { display:flex; justify-content:space-between; padding:2px 0; color:#bbb; }
         .consumo-sum .p-sum.total { border-top:1px solid #333; margin-top:4px; padding-top:6px; color:#eee; font-weight:700; }
@@ -480,7 +486,7 @@
             </div>
 
             @if ($walkInMode)
-                <div class="panel step-panel consumo-panel" data-step="3" data-optional="1">
+                <div class="panel step-panel consumo-panel" data-step="3">
                     <div class="form-col-head"><span class="step-num">3</span>Ofrecer productos y combos<span class="step-tag"></span></div>
                     <div class="consumo-total" id="consumo-total">Sin consumo todavía</div>
 
@@ -526,6 +532,11 @@
                                 @endforeach
                             </div>
                         @endforeach
+                    </div>
+
+                    <div class="offer-actions">
+                        <button type="button" class="offer-none" id="offer-none">El cliente no quiere nada · continuar →</button>
+                        <button type="button" class="offer-ok" id="offer-ok" hidden>Continuar con el consumo →</button>
                     </div>
                 </div>
             @endif
@@ -614,6 +625,9 @@
 
 
                 <button class="submit" id="submit-btn" type="submit">Calcular y crear reserva</button>
+                @if ($walkInMode)
+                    <div class="offer-needed" id="offer-needed" hidden>Antes de cobrar, ofrece productos y combos (paso 3).</div>
+                @endif
             </div>
         </div>
 
@@ -1536,19 +1550,30 @@
             function update() {
                 syncDeposit();
                 const last = panels.length;
+                const walk = last === 4;
                 const stay = stayDone();
-                const client = stay && clientDone();
-                const active = stay ? (client ? last : 2) : 1;
+                // En el ingreso presencial el paso del cliente incluye a sus acompañantes: cada fila con nombre y apellido.
+                const guestsOk = !walk || Array.from(document.querySelectorAll('#guest-rows .guest-row')).every((r) => r.querySelector('.guest-first').value.trim() && r.querySelector('.guest-last').value.trim());
+                const client = stay && clientDone() && guestsOk;
+                let active;
+                if (!stay) active = 1;
+                else if (!client) active = 2;
+                else if (walk && !window.hhOfferResolved) active = 3;
+                else active = last;
                 panels.forEach((panel) => {
                     const n = Number(panel.dataset.step);
-                    const optional = panel.dataset.optional === '1';
-                    const isDone = !optional && n < active;
+                    const isDone = n < active;
                     panel.classList.toggle('step-active', n === active);
                     panel.classList.toggle('step-done', isDone);
-                    panel.classList.toggle('step-offer', optional && client);
-                    panel.classList.toggle('step-pending', optional ? !client : n > active);
-                    panel.querySelector('.step-tag').textContent = optional ? (client ? 'Ofrece' : '') : (n === active ? 'Paso actual' : (isDone ? 'Listo' : ''));
+                    panel.classList.toggle('step-pending', n > active);
+                    panel.querySelector('.step-tag').textContent = n === active ? 'Paso actual' : (isDone ? 'Listo' : '');
                 });
+                if (walk) {
+                    const btn = document.getElementById('submit-btn');
+                    const blocked = active < last;
+                    btn.disabled = blocked;
+                    document.getElementById('offer-needed').hidden = !(client && !window.hhOfferResolved);
+                }
             }
 
             const form = document.querySelector('.form-grid').closest('form');
@@ -1579,6 +1604,8 @@
                 const head = document.getElementById('consumo-total');
                 head.textContent = items ? ('A cargar: ' + money(total) + ' · ' + items + (items === 1 ? ' ítem' : ' ítems')) : 'Sin consumo todavía';
                 head.classList.toggle('has', items > 0);
+                none.hidden = items > 0; ok.hidden = items === 0;
+                ok.textContent = 'Continuar con ' + items + (items === 1 ? ' ítem' : ' ítems') + ' →';
                 const sum = document.getElementById('consumo-sum');
                 const final = Number(document.getElementById('price-box').dataset.final);
                 if (items && final) {
@@ -1590,6 +1617,11 @@
                 }
             }
             window.hhRefreshConsumo = refresh;
+            window.hhOfferResolved = false;
+            const none = document.getElementById('offer-none'), ok = document.getElementById('offer-ok');
+            const resolve = () => { window.hhOfferResolved = true; document.querySelector('.form-grid').closest('form').dispatchEvent(new Event('change', { bubbles: true })); };
+            none.addEventListener('click', resolve);
+            ok.addEventListener('click', resolve);
             panel.querySelectorAll('.qty').forEach((box) => {
                 const input = box.querySelector('input');
                 const step = (d) => {
