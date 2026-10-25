@@ -79,6 +79,14 @@
         .hh-checkin-page .offer-panel .prod-row { padding:3px 0; gap:10px; align-items:center; }
         .hh-checkin-page .offer-panel .prod-row .name { font-size:13.5px; line-height:1.25; color:#f1f1f1; font-weight:600; }
         .hh-checkin-page .offer-panel .prod-row .price { font-size:11.5px; margin-top:2px; color:#8d8f94; }
+        .hh-checkin-page .offer-panel .combos-label { margin:4px 0 8px; font-size:10.5px; letter-spacing:.06em; }
+        .combo-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:12px; }
+        .hh-checkin-page .combo-card { display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; padding:12px 10px; background:#242424; border:1px solid #3a3a3a; border-radius:12px; }
+        .hh-checkin-page .combo-card.out { opacity:.5; }
+        .hh-checkin-page .combo-name { font-size:14px; font-weight:700; color:#fff; line-height:1.2; }
+        .hh-checkin-page .combo-items { font-size:11.5px; color:#9a9a9a; line-height:1.3; min-height:30px; }
+        .hh-checkin-page .combo-price { font-size:18px; font-weight:800; color:#ff7918; margin:2px 0 4px; }
+        .hh-checkin-page .combo-out { font-size:11px; font-weight:600; color:#c66; }
         .qty { display:flex; align-items:center; gap:2px; flex:none; }
         .hh-checkin-page .offer-panel .qty button { width:28px; height:28px; margin:0; padding:0; border-radius:7px; background:#262626; border:1px solid #444; color:#ddd; font-size:17px; line-height:1; font-weight:600; min-height:0; }
         .hh-checkin-page .offer-panel .qty button:hover:not(:disabled) { border-color:#ff7918; color:#ff7918; }
@@ -164,30 +172,28 @@
                 </div>
 
                 @if ($combos->isNotEmpty())
-                    <div class="offer-block">
-                        <div class="cat-block">
-                            <div class="cat-label">Combos</div>
-                            @foreach ($combos as $combo)
-                                <div class="prod-row">
-                                    <div>
-                                        <div class="name">{{ $combo->name }}</div>
-                                        <div class="price">
-                                            ${{ number_format($combo->price, 0, ',', '.') }}
-                                            @if ($combo->description)
-                                                · {{ $combo->description }}
-                                            @endif
-                                            {{ $combo->isOutOfStock() ? '· agotado' : '' }}
-                                        </div>
-                                    </div>
-                                    <div class="qty">
-                                        <button type="button" class="q-minus" aria-label="Menos" @disabled($combo->isOutOfStock())>−</button>
-                                        <input type="number" name="combo_quantities[{{ $combo->id }}]" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" data-price="{{ $combo->price }}" @disabled($combo->isOutOfStock())>
-                                        <button type="button" class="q-plus" aria-label="Más" @disabled($combo->isOutOfStock())>+</button>
-                                    </div>
+                    <div class="cat-label combos-label">Combos</div>
+                    <div class="combo-cards">
+                        @foreach ($combos as $combo)
+                            <div class="combo-card {{ $combo->isOutOfStock() ? 'out' : '' }}">
+                                <div class="combo-name">{{ $combo->name }}</div>
+                                <div class="combo-items">
+                                    @if ($combo->description)
+                                        {{ $combo->description }}
+                                    @else
+                                        {{ $combo->items->map(fn ($i) => $i->quantity.' × '.($i->product->name ?? ''))->join(' · ') }}
+                                    @endif
                                 </div>
-                            @endforeach
-                        </div>
+                                <div class="combo-price">${{ number_format($combo->price, 0, ',', '.') }}{!! $combo->isOutOfStock() ? ' <span class="combo-out">agotado</span>' : '' !!}</div>
+                                <div class="qty">
+                                    <button type="button" class="q-minus" aria-label="Menos" @disabled($combo->isOutOfStock())>−</button>
+                                    <input type="number" name="combo_quantities[{{ $combo->id }}]" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" data-price="{{ $combo->price }}" @disabled($combo->isOutOfStock())>
+                                    <button type="button" class="q-plus" aria-label="Más" @disabled($combo->isOutOfStock())>+</button>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
+                    <div class="cat-label combos-label">Productos sueltos</div>
                 @endif
 
                 <div class="offer-block">
