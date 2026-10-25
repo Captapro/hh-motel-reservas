@@ -85,6 +85,7 @@ class PublicBookingValidationTest extends TestCase
             'first_name' => 'Cliente',
             'last_name' => 'Público',
             'phone' => '+56922222222',
+            'email' => 'cliente@ejemplo.cl',
         ], $overrides);
     }
 
@@ -126,6 +127,16 @@ class PublicBookingValidationTest extends TestCase
 
         $this->assertSame(1, Booking::count());
         $this->assertSame($first->headers->get('Location'), $second->headers->get('Location'));
+    }
+
+    public function test_catalog_booking_requires_a_valid_email(): void
+    {
+        $this->post('/catalogo/reservar', $this->bookingPayload(['email' => '']))->assertSessionHasErrors('email');
+        $this->post('/catalogo/reservar', $this->bookingPayload(['email' => 'no-es-un-correo']))->assertSessionHasErrors('email');
+        $this->assertSame(0, Booking::count());
+
+        $this->post('/catalogo/reservar', $this->bookingPayload())->assertSessionHasNoErrors();
+        $this->assertSame(1, Booking::count());
     }
 
     public function test_catalog_fills_the_north_wing_before_the_south_wing(): void

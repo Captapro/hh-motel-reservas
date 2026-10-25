@@ -825,12 +825,12 @@ class BookingIntegrityTest extends TestCase
         $other->prices()->create(['room_category_id' => Room::first()->room_category_id, 'duration_minutes' => 180, 'price' => 40000]);
         $data = ['room_category_id' => Room::first()->room_category_id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 0, 'duration_minutes' => 180];
         $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query($data))->assertOk()->assertJsonPath('available', false);
-        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164])
+        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl'])
             ->assertRedirect()->assertSessionHasErrors('duration_minutes');
         $this->assertSame(0, Booking::count());
         RateRule::where('is_active', true)->first()->prices()->create(['room_category_id' => Room::first()->room_category_id, 'duration_minutes' => 180, 'price' => 40000]);
         $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query($data))->assertOk()->assertJsonPath('available', true);
-        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164])
+        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl'])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(1, Booking::count());
     }

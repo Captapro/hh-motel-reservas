@@ -106,7 +106,7 @@ class PublicBookingController extends Controller
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
-            'email' => ['nullable', 'email'],
+            'email' => ['required', 'email', 'max:255'],
             'coupon_code' => ['nullable', 'string', 'max:50'],
             'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
             'quantities' => ['nullable', 'array'],
@@ -159,6 +159,10 @@ class PublicBookingController extends Controller
                 ['phone_e164' => $phone],
                 ['name' => $customerName, 'email' => $validated['email'] ?? null, 'birth_date' => $validated['birth_date'] ?? null]
             );
+            // Cliente que ya existía sin correo: se completa con el de esta reserva.
+            if (! $customer->email) {
+                $customer->update(['email' => $validated['email']]);
+            }
             if ($customer->blacklist_status === 'blocked') {
                 return back()->withInput()->withErrors(['phone' => 'No es posible solicitar la reserva con los datos ingresados.']);
             }

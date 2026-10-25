@@ -182,8 +182,8 @@
             <label for="phone">Teléfono / WhatsApp</label>
             <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" placeholder="+56 9 1234 5678" required>
 
-            <label for="email">Email (opcional)</label>
-            <input type="email" id="email" name="email" value="{{ old('email') }}">
+            <label for="email">Correo electrónico</label>
+            <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="email" placeholder="tucorreo@ejemplo.com">
 
             @if ($selectedCoupon && $selectedCoupon->min_age)
                 <label for="birth_date">Fecha de nacimiento <span style="color:#9edaff; font-weight:400;">— para aplicar el cupón ({{ $selectedCoupon->min_age }}+ años)</span></label>
