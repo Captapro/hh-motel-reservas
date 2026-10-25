@@ -93,17 +93,33 @@
         details.col-cancel .col-btn { background:transparent; border-color:#4a2a2a; color:#c47a7a; }
         details.col-cancel .col-btn:hover { border-color:#a83a3a; color:#e88a8a; }
         details.col-cancel[open] .col-btn { border-color:#a83a3a; color:#e88a8a; margin-bottom:8px; }
+        /* Tres columnas: estadía | dinero y pagos | consumo */
+        .page-inner { max-width: 1760px; padding-top:16px; padding-bottom:8px; }
+        .page-inner > .finish-blocked, .page-inner > a.finalize-btn { margin-top:12px; }
+        .page-inner > .hint { margin:6px 0 0; }
+        .page-head { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px 20px; margin-bottom:14px; }
+        .head-title { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .head-title h1 { margin:0; font-size:21px; letter-spacing:.01em; }
+        .code-inline { font-family: ui-monospace, monospace; color:#ff7918; font-size:19px; }
+        .pill-status { font-size:11px; letter-spacing:.03em; }
+        .page-head .col-actions { margin:0; justify-content:flex-end; }
+        .layout { grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1.1fr); gap:16px; }
+        .layout .card { padding:14px 18px; }
+        .layout .row { padding:6px 0; font-size:14px; }
+        @media (max-width: 1280px) { .layout { grid-template-columns: 1fr 1fr; } .layout > .col:nth-child(3) { grid-column: 1 / -1; } }
+        @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
     @include('partials.navbar')
     <div class="page-inner">
-    <h1>HH MOTEL — Reserva creada</h1>
-    <div class="code">{{ $booking->code }}</div>
-    {{-- Un solo grupo de botones -- antes estaba partido en dos filas (uno
-         acá arriba, otro repetido adentro de la columna "El dinero"), y con
-         cantidades distintas de botones por fila se veía desalineado. --}}
-    <div class="col-actions">
+    <div class="page-head">
+        <div class="head-title">
+            <h1>Reserva <span class="code-inline">{{ $booking->code }}</span></h1>
+            <span class="pill pill-status">{{ $booking->booking_status }}</span>
+            <span class="pill pill-status">{{ $booking->payment_status }}</span>
+        </div>
+        <div class="col-actions">
         <a class="col-btn" href="{{ route('bookings.pass.preview', $booking->pass_token) }}" target="_blank">Ver pase PDF</a>
         <a class="col-btn" href="{{ route('bookings.pass.pdf', $booking->pass_token) }}">Descargar pase</a>
         <a class="col-btn" href="{{ route('rooms.board') }}">← Tablero</a>
@@ -122,6 +138,7 @@
                 </form>
             </details>
         @endunless
+    </div>
     </div>
 
     @php
@@ -265,13 +282,9 @@
                 </div>
             @endif
 
-            <div class="card">
-                <div class="row"><span class="muted">Estado reserva</span><span class="pill">{{ $booking->booking_status }}</span></div>
-                <div class="row"><span class="muted">Estado pago</span><span class="pill">{{ $booking->payment_status }}</span></div>
-            </div>
         </div>
 
-        {{-- ===== Columna derecha: el dinero ===== --}}
+        {{-- ===== Columna central: el dinero y los pagos ===== --}}
         <div class="col">
             <div class="card">
                 <div class="row"><span class="muted">Precio original</span><span>${{ number_format($booking->price_original, 0, ',', '.') }}</span></div>
@@ -290,6 +303,33 @@
                 @endif
             </div>
 
+            @if ($booking->payments->isNotEmpty())
+                <div class="card">
+                    <div class="pay-title">Pagos registrados</div>
+                    @foreach ($booking->payments as $payment)
+                        <div class="pay-block">
+                            <div class="pay-head">
+                                <span class="pay-method">{{ $payment->paymentMethod->name }}</span>
+                                <span class="pay-amount">${{ number_format($payment->amount, 0, ',', '.') }}</span>
+                                <span class="pay-status">{{ $payment->status }}</span>
+                            </div>
+                            <form method="POST" action="{{ route('payments.document', $payment) }}" class="pay-docs">
+                                @csrf @method('PUT')
+                                <label>N° voucher <input name="voucher_number" value="{{ $payment->voucher_number }}" placeholder="Voucher" maxlength="30"></label>
+                                <label>N° boleta <input name="receipt_number" value="{{ $payment->receipt_number }}" placeholder="Boleta" maxlength="30"></label>
+                                <button type="submit">Guardar</button>
+                            </form>
+                        </div>
+                    @endforeach
+                    @if (! $booking->customer->documentNumber() || ! $booking->customer->nationality || $booking->customer->age() === null)
+                        <p style="margin:10px 0 0;font-size:12.5px;color:#e8c76f;">Faltan datos del cliente (RUT/documento, nacionalidad o edad). <a href="{{ route('admin.customers.show', $booking->customer) }}" style="color:#ff7918;">Completar en su ficha →</a></p>
+                    @endif
+                </div>
+            @endif
+        </div>
+
+        {{-- ===== Columna derecha: consumo y extras ===== --}}
+        <div class="col">
             @php $consumo = $booking->addonsByPaymentStatus(); @endphp
 
             <div class="card" id="consumo">
@@ -359,30 +399,6 @@
                     </form>
                 @endunless
             </div>
-
-            @if ($booking->payments->isNotEmpty())
-                <div class="card">
-                    <div class="pay-title">Pagos registrados</div>
-                    @foreach ($booking->payments as $payment)
-                        <div class="pay-block">
-                            <div class="pay-head">
-                                <span class="pay-method">{{ $payment->paymentMethod->name }}</span>
-                                <span class="pay-amount">${{ number_format($payment->amount, 0, ',', '.') }}</span>
-                                <span class="pay-status">{{ $payment->status }}</span>
-                            </div>
-                            <form method="POST" action="{{ route('payments.document', $payment) }}" class="pay-docs">
-                                @csrf @method('PUT')
-                                <label>N° voucher <input name="voucher_number" value="{{ $payment->voucher_number }}" placeholder="Voucher" maxlength="30"></label>
-                                <label>N° boleta <input name="receipt_number" value="{{ $payment->receipt_number }}" placeholder="Boleta" maxlength="30"></label>
-                                <button type="submit">Guardar</button>
-                            </form>
-                        </div>
-                    @endforeach
-                    @if (! $booking->customer->documentNumber() || ! $booking->customer->nationality || $booking->customer->age() === null)
-                        <p style="margin:10px 0 0;font-size:12.5px;color:#e8c76f;">Faltan datos del cliente (RUT/documento, nacionalidad o edad). <a href="{{ route('admin.customers.show', $booking->customer) }}" style="color:#ff7918;">Completar en su ficha →</a></p>
-                    @endif
-                </div>
-            @endif
         </div>
     </div>
 
@@ -420,8 +436,6 @@
     @endif
 
 
-    <a class="board-btn" href="{{ route('rooms.board') }}">← Volver al tablero</a>
-    <a class="back" href="{{ route('reservations.create') }}">+ Nueva reserva</a>
     </div>
     <script>
         // Deja constancia de que recepción ya le mandó los datos de pago al
