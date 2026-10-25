@@ -31,6 +31,10 @@
              no conoce estas clases nuevas, así que hay que definirlas ya en
              el tono claro de una vez, no en el oscuro que "parece" el resto
              de este <style>. --}}
+        .pending-row-wrap.no-pending { justify-content:flex-end; margin-bottom:12px; }
+        .pending-row-wrap.no-pending .scan-bridge { flex-direction:row-reverse; gap:10px; padding:6px 12px; }
+        .pending-row-wrap.no-pending .scan-bridge img { width:56px; height:56px; }
+        .pending-row-wrap.no-pending .scan-bridge .label { text-align:right; }
         .pending-row-wrap { display:flex; align-items:stretch; gap:16px; margin-bottom: 26px; }
         .pending-panel { flex:1; min-width:0; background:#fff; border:1px solid #f0d9b8; border-left:4px solid #e8a23f; border-radius:11px; padding:16px 18px; box-shadow: 0 3px 10px #1011120b; }
         .pending-head { display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
@@ -318,7 +322,9 @@
          de administración (Categorías) -- no es responsabilidad de quien
          está en el tablero prender o apagar disponibilidad. --}}
 
-    <div class="pending-row-wrap">
+    <div class="pending-row-wrap {{ $pendingBookings->isEmpty() ? 'no-pending' : '' }}">
+    {{-- Sin pendientes no se muestra el panel: solo aparece cuando hay algo por gestionar. --}}
+    @if ($pendingBookings->isNotEmpty())
     <div class="pending-panel">
         <div class="pending-head"><h2>⚠ Pendientes de gestionar</h2><span class="count">{{ $pendingBookings->count() }}</span></div>
         @if ($pendingBookings->isEmpty())
@@ -340,6 +346,7 @@
             @endforeach
         @endif
     </div>
+    @endif
 
     {{-- Puente PC → celular: la cámara para escanear el pase de un huésped
          está en el celular, no en este monitor -- recepción escanea este QR
