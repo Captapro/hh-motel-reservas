@@ -44,10 +44,8 @@
         @media (max-width:1200px) { .cols-3, .cols-4 { grid-template-columns:repeat(2, minmax(0,1fr)); } }
         @media (max-width:820px) { .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } }
         .cols > .card { margin-bottom:0; }
-        .masonry { column-count:3; column-gap:16px; }
-        .masonry > .card { break-inside:avoid; margin-bottom:14px; }
-        @media (max-width:1200px) { .masonry { column-count:2; } }
-        @media (max-width:820px) { .masonry { column-count:1; } }
+        .stack { display:flex; flex-direction:column; gap:14px; min-width:0; }
+        .stack > .card { margin-bottom:0; }
         .cols-h { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:8px; }
         .cols-h h2 { margin:0; }
         .tbl-compact td { font-size:13.5px; }
