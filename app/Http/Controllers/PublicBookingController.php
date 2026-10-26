@@ -20,6 +20,7 @@ use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
+use App\Services\Payments\MercadoPagoClient;
 use App\Services\Pricing\RateRuleResolver;
 use App\Support\Phone;
 use Carbon\Carbon;
@@ -276,6 +277,7 @@ class PublicBookingController extends Controller
             'qrDataUri' => $qr->getDataUri(),
             'passUrl' => route('bookings.pass.pdf', $booking->pass_token),
             'pay' => config('services.hh_payment'),
+            'mpEnabled' => app(MercadoPagoClient::class)->enabled(),
         ]);
     }
 

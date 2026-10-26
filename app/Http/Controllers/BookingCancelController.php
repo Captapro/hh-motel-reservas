@@ -43,7 +43,9 @@ class BookingCancelController extends Controller
 
             AuditLog::record(auth()->id(), 'reserva.cancelar', 'Booking', $booking->id, $old, $booking->fresh()->only(['booking_status', 'notes']));
 
-            return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva cancelada.');
+            $paid = $booking->paidAmount();
+
+            return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva cancelada.'.($paid > 0 ? ' Tiene $'.number_format($paid, 0, ',', '.').' pagados: si corresponde devolverlos, usa "Devolver este pago" en Pagos registrados.' : ''));
         }, 3);
     }
 }

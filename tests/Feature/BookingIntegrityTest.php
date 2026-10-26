@@ -29,6 +29,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -63,6 +64,7 @@ class BookingIntegrityTest extends TestCase
             '2026_08_18_120014_create_booking_addons_table.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
+            '2026_08_18_120017_create_refunds_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
             '2026_08_19_090001_create_products_table.php',
             '2026_08_19_090002_add_product_id_to_booking_addons_table.php',
@@ -182,6 +184,100 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('Presencial', $walkIn->fresh()->originLabel());
         $this->assertSame('Reserva en línea', $online->fresh()->originLabel());
         $this->assertSame('Reserva asistida', $team->fresh()->originLabel());
+    }
+
+    private function mpWebhook(string $paymentId, string $secret = 'sekret', ?string $signature = null)
+    {
+        $ts = '1700000000';
+        $manifest = 'id:'.strtolower($paymentId).';request-id:req-1;ts:'.$ts.';';
+        $v1 = $signature ?? hash_hmac('sha256', $manifest, $secret);
+
+        return $this->postJson('/webhooks/mercadopago?data.id='.$paymentId.'&type=payment', ['type' => 'payment', 'data' => ['id' => $paymentId]], [
+            'x-signature' => 'ts='.$ts.',v1='.$v1, 'x-request-id' => 'req-1',
+        ]);
+    }
+
+    public function test_mercado_pago_webhook_confirms_the_booking_once_and_rejects_bad_signatures(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token', 'services.mercadopago.webhook_secret' => 'sekret']);
+        PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago', 'requires_external_id' => true]);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking->update(['expires_at' => now()->addMinutes(10)]);
+        Http::fake(['api.mercadopago.com/v1/payments/777' => Http::response([
+            'id' => 777, 'status' => 'approved', 'external_reference' => $booking->code, 'transaction_amount' => 20000.0, 'payment_type_id' => 'credit_card',
+        ])]);
+
+        $this->mpWebhook('777', signature: 'firma-falsa')->assertStatus(401);
+        $this->assertSame(0, $booking->payments()->count());
+
+        $this->mpWebhook('777')->assertOk();
+        $this->mpWebhook('777')->assertOk();   // aviso repetido: no duplica el pago
+
+        $booking->refresh();
+        $this->assertSame(1, $booking->payments()->count());
+        $this->assertSame('MP-777', $booking->payments()->first()->external_id);
+        $this->assertSame(20000, $booking->paidAmount());
+        $this->assertSame('CONFIRMADA', $booking->booking_status);
+        $this->assertNull($booking->expires_at);
+    }
+
+    public function test_mercado_pago_payment_after_the_hold_expired_is_recorded_and_flagged(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token', 'services.mercadopago.webhook_secret' => 'sekret']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking->update(['booking_status' => 'EXPIRADA']);
+        Http::fake(['api.mercadopago.com/v1/payments/888' => Http::response([
+            'id' => 888, 'status' => 'approved', 'external_reference' => $booking->code, 'transaction_amount' => 20000,
+        ])]);
+
+        $this->mpWebhook('888')->assertOk()->assertJsonPath('result', 'registrado_revisar');
+
+        $booking->refresh();
+        $this->assertSame(20000, $booking->paidAmount());
+        $this->assertSame('EXPIRADA', $booking->booking_status);
+        $this->assertStringContainsString('Pago de Mercado Pago recibido', (string) $booking->notes);
+    }
+
+    public function test_pay_now_opens_the_mercado_pago_checkout_for_the_full_balance(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        Http::fake(['api.mercadopago.com/checkout/preferences' => Http::response(['init_point' => 'https://www.mercadopago.cl/checkout/v1/redirect?pref_id=abc'])]);
+
+        $this->get(route('catalog.pay', $booking->pass_token))->assertRedirect('https://www.mercadopago.cl/checkout/v1/redirect?pref_id=abc');
+
+        Http::assertSent(fn ($request) => $request['external_reference'] === $booking->code
+            && (int) $request['items'][0]['unit_price'] === 20000 && $request['items'][0]['currency_id'] === 'CLP');
+    }
+
+    public function test_refund_marks_the_payment_returned_and_the_caja_stops_counting_it(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $payment = app(PaymentService::class)->register($booking, $method, 20000, null, null, auth()->id(), null, '123');
+
+        $this->post(route('payments.refund', ['code' => $booking->code, 'payment' => $payment]), [])->assertSessionHasErrors('reason');
+        $this->post(route('payments.refund', ['code' => $booking->code, 'payment' => $payment]), ['reason' => 'Cliente canceló'])->assertSessionHasNoErrors();
+
+        $this->assertSame('reembolsado', $payment->fresh()->status);
+        $this->assertSame(0, $booking->fresh()->paidAmount());
+        $this->assertSame('NO_PAGADA', $booking->fresh()->payment_status);
+        $this->assertDatabaseHas('refunds', ['payment_id' => $payment->id, 'amount' => 20000, 'status' => 'procesado', 'reason' => 'Cliente canceló']);
+    }
+
+    public function test_online_payment_is_refunded_through_mercado_pago(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $method = PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $payment = app(PaymentService::class)->register($booking, $method, 20000, 'MP-555', null, auth()->id());
+        Http::fake(['api.mercadopago.com/v1/payments/555/refunds' => Http::response(['id' => 1, 'status' => 'approved'])]);
+
+        $this->post(route('payments.refund', ['code' => $booking->code, 'payment' => $payment]), ['reason' => 'Pagó dos veces'])->assertSessionHasNoErrors();
+
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/v1/payments/555/refunds'));
+        $this->assertSame('reembolsado', $payment->fresh()->status);
     }
 
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void

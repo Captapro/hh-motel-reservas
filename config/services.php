@@ -42,6 +42,13 @@ return [
     // Cuenta/subcuenta de GoHighLevel de HH Motel -- Private Integration
     // Token (no OAuth), generado en Configuración → Integraciones privadas
     // de esa subcuenta puntual, con permisos de contactos y tags.
+    // Mercado Pago (cobro en línea). Las claves van en variables de entorno de Render,
+    // nunca en el código: MERCADOPAGO_ACCESS_TOKEN y MERCADOPAGO_WEBHOOK_SECRET.
+    'mercadopago' => [
+        'access_token' => env('MERCADOPAGO_ACCESS_TOKEN'),
+        'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET'),
+    ],
+
     'ghl' => [
         'private_token' => env('GHL_PRIVATE_TOKEN'),
         'location_id' => env('GHL_LOCATION_ID'),

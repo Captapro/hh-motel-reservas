@@ -374,6 +374,13 @@
                 <div class="row total balance"><span>Saldo</span><span>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</span></div>
                 @if ($booking->balanceDue() > 0)
                     <a class="pay-btn pay-btn-inline" href="{{ route('payments.create', ['code' => $booking->code, 'after' => 'board']) }}">Registrar pago (abono o total) →</a>
+                    @if (app(\App\Services\Payments\MercadoPagoClient::class)->enabled() && in_array($booking->booking_status, ['PENDIENTE_PAGO', 'CONFIRMADA'], true))
+                        <div style="margin-top:12px;">
+                            <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Link de pago en línea (Mercado Pago)</div>
+                            <input type="text" readonly value="{{ route('catalog.pay', $booking->pass_token) }}" onclick="this.select()" style="width:100%;font-size:12px;">
+                            <div style="font-size:11.5px;color:#888;margin-top:4px;">Mándalo al cliente: paga el saldo y la reserva se confirma sola.</div>
+                        </div>
+                    @endif
                 @endif
             </div>
 
@@ -395,6 +402,16 @@
                                     @if (filled($payment->receipt_number))<span>Boleta <b>{{ $payment->receipt_number }}</b></span>@endif
                                     <button type="button" class="pay-doc-edit" onclick="this.closest('.pay-block').querySelector('.pay-docs').hidden = false; this.hidden = true;">✎ Corregir</button>
                                 </div>
+                            @endif
+                            @if ($payment->status === 'aprobado' && auth()->user()?->isAdministrador())
+                                <details class="pay-refund" style="margin-top:8px;">
+                                    <summary style="cursor:pointer;color:#c47a7a;font-size:12.5px;">Devolver este pago</summary>
+                                    <form method="POST" action="{{ route('payments.refund', ['code' => $booking->code, 'payment' => $payment]) }}" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;" onsubmit="return confirm('¿Devolver ${{ number_format($payment->amount, 0, ',', '.') }} a este cliente? {{ str_starts_with((string) $payment->external_id, 'MP-') ? 'Se le devolverá por Mercado Pago.' : 'Tendrás que devolver el dinero por fuera del sistema.' }}');">
+                                        @csrf
+                                        <input name="reason" required maxlength="255" placeholder="Motivo de la devolución" style="flex:1;min-width:160px;">
+                                        <button type="submit" style="background:#7a2d2d;color:#fff;border:none;border-radius:7px;padding:8px 14px;font-weight:600;cursor:pointer;">Devolver</button>
+                                    </form>
+                                </details>
                             @endif
                             <form method="POST" action="{{ route('payments.document', $payment) }}" class="pay-docs" @if ($hasDoc) hidden @endif>
                                 @csrf @method('PUT')

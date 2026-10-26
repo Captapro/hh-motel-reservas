@@ -93,8 +93,26 @@
             <a class="pass" href="{{ $passUrl }}">Descargar mi pase (PDF) ↓</a>
         </div>
 
-        @php $hasBank = ! empty($pay['bank_titular']) && ! empty($pay['bank_account_number']); @endphp
-        @if ($hasBank || ! empty($pay['mercadopago_link']))
+        @php
+            $hasBank = ! empty($pay['bank_titular']) && ! empty($pay['bank_account_number']);
+            $canPayOnline = $mpEnabled && in_array($booking->booking_status, ['PENDIENTE_PAGO', 'CONFIRMADA'], true) && $booking->balanceDue() > 0;
+            // Volvió de Mercado Pago pero el aviso todavía no llegó: se refresca solo unos segundos.
+            $waitingMp = request('mp') === 'ok' && $booking->booking_status === 'PENDIENTE_PAGO';
+        @endphp
+        @if ($waitingMp)
+            <div class="next-steps" style="background:#12293a; border-color:#243a4c; color:#9edaff;">⏳ Estamos confirmando tu pago con Mercado Pago. Esta página se actualiza sola.</div>
+            <meta http-equiv="refresh" content="4">
+        @elseif (request('mp') === 'fallo')
+            <div class="next-steps" style="background:#3a1c1c; border-color:#7a2d2d; color:#f3b8b8;">El pago no se completó. Puedes intentarlo de nuevo o pagar por transferencia.</div>
+        @endif
+        @if ($canPayOnline)
+            <div class="pay-box">
+                <strong>Paga ahora y confirma tu reserva — ${{ number_format($booking->balanceDue(), 0, ',', '.') }}</strong>
+                <a class="mp" href="{{ route('catalog.pay', $booking->pass_token) }}">Pagar con Mercado Pago →</a>
+                <small>Pago seguro en Mercado Pago. Apenas se aprueba, tu reserva queda confirmada.</small>
+            </div>
+        @endif
+        @if (! $canPayOnline && ($hasBank || ! empty($pay['mercadopago_link'])))
             <div class="pay-box">
                 <strong>Para asegurar tu reserva — ${{ number_format($booking->balanceDue(), 0, ',', '.') }}</strong>
                 @if ($hasBank)

@@ -33,6 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // mitad de sesión pierde el acceso en el siguiente click, sin
         // depender de que cada grupo de rutas la incluya a mano.
         $middleware->web(append: [EnsureUserIsActive::class]);
+
+        // Mercado Pago avisa los pagos con un POST sin sesión ni token CSRF;
+        // se valida con la firma del aviso (MercadoPagoController::webhook).
+        $middleware->validateCsrfTokens(except: ['webhooks/mercadopago']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

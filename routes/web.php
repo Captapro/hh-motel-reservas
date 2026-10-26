@@ -47,6 +47,8 @@ use App\Http\Controllers\ReservationSearchController;
 use App\Http\Controllers\RoomBoardController;
 use App\Http\Controllers\RoomInspectionController;
 use App\Http\Controllers\RoomQrController;
+use App\Http\Controllers\MercadoPagoController;
+use App\Http\Controllers\PaymentRefundController;
 use App\Http\Controllers\SaleDetailController;
 use App\Http\Controllers\ShiftRoundController;
 use Illuminate\Support\Facades\Route;
@@ -66,6 +68,8 @@ Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->mi
 // pass_token, no code -- el código es secuencial por día (fácil de
 // adivinar) y esta página muestra habitación, fecha, consumo y saldo sin
 // pedir sesión.
+Route::get('/catalogo/pagar/{token}', [MercadoPagoController::class, 'pay'])->middleware('throttle:10,1')->name('catalog.pay');
+Route::post('/webhooks/mercadopago', [MercadoPagoController::class, 'webhook'])->middleware('throttle:120,1')->name('webhooks.mercadopago');
 Route::get('/catalogo/reservado/{token}', [PublicBookingController::class, 'booked'])->name('catalog.booked');
 // El pase PDF se manda directo al cliente por WhatsApp (ver el botón de
 // "instrucciones de pago" en reservations/show) -- tiene que poder abrirlo
@@ -117,6 +121,7 @@ Route::middleware(['auth', 'section'])->group(function () {
 
     Route::get('/ventas/reserva/{code}', [SaleDetailController::class, 'show'])->name('sales.detail');
     Route::get('/ventas/{date?}', [DailySalesController::class, 'show'])->name('sales.daily');
+    Route::post('/reservas/{code}/pagos/{payment}/devolver', [PaymentRefundController::class, 'store'])->middleware('role:administrador')->name('payments.refund');
     Route::put('/pagos/{payment}/documento', [PaymentDocumentController::class, 'update'])->name('payments.document');
     Route::get('/resumen-mensual/{month?}', [MonthlySalesController::class, 'show'])->name('sales.monthly');
     Route::get('/caja/{date?}', [CashRegisterController::class, 'show'])->name('cash.show');
