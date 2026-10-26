@@ -12,6 +12,27 @@
 .calendar-split .calendar-card.upcoming h2{color:#1c9169}
 .calendar-split .calendar-card.past h2{color:#888}
 .soon-stats{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.soon-stats span{background:#fff4ea;border:1px solid #ffd5b0;color:#9a4a00;border-radius:20px;padding:5px 12px;font-size:12px}.soon-stats b{font-size:15px;color:#c2410c;margin-right:3px}.soon-day{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;background:#f4f4f2;border-radius:6px;padding:5px 9px;margin:12px 0 2px}.soon-day:first-of-type{margin-top:4px}.calendar-split .calendar-card.upcoming h2{color:#c2410c}
+
+/* ===== Versión comprimida: menos aire, más calendario en pantalla ===== */
+.calendar-page{padding-top:14px}
+.calendar-head,.calendar-toolbar{gap:12px;margin-bottom:10px}
+.calendar-head h1{font-size:20px;margin-bottom:0}.calendar-head .sub{margin:2px 0 0;font-size:12.5px}
+.calendar-search input{padding:7px 10px;min-width:220px}.calendar-search button{padding:7px 14px}
+.calendar-toolbar,.calendar-card{padding:10px 12px;border-radius:12px}
+.calendar-views a,.calendar-nav a{padding:6px 13px}.calendar-nav{gap:10px}.calendar-nav a{font-size:20px;line-height:1;padding:5px 12px}
+.weekdays,.month-grid{gap:5px}.weekdays{margin-bottom:5px}
+.day-cell{min-height:92px;padding:6px 7px;border-radius:8px}
+.day-create{min-width:20px;height:20px;font-size:12.5px}.today-tag{font-size:8.5px;padding:2px 6px}
+.event{padding:3px 5px;margin-top:4px;font-size:11px;line-height:1.3}
+.day-cell small{margin-top:4px;font-size:11px}
+.booking-row{padding:8px 6px;gap:12px}
+.booking-time span,.booking-row small{margin-top:1px;font-size:11.5px}
+.calendar-split{gap:12px;margin-top:12px}.calendar-history{margin-top:12px;max-height:340px}
+.calendar-history h2{margin-bottom:6px}
+.soon-stats{margin-bottom:6px}.soon-stats span{padding:3px 10px;font-size:11.5px}.soon-stats b{font-size:13.5px}
+.soon-day{margin:8px 0 0;padding:3px 8px}
+.empty{padding:14px 8px;font-size:13.5px}
+@media(max-width:700px){.day-cell{min-height:74px;padding:4px}.event{font-size:9.5px;padding:2px 3px;margin-top:3px}}
 </style>
 </head><body>
 @include('partials.navbar')
