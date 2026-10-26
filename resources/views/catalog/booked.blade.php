@@ -76,7 +76,11 @@
             <div class="row"><span class="muted">Estado</span><span class="status-badge">{{ $expired ? 'Vencida' : ($confirmed ? 'Confirmada' : 'Pendiente de pago') }}</span></div>
             <div class="row"><span class="muted">Habitación</span><span>{{ $booking->room->name }} · {{ $booking->room->category->name }}</span></div>
             <div class="row"><span class="muted">Fecha</span><span>{{ $booking->starts_at->timezone('America/Santiago')->locale('es')->isoFormat('D [de] MMMM, HH:mm') }}</span></div>
-            <div class="row"><span class="muted">Duración</span><span>{{ $booking->duration_minutes >= 60 ? intdiv($booking->duration_minutes, 60).' h' : $booking->duration_minutes.' min' }}</span></div>
+            @if ($booking->short_stay)
+                <div class="row"><span class="muted">Salida</span><span>{{ $booking->ends_at->timezone('America/Santiago')->format('H:i') }} (hora de cierre · estadía corta)</span></div>
+            @else
+                <div class="row"><span class="muted">Duración</span><span>{{ $booking->duration_minutes >= 60 ? intdiv($booking->duration_minutes, 60).' h' : $booking->duration_minutes.' min' }}</span></div>
+            @endif
             @if ($booking->discount_amount > 0)
                 <div class="row discount-row"><span class="muted">Descuento aplicado{{ $booking->coupon_code_snapshot ? ' ('.$booking->coupon_code_snapshot.')' : '' }}</span><span>-${{ number_format($booking->discount_amount, 0, ',', '.') }}</span></div>
             @endif

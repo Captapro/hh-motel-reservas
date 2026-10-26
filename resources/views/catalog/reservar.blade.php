@@ -75,6 +75,11 @@
         .avail-status.checking { background:#242527; color:#c1c3c7; }
         .avail-status.ok { background:#1c2f1c; border:1px solid #2e5a2e; color:#8fe0ad; }
         .avail-status.no { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; }
+        .avail-status.short { background:#2e2410; border:1px solid #c98a1b; color:#f3d9a4; display:block; line-height:1.45; }
+        .avail-status.short b { color:#fff; }
+        .short-accept { display:flex; gap:9px; align-items:center; margin-top:8px; padding:10px 12px; border-radius:8px; border:1px solid #c98a1b; color:#fff; font-weight:650; font-size:13.5px; cursor:pointer; }
+        .short-accept[hidden] { display:none; }
+        .short-accept input { width:18px; height:18px; flex:none; }
         .avail-status .spin { width:11px; height:11px; border-radius:50%; border:2px solid currentColor; border-top-color:transparent; animation:hh-spin .7s linear infinite; flex:none; }
         @keyframes hh-spin { to { transform:rotate(360deg); } }
         .extras { margin-top:22px; padding-top:4px; }
@@ -153,6 +158,10 @@
             <label for="duration_minutes">¿Cuánto tiempo quieres quedarte?</label>
             <select id="duration_minutes" name="duration_minutes" required></select>
             <div class="avail-status" id="avail-status" aria-live="polite"></div>
+            <label class="short-accept" id="short-accept" hidden>
+                <input type="checkbox" name="short_stay_accept" value="1" id="short-accept-input" @checked(old('short_stay_accept'))>
+                <span id="short-accept-text">Acepto salir a la hora de cierre</span>
+            </label>
 
             <label for="guests_count">Cantidad de personas</label>
             <div class="people-stepper" id="people-stepper">
@@ -351,6 +360,7 @@
             clearTimeout(hhAvailTimer);
             if (!catId || !date || !duration || timeHour === '' || timeMinute === '') {
                 status.classList.remove('show');
+                hhShortStay(null);
                 return;
             }
             const mySeq = ++hhAvailSeq;
@@ -367,7 +377,15 @@
                     .then((r) => r.ok ? r.json() : Promise.reject())
                     .then((data) => {
                         if (mySeq !== hhAvailSeq) return;
-                        if (data.available) {
+                        hhShortStay(data.available ? data.short_stay : null);
+                        if (data.available && data.short_stay) {
+                            // Cerca del cierre: se vende hasta la hora de cierre, con precio menor.
+                            const ss = data.short_stay;
+                            const fmt = (n) => '$' + Number(n).toLocaleString('es-CL');
+                            status.className = 'avail-status show short';
+                            status.innerHTML = '⏱ <b>Estadía corta por cierre.</b> A esa hora quedan ' + ss.minutes_label + ' para el cierre: '
+                                + 'sales a las <b>' + ss.closes_at + '</b> y pagas <b>' + fmt(ss.price) + '</b> en vez de ' + fmt(ss.full_price) + '.';
+                        } else if (data.available) {
                             status.className = 'avail-status show ok';
                             status.textContent = '✓ Hay disponibilidad para ese horario';
                         } else {
@@ -379,6 +397,19 @@
             }, 450);
         }
 
+        // Muestra (y exige) la casilla "Acepto salir a las HH:MM" solo cuando aplica.
+        var hhShortClose = null;
+        function hhShortStay(ss) {
+            const box = document.getElementById('short-accept');
+            const input = document.getElementById('short-accept-input');
+            hhShortClose = ss ? ss.closes_at : null;
+            box.hidden = !ss;
+            input.required = !!ss;
+            if (ss) document.getElementById('short-accept-text').textContent = 'Acepto salir a las ' + ss.closes_at + ' (hora de cierre)';
+            else input.checked = false;
+            hhUpdateSummary();
+        }
+
         function hhUpdateSummary() {
             const cat = document.getElementById('room_category_id');
             const date = document.getElementById('date').value;
@@ -387,7 +418,7 @@
             const summary = document.getElementById('booking-summary');
             if (!cat.value || !date || !time || !duration) return;
             const formatted = new Date(date + 'T12:00:00').toLocaleDateString('es-CL', {day:'2-digit', month:'2-digit', year:'numeric'});
-            summary.innerHTML = `<strong>${cat.selectedOptions[0].textContent} · ${duration}</strong><small>${formatted} a las ${time} · disponibilidad se confirma al enviar</small>`;
+            summary.innerHTML = `<strong>${cat.selectedOptions[0].textContent} · ${duration}</strong><small>${formatted} a las ${time}${hhShortClose ? ' · salida a las ' + hhShortClose : ''} · disponibilidad se confirma al enviar</small>`;
         }
 
         function hhUpdateExtrasTotal() {

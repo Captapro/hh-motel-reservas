@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\RateRuleController;
 use App\Http\Controllers\Admin\RoomCategoryController;
 use App\Http\Controllers\Admin\RoomController as AdminRoomController;
 use App\Http\Controllers\Admin\ShiftController;
+use App\Http\Controllers\Admin\ShortStaySettingController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Admin\UpsellController;
 use App\Http\Controllers\AseoSummaryController;
@@ -216,6 +217,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::put('/upsells/{upsell}', [UpsellController::class, 'update'])->name('upsells.update');
         Route::post('/upsells/{upsell}/toggle', [UpsellController::class, 'toggle'])->name('upsells.toggle');
         Route::delete('/upsells/{upsell}', [UpsellController::class, 'destroy'])->name('upsells.destroy');
+
+        Route::get('/estadia-corta', [ShortStaySettingController::class, 'edit'])->name('short_stay.edit');
+        Route::put('/estadia-corta', [ShortStaySettingController::class, 'update'])->name('short_stay.update');
 
         Route::get('/cupones', [CouponController::class, 'index'])->name('coupons.index');
         Route::get('/cupones/crear', [CouponController::class, 'create'])->name('coupons.create');

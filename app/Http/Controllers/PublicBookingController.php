@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\RateRulePrice;
 use App\Models\Room;
 use App\Models\RoomCategory;
+use App\Models\ShortStaySetting;
 use App\Models\UpsellOffer;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
@@ -23,7 +24,9 @@ use App\Services\Booking\ConsumptionService;
 use App\Services\Payments\MercadoPagoClient;
 use App\Services\Payments\MercadoPagoPayments;
 use App\Services\Pricing\RateRuleResolver;
+use App\Services\Pricing\ShortStayPricer;
 use App\Support\Phone;
+use App\Support\TimeFormat;
 use Carbon\Carbon;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
@@ -89,7 +92,7 @@ class PublicBookingController extends Controller
         ]);
     }
 
-    public function store(Request $request, BookingService $bookingService, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
+    public function store(Request $request, BookingService $bookingService, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules, ShortStayPricer $shortStays): RedirectResponse
     {
         // "00" con cero a la izquierda no pasa la regla integer de Laravel
         // (FILTER_VALIDATE_INT la rechaza), y una hora en punto siempre manda "00".
@@ -118,6 +121,7 @@ class PublicBookingController extends Controller
             'combo_quantities.*' => ['nullable', 'integer', 'min:0', 'max:5'],
             'accepted_upsells' => ['nullable', 'array'],
             'accepted_upsells.*' => ['integer', 'exists:upsell_offers,id'],
+            'short_stay_accept' => ['nullable', 'boolean'],
             // Campo trampa para bots -- invisible para una persona real
             // (oculto por CSS), un bot que autocompleta todo lo llena.
             'website' => ['prohibited'],
@@ -150,7 +154,17 @@ class PublicBookingController extends Controller
                 }
             }
 
-            $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules);
+            // Estadía corta por cierre: sale a la hora de cierre y el cliente
+            // tiene que aceptarlo explícitamente en el formulario.
+            $short = $shortStays->quoteForCategory((int) $validated['room_category_id'], $startsAt, (int) $validated['duration_minutes'], 'catalogo');
+            if ($short) {
+                $endsAt = $short['closes_at']->copy();
+                if (empty($validated['short_stay_accept'])) {
+                    return back()->withInput()->withErrors(['duration_minutes' => 'A esa hora queda poco para el cierre: la estadía termina a las '.$short['closes_at']->copy()->timezone('America/Santiago')->format('H:i').'. Marca que aceptas salir a esa hora para continuar.']);
+                }
+            }
+
+            $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules, $short);
 
             if (! $room) {
                 return back()->withInput()->withErrors(['duration_minutes' => 'No hay habitaciones libres de ese tipo para ese horario — prueba otra fecha, hora o duración.']);
@@ -185,6 +199,7 @@ class PublicBookingController extends Controller
                     'coupon_code' => $validated['coupon_code'] ?? null,
                     'deposit_amount' => 0,
                     'hold_minutes' => Booking::HOLD_MINUTES,
+                    'short_stay' => (bool) $short,
                     'created_by' => null,
                     'verified_by' => null,
                     'notes' => 'Reserva online desde el catálogo público.',
@@ -314,7 +329,7 @@ class PublicBookingController extends Controller
      * "disponible" acá nunca contradice el resultado real del envío (salvo
      * que otra reserva tome el horario justo entre medio).
      */
-    public function checkAvailability(Request $request, AvailabilityChecker $availability, RateRuleResolver $rateRules): JsonResponse
+    public function checkAvailability(Request $request, AvailabilityChecker $availability, RateRuleResolver $rateRules, ShortStayPricer $shortStays): JsonResponse
     {
         $validated = $request->validate([
             'room_category_id' => ['required', 'exists:room_categories,id'],
@@ -332,9 +347,22 @@ class PublicBookingController extends Controller
             return response()->json(['available' => false]);
         }
 
-        $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules);
+        $short = $shortStays->quoteForCategory((int) $validated['room_category_id'], $startsAt, (int) $validated['duration_minutes'], 'catalogo');
+        if ($short) {
+            $endsAt = $short['closes_at']->copy();
+        }
 
-        return response()->json(['available' => (bool) $room]);
+        $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules, $short);
+
+        return response()->json([
+            'available' => (bool) $room,
+            'short_stay' => $short ? [
+                'closes_at' => $short['closes_at']->copy()->timezone('America/Santiago')->format('H:i'),
+                'minutes_label' => TimeFormat::minutes($short['minutes']),
+                'price' => $short['price'],
+                'full_price' => $short['full_price'],
+            ] : null,
+        ]);
     }
 
     /**
@@ -342,7 +370,7 @@ class PublicBookingController extends Controller
      * del horario de alguna tarifa vigente (no todas las del reloj). Se calcula con la misma
      * regla que usa la reserva, con la duración más corta que se vende, y se guarda unos minutos.
      */
-    public function times(Request $request, RateRuleResolver $rateRules): JsonResponse
+    public function times(Request $request, RateRuleResolver $rateRules, ShortStayPricer $shortStays): JsonResponse
     {
         $validated = $request->validate([
             'date' => ['required', 'date', 'after_or_equal:today'],
@@ -356,12 +384,18 @@ class PublicBookingController extends Controller
             return response()->json(['times' => []]);
         }
 
-        $times = Cache::remember("catalog-times:{$date}:{$category}:{$minDuration}", 300, function () use ($date, $category, $minDuration, $rateRules) {
+        // La versión de las reglas de estadía corta entra en la llave: al
+        // cambiarlas en Administración, el catálogo no sigue con horas viejas.
+        $shortVersion = md5(json_encode(ShortStaySetting::current()->only(['enabled', 'catalog_enabled', 'min_minutes', 'max_minutes'])));
+        $times = Cache::remember("catalog-times:{$date}:{$category}:{$minDuration}:{$shortVersion}", 300, function () use ($date, $category, $minDuration, $rateRules, $shortStays) {
             $valid = [];
             for ($minute = 0; $minute < 24 * 60; $minute += 15) {
                 $start = Carbon::parse($date)->addMinutes($minute);
                 $rate = $rateRules->resolve($start, $start->copy()->addMinutes((int) $minDuration));
                 if ($rate && $rate->prices()->where('room_category_id', $category)->where('duration_minutes', (int) $minDuration)->exists()) {
+                    $valid[] = $start->format('H:i');
+                } elseif ($shortStays->quoteForCategory($category, $start, (int) $minDuration, 'catalogo')) {
+                    // Cerca del cierre: se puede pedir como estadía corta.
                     $valid[] = $start->format('H:i');
                 }
             }
@@ -378,7 +412,7 @@ class PublicBookingController extends Controller
         return response()->json(['times' => $times]);
     }
 
-    private function findAvailableRoom(int $categoryId, ?int $roomId, Carbon $startsAt, Carbon $endsAt, AvailabilityChecker $availability, RateRuleResolver $rateRules): ?Room
+    private function findAvailableRoom(int $categoryId, ?int $roomId, Carbon $startsAt, Carbon $endsAt, AvailabilityChecker $availability, RateRuleResolver $rateRules, ?array $shortStay = null): ?Room
     {
         // Una retención vencida no debe seguir bloqueando la habitación.
         Booking::releaseExpired();
@@ -389,11 +423,13 @@ class PublicBookingController extends Controller
         // de la tarifa), el chequeo en vivo miente diciendo "disponible" y
         // el envío real rechaza con un error de tarifa que no tiene nada
         // que ver con lo que el cliente vio en pantalla.
-        $rate = $rateRules->resolve($startsAt, $endsAt);
-        if (! $rate || ! $rate->prices()
+        // La estadía corta ya se validó contra la tarifa (ShortStayPricer):
+        // termina al cierre, así que su largo no coincide con un precio.
+        $rate = $shortStay ? null : $rateRules->resolve($startsAt, $endsAt);
+        if (! $shortStay && (! $rate || ! $rate->prices()
             ->where('room_category_id', $categoryId)
             ->where('duration_minutes', (int) $startsAt->diffInMinutes($endsAt, false))
-            ->exists()) {
+            ->exists())) {
             return null;
         }
 

@@ -43,6 +43,7 @@ class ExtraHourClosingTimeTest extends TestCase
             '2026_08_18_120011_create_bookings_table.php',
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
+            '2026_10_26_210000_create_short_stay_settings_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',

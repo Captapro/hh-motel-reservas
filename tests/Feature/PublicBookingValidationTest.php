@@ -9,6 +9,7 @@ use App\Models\RateRulePrice;
 use App\Models\RateRuleWindow;
 use App\Models\Room;
 use App\Models\RoomCategory;
+use App\Models\ShortStaySetting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -49,6 +50,7 @@ class PublicBookingValidationTest extends TestCase
             '2026_08_18_120011_create_bookings_table.php',
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
+            '2026_10_26_210000_create_short_stay_settings_table.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
@@ -133,15 +135,43 @@ class PublicBookingValidationTest extends TestCase
 
     public function test_catalog_offers_only_arrival_times_inside_the_tariff_schedule(): void
     {
-        // Lunes 10:00-23:00 con precio solo a 3 h: la última llegada posible es las 20:00.
+        // Lunes 10:00-23:00 con precio solo a 3 h: sin estadía corta, la última llegada posible es las 20:00.
+        ShortStaySetting::current()->update(['enabled' => false]);
         $monday = $this->getJson('/catalogo/reservar/horarios?'.http_build_query(['date' => '2026-10-05', 'room_category_id' => $this->category->id]))->assertOk()->json('times');
         $this->assertSame('10:00', $monday[0]);
         $this->assertSame('20:00', end($monday));
         $this->assertNotContains('09:45', $monday);
         $this->assertNotContains('20:15', $monday);
 
+        // Con la estadía corta (por defecto: de 1h30 a 30 min antes del cierre) se suman 21:30 a 22:30.
+        ShortStaySetting::current()->update(['enabled' => true]);
+        $withShort = $this->getJson('/catalogo/reservar/horarios?'.http_build_query(['date' => '2026-10-05', 'room_category_id' => $this->category->id]))->assertOk()->json('times');
+        $this->assertContains('21:30', $withShort);
+        $this->assertSame('22:30', end($withShort));
+        $this->assertNotContains('21:15', $withShort);
+
         // Martes: no hay tarifa cargada, no se ofrece ninguna hora.
         $this->getJson('/catalogo/reservar/horarios?'.http_build_query(['date' => '2026-10-06', 'room_category_id' => $this->category->id]))->assertOk()->assertExactJson(['times' => []]);
+    }
+
+    public function test_catalog_short_stay_requires_accepting_the_closing_time(): void
+    {
+        // Lunes 22:00, cierre 23:00, mínimo 3 h: solo como estadía corta.
+        $late = ['time_hour' => 22, 'time_minute' => 0];
+
+        $check = $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query($this->bookingPayload($late)))->assertOk();
+        $this->assertTrue($check->json('available'));
+        $this->assertSame('23:00', $check->json('short_stay.closes_at'));
+        $this->assertSame(10000, $check->json('short_stay.price'));
+
+        $this->post('/catalogo/reservar', $this->bookingPayload($late))->assertSessionHasErrors('duration_minutes');
+        $this->assertSame(0, Booking::count());
+
+        $this->post('/catalogo/reservar', $this->bookingPayload($late + ['short_stay_accept' => 1]))->assertSessionHasNoErrors();
+        $booking = Booking::first();
+        $this->assertTrue($booking->short_stay);
+        $this->assertTrue(Carbon::parse('2026-10-05 23:00')->eq($booking->ends_at));
+        $this->assertSame(10000, (int) $booking->price_final);
     }
 
     public function test_catalog_booking_requires_a_valid_email(): void

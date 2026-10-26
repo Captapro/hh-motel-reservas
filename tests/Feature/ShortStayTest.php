@@ -9,6 +9,7 @@ use App\Models\RateRulePrice;
 use App\Models\RateRuleWindow;
 use App\Models\Room;
 use App\Models\RoomCategory;
+use App\Models\ShortStaySetting;
 use App\Services\Booking\BookingService;
 use App\Services\Pricing\ShortStayPricer;
 use Carbon\Carbon;
@@ -46,6 +47,7 @@ class ShortStayTest extends TestCase
             '2026_08_18_120011_create_bookings_table.php',
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
+            '2026_10_26_210000_create_short_stay_settings_table.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
@@ -68,6 +70,9 @@ class ShortStayTest extends TestCase
         RateRuleWindow::create(['rate_rule_id' => $rateRule->id, 'weekday' => Carbon::parse('2026-10-05')->dayOfWeek, 'start_time' => '20:00:00', 'end_time' => '03:00:00', 'wraps_midnight' => true]);
         RateRulePrice::create(['rate_rule_id' => $rateRule->id, 'room_category_id' => $category->id, 'duration_minutes' => 180, 'price' => 20000]);
         RateRulePrice::create(['rate_rule_id' => $rateRule->id, 'room_category_id' => $category->id, 'duration_minutes' => 360, 'price' => 35000]);
+
+        // Reglas amplias para estas pruebas: de 30 min a 2h30 antes del cierre, proporcional con piso 50%.
+        ShortStaySetting::current()->update(['min_minutes' => 30, 'max_minutes' => 150, 'pricing_mode' => 'proporcional', 'percent' => 50]);
     }
 
     private function create(string $startsAt, int $duration, bool $shortStay)
@@ -134,5 +139,39 @@ class ShortStayTest extends TestCase
         $this->assertFalse($booking->short_stay);
         $this->assertSame(20000, (int) $booking->price_final);
         $this->assertTrue(Carbon::parse('2026-10-06 01:00')->eq($booking->ends_at));
+    }
+
+    public function test_default_rule_only_offers_it_with_ninety_minutes_or_less(): void
+    {
+        ShortStaySetting::current()->update(['max_minutes' => 90]);
+        $pricer = app(ShortStayPricer::class);
+
+        // 01:00 -> quedan 2 h: más que la hora y media configurada.
+        $this->assertNull($pricer->quote($this->room, Carbon::parse('2026-10-06 01:00'), 180));
+        // 01:30 -> quedan 1h30 justo: se ofrece.
+        $this->assertNotNull($pricer->quote($this->room, Carbon::parse('2026-10-06 01:30'), 180));
+    }
+
+    public function test_fixed_percentage_mode(): void
+    {
+        ShortStaySetting::current()->update(['pricing_mode' => 'porcentaje', 'percent' => 60]);
+
+        $quote = app(ShortStayPricer::class)->quote($this->room, Carbon::parse('2026-10-06 02:15'), 180);
+
+        $this->assertSame(12000, $quote['price']);
+    }
+
+    public function test_channels_can_be_turned_off_separately(): void
+    {
+        $pricer = app(ShortStayPricer::class);
+        $start = Carbon::parse('2026-10-06 01:30');
+
+        ShortStaySetting::current()->update(['catalog_enabled' => false]);
+        $this->assertNull($pricer->quote($this->room, $start, 180, 'catalogo'));
+        $this->assertNotNull($pricer->quote($this->room, $start, 180, 'recepcion'));
+
+        ShortStaySetting::current()->update(['catalog_enabled' => true, 'enabled' => false]);
+        $this->assertNull($pricer->quote($this->room, $start, 180, 'catalogo'));
+        $this->assertNull($pricer->quote($this->room, $start, 180, 'recepcion'));
     }
 }
