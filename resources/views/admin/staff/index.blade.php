@@ -17,7 +17,7 @@
         {{-- ===== Cuentas de acceso ===== --}}
         <div class="card">
             <div class="cols-h"><h2>Cuentas de acceso <span class="pill">{{ $accounts->count() }}</span></h2></div>
-            <p class="sub" style="font-size:12px;"><b>Administrador</b> ve todo; <b>anfitrión</b> no entra a Administración. Las mucamas no necesitan cuenta: van en el personal para turnos.</p>
+            <p class="sub" style="font-size:12px;">Aquí se crean las cuentas de <b>Anfitrión</b>. Las <b>mucamas</b> no necesitan cuenta: se agregan en el personal (con su PIN).@if (! auth()->user()?->isSoporte()) Las cuentas de Administrador y Marketing las crea solo el Master.@endif</p>
 
             <form method="POST" action="{{ route('admin.accounts.store') }}" class="add-row" style="margin-bottom:12px;">
                 @csrf
@@ -26,9 +26,11 @@
                 <div style="flex:0 1 150px;"><label>Rol</label>
                     <select name="role" required>
                         <option value="recepcion">Anfitrión</option>
-                        <option value="administrador">Administrador</option>
-                        @if (auth()->user()?->isSoporte())<option value="soporte">Soporte (master)</option>@endif
-                        <option value="marketing">Marketing</option>
+                        @if (auth()->user()?->isSoporte())
+                            <option value="administrador">Administrador</option>
+                            <option value="soporte">Soporte (master)</option>
+                            <option value="marketing">Marketing</option>
+                        @endif
                     </select>
                 </div>
                 <button class="btn" type="submit">+ Crear</button>
@@ -44,6 +46,7 @@
                             <td>{{ ['recepcion' => 'Anfitrión', 'soporte' => 'Soporte (master)'][$account->role] ?? ucfirst($account->role) }}</td>
                             <td><span class="pill {{ $account->is_active ? '' : 'pill-bad' }}">{{ $account->is_active ? 'ACTIVA' : 'DESACTIVADA' }}</span></td>
                             <td style="text-align:right;">
+                                @if (auth()->user()?->isSoporte() || $account->role === 'recepcion' || $account->id === auth()->id())
                                 <details class="pop">
                                     <summary>Editar</summary>
                                     <div class="pop-body">
@@ -51,12 +54,19 @@
                                             @csrf @method('PUT')
                                             <div><label>Nombre</label><input name="name" value="{{ $account->name }}" maxlength="100" required></div>
                                             <div><label>Rol</label>
-                                                <select name="role">
-                                                    <option value="recepcion" @selected($account->role === 'recepcion')>Anfitrión</option>
-                                                    <option value="administrador" @selected($account->role === 'administrador')>Administrador</option>
-                                                    @if (auth()->user()?->isSoporte())<option value="soporte" @selected($account->role === 'soporte')>Soporte (master)</option>@endif
-                                                    <option value="marketing" @selected($account->role === 'marketing')>Marketing</option>
+                                                <select name="role" @disabled(! auth()->user()?->isSoporte() && $account->role !== 'recepcion')>
+                                                    @if (auth()->user()?->isSoporte() || $account->role === 'recepcion')
+                                                        <option value="recepcion" @selected($account->role === 'recepcion')>Anfitrión</option>
+                                                    @endif
+                                                    @if (auth()->user()?->isSoporte())
+                                                        <option value="administrador" @selected($account->role === 'administrador')>Administrador</option>
+                                                        <option value="soporte" @selected($account->role === 'soporte')>Soporte (master)</option>
+                                                        <option value="marketing" @selected($account->role === 'marketing')>Marketing</option>
+                                                    @elseif ($account->role !== 'recepcion')
+                                                        <option value="{{ $account->role }}" selected>{{ ucfirst($account->role) }}</option>
+                                                    @endif
                                                 </select>
+                                                @if (! auth()->user()?->isSoporte() && $account->role !== 'recepcion')<input type="hidden" name="role" value="{{ $account->role }}">@endif
                                             </div>
                                             <div class="full"><label>Email</label><input type="email" name="email" value="{{ $account->email }}" maxlength="255" required></div>
                                             <div><label>Estado</label>
@@ -80,6 +90,7 @@
                                         </div>
                                     </div>
                                 </details>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -98,10 +109,17 @@
                 @csrf
                 <div><label>Nombre</label><input name="name" maxlength="100" required placeholder="Ej. Leonardo"></div>
                 <div><label>Rol</label>
-                    <input name="role" maxlength="50" required placeholder="Anfitrión, Mucama" list="existing-roles">
-                    <datalist id="existing-roles">
-                        @foreach ($staff->pluck('role')->unique() as $role)<option value="{{ $role }}">@endforeach
-                    </datalist>
+                    @if (auth()->user()?->isSoporte())
+                        <input name="role" maxlength="50" required placeholder="Anfitrión, Mucama" list="existing-roles">
+                        <datalist id="existing-roles">
+                            @foreach ($staff->pluck('role')->unique() as $role)<option value="{{ $role }}">@endforeach
+                        </datalist>
+                    @else
+                        <select name="role" required>
+                            <option value="Mucama">Mucama</option>
+                            <option value="Anfitrión">Anfitrión</option>
+                        </select>
+                    @endif
                 </div>
                 <div style="flex:0 1 90px;"><label>PIN</label><input type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" name="pin" placeholder="1234"></div>
                 <div style="flex:0 1 90px;"><label>Hrs/sem.</label><input type="number" name="legal_hours_per_week" min="0" max="100" placeholder="45"></div>
@@ -125,7 +143,18 @@
                                         <form method="POST" action="{{ route('admin.staff.update', $person) }}" class="pop-grid">
                                             @csrf @method('PUT')
                                             <div><label>Nombre</label><input name="name" value="{{ $person->name }}" maxlength="100" required></div>
-                                            <div><label>Rol</label><input name="role" value="{{ $person->role }}" maxlength="50" required></div>
+                                            <div><label>Rol</label>
+                                                @if (auth()->user()?->isSoporte())
+                                                    <input name="role" value="{{ $person->role }}" maxlength="50" required>
+                                                @elseif (in_array($person->role, ['Mucama', 'Anfitrión'], true))
+                                                    <select name="role">
+                                                        <option value="Mucama" @selected($person->role === 'Mucama')>Mucama</option>
+                                                        <option value="Anfitrión" @selected($person->role === 'Anfitrión')>Anfitrión</option>
+                                                    </select>
+                                                @else
+                                                    <input name="role" value="{{ $person->role }}" readonly>
+                                                @endif
+                                            </div>
                                             <div><label>PIN</label><input type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" name="pin" placeholder="{{ $person->pin ? 'Vacío = no cambiar' : '4 dígitos' }}"></div>
                                             <div><label>Horas legales/semana</label><input type="number" name="legal_hours_per_week" value="{{ $person->legal_hours_per_week }}" min="0" max="100"></div>
                                             <div><label>Estado</label>

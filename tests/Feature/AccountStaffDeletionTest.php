@@ -44,9 +44,41 @@ class AccountStaffDeletionTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $reception->id]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'cuenta.eliminar', 'entity_id' => $reception->id]);
 
-        // Un segundo administrador sí se puede borrar mientras quede otro activo.
+        // Un administrador no gestiona a otro administrador: eso es del Master.
         $other = User::factory()->create(['role' => 'administrador', 'is_active' => true]);
+        $this->delete(route('admin.accounts.destroy', $other))->assertForbidden();
+        $this->assertDatabaseHas('users', ['id' => $other->id]);
+
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
         $this->delete(route('admin.accounts.destroy', $other))->assertRedirect(route('admin.staff.index'));
+        $this->assertDatabaseMissing('users', ['id' => $other->id]);
+    }
+
+    public function test_administrator_only_creates_host_accounts_and_mucama_or_host_staff(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador']);
+        $this->actingAs($admin);
+
+        foreach (['administrador', 'marketing', 'soporte'] as $role) {
+            $this->post(route('admin.accounts.store'), ['name' => 'N', 'email' => $role.'@x.cl', 'role' => $role])->assertSessionHasErrors('role');
+            $this->assertDatabaseMissing('users', ['email' => $role.'@x.cl']);
+        }
+        $this->post(route('admin.accounts.store'), ['name' => 'Camila', 'email' => 'camila@x.cl', 'role' => 'recepcion'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('users', ['email' => 'camila@x.cl', 'role' => 'recepcion']);
+
+        // No puede cambiarse el rol a sí mismo.
+        $this->put(route('admin.accounts.update', $admin), ['name' => 'A', 'email' => $admin->email, 'role' => 'soporte', 'is_active' => 1])->assertSessionHasErrors('role');
+
+        // Personal: solo Mucama o Anfitrión.
+        $this->post(route('admin.staff.store'), ['name' => 'Gerente', 'role' => 'Gerente'])->assertSessionHasErrors('role');
+        $this->post(route('admin.staff.store'), ['name' => 'Rosa', 'role' => 'Mucama', 'pin' => '1234'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('staff', ['name' => 'Rosa', 'role' => 'Mucama']);
+
+        // El Master sí puede todo.
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+        $this->post(route('admin.accounts.store'), ['name' => 'Mar', 'email' => 'mar@x.cl', 'role' => 'marketing'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('users', ['email' => 'mar@x.cl', 'role' => 'marketing']);
+        $this->post(route('admin.staff.store'), ['name' => 'Jefe', 'role' => 'Gerente'])->assertSessionHasNoErrors();
     }
 
     public function test_administrators_cannot_see_touch_or_create_soporte_accounts(): void

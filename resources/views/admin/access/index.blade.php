@@ -61,6 +61,7 @@
         <ul style="margin:10px 0 0; padding-left:18px; color:#bbb; font-size:13.5px; line-height:1.7;">
             <li><b>Administración</b> (tarifas, ofertas, personal, cuentas) es solo del administrador y del Master. <b>Limpieza, Perfiles y accesos, Integración GHL y Eliminar reservas</b> son solo del Master.</li>
             <li>Crear, ver y cobrar <b>reservas</b> lo puede hacer cualquier perfil con una cuenta; este cuadro controla las <b>secciones del menú</b>.</li>
+            <li>El <b>Administrador</b> solo crea cuentas de <b>Anfitrión</b> y da de alta <b>mucamas</b> (y anfitriones) en el personal; no puede crear ni editar otros administradores, Marketing ni Master.</li>
             <li>Las <b>mucamas</b> no tienen cuenta: entran con su PIN solo a su panel (reportar aseo y ronda); no se configuran aquí.</li>
             <li>Si desmarcas todo para un perfil, esa persona no podrá entrar a ninguna sección.</li>
         </ul>

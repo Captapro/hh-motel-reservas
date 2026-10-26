@@ -8,6 +8,7 @@ use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class StaffController extends Controller
@@ -20,11 +21,20 @@ class StaffController extends Controller
         ]);
     }
 
+    /** El administrador solo da de alta Anfitriones y Mucamas; el Master puede poner cualquier rol. */
+    private function roleRules(?string $current = null): array
+    {
+        // Al editar, un rol que ya tenía se puede conservar aunque sea otro.
+        return auth()->user()?->isSoporte()
+            ? ['required', 'string', 'max:50']
+            : ['required', 'string', 'max:50', Rule::in(array_filter(['Mucama', 'Anfitrión', $current]))];
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'role' => ['required', 'string', 'max:50'],
+            'role' => $this->roleRules(),
             'pin' => ['nullable', 'digits:4'],
             'legal_hours_per_week' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
@@ -39,7 +49,7 @@ class StaffController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'role' => ['required', 'string', 'max:50'],
+            'role' => $this->roleRules($staff->role),
             'pin' => ['nullable', 'digits:4'],
             'legal_hours_per_week' => ['nullable', 'integer', 'min:0', 'max:100'],
             'is_active' => ['sometimes', 'boolean'],

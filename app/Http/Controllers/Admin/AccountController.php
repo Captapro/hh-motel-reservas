@@ -12,10 +12,21 @@ use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
-    /** Roles que quien está logueado puede asignar: solo soporte puede crear otro soporte. */
+    /**
+     * Roles que quien está logueado puede asignar. El Master (soporte) puede
+     * todos; el administrador solo crea cuentas de Anfitrión (las mucamas no
+     * tienen cuenta: van en Personal con su PIN).
+     */
     private function assignableRoles(): array
     {
-        return array_merge(['administrador', 'recepcion', 'marketing'], auth()->user()?->isSoporte() ? ['soporte'] : []);
+        return auth()->user()?->isSoporte() ? ['administrador', 'recepcion', 'marketing', 'soporte'] : ['recepcion'];
+    }
+
+    /** El administrador solo gestiona cuentas de Anfitrión (y su propia cuenta, sin cambiarle el rol). */
+    private function guardManage(User $user): void
+    {
+        $me = auth()->user();
+        abort_unless($me?->isSoporte() || $user->role === 'recepcion' || $user->id === $me?->id, 403, 'Solo el Master puede gestionar esta cuenta.');
     }
 
     /** Las cuentas de soporte solo las administra otro soporte; para un administrador no existen. */
@@ -49,10 +60,13 @@ class AccountController extends Controller
     public function update(Request $request, User $user): RedirectResponse
     {
         $this->guardSoporte($user);
+        $this->guardManage($user);
+        // Sobre su propia cuenta, un administrador no puede cambiarse el rol.
+        $roles = ($user->id === auth()->id() && ! auth()->user()->isSoporte()) ? [$user->role] : $this->assignableRoles();
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'role' => ['required', Rule::in($this->assignableRoles())],
+            'role' => ['required', Rule::in($roles)],
             'is_active' => ['sometimes', 'boolean'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
@@ -74,6 +88,7 @@ class AccountController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         $this->guardSoporte($user);
+        $this->guardManage($user);
         if ($user->id === auth()->id()) {
             return back()->withErrors(['account' => 'No puedes eliminar tu propia cuenta mientras estás dentro. Entra con otro administrador para hacerlo.']);
         }
