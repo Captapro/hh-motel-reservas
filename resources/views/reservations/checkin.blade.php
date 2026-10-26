@@ -260,6 +260,16 @@
     </div>
 
     <script>
+        // RUT con guion automatico: al tipear 154278885 queda 15427888-5.
+        // Solo si parece RUT (digitos y K); un pasaporte se deja como esta.
+        function hhRutFormat(raw) {
+            const v = (raw || '').trim();
+            if (!/^[0-9.\-kK\s]*$/.test(v)) return v;
+            const clean = v.toUpperCase().replace(/[^0-9K]/g, '');
+            if (clean.length < 2) return clean;
+            return clean.slice(0, -1) + '-' + clean.slice(-1);
+        }
+
         // Mismo patrón de nombre+apellido por acompañante que en la reserva
         // nueva, pero acá es la fuente de verdad — obligatorio, y se valida
         // el conteo justo antes de enviar (fase de captura, corre antes que
@@ -296,6 +306,7 @@
             docInput.className = 'guest-doc';
             docInput.maxLength = 20;
             docInput.value = doc || '';
+            docInput.addEventListener('input', function () { docInput.value = hhRutFormat(docInput.value); });
             docInput.style.flex = '1 1 100%';
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
@@ -420,6 +431,7 @@
     @endif
 
     <script>
+
         // Cantidades con − / + y total del consumo a cargar, en vivo.
         (function () {
             const inputs = Array.from(document.querySelectorAll('.offer-panel .qty input'));

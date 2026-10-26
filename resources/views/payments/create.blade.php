@@ -15,8 +15,7 @@
         .row.balance { font-weight:700; color:#ff7918; font-size:16px; border-top:1px solid #333; margin-top:6px; padding-top:10px; }
         label { display:block; font-size: 12.5px; color:#bbb; margin: 14px 0 6px; }
         input, select { width:100%; box-sizing:border-box; background:#1c1c1c; border:1px solid #333; color:#fff; padding:10px 12px; border-radius:8px; font-size:15px; }
-        .amount-fmt { font-size:13px; color:#8fe0ad; margin-top:6px; }
-        button { width:100%; margin-top:24px; background:#ff7918; color:#fff; border:none; padding:14px; border-radius:8px; font-size:15px; font-weight:600; }
+                button { width:100%; margin-top:24px; background:#ff7918; color:#fff; border:none; padding:14px; border-radius:8px; font-size:15px; font-weight:600; }
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:12px 14px; border-radius:8px; margin-bottom: 18px; font-size:14px; }
         a.back { display:block; text-align:center; margin-top: 16px; color:#999; font-size: 13px; text-decoration:none; }
         a.skip-btn { display:block; text-align:center; margin-top: 16px; background:#2a2a2a; border:1px solid #555; color:#eee; padding:13px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none; }
@@ -44,6 +43,23 @@
         .pay-actions button.primary { width:auto; min-width:280px; margin:0; padding:13px 28px; }
         a.skip-inline { color:#bbb; font-size:14px; text-decoration:none; font-weight:600; }
         a.skip-inline:hover { color:#ff7918; }
+        .step-title { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700; color:#fff; margin:20px 0 10px; }
+        .step-title:first-of-type { margin-top:4px; }
+        .step-title b { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:#ff7918; color:#111; font-size:13px; }
+        .pay-wait { color:#888; font-size:13.5px; margin:14px 0 0; }
+        .amount-box { display:flex; align-items:center; gap:8px; background:#111; border:1.5px solid #3a3a3a; border-radius:10px; padding:4px 16px; }
+        .amount-box:focus-within { border-color:#ff7918; }
+        .amount-box .cur { font-size:26px; color:#888; font-weight:700; }
+        .amount-box input { border:none !important; background:transparent !important; box-shadow:none !important; font-size:30px; font-weight:800; padding:10px 0; outline:none !important; }
+        .doc-single { grid-template-columns:1fr !important; }
+        .doc-single label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+        #voucher-number, #receipt-number { font-size:20px; font-weight:700; padding:13px 14px; letter-spacing:.5px; }
+        button.full-balance { width:auto; margin:10px 0 0; padding:9px 16px; background:#262626; border:1.5px solid #3a3a3a; color:#ddd; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer; }
+        button.full-balance:hover { border-color:#ff7918; color:#fff; }
+        .doc-hint { color:#888; font-size:13px; margin:8px 0 0; min-height:0; }
+        .doc-hint:empty { display:none; }
+        button.note-toggle { width:auto; margin:16px 0 0; padding:4px 0; background:none; border:none; color:#bbb; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; }
+        button.note-toggle:hover { color:#ff7918; }
     </style>
 </head>
 <body>
@@ -90,7 +106,7 @@
             <input type="hidden" name="after" value="{{ $after }}">
         @endif
 
-        <label>Medio de pago</label>
+        <div class="step-title"><b>1</b> ¿Cómo paga?</div>
         <div class="method-chips" id="method-chips" role="group" aria-label="Medio de pago">
             @php $order = ['efectivo', 'transferencia', 'debito', 'credito', 'mercado_pago', 'otro']; @endphp
             @foreach ($methods->sortBy(fn ($m) => ($i = array_search($m->code, $order, true)) === false ? 99 : $i) as $method)
@@ -104,32 +120,38 @@
             @endforeach
         </select>
         <div class="chip-error" id="chip-error" hidden>Elige un medio de pago para continuar.</div>
+        <p class="pay-wait" id="pay-wait">Elige el medio de pago para seguir.</p>
 
-        <div class="pay-grid">
-            <div>
-                <label for="amount-display">Monto (CLP)</label>
-                <input type="text" inputmode="numeric" id="amount-display" placeholder="0" required>
+        <div id="pay-rest" hidden>
+            <div class="step-title"><b>2</b> ¿Cuánto paga?</div>
+            <div class="amount-box">
+                <span class="cur">$</span>
+                <input type="text" inputmode="numeric" id="amount-display" placeholder="0" aria-label="Monto en pesos">
                 <input type="hidden" name="amount" id="amount-input" value="{{ old('amount', $suggestedAmount) }}">
             </div>
-            <div>
-                <label for="payment-reference">Referencia / N° de operación <span class="muted">(opcional)</span></label>
-                <input id="payment-reference" type="text" name="external_id" value="{{ old('external_id') }}" placeholder="Si la dejas vacía, generamos una">
+            @if ($balance > 0)
+                <button type="button" class="full-balance" id="full-balance" data-amount="{{ $balance }}">Saldo completo · ${{ number_format($balance, 0, ',', '.') }}</button>
+            @endif
+
+            <div class="step-title"><b>3</b> <span id="doc-title">Comprobante</span></div>
+            <div class="pay-grid" id="doc-grid">
+                <div id="voucher-field">
+                    <label for="voucher-number" id="voucher-label">N° de voucher</label>
+                    <input id="voucher-number" type="text" name="voucher_number" value="{{ old('voucher_number') }}" placeholder="Ej. 146" inputmode="numeric" autocomplete="off">
+                </div>
+                <div id="receipt-field">
+                    <label for="receipt-number" id="receipt-label">N° de boleta</label>
+                    <input id="receipt-number" type="text" name="receipt_number" value="{{ old('receipt_number') }}" placeholder="Ej. 96302" inputmode="numeric" autocomplete="off">
+                </div>
+            </div>
+            <p class="doc-hint" id="doc-hint"></p>
+
+            <button type="button" class="note-toggle" id="note-toggle" @if (old('notes')) hidden @endif>+ Agregar una nota</button>
+            <div id="note-box" @if (! old('notes')) hidden @endif>
+                <label for="payment-notes">Nota</label>
+                <input id="payment-notes" type="text" name="notes" value="{{ old('notes') }}" maxlength="255">
             </div>
         </div>
-
-        <div class="pay-grid">
-            <div id="voucher-field">
-                <label for="voucher-number">N° voucher <span id="voucher-hint" class="muted"></span></label>
-                <input id="voucher-number" type="text" name="voucher_number" value="{{ old('voucher_number') }}" placeholder="Ej. 146">
-            </div>
-            <div id="receipt-field">
-                <label for="receipt-number">N° boleta <span id="receipt-hint" class="muted"></span></label>
-                <input id="receipt-number" type="text" name="receipt_number" value="{{ old('receipt_number') }}" placeholder="Ej. 96302">
-            </div>
-        </div>
-
-        <label for="payment-notes">Observaciones <span class="muted">(opcional)</span></label>
-        <input id="payment-notes" type="text" name="notes" value="{{ old('notes') }}">
 
         <div class="pay-actions">
             <button type="submit" class="primary">Registrar pago</button>
@@ -174,22 +196,27 @@
             });
         })();
 
-        // Efectivo/transferencia solo piden boleta; débito/crédito solo
-        // piden voucher -- se oculta el que no corresponde para no
-        // confundir a recepción. Con otros medios (Mercado Pago, Otro) se
-        // muestran los dos, basta con uno.
+        // Según el medio se pide UN solo comprobante: efectivo/transferencia
+        // → boleta; débito/crédito → voucher del POS. Con Mercado Pago u
+        // Otro se muestran los dos y basta con uno. Todo el bloque de
+        // monto y comprobante aparece recién al elegir el medio.
         (function () {
             const select = document.getElementById('payment-method');
+            const rest = document.getElementById('pay-rest');
+            const wait = document.getElementById('pay-wait');
             const voucherField = document.getElementById('voucher-field');
             const receiptField = document.getElementById('receipt-field');
             const voucherInput = document.getElementById('voucher-number');
             const receiptInput = document.getElementById('receipt-number');
-            const voucherHint = document.getElementById('voucher-hint');
-            const receiptHint = document.getElementById('receipt-hint');
+            const title = document.getElementById('doc-title');
+            const hint = document.getElementById('doc-hint');
             if (!select) return;
 
             function apply() {
                 const code = select.selectedOptions[0]?.dataset.code;
+                rest.hidden = !code;
+                wait.hidden = !!code;
+                if (!code) return;
                 const cashLike = code === 'efectivo' || code === 'transferencia';
                 const cardLike = code === 'debito' || code === 'credito';
 
@@ -198,12 +225,26 @@
                 if (cashLike) voucherInput.value = '';
                 if (cardLike) receiptInput.value = '';
 
-                voucherHint.textContent = cardLike ? '' : (!code ? '(uno de los dos)' : '');
-                receiptHint.textContent = cashLike ? '' : (!code ? '(uno de los dos)' : '');
+                document.getElementById('doc-grid').classList.toggle('doc-single', cashLike || cardLike);
+                title.textContent = cashLike ? 'N° de boleta' : cardLike ? 'N° de voucher' : 'Comprobante';
+                hint.textContent = cashLike ? 'Es el número de la boleta que entregas al cliente.'
+                    : cardLike ? 'Es el número que sale en el voucher del POS.'
+                    : 'Escribe el N° de voucher o el de boleta: basta con uno.';
             }
 
             select.addEventListener('change', apply);
             apply();
+
+            document.getElementById('full-balance')?.addEventListener('click', function () {
+                const display = document.getElementById('amount-display');
+                display.value = Number(this.dataset.amount).toLocaleString('es-CL');
+                document.getElementById('amount-input').value = this.dataset.amount;
+            });
+            document.getElementById('note-toggle')?.addEventListener('click', function () {
+                this.hidden = true;
+                document.getElementById('note-box').hidden = false;
+                document.getElementById('payment-notes').focus();
+            });
         })();
 
         // Medio de pago como botones: llenan el <select> real (que es el que se envía).
@@ -219,8 +260,7 @@
                 select.dispatchEvent(new Event('change', { bubbles: true }));
                 error.hidden = true;
                 paint();
-                const next = document.getElementById('voucher-number').offsetParent ? 'voucher-number' : 'receipt-number';
-                document.getElementById(next)?.focus();
+                document.getElementById('amount-display')?.focus();
             }));
             paint();
 

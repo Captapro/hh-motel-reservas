@@ -80,7 +80,7 @@
                     </div>
                     <div>
                         <label>RUT</label>
-                        <input name="rut" value="{{ $customer->rut }}" maxlength="20">
+                        <input name="rut" value="{{ $customer->rut }}" maxlength="20" oninput="var c=this.value.toUpperCase().replace(/[^0-9K]/g,'');if(/^[0-9.\-kK\s]*$/.test(this.value))this.value=c.length>1?c.slice(0,-1)+'-'+c.slice(-1):c;">
                     </div>
                     <div>
                         <label>N° de pasaporte</label>

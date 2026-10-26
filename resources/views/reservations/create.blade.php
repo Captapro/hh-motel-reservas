@@ -844,6 +844,7 @@
             docInput.className = 'guest-doc';
             docInput.maxLength = 20;
             docInput.value = doc || '';
+            docInput.addEventListener('input', function () { docInput.value = hhRutFormat(docInput.value); });
             docInput.style.flex = '1 1 100%';
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
@@ -1206,7 +1207,7 @@
                         ln.value = d.last_name || ln.value;
                         em.value = d.email || em.value;
                         if (d.document_type) { docType.value = d.document_type; hhSyncDocField(); }
-                        if (d.document_number) docNumber.value = d.document_number;
+                        if (d.document_number) docNumber.value = d.document_type === 'rut' ? hhRutFormat(d.document_number) : d.document_number;
                         if (d.nationality) hhSetNationality(d.nationality);
                         if (d.birth_date) hhSetBirthDate(d.birth_date);
                         autofilled = true;
@@ -1258,6 +1259,16 @@
             if (phone.value.trim()) lookup();
         })();
 
+        // RUT con guion automatico: al tipear 154278885 queda 15427888-5.
+        // Solo si parece RUT (digitos y K); un pasaporte se deja como esta.
+        function hhRutFormat(raw) {
+            const v = (raw || '').trim();
+            if (!/^[0-9.\-kK\s]*$/.test(v)) return v;
+            const clean = v.toUpperCase().replace(/[^0-9K]/g, '');
+            if (clean.length < 2) return clean;
+            return clean.slice(0, -1) + '-' + clean.slice(-1);
+        }
+
         // RUT chileno: mismo algoritmo (módulo 11) que valida el servidor,
         // en vivo, para no descubrir el error recién al enviar el formulario.
         function hhRutIsValid(raw) {
@@ -1292,7 +1303,8 @@
                 return;
             }
             number.disabled = false;
-            number.placeholder = type.value === 'rut' ? '12.345.678-9' : 'Número de pasaporte';
+            number.placeholder = type.value === 'rut' ? '12345678-9' : 'Número de pasaporte';
+            if (type.value === 'rut') number.value = hhRutFormat(number.value);
             hhValidateDocNumber();
         }
         function hhValidateDocNumber() {
@@ -1326,7 +1338,10 @@
             const number = document.getElementById('document-number');
             if (!type || !number) return;
             type.addEventListener('change', function () { hhDocTypeTouched = true; hhSyncDocField(); });
-            number.addEventListener('input', hhValidateDocNumber);
+            number.addEventListener('input', function () {
+                if (type.value === 'rut') number.value = hhRutFormat(number.value);
+                hhValidateDocNumber();
+            });
             hhSyncDocField();
         })();
 
