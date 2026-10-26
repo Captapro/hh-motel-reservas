@@ -21,6 +21,7 @@ use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Payments\MercadoPagoClient;
+use App\Services\Payments\MercadoPagoPayments;
 use App\Services\Pricing\RateRuleResolver;
 use App\Support\Phone;
 use Carbon\Carbon;
@@ -31,6 +32,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 /**
@@ -259,10 +261,14 @@ class PublicBookingController extends Controller
         }
     }
 
-    public function booked(string $token): View
+    public function booked(Request $request, string $token): View
     {
         Booking::releaseExpired();
         $booking = Booking::with(['room.category', 'addons'])->where('pass_token', $token)->firstOrFail();
+
+        // Al volver de Mercado Pago no se espera el aviso: se consulta el pago
+        // directo a su API y se registra (idempotente) si es de esta reserva.
+        $this->reconcileMercadoPago($request, $booking);
 
         // Mismo QR del pase PDF: recepción lo escanea y abre la ficha.
         $qr = (new Builder(
@@ -279,6 +285,26 @@ class PublicBookingController extends Controller
             'pay' => config('services.hh_payment'),
             'mpEnabled' => app(MercadoPagoClient::class)->enabled(),
         ]);
+    }
+
+    private function reconcileMercadoPago(Request $request, Booking $booking): void
+    {
+        $paymentId = (string) $request->query('payment_id', '');
+        $mp = app(MercadoPagoClient::class);
+        if ($paymentId === '' || ! ctype_digit($paymentId) || ! $mp->enabled() || $booking->booking_status !== 'PENDIENTE_PAGO') {
+            return;
+        }
+
+        try {
+            $payment = $mp->payment($paymentId);
+            if (($payment['external_reference'] ?? null) !== $booking->code) {
+                return;
+            }
+            app(MercadoPagoPayments::class)->record($payment);
+            $booking->refresh()->load(['room.category', 'addons']);
+        } catch (\Throwable $e) {
+            Log::warning('Mercado Pago: no se pudo confirmar el pago al volver', ['booking' => $booking->code, 'error' => $e->getMessage()]);
+        }
     }
 
     /**

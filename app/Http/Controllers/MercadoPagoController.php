@@ -45,13 +45,23 @@ class MercadoPagoController extends Controller
         $secret = (string) config('services.mercadopago.webhook_secret');
         // PHP convierte el punto de "data.id" en guion bajo al leer la dirección.
         $dataId = (string) ($request->query('data_id') ?? $request->input('data.id') ?? '');
-        if ($secret === '' || ! $this->validSignature($request, $secret, $dataId)) {
-            return response()->json(['ok' => false], 401);
-        }
-
         $type = (string) ($request->input('type') ?? $request->query('type') ?? '');
+
+        // Otros avisos (p. ej. merchant_order) no traen firma ni nos sirven:
+        // se responde 200 para que Mercado Pago no los reintente.
         if ($type !== 'payment' || $dataId === '') {
             return response()->json(['ok' => true, 'ignored' => true]);
+        }
+
+        if ($secret === '' || ! $this->validSignature($request, $secret, $dataId)) {
+            Log::warning('Mercado Pago: aviso rechazado por firma', [
+                'payment' => $dataId,
+                'secret_configurado' => $secret !== '',
+                'trae_firma' => $request->hasHeader('x-signature'),
+                'trae_request_id' => $request->hasHeader('x-request-id'),
+            ]);
+
+            return response()->json(['ok' => false], 401);
         }
 
         try {

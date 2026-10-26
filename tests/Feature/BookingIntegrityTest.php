@@ -226,6 +226,38 @@ class BookingIntegrityTest extends TestCase
             ->assertJsonFragment(['type' => 'pago', 'code' => $booking->code, 'amount' => 20000, 'review' => false]);
     }
 
+    public function test_returning_from_mercado_pago_confirms_the_booking_without_waiting_for_the_webhook(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago', 'requires_external_id' => true]);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking->update(['expires_at' => now()->addMinutes(10)]);
+        $other = $this->booking(['starts_at' => Carbon::parse('2026-11-09 12:00')]);
+        Http::fake([
+            'api.mercadopago.com/v1/payments/901' => Http::response(['id' => 901, 'status' => 'approved', 'external_reference' => $booking->code, 'transaction_amount' => 20000]),
+            'api.mercadopago.com/v1/payments/902' => Http::response(['id' => 902, 'status' => 'approved', 'external_reference' => $other->code, 'transaction_amount' => 20000]),
+        ]);
+
+        // Un pago de otra reserva no confirma esta.
+        $this->get(route('catalog.booked', $booking->pass_token).'?payment_id=902')->assertOk();
+        $this->assertSame('PENDIENTE_PAGO', $booking->fresh()->booking_status);
+
+        $this->get(route('catalog.booked', $booking->pass_token).'?payment_id=901')->assertOk();
+        $this->get(route('catalog.booked', $booking->pass_token).'?payment_id=901')->assertOk();
+
+        $booking->refresh();
+        $this->assertSame('CONFIRMADA', $booking->booking_status);
+        $this->assertSame(1, $booking->payments()->count());
+    }
+
+    public function test_mercado_pago_webhook_ignores_merchant_order_notices_without_signature(): void
+    {
+        config(['services.mercadopago.webhook_secret' => 'sekret']);
+
+        $this->postJson('/webhooks/mercadopago?id=45568092227&topic=merchant_order')
+            ->assertOk()->assertJsonPath('ignored', true);
+    }
+
     public function test_mercado_pago_payment_after_the_hold_expired_is_recorded_and_flagged(): void
     {
         config(['services.mercadopago.access_token' => 'TEST-token', 'services.mercadopago.webhook_secret' => 'sekret']);
