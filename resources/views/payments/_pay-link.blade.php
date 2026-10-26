@@ -11,7 +11,10 @@
         $payPhone = preg_replace('/\D/', '', (string) $booking->customer->phone_e164);
         $payWaUrl = 'https://wa.me/'.$payPhone.'?text='.rawurlencode($payMessage);
     @endphp
-    <div class="pay-link-box" style="margin-top:14px;padding:12px 14px;background:#161616;border:1px solid #333;border-radius:10px;">
+    @if ($divider ?? false)
+        <div style="margin-top:24px;padding-top:16px;border-top:1px solid #3a3a3a;font-size:13.5px;color:#ddd;font-weight:700;">O cobra por link de pago</div>
+    @endif
+    <div class="pay-link-box" style="margin-top:{{ ($divider ?? false) ? '10' : '14' }}px;padding:12px 14px;background:#161616;border:1px solid #333;border-radius:10px;">
         <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Cobrar por link (Mercado Pago)</div>
         <input type="text" readonly value="{{ $payUrl }}" onclick="this.select()" style="width:100%;font-size:12px;box-sizing:border-box;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">

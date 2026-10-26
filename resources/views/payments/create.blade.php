@@ -96,7 +96,6 @@
         @endif
         <div class="row"><span>Pagado</span><span>${{ number_format($booking->paidAmount(), 0, ',', '.') }}</span></div>
         <div class="row balance"><span>Saldo</span><span>${{ number_format($balance, 0, ',', '.') }}</span></div>
-        @include('payments._pay-link', ['booking' => $booking])
     </div>
 
     <form class="card hh-form-card" method="POST" action="{{ route('payments.store', $booking->code) }}" id="payment-form">
@@ -164,6 +163,7 @@
                 <a class="skip-inline" href="{{ route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso']) }}">Cobrar después, ir al check-in →</a>
             @endif
         </div>
+        @include('payments._pay-link', ['booking' => $booking, 'divider' => true])
     </form>
     </div>
 

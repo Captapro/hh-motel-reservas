@@ -601,6 +601,7 @@ class BookingIntegrityTest extends TestCase
 
         config(['services.mercadopago.access_token' => 'TEST-token']);
         $page = $this->get(route('payments.create', $booking->code))->assertOk();
+        $page->assertSeeInOrder(['Resumen de la reserva', 'Datos del pago', 'O cobra por link de pago', 'Cobrar por link (Mercado Pago)']);
         $page->assertSee('Cobrar por link (Mercado Pago)')
             ->assertSee(route('catalog.pay', $booking->pass_token), false)
             ->assertSee('https://wa.me/56911111111?text=', false);
