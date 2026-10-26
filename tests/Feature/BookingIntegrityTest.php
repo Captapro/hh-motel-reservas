@@ -592,6 +592,25 @@ class BookingIntegrityTest extends TestCase
         $this->getJson(route('rooms.pass_scans'))->assertJsonFragment(['type' => 'pago', 'review' => true]);
     }
 
+    public function test_payment_screen_offers_the_mercado_pago_link_to_send_by_whatsapp(): void
+    {
+        PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+
+        // Sin Mercado Pago configurado no se ofrece.
+        $this->get(route('payments.create', $booking->code))->assertOk()->assertDontSee('Enviar por WhatsApp');
+
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $page = $this->get(route('payments.create', $booking->code))->assertOk();
+        $page->assertSee('Cobrar por link (Mercado Pago)')
+            ->assertSee(route('catalog.pay', $booking->pass_token), false)
+            ->assertSee('https://wa.me/56911111111?text=', false);
+
+        // Saldado: ya no hay nada que cobrar por link.
+        app(PaymentService::class)->register($booking, PaymentMethod::where('code', 'efectivo')->first(), (int) $booking->price_final, null, null, auth()->id());
+        $this->get(route('payments.create', $booking->code))->assertDontSee('Enviar por WhatsApp');
+    }
+
     public function test_public_confirmation_shows_qr_and_payment_data_when_configured(): void
     {
         $booking = $this->booking();

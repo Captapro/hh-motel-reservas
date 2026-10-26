@@ -374,13 +374,7 @@
                 <div class="row total balance"><span>Saldo</span><span>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</span></div>
                 @if ($booking->balanceDue() > 0)
                     <a class="pay-btn pay-btn-inline" href="{{ route('payments.create', ['code' => $booking->code, 'after' => 'board']) }}">Registrar pago (abono o total) →</a>
-                    @if (app(\App\Services\Payments\MercadoPagoClient::class)->enabled() && in_array($booking->booking_status, ['PENDIENTE_PAGO', 'CONFIRMADA'], true))
-                        <div style="margin-top:12px;">
-                            <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Link de pago en línea (Mercado Pago)</div>
-                            <input type="text" readonly value="{{ route('catalog.pay', $booking->pass_token) }}" onclick="this.select()" style="width:100%;font-size:12px;">
-                            <div style="font-size:11.5px;color:#888;margin-top:4px;">Mándalo al cliente: paga el saldo y la reserva se confirma sola.</div>
-                        </div>
-                    @endif
+                    @include('payments._pay-link', ['booking' => $booking])
                 @endif
             </div>
 
