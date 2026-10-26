@@ -97,6 +97,8 @@
         /* Panel enmarcado: mismo marco que "Por llegar", pero horizontal. */
         .section.panel-box { border:1px solid #dddfe1; border-radius:18px; background:#fff; padding:14px 14px 4px; }
         .section.ocupadas.panel-box .section-head h2 { color:#a63a4a; }
+        .section.aseo.panel-box .section-head h2 { color:#9a7414; }
+        .section.fuera.panel-box .section-head h2 { color:#5f6368; }
         .section.panel-box .grid { margin-bottom:10px; }
         .section.aseo .section-head h2 { color:#e8c76f; }
         .section.disponibles .section-head h2 { color:#34d399; }
@@ -486,7 +488,7 @@
             {{-- Siempre ocupa su lugar (aunque no haya ocupadas), igual que "Por llegar", para que nada se corra al ocuparse una habitación. --}}
             <div class="section ocupadas panel-box">
                 <div class="section-head"><h2>Ocupadas</h2><span class="count" id="ocupadas-count">{{ $grouped['ocupadas']->count() }}</span></div>
-                <div class="sidebar-empty" id="ocupadas-empty" @if ($grouped['ocupadas']->isNotEmpty()) hidden @endif>Ninguna habitación ocupada ahora.</div>
+                <div class="sidebar-empty panel-empty" id="ocupadas-empty" @if ($grouped['ocupadas']->isNotEmpty()) hidden @endif>Ninguna habitación ocupada ahora.</div>
                 @if ($grouped['ocupadas']->isNotEmpty())
                     <div class="grid">
                         @foreach ($grouped['ocupadas'] as $entry)
@@ -525,30 +527,31 @@
                 @endif
             </div>
 
-            @if ($grouped['en_aseo']->isNotEmpty())
-            <div class="section aseo">
-                <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span><span class="bar"></span></div>
+            {{-- En aseo y Fuera de servicio: mismo panel enmarcado que Ocupadas, siempre visibles. --}}
+            <div class="section aseo panel-box">
+                <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span></div>
+                <div class="sidebar-empty panel-empty" @if ($grouped['en_aseo']->isNotEmpty()) hidden @endif>Ninguna habitación en aseo ahora.</div>
+                @if ($grouped['en_aseo']->isNotEmpty())
                     <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
                     <div class="grid">
                         @foreach ($grouped['en_aseo'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
                         @endforeach
                     </div>
-
+                @endif
             </div>
-            @endif
 
-            @if ($grouped['fuera_de_servicio']->isNotEmpty())
-            <div class="section fuera">
-                <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span><span class="bar"></span></div>
+            <div class="section fuera panel-box">
+                <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span></div>
+                <div class="sidebar-empty panel-empty" @if ($grouped['fuera_de_servicio']->isNotEmpty()) hidden @endif>Ninguna habitación fuera de servicio.</div>
+                @if ($grouped['fuera_de_servicio']->isNotEmpty())
                     <div class="grid">
                         @foreach ($grouped['fuera_de_servicio'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
                         @endforeach
                     </div>
-
+                @endif
             </div>
-            @endif
         </div>
 
         {{-- La columna "Por llegar" siempre ocupa su lugar: así las habitaciones no se corren cuando aparece o desaparece una reserva. --}}
@@ -705,8 +708,7 @@
                 const n = sec.querySelectorAll('.card:not(.wing-hidden)').length;
                 const count = sec.querySelector('.section-head .count');
                 if (count && name !== 'disponibles') count.textContent = n;
-                if (name !== 'disponibles' && name !== 'ocupadas') sec.classList.toggle('wing-hidden', n === 0);
-                if (name === 'ocupadas') { const oe = document.getElementById('ocupadas-empty'); if (oe) oe.hidden = n > 0; }
+                const pe = sec.querySelector('.panel-empty'); if (pe) pe.hidden = n > 0;
                 const chip = document.querySelector('.summary .chip.' + name + ' b');
                 if (chip) chip.textContent = n;
             });
