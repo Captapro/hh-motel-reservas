@@ -13,6 +13,7 @@ use App\Models\UpsellOffer;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\ConsumptionService;
+use App\Services\Booking\LateArrivalPolicy;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\UpsellResolver;
 use App\Support\GuestLine;
@@ -81,8 +82,13 @@ class BookingCheckInController extends Controller
                 'detail' => $u['detail'],
             ]);
 
+        // Vista previa de la regla de atrasos: recepción ve antes de confirmar
+        // si tiene el tiempo completo o cuánto se le descuenta.
+        $late = $booking->starts_at->lt(now()) ? app(LateArrivalPolicy::class)->resolve($booking, now()) : null;
+
         return view('reservations.checkin', [
             'booking' => $booking,
+            'late' => $late,
             'products' => $products,
             'combos' => $combos,
             'upsells' => $applicable,
@@ -173,14 +179,12 @@ class BookingCheckInController extends Controller
 
         // Resolver el horario antes de registrar la entrada evita confirmar
         // una estancia cuya salida ya pasó y que no puede extenderse.
-        $delay = (int) $booking->starts_at->diffInMinutes($arrival, false);
-        $endsAt = $booking->ends_at;
+        // Regla de atrasos (Administración → Atrasos): dentro de la
+        // tolerancia el contador parte de cero; pasada, se descuenta tiempo.
+        $late = app(LateArrivalPolicy::class)->resolve($booking, $arrival);
+        $delay = $late['delay'];
+        $endsAt = $late['ends_at'];
         if ($delay > 0) {
-            $extendedEnd = $endsAt->copy()->addMinutes($delay);
-            if ($rateRules->resolve($booking->starts_at, $extendedEnd)
-                && $availability->isAvailable($booking->room, $booking->starts_at, $extendedEnd, $booking->id)) {
-                $endsAt = $extendedEnd;
-            }
             if ($endsAt->lte($arrival)) {
                 return back()->withInput()->withErrors([
                     'booking' => 'El horario de esta reserva ya terminó y no se puede extender. Reprograma la reserva antes de hacer el check-in.',
@@ -211,7 +215,11 @@ class BookingCheckInController extends Controller
 
         $this->applyUpsells($booking, $validated['accepted_upsells'] ?? [], $consumption, $availability, $rateRules);
 
-        $status = $delay > 0 ? "Check-in registrado — {$delay} min de atraso." : 'Check-in registrado.';
+        $status = match (true) {
+            $delay <= 0 => 'Check-in registrado.',
+            $late['lost'] > 0 => "Check-in registrado — {$delay} min de atraso, se descuentan {$late['lost']} min. Sale a las ".$endsAt->copy()->timezone('America/Santiago')->format('H:i').'.',
+            default => "Check-in registrado — {$delay} min de atraso, tiempo completo.",
+        };
         if ($request->input('flujo') === 'ingreso') {
             // Ingreso presencial: el cierre del flujo crear -> cobrar -> entrar.
             $status = '✓ Ingreso registrado con éxito · '.$booking->customer->name;

@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\CustomerBehaviorController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\FurnitureController;
 use App\Http\Controllers\Admin\GhlTestController;
+use App\Http\Controllers\Admin\LateArrivalSettingController;
 use App\Http\Controllers\Admin\OfferController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RateRuleController;
@@ -220,6 +221,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
         Route::get('/estadia-corta', [ShortStaySettingController::class, 'edit'])->name('short_stay.edit');
         Route::put('/estadia-corta', [ShortStaySettingController::class, 'update'])->name('short_stay.update');
+        Route::get('/atrasos', [LateArrivalSettingController::class, 'edit'])->name('late_arrival.edit');
+        Route::put('/atrasos', [LateArrivalSettingController::class, 'update'])->name('late_arrival.update');
 
         Route::get('/cupones', [CouponController::class, 'index'])->name('coupons.index');
         Route::get('/cupones/crear', [CouponController::class, 'create'])->name('coupons.create');

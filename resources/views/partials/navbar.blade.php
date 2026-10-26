@@ -110,6 +110,7 @@
                 <a href="{{ route('admin.upsells.index') }}" class="{{ request()->routeIs('admin.upsells.*') ? 'hh-active' : '' }}">Upsells</a>
                 <a href="{{ route('admin.coupons.index') }}" class="{{ request()->routeIs('admin.coupons.*') ? 'hh-active' : '' }}">Cupones</a>
                 <a href="{{ route('admin.short_stay.edit') }}" class="{{ request()->routeIs('admin.short_stay.*') ? 'hh-active' : '' }}">Estadía corta</a>
+                <a href="{{ route('admin.late_arrival.edit') }}" class="{{ request()->routeIs('admin.late_arrival.*') ? 'hh-active' : '' }}">Atrasos</a>
             </span>
             <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">

@@ -10,6 +10,7 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Coupon;
 use App\Models\Customer;
+use App\Models\LateArrivalSetting;
 use App\Models\OperationalSetting;
 use App\Models\PaymentMethod;
 use App\Models\Product;
@@ -62,6 +63,7 @@ class BookingIntegrityTest extends TestCase
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
             '2026_10_26_210000_create_short_stay_settings_table.php',
+            '2026_10_26_220000_create_late_arrival_settings_table.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
@@ -1235,11 +1237,23 @@ class BookingIntegrityTest extends TestCase
 
     public function test_late_arrival_extends_when_there_is_room_and_opening_time(): void
     {
+        // Tolerancia amplia: 110 min de atraso quedan dentro, el contador parte de cero.
+        LateArrivalSetting::current()->update(['tolerance_minutes' => 120]);
         $booking = $this->reserve();
         $this->travelTo(Carbon::parse('2026-10-05 13:50'));
         $this->post('/reservas/'.$booking->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
         $this->assertSame('14:50', $booking->fresh()->ends_at->format('H:i'));
         $this->assertSame(20000, $booking->fresh()->price_final);
+    }
+
+    public function test_late_arrival_past_tolerance_cannot_check_in_after_its_time_ended(): void
+    {
+        // Regla por defecto (15 min, se descuenta el exceso): reserva de 1 h que
+        // terminaba 13:00 sale 13:15; llegando 13:50 su horario ya terminó.
+        $booking = $this->reserve();
+        $this->travelTo(Carbon::parse('2026-10-05 13:50'));
+        $this->post('/reservas/'.$booking->code.'/checkin')->assertSessionHasErrors('booking');
+        $this->assertNull($booking->fresh()->checked_in_at);
     }
 
     public function test_late_arrival_after_closing_is_rejected_before_registering_checkin(): void

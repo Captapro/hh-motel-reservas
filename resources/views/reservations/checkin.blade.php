@@ -128,9 +128,17 @@
         @else
             Momento de ofrecerle los extras al cliente — lo que cargues acá se suma a la reserva junto con el check-in.
         @endif
-        @php $delay = (int) round($booking->starts_at->diffInMinutes(now(), false)); @endphp
-        @if ($delay > 5)
-            <div class="late-box">Llega {{ $delay }} min después de la hora reservada — queda registrado como atraso.</div>
+        @if ($late && $late['delay'] > 0)
+            @php $exit = $late['ends_at']->copy()->timezone('America/Santiago')->format('H:i'); @endphp
+            <div class="late-box">
+                @if ($late['lost'] === 0)
+                    Llega {{ $late['delay'] }} min tarde — {{ $late['within_tolerance'] ? 'dentro de la tolerancia de '.$late['tolerance'].' min' : 'se le respeta' }}: <b>tiempo completo</b>, sale a las <b>{{ $exit }}</b>.
+                @elseif ($late['blocked'])
+                    Llega {{ $late['delay'] }} min tarde — no se puede correr la salida (cierre o siguiente reserva): <b>se descuentan {{ $late['lost'] }} min</b>, sale a las <b>{{ $exit }}</b>.
+                @else
+                    Llega {{ $late['delay'] }} min tarde — pasa la tolerancia de {{ $late['tolerance'] }} min: <b>se descuentan {{ $late['lost'] }} min</b>, sale a las <b>{{ $exit }}</b>.
+                @endif
+            </div>
         @endif
     </div>
 
