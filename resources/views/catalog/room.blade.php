@@ -87,12 +87,6 @@
         a.btn.primary:hover { background:var(--hh-accent-hover); }
         @media (max-width: 420px) { .btn-row { flex-direction:column; } }
 
-        .share-box { margin-top:18px; background:#fff; border:1px solid #e2e2df; border-radius:10px; padding:14px 16px; }
-        .share-box .label { font-size:11.5px; color:#62656c; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; }
-        .share-row { display:flex; gap:8px; }
-        .share-row input { flex:1; min-width:0; background:#f5f5f4; border:1px solid #d1d3d8; border-radius:7px; padding:9px 11px; font-size:12.5px; color:#42464e; }
-        .share-row button { flex:none; background:#262729; color:#eee; border:none; border-radius:7px; padding:9px 14px; font-weight:600; font-size:12.5px; cursor:pointer; }
-        .share-row button:hover { background:#1c1d1f; }
 
         footer.catalog-footer { text-align:center; color:#8a8d93; font-size:12.5px; padding: 26px 0 10px; }
 
@@ -194,14 +188,6 @@
             </div>
         </section>
 
-        <div class="share-box">
-            <div class="label">Link de esta ficha</div>
-            <div class="share-row">
-                <input type="text" readonly value="{{ route('catalog.room', $room) }}" id="room-link" onclick="this.select()">
-                <button type="button" id="room-link-copy" onclick="hhCopyRoomLink()">Copiar</button>
-            </div>
-        </div>
-
         <footer class="catalog-footer">HH Motel</footer>
     </div>
     @php
@@ -253,29 +239,6 @@
         document.getElementById('video-close').addEventListener('click', closeVideo);
         videoModal.addEventListener('click', (event) => { if (event.target === videoModal) closeVideo(); });
         document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeVideo(); });
-
-        // navigator.clipboard falla callado (sin lanzar error visible) en
-        // varios navegadores embebidos -- como el de WhatsApp -- y sin
-        // .catch() el botón igual decía "¡Copiado!" aunque no copió nada.
-        // Con execCommand('copy') como respaldo, y mostrando el resultado
-        // real, no el optimista.
-        function hhCopyRoomLink() {
-            const input = document.getElementById('room-link');
-            const btn = document.getElementById('room-link-copy');
-            const show = (ok) => {
-                btn.textContent = ok ? '¡Copiado!' : 'No se pudo — mantén tocado el link';
-                setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
-            };
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(input.value).then(() => show(true)).catch(() => {
-                    input.select();
-                    try { show(document.execCommand('copy')); } catch (e) { show(false); }
-                });
-            } else {
-                input.select();
-                try { show(document.execCommand('copy')); } catch (e) { show(false); }
-            }
-        }
     </script>
     @include('partials.photo-viewer')
 </body>
