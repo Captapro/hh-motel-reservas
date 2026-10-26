@@ -165,7 +165,7 @@ class BookingIntegrityTest extends TestCase
         $this->post(route('payments.store', $booking->code), [
             'payment_method_id' => $method->id,
             'amount' => 1000,
-            'request_token' => (string) \Illuminate\Support\Str::uuid(),
+            'request_token' => (string) Str::uuid(),
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(1000, $booking->fresh()->paidAmount());
