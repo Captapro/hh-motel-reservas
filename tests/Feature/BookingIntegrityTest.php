@@ -500,6 +500,26 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame((int) $paid->price_final + 1000, (int) $totals['cash_total']);   // la caja sí tiene los dos pagos
     }
 
+    public function test_unpaid_consumption_does_not_remove_the_room_from_sales(): void
+    {
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $method = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        app(PaymentService::class)->register($booking, $method, (int) $booking->price_final, null, null, auth()->id());
+        $booking->addons()->create(['description' => 'Agua', 'quantity' => 1, 'amount' => 3000]);
+
+        // Habitación pagada, consumo aún sin pagar: la habitación cuenta, el consumo no.
+        $totals = $this->get(route('sales.monthly', '2026-10'))->viewData('totals');
+        $this->assertSame(1, $totals['rooms']);
+        $this->assertSame((int) $booking->price_final, (int) $totals['total']);
+        $this->assertSame(0, (int) $totals['extras']);
+
+        app(PaymentService::class)->register($booking->fresh(), $method, 3000, null, null, auth()->id());
+
+        $totals = $this->get(route('sales.monthly', '2026-10'))->viewData('totals');
+        $this->assertSame(3000, (int) $totals['extras']);
+        $this->assertSame((int) $booking->price_final + 3000, (int) $totals['total']);
+    }
+
     public function test_public_confirmation_shows_qr_and_payment_data_when_configured(): void
     {
         $booking = $this->booking();

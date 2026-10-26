@@ -43,7 +43,7 @@ class DailySalesController extends Controller
         // en la tabla y en "Pendiente", pero no suman a la venta.
         $sold = $active->filter(fn (Booking $b) => $b->isPaidSale());
 
-        $revenue = $sold->sum(fn (Booking $b) => $b->price_final + $b->addonsTotal());
+        $revenue = $sold->sum(fn (Booking $b) => $b->price_final + $b->paidAddonsAmount());
         $collected = $active->sum(fn (Booking $b) => $b->paidAmount());
         $pending = $active->sum(fn (Booking $b) => $b->balanceDue());
 
@@ -51,7 +51,7 @@ class DailySalesController extends Controller
             ->groupBy('rate_rule_name_snapshot')
             ->map(fn ($group) => [
                 'count' => $group->count(),
-                'revenue' => $group->sum(fn (Booking $b) => $b->price_final + $b->addonsTotal()),
+                'revenue' => $group->sum(fn (Booking $b) => $b->price_final + $b->paidAddonsAmount()),
             ]);
 
         // De la venta de hoy, cuánto ya se había cobrado ANTES de hoy (anticipo

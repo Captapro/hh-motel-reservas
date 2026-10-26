@@ -171,23 +171,58 @@ class Booking extends Model
         return (int) $this->addons()->sum('amount');
     }
 
+    /** Pagos aprobados, usando la relación ya cargada si existe (evita una consulta por fila). */
+    private function approvedPaidFast(): int
+    {
+        return $this->relationLoaded('payments')
+            ? (int) $this->payments->where('status', 'aprobado')->sum('amount')
+            : $this->paidAmount();
+    }
+
+    private function isClosedForSales(): bool
+    {
+        return in_array($this->booking_status, ['CANCELADA', 'EXPIRADA'], true);
+    }
+
     /**
-     * Cuenta como venta solo la estadía con su pago completo: ni las
-     * canceladas o vencidas, ni las que aún no pagan (aunque lleguen hoy).
-     * Usa las relaciones ya cargadas si las hay, para no consultar por fila.
+     * La habitación cuenta como venta solo cuando está pagada completa: ni
+     * las canceladas o vencidas, ni las que aún no pagan (aunque lleguen hoy).
      */
     public function isPaidSale(): bool
     {
-        if (in_array($this->booking_status, ['CANCELADA', 'EXPIRADA'], true)) {
-            return false;
+        return ! $this->isClosedForSales() && $this->approvedPaidFast() >= $this->price_final;
+    }
+
+    /**
+     * Consumos ya cubiertos por pagos: el dinero paga primero la habitación y
+     * luego el consumo más antiguo, línea por línea (igual que
+     * addonsByPaymentStatus). Un consumo sin pagar no suma a la venta ni
+     * saca la habitación de ella.
+     */
+    public function paidAddons(): Collection
+    {
+        if ($this->isClosedForSales()) {
+            return collect();
         }
 
-        $addons = $this->relationLoaded('addons') ? (int) $this->addons->sum('amount') : $this->addonsTotal();
-        $paid = $this->relationLoaded('payments')
-            ? (int) $this->payments->where('status', 'aprobado')->sum('amount')
-            : $this->paidAmount();
+        $remaining = max(0, $this->approvedPaidFast() - $this->price_final);
+        $addons = $this->relationLoaded('addons') ? $this->addons : $this->addons()->get();
 
-        return $this->price_final + $addons - $paid <= 0;
+        return $addons->sortBy('created_at')->values()->filter(function ($addon) use (&$remaining) {
+            if ($remaining >= $addon->amount) {
+                $remaining -= $addon->amount;
+
+                return true;
+            }
+
+            return false;
+        })->values();
+    }
+
+    /** Venta de consumos de esta reserva: solo lo ya pagado. */
+    public function paidAddonsAmount(): int
+    {
+        return (int) $this->paidAddons()->sum('amount');
     }
 
     /** Total a cobrar: precio final de la habitación + consumo, menos lo ya pagado. */

@@ -7,7 +7,6 @@ use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -51,7 +50,7 @@ class MonthlySalesController extends Controller
             ->get();
 
         $stayDay = fn (Booking $b) => $b->starts_at->copy()->timezone(self::TZ);
-        $total = fn (Booking $b) => $b->price_final + (int) $b->addons->sum('amount');
+        $total = fn (Booking $b) => $b->price_final + $b->paidAddonsAmount();
         $groups = ['Tarjeta', 'Efectivo', 'Transferencia', 'Otro'];
 
         // ===== Registro diario =====
@@ -67,7 +66,7 @@ class MonthlySalesController extends Controller
                 'date' => $d->copy(),
                 'rooms' => $dayBookings->count(),
                 'lodging' => $dayBookings->sum('price_final'),
-                'extras' => $dayBookings->sum(fn (Booking $b) => (int) $b->addons->sum('amount')),
+                'extras' => $dayBookings->sum(fn (Booking $b) => $b->paidAddonsAmount()),
                 'cash_total' => $dayCash->sum('amount'),
             ];
             $row['total'] = $row['lodging'] + $row['extras'];
@@ -138,7 +137,7 @@ class MonthlySalesController extends Controller
 
         // ===== Extras vendidos =====
         $extrasTotal = max(1, $totals['extras']);
-        $extras = $bookings->flatMap->addons->groupBy('description')->map(fn (Collection $rows, $name) => [
+        $extras = $bookings->flatMap(fn (Booking $b) => $b->paidAddons())->groupBy('description')->map(fn (Collection $rows, $name) => [
             'name' => $name, 'units' => $rows->count(), 'amount' => $rows->sum('amount'), 'pct' => $rows->sum('amount') / $extrasTotal,
         ])->sortByDesc('amount')->values();
 
@@ -161,19 +160,14 @@ class MonthlySalesController extends Controller
      */
     private function monthHistory(): Collection
     {
-        $addons = DB::table('booking_addons')
-            ->selectRaw('booking_id, SUM(amount) as total')->groupBy('booking_id')->pluck('total', 'booking_id');
-
-        $paidByBooking = DB::table('payments')->where('status', 'aprobado')
-            ->selectRaw('booking_id, SUM(amount) as total')->groupBy('booking_id')->pluck('total', 'booking_id');
-
-        $sales = Booking::whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])->get(['id', 'starts_at', 'price_final'])
-            ->filter(fn (Booking $b) => $b->price_final + (int) ($addons[$b->id] ?? 0) - (int) ($paidByBooking[$b->id] ?? 0) <= 0)
+        $sales = Booking::with(['addons', 'payments'])
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale())
             ->groupBy(fn (Booking $b) => $b->starts_at->copy()->timezone(self::TZ)->format('Y-m'))
             ->map(fn (Collection $rows) => [
                 'rooms' => $rows->count(),
                 'lodging' => $rows->sum('price_final'),
-                'extras' => (int) $rows->sum(fn (Booking $b) => (int) ($addons[$b->id] ?? 0)),
+                'extras' => (int) $rows->sum(fn (Booking $b) => $b->paidAddonsAmount()),
             ]);
 
         $cash = Payment::where('status', 'aprobado')->get(['amount', 'created_at'])
@@ -254,7 +248,7 @@ class MonthlySalesController extends Controller
                 'kind' => 'ALOJAMIENTO', 'detail' => $b->coupon_code_snapshot ? 'Cupón '.$b->coupon_code_snapshot : '', 'qty' => '',
                 'price' => $b->price_final, 'discount' => (int) $b->discount_amount, 'missing' => $missing,
             ]);
-            foreach ($b->addons as $a) {
+            foreach ($b->paidAddons() as $a) {
                 $rows->push($base + [
                     'n' => ++$n, 'doc_type' => '', 'voucher' => '', 'receipt' => '', 'kind' => 'EXTRAS', 'detail' => $a->description,
                     'qty' => $a->quantity ?? 1, 'price' => $a->amount, 'discount' => 0, 'missing' => [],

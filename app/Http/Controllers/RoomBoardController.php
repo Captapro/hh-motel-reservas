@@ -158,7 +158,7 @@ class RoomBoardController extends Controller
             ->get()
             ->filter(fn (Booking $b) => $b->isPaidSale());
 
-        $addons = $bookings->flatMap->addons;
+        $addons = $bookings->flatMap(fn (Booking $b) => $b->paidAddons());
 
         return [
             'rooms_count' => $bookings->count(),

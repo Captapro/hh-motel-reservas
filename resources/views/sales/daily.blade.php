@@ -89,7 +89,7 @@
         };
         $live = $sold;
         $lodging = $live->sum('price_final');
-        $extrasSum = $live->sum(fn ($b) => (int) $b->addons->sum('amount'));
+        $extrasSum = $live->sum(fn ($b) => $b->paidAddonsAmount());
     @endphp
 
     <div class="topline">
