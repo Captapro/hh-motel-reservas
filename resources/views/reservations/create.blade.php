@@ -314,7 +314,13 @@
                         </option>
                     @endforeach
                 </select>
-                <div class="hint">El estado es el de <strong>ahora mismo</strong> — si reservas para más adelante, puede estar libre igual aunque diga ocupada.</div>
+                <div class="hint">
+                    @if ($walkInMode)
+                        Así está cada habitación en este momento.
+                    @else
+                        Así está cada habitación <strong>ahora</strong>. Si la reserva es para otra fecha u hora, una habitación ocupada ahora puede estar libre para entonces.
+                    @endif
+                </div>
 
                 <div class="row row-datetime"@if ($walkInMode) style="display:none"@endif>
                     <div>

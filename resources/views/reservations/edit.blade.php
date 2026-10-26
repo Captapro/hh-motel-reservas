@@ -109,7 +109,7 @@
                 </option>
             @endforeach
         </select>
-        <div class="hint">El estado es el de <strong>ahora mismo</strong> — si reprogramas para más adelante, puede estar libre igual aunque diga ocupada.</div>
+        <div class="hint">Así está cada habitación <strong>ahora</strong>. Si la reserva es para otra fecha u hora, una habitación ocupada ahora puede estar libre para entonces.</div>
 
         <label>Duración <span class="hint" style="margin:0;">— según la categoría</span></label>
         @php
