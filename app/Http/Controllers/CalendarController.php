@@ -16,7 +16,7 @@ class CalendarController extends Controller
         $rangeStart = $view === 'month' ? $date->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY) : $date->copy()->startOf($view === 'week' ? 'week' : 'day');
         $rangeEnd = $view === 'month' ? $date->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY) : $date->copy()->endOf($view === 'week' ? 'week' : 'day');
 
-        $bookings = Booking::with(['room.category', 'customer'])
+        $bookings = Booking::with(['room.category', 'customer', 'payments', 'addons'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
             ->where('starts_at', '<', $rangeEnd)
             ->where('ends_at', '>', $rangeStart)

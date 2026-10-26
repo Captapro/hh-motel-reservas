@@ -33,6 +33,24 @@
 .soon-day{margin:8px 0 0;padding:3px 8px}
 .empty{padding:14px 8px;font-size:13.5px}
 @media(max-width:700px){.day-cell{min-height:74px;padding:4px}.event{font-size:9.5px;padding:2px 3px;margin-top:3px}}
+
+.calendar-split-one{grid-template-columns:1fr}
+.calendar-history{max-height:300px}
+.sheet-card{margin-top:12px}
+.sheet-card h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sheet-wrap{overflow:auto;max-height:540px;border:1px solid #e5e7eb;border-radius:8px}
+table.sheet{width:100%;border-collapse:collapse;font-size:12.5px}
+table.sheet th{position:sticky;top:0;z-index:1;background:#f3f4f6;color:#4b5563;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:8px 9px;border:1px solid #e5e7eb;white-space:nowrap}
+table.sheet td{padding:6px 9px;border:1px solid #e5e7eb;white-space:nowrap;background:#fff;color:#1f2937}
+table.sheet th.n,table.sheet td.n{text-align:right;font-variant-numeric:tabular-nums}
+table.sheet tbody tr[data-href]{cursor:pointer}
+table.sheet tbody tr[data-href]:hover td{background:#fff7ed}
+table.sheet a.code{font-family:ui-monospace,monospace;color:#c2410c;text-decoration:none;font-weight:600}
+table.sheet td.owe{color:#dc2626;font-weight:700}
+table.sheet tr.zero td{color:#9ca3af;text-align:center;padding:14px}
+table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db;position:sticky;bottom:0}
+.st{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#4b5563}
+.st-finalizada{background:#eff6ff;color:#1d4ed8}.st-confirmada,.st-check_in{background:#fff7ed;color:#c2410c}.st-pendiente_pago{background:#fffbeb;color:#b45309}
 </style>
 </head><body>
 @include('partials.navbar')
@@ -70,7 +88,7 @@
      $bookings de "Historial" de más abajo, mostrada dos veces con menos
      información (sin fecha por fila, ambigua en vista semana). --}}
 
-<div class="calendar-split">
+<div class="calendar-split calendar-split-one">
  <section class="calendar-card upcoming calendar-history">
   <h2>◷ Próximas reservas <span class="hist-count">desde ahora, sin importar el período</span></h2>
   <div class="soon-stats">
@@ -89,14 +107,66 @@
    <p class="empty">No hay reservas futuras por ahora.</p>
   @endforelse
  </section>
- <section class="calendar-card past calendar-history">
-  <h2>✓ Historial {{ $view==='month' ? 'del mes' : ($view==='week' ? 'de la semana' : 'del día') }} <span class="hist-count">{{ $pastBookings->count() }} {{ Str::plural('reserva', $pastBookings->count()) }}</span></h2>
-  @forelse ($pastBookings->sortByDesc('starts_at') as $booking)
-   <a class="booking-row" href="{{ route('reservations.show',$booking->code) }}"><div class="booking-time"><b>{{ $booking->starts_at->locale('es')->isoFormat('D MMM') }}</b><span>{{ $booking->starts_at->format('H:i') }}</span></div><div><strong>{{ $booking->room->name }}</strong><small>{{ $booking->room->category->name }} · {{ $booking->customer->name }}</small></div><div class="booking-status">{{ str_replace('_',' ', $booking->booking_status) }}</div><span class="arrow">→</span></a>
-  @empty
-   <p class="empty">Todavía no pasó ninguna reserva en este período.</p>
-  @endforelse
- </section>
 </div>
+@php
+ $money = fn ($n) => '$'.number_format((int) $n, 0, ',', '.');
+ $histRows = $pastBookings->sortBy('starts_at')->values()->map(function ($b) {
+  $extras = (int) $b->addons->sum('amount');
+  $paid = (int) $b->payments->where('status', 'aprobado')->sum('amount');
+  return ['b' => $b, 'extras' => $extras, 'paid' => $paid, 'total' => (int) $b->price_final + $extras, 'balance' => max(0, (int) $b->price_final + $extras - $paid)];
+ });
+ $statusLabel = ['PENDIENTE_PAGO' => 'Pendiente de pago', 'CONFIRMADA' => 'Confirmada', 'CHECK_IN' => 'En curso', 'FINALIZADA' => 'Finalizada'];
+@endphp
+<section class="calendar-card sheet-card">
+ <h2>✓ Historial {{ $view==='month' ? 'del mes' : ($view==='week' ? 'de la semana' : 'del día') }} <span class="hist-count">{{ $histRows->count() }} {{ Str::plural('reserva', $histRows->count()) }} · toca una fila para ver el detalle</span></h2>
+ <div class="sheet-wrap">
+  <table class="sheet">
+   <thead><tr>
+    <th class="n">N°</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th class="n">Duración</th><th>Reserva</th><th>Cliente</th><th>Teléfono</th>
+    <th>Hab.</th><th>Categoría</th><th class="n">Pers.</th><th>Tarifa</th>
+    <th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th><th>Estado</th>
+   </tr></thead>
+   <tbody>
+   @forelse ($histRows as $r)
+    @php $b = $r['b']; @endphp
+    <tr data-href="{{ route('reservations.show', $b->code) }}">
+     <td class="n">{{ $loop->iteration }}</td>
+     <td>{{ $b->starts_at->locale('es')->isoFormat('ddd D MMM') }}</td>
+     <td>{{ $b->starts_at->format('H:i') }}</td>
+     <td>{{ $b->ends_at->format('H:i') }}</td>
+     <td class="n">{{ \App\Support\TimeFormat::minutes($b->duration_minutes) }}</td>
+     <td><a class="code" href="{{ route('reservations.show', $b->code) }}">{{ $b->code }}</a></td>
+     <td>{{ $b->customer->name }}</td>
+     <td>{{ $b->customer->phone ?: '—' }}</td>
+     <td>{{ $b->room->name }}</td>
+     <td>{{ $b->room->category->name }}</td>
+     <td class="n">{{ $b->guests_count }}</td>
+     <td>{{ $b->rate_rule_name_snapshot ?: '—' }}</td>
+     <td class="n">{{ $money($b->price_final) }}</td>
+     <td class="n">{{ $r['extras'] ? $money($r['extras']) : '—' }}</td>
+     <td class="n"><b>{{ $money($r['total']) }}</b></td>
+     <td class="n">{{ $money($r['paid']) }}</td>
+     <td class="n {{ $r['balance'] > 0 ? 'owe' : '' }}">{{ $r['balance'] > 0 ? $money($r['balance']) : '—' }}</td>
+     <td><span class="st st-{{ strtolower($b->booking_status) }}">{{ $statusLabel[$b->booking_status] ?? $b->booking_status }}</span></td>
+    </tr>
+   @empty
+    <tr class="zero"><td colspan="18">Todavía no pasó ninguna reserva en este período.</td></tr>
+   @endforelse
+   @if ($histRows->isNotEmpty())
+    <tr class="total">
+     <td colspan="12">Total · {{ $histRows->count() }} {{ Str::plural('reserva', $histRows->count()) }}</td>
+     <td class="n">{{ $money($histRows->sum(fn ($r) => $r['b']->price_final)) }}</td>
+     <td class="n">{{ $money($histRows->sum('extras')) }}</td>
+     <td class="n">{{ $money($histRows->sum('total')) }}</td>
+     <td class="n">{{ $money($histRows->sum('paid')) }}</td>
+     <td class="n">{{ $money($histRows->sum('balance')) }}</td>
+     <td></td>
+    </tr>
+   @endif
+   </tbody>
+  </table>
+ </div>
+</section>
+<script>document.addEventListener('click',function(e){var r=e.target.closest('table.sheet tr[data-href]');if(r&&!e.target.closest('a'))location.href=r.dataset.href;});</script>
 </main>
 </body></html>
