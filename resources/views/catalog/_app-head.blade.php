@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-<link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
-<link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/icon-192.png') }}">
+<link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png').'?v=2' }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/icon-192.png').'?v=2' }}">
 <style>
     @view-transition { navigation: auto; }
     ::view-transition-old(root) { animation: hh-vt-out .12s ease both; }
@@ -17,7 +17,7 @@
     @keyframes hh-vt-out { to { opacity:0; } }
     @keyframes hh-vt-in { from { opacity:0; transform:translateY(6px); } }
 
-    :root { --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px); --bar-h: 56px; }
+    :root { --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px); --bar-h: 62px; }
     html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
     body { -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
     a, button, summary, label { touch-action: manipulation; }
@@ -40,7 +40,7 @@
     .ab-btn.wa { background: #1f2a22; color: #4ade80; }
     .ab-btn.wa:active { background: #2b3a2f; }
     .ab-center { justify-self: center; display: flex; align-items: center; min-width: 0; color: #fff; text-decoration: none; }
-    .ab-center img { display: block; height: 42px; width: auto; }
+    .ab-center img { display: block; height: 50px; width: auto; }
     .ab-title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
     .ab-nav { display: none; }
     @media (min-width: 900px) {

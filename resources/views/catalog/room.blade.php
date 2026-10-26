@@ -93,7 +93,7 @@
     </style>
 </head>
 <body class="has-ctabar">
-    @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => $room->name])
+    @include('catalog._app-bar', ['appBack' => route('catalog.index')])
     <div class="wrap">
 
         <section class="room-card cat-{{ Str::slug($category->name) }}">
