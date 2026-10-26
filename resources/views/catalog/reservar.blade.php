@@ -3,9 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="color-scheme" content="light">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Reservar — HH Motel</title>
     @include('partials.social-meta', ['shareTitle' => 'Reservar — HH Motel Santiago', 'shareDescription' => 'Elige tu playroom, fecha y duración, y confirma tu reserva en línea en HH Motel Santiago.'])
+    @include('catalog._app-head')
     <style>
         :root {
             color-scheme: light;
@@ -17,7 +18,7 @@
         }
         * { box-sizing: border-box; }
         body { background:var(--hh-canvas); color:var(--hh-ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; line-height: 1.45; }
-        .wrap { max-width: 520px; margin: 0 auto; padding: 24px 16px 60px; }
+        .wrap { max-width: 520px; margin: 0 auto; padding: 18px 16px calc(40px + var(--safe-b)); }
         a.back { color:#62656c; text-decoration:none; font-size:13px; display:inline-block; margin-bottom: 18px; }
         .brand { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--hh-accent); margin-bottom: 8px; }
         h1 { font-size: 25px; margin: 0 0 6px; letter-spacing: -.03em; }
@@ -53,7 +54,7 @@
             .row2-datetime { grid-template-columns: 1fr; }
         }
         .honey-field { position:absolute; left:-9999px; top:-9999px; }
-        button.submit { width:100%; margin-top:26px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:15px; font-weight:750; cursor:pointer; }
+        button.submit { position:sticky; bottom:calc(10px + var(--safe-b)); z-index:30; box-shadow:0 10px 28px rgba(0,0,0,.45); min-height:56px; width:100%; margin-top:26px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:15px; font-weight:750; cursor:pointer; }
         button.submit:hover { background:var(--hh-accent-hover); }
         .summary { background:#fff; color:var(--hh-ink); border:1px solid #dedfdf; border-radius:10px; padding:13px 14px; margin-top:18px; font-size:13px; }
         .summary strong { display:block; font-size:15px; margin-bottom:3px; }
@@ -86,9 +87,8 @@
     </style>
 </head>
 <body>
+    @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => 'Reservar'])
     <div class="wrap">
-        <a class="back" href="{{ route('catalog.index') }}">← Volver al catálogo</a>
-        <div class="brand">HH MOTEL</div>
         <h1>Reserva tu Playroom</h1>
         <p class="sub">Elige tu fecha y horario. Te mostraremos una opción disponible y recibirás la confirmación al finalizar.</p>
 

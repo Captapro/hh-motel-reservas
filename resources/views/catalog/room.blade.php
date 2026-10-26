@@ -3,9 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="color-scheme" content="light">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{{ $room->name }} — HH Motel</title>
     @include('partials.social-meta', ['shareTitle' => $room->name.' — HH Motel Santiago', 'shareDescription' => 'Conoce la habitación '.$room->name.' de HH Motel Santiago y reserva en línea.', 'shareImage' => $photos->isNotEmpty() ? url($photos->first()) : null])
+    @include('catalog._app-head')
     <style>
         :root {
             color-scheme: light;
@@ -18,13 +19,13 @@
         * { box-sizing: border-box; }
         body { background:var(--hh-canvas); color:var(--hh-ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; line-height: 1.45; }
         a { color: inherit; }
-        .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
+        .wrap { max-width: 720px; margin: 0 auto; padding: 14px 16px 30px; }
 
         header.hero { text-align:center; padding: 32px 20px 24px; }
         header.hero .brand { font-size: 14px; font-weight: 800; letter-spacing: .1em; color: var(--hh-accent); margin-bottom: 8px; }
         a.back { display:inline-block; color:#62656c; text-decoration:none; font-size:13px; margin-bottom: 14px; }
 
-        .room-card { background:var(--hh-surface); color:#f5f5f5; border:1px solid #454649; border-left-width:4px; border-radius: 12px; overflow:hidden; box-shadow: 0 3px 10px #1011120b; }
+        .room-card { background:#1b1c1e; color:#f5f5f5; border-radius: 24px; overflow:hidden; box-shadow: 0 8px 28px rgba(16,17,18,.14); }
         .room-card.cat-go { border-left-color:#5b9dd9; }
         .room-card.cat-lite { border-left-color:#4ecdc4; }
         .room-card.cat-plus { border-left-color:#b088e8; }
@@ -36,13 +37,18 @@
         .cat-max h1 { color:#f7b06a; }
         .cat-new-lite h1 { color:#f0d98a; }
 
-        .gallery { display:grid; grid-template-columns: repeat(4, 1fr); gap:2px; background:#202122; }
-        .gallery a { display:block; aspect-ratio: 4/3; overflow:hidden; }
-        .gallery img { width:100%; height:100%; object-fit:cover; display:block; transition: transform .2s ease; }
-        .gallery a:hover img { transform: scale(1.05); }
-        .gallery.empty { aspect-ratio: 16/6; display:flex; align-items:center; justify-content:center; color:#8a8c90; font-size:13px; grid-template-columns:none; }
+        .gallery-wrap { position:relative; background:#232427; }
+        .gallery { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; }
+        .gallery::-webkit-scrollbar { display:none; }
+        .gallery a { flex:0 0 100%; scroll-snap-align:center; display:block; aspect-ratio:4/3; overflow:hidden; background:#2a2b2e; }
+        .gallery img { width:100%; height:100%; object-fit:cover; display:block; }
+        .gallery.empty { aspect-ratio: 4/3; display:flex; align-items:center; justify-content:center; color:#8a8c90; font-size:14px; }
+        .g-count { position:absolute; top:14px; right:14px; background:rgba(0,0,0,.55); color:#fff; font-size:12px; font-weight:700; padding:5px 10px; border-radius:999px; pointer-events:none; }
+        .g-dots { position:absolute; left:0; right:0; bottom:10px; display:flex; justify-content:center; gap:5px; pointer-events:none; }
+        .g-dots i { width:6px; height:6px; border-radius:50%; background:#ffffff66; transition:all .18s ease; }
+        .g-dots i.on { width:16px; border-radius:4px; background:#fff; }
 
-        .room-body { padding: 22px 24px 26px; }
+        .room-body { padding: 20px 18px 22px; }
         h1 { font-size: 22px; margin: 0 0 4px; letter-spacing:-.02em; }
         .cat-label { font-size: 12.5px; color:#9edaff; font-weight:600; margin-bottom: 12px; }
         .cap { font-size: 14px; color: #d5d8de; margin-bottom: 14px; }
@@ -90,24 +96,25 @@
 
         footer.catalog-footer { text-align:center; color:#8a8d93; font-size:12.5px; padding: 26px 0 10px; }
 
-        @media (max-width: 560px) {
-            .gallery { grid-template-columns: repeat(2, 1fr); }
-        }
     </style>
 </head>
-<body>
+<body class="has-ctabar">
+    @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => $room->name])
     <div class="wrap">
-        <header class="hero">
-            <div class="brand">HH MOTEL</div>
-        </header>
-        <a class="back" href="{{ route('catalog.index') }}">← Volver al catálogo</a>
 
         <section class="room-card cat-{{ Str::slug($category->name) }}">
             @if ($photos->isNotEmpty())
-                <div class="gallery">
-                    @foreach ($photos->take(8) as $url)
-                        <a href="{{ \App\Support\Img::url($url, 1280) }}" data-viewer="room" aria-label="Ampliar foto {{ $loop->iteration }}"><img src="{{ \App\Support\Img::url($url, 640) }}" alt="Foto {{ $room->name }}" loading="lazy" decoding="async"></a>
-                    @endforeach
+                @php $gSlides = $photos->take(8); @endphp
+                <div class="gallery-wrap">
+                    <div class="gallery" id="room-gallery">
+                        @foreach ($gSlides as $url)
+                            <a href="{{ \App\Support\Img::url($url, 1280) }}" data-viewer="room" aria-label="Ampliar foto {{ $loop->iteration }}"><img src="{{ \App\Support\Img::url($url, 640) }}" alt="Foto {{ $room->name }}" width="640" height="480" @if ($loop->first) fetchpriority="high" @else loading="lazy" @endif decoding="async"></a>
+                        @endforeach
+                    </div>
+                    @if ($gSlides->count() > 1)
+                        <span class="g-count" id="g-count">1/{{ $gSlides->count() }}</span>
+                        <div class="g-dots" id="g-dots">@foreach ($gSlides as $g)<i class="{{ $loop->first ? 'on' : '' }}"></i>@endforeach</div>
+                    @endif
                 </div>
             @else
                 <div class="gallery empty">Fotos próximamente</div>
@@ -184,9 +191,6 @@
                     </table>
                 @endif
 
-                <div class="btn-row">
-                    <a class="btn primary" href="{{ route('catalog.reserve', ['categoria' => $category->id, 'room_id' => $room->id]) }}" style="flex:none; width:100%;">Reservar online →</a>
-                </div>
             </div>
         </section>
 
@@ -200,11 +204,40 @@
 
         <footer class="catalog-footer">HH Motel</footer>
     </div>
+    @php
+        $from = null;
+        foreach ($prices as $row) {
+            foreach (['hh', 'hot'] as $k) {
+                if ($row[$k] && ($from === null || $row[$k] < $from['price'])) { $from = ['price' => $row[$k], 'duration' => $row['duration']]; }
+            }
+        }
+    @endphp
+    <div class="cta-bar">
+        <div class="cta-bar-in">
+            @if ($from)
+                <div class="cta-price"><small>Desde</small><b>${{ number_format($from['price'], 0, ',', '.') }}</b></div>
+            @endif
+            <a class="cta-go" href="{{ route('catalog.reserve', ['categoria' => $category->id, 'room_id' => $room->id]) }}">Reservar {{ $room->name }}</a>
+        </div>
+    </div>
     <div class="video-modal" id="video-modal" role="dialog" aria-modal="true" aria-label="Reproductor de video">
         <button class="video-close" type="button" id="video-close">Cerrar ✕</button>
         <video id="video-modal-player" controls playsinline></video>
     </div>
     <script>
+        (function () {
+            const g = document.getElementById('room-gallery'), dots = document.querySelectorAll('#g-dots i'), count = document.getElementById('g-count');
+            if (!g || !dots.length) return;
+            let raf = 0;
+            g.addEventListener('scroll', () => {
+                cancelAnimationFrame(raf);
+                raf = requestAnimationFrame(() => {
+                    const i = Math.round(g.scrollLeft / g.clientWidth);
+                    dots.forEach((d, n) => d.classList.toggle('on', n === i));
+                    if (count) count.textContent = (i + 1) + '/' + dots.length;
+                });
+            }, { passive: true });
+        })();
         // Antes el video abría en pestaña nueva (target="_blank") sin ningún
         // botón para volver a la ficha -- ahora se reproduce en un modal con
         // su propio "Cerrar".

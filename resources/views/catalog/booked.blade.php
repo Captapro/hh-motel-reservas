@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="color-scheme" content="light">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Reserva confirmada — HH Motel</title>
+    @include('catalog._app-head')
     <style>
         :root {
             color-scheme: light;
@@ -16,7 +17,7 @@
         }
         * { box-sizing: border-box; }
         body { background:var(--hh-canvas); color:var(--hh-ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; line-height: 1.45; }
-        .wrap { max-width: 440px; margin: 0 auto; padding: 60px 20px; text-align:center; }
+        .wrap { max-width: 440px; margin: 0 auto; padding: 24px 16px calc(40px + var(--safe-b)); text-align:center; }
         .check { width:56px; height:56px; border-radius:50%; background:#1c3a2a; color:#6fd39a; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; margin: 0 auto 18px; }
         h1 { font-size: 21px; margin: 0 0 8px; letter-spacing:-.02em; }
         p.sub { color:#62656c; font-size: 14px; margin: 0 0 26px; }
@@ -49,6 +50,7 @@
     </style>
 </head>
 <body>
+    @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => 'Mi reserva'])
     <div class="wrap">
         <div class="check">✓</div>
         @php

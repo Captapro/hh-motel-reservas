@@ -16,7 +16,7 @@ class CatalogController extends Controller
      * real la sigue creando recepción, este catálogo es solo para que el
      * cliente vea las habitaciones y escriba.
      */
-    private const WHATSAPP_NUMBER = '56977683108';
+    public const WHATSAPP_NUMBER = '56977683108';
 
     public function index(): View
     {

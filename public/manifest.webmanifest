@@ -1,0 +1,18 @@
+{
+  "name": "HH Motel Santiago — Playrooms",
+  "short_name": "HH Motel",
+  "description": "Elige tu Playroom y reserva en línea en HH Motel Santiago.",
+  "id": "/catalogo",
+  "start_url": "/catalogo?utm_source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "es-CL",
+  "icons": [
+    { "src": "/images/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
