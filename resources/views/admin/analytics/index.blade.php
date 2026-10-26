@@ -123,29 +123,21 @@
         <a href="{{ route('admin.analytics.index') }}" style="padding:7px 14px;border-radius:7px;background:#ff7918;color:#111;font-weight:600;font-size:13px;text-decoration:none;">Analytics</a>
     </div>
     <h1>Analytics</h1>
-    <p class="sub">{{ $rangeLabel }} · viendo por <b>{{ $metricLabel }}</b>{{ $categoryId ? ' · '.$categories->firstWhere('id', $categoryId)?->name : '' }}. No cuenta reservas canceladas.</p>
+    <p class="sub">{{ $rangeLabel }}{{ $categoryId ? ' · '.$categories->firstWhere('id', $categoryId)?->name : '' }}. No cuenta reservas canceladas.</p>
 
     <form class="flt" method="GET" action="{{ route('admin.analytics.index') }}">
         <div class="flt-row">
-            @foreach (['today' => 'Hoy', 'week' => 'Semana', 'this_month' => 'Mes', '7d' => '7 días', '30d' => '30 días', '90d' => '90 días', 'last_month' => 'Mes pasado', 'this_year' => 'Este año', 'all' => 'Todo'] as $k => $lbl)
-                <a class="chip {{ $preset === $k ? 'active' : '' }}" href="{{ route('admin.analytics.index', $qs(['preset' => $k, 'from' => null, 'to' => null])) }}">{{ $lbl }}</a>
-            @endforeach
-        </div>
-        <div class="flt-row">
             <label>Desde</label>
-            <input type="date" name="from" value="{{ $preset === 'custom' ? $from : '' }}">
+            <input type="date" name="from" value="{{ $from }}">
             <label>Hasta</label>
-            <input type="date" name="to" value="{{ $preset === 'custom' ? $to : '' }}">
-            <input type="hidden" name="metric" value="{{ $metric }}">
+            <input type="date" name="to" value="{{ $to }}">
             <input type="hidden" name="category" value="{{ $categoryId }}">
             <button class="go" type="submit">Aplicar</button>
+            @if ($preset === 'custom')
+                <a class="chip" href="{{ route('admin.analytics.index', ['category' => $categoryId]) }}">Volver al mes actual</a>
+            @endif
 
             <span style="flex:1"></span>
-
-            <span class="metric-toggle">
-                <a class="{{ $metric === 'revenue' ? 'on' : '' }}" href="{{ route('admin.analytics.index', $qs(['metric' => 'revenue'])) }}">Venta</a>
-                <a class="{{ $metric === 'count' ? 'on' : '' }}" href="{{ route('admin.analytics.index', $qs(['metric' => 'count'])) }}">Reservas</a>
-            </span>
 
             <select onchange="location.href=this.value">
                 <option value="{{ route('admin.analytics.index', $qs(['category' => null])) }}" @selected(! $categoryId)>Todas las categorías</option>

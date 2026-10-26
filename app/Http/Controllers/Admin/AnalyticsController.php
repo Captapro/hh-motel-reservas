@@ -24,7 +24,8 @@ class AnalyticsController extends Controller
     public function index(Request $request): View
     {
         [$start, $end, $preset] = $this->resolveRange($request);
-        $metric = $request->query('metric') === 'count' ? 'count' : 'revenue';
+        // Siempre en venta ($): la cantidad de reservas ya se ve en las tarjetas de arriba.
+        $metric = 'revenue';
         $categoryId = (int) $request->query('category', 0) ?: null;
 
         $spanDays = max(1, (int) ceil($start->diffInDays($end)) + 1);
@@ -156,7 +157,8 @@ class AnalyticsController extends Controller
             'last_month' => [$now->copy()->subMonthNoOverflow()->startOfMonth(), $now->copy()->subMonthNoOverflow()->endOfMonth(), 'last_month'],
             'this_year' => [$now->copy()->startOfYear(), $now->copy()->endOfDay(), 'this_year'],
             'all' => [Carbon::parse('2000-01-01', $tz), $now->copy()->endOfDay(), 'all'],
-            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth(), 'this_month'],
+            // Por defecto, el mes en curso hasta hoy (si es día 8, los 8 primeros días del mes).
+            default => [$now->copy()->startOfMonth(), $now->copy()->endOfDay(), 'this_month'],
         };
     }
 
