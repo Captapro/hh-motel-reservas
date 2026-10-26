@@ -13,7 +13,7 @@
         .shell { width:min(100%,480px); margin:auto; padding:28px 20px 24px; }
         .brand { background:#000; padding:22px 20px 20px; border-radius:0 0 18px 18px; }
         .brand-inner { max-width:440px; margin:auto; text-align:center; }
-        .brand img { display:block; width:min(220px,64vw); height:66px; object-fit:contain; margin:auto; }
+        .brand img { display:block; width:auto; max-width:min(260px,70vw); height:78px; object-fit:contain; margin:auto; }
         .review-content { text-align:left; }
         .eyebrow { color:#62656c; font-size:16px; font-weight:600; margin:0 0 12px; }
         h1 { font-size:clamp(36px,10vw,44px); font-weight:750; line-height:1.06; letter-spacing:-.045em; margin:0 0 18px; }
@@ -56,7 +56,7 @@
 </head>
 <body>
     <header class="brand"><div class="brand-inner">
-            <img src="https://assets.cdn.filesafe.space/ksYYfSiY8nP4YFvkrJFJ/media/6aab44cf9f8b31b6ab530587.png" alt="HH Motel" width="220" height="66">
+            <img src="{{ asset('images/hh-logo-wide.png').'?v=2' }}" alt="HH Motel Santiago Playrooms" width="720" height="280">
     </div></header>
     <div class="shell">
         <main class="review-content">

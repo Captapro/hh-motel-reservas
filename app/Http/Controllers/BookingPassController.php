@@ -29,7 +29,7 @@ class BookingPassController extends Controller
             'booking' => $booking,
             'paid' => $booking->paidAmount(),
             'balance' => $booking->balanceDue(),
-            'logo' => public_path('images/hh-motel-logo.png'),
+            'logo' => public_path('images/hh-logo-wide.png'),
             'qrDataUri' => $qr->getDataUri(),
         ])->setPaper([0, 0, 396, 720], 'portrait');
     }
