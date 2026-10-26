@@ -500,34 +500,6 @@
                 @endif
             </div>
 
-            {{-- En aseo y Fuera de servicio: mismo panel enmarcado que Ocupadas, siempre visibles y lado a lado, arriba de Disponibles. --}}
-            <div class="panel-row">
-            <div class="section aseo panel-box">
-                <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span></div>
-                <div class="sidebar-empty panel-empty" @if ($grouped['en_aseo']->isNotEmpty()) hidden @endif>Ninguna habitación en aseo ahora.</div>
-                @if ($grouped['en_aseo']->isNotEmpty())
-                    <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
-                    <div class="grid">
-                        @foreach ($grouped['en_aseo'] as $entry)
-                            @include('rooms._card', ['entry' => $entry])
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-
-            <div class="section fuera panel-box">
-                <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span></div>
-                <div class="sidebar-empty panel-empty" @if ($grouped['fuera_de_servicio']->isNotEmpty()) hidden @endif>Ninguna habitación fuera de servicio.</div>
-                @if ($grouped['fuera_de_servicio']->isNotEmpty())
-                    <div class="grid">
-                        @foreach ($grouped['fuera_de_servicio'] as $entry)
-                            @include('rooms._card', ['entry' => $entry])
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-            </div>
-
             <div class="section disponibles">
                 <div class="section-head"><h2>Disponibles</h2><span class="count" id="disponibles-count">{{ $grouped['disponibles']->count() }}</span><span class="bar"></span></div>
                 @php
@@ -557,6 +529,34 @@
                 @endif
             </div>
 
+
+            {{-- En aseo y Fuera de servicio: mismo panel enmarcado que Ocupadas, siempre visibles y lado a lado, debajo de Disponibles. --}}
+            <div class="panel-row">
+            <div class="section aseo panel-box">
+                <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span></div>
+                <div class="sidebar-empty panel-empty" @if ($grouped['en_aseo']->isNotEmpty()) hidden @endif>Ninguna habitación en aseo ahora.</div>
+                @if ($grouped['en_aseo']->isNotEmpty())
+                    <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
+                    <div class="grid">
+                        @foreach ($grouped['en_aseo'] as $entry)
+                            @include('rooms._card', ['entry' => $entry])
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            <div class="section fuera panel-box">
+                <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span></div>
+                <div class="sidebar-empty panel-empty" @if ($grouped['fuera_de_servicio']->isNotEmpty()) hidden @endif>Ninguna habitación fuera de servicio.</div>
+                @if ($grouped['fuera_de_servicio']->isNotEmpty())
+                    <div class="grid">
+                        @foreach ($grouped['fuera_de_servicio'] as $entry)
+                            @include('rooms._card', ['entry' => $entry])
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+            </div>
         </div>
 
         {{-- La columna "Por llegar" siempre ocupa su lugar: así las habitaciones no se corren cuando aparece o desaparece una reserva. --}}
