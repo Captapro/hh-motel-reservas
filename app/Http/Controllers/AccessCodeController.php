@@ -116,15 +116,14 @@ class AccessCodeController extends Controller
             $label = trim($parts[0], " :#\t");
             // El valor es la clave y, si trae algo más, eso va como nota: "3333 (Presiona el candado...)".
             [$code, $notes] = array_pad(preg_split('/\s+/u', trim($parts[1]), 2), 2, null);
-            if (preg_match('/^(?:hab(?:itaci[oó]n)?\.?\s*)?#?\s*(\d{3})$/iu', $label, $n)) {
-                $room = $rooms->get($n[1]);
-                if (! $room) {
-                    $skipped[] = $line.' (no existe la habitación '.$n[1].')';
-                    continue;
-                }
+            // Un número que no es habitación del sistema (ej. la 211, que se usa para
+            // otra cosa) se guarda tal cual como recinto con ese mismo nombre.
+            $room = preg_match('/^(?:hab(?:itaci[oó]n)?\.?\s*)?#?\s*(\d{3})$/iu', $label, $n) ? $rooms->get($n[1]) : null;
+            if ($room) {
                 AccessCode::updateOrCreate(['room_id' => $room->id], ['kind' => 'habitacion', 'code' => $code, 'notes' => $notes, 'updated_by' => auth()->id()]);
                 $saved[] = $room->name;
             } else {
+                $label = trim($parts[0], " :\t");
                 $row = AccessCode::whereNull('room_id')->where('name', $label)->first()
                     ?? new AccessCode(['name' => $label, 'kind' => 'acceso']);
                 $row->fill(['code' => $code, 'notes' => $notes, 'updated_by' => auth()->id()])->save();

@@ -98,23 +98,25 @@ class AccessCodeTest extends TestCase
         $this->assertSame('1234', AccessCode::first()->code);
     }
 
-    public function test_pasting_a_spreadsheet_loads_rooms_and_places_and_reports_unknown_rooms(): void
+    public function test_pasting_a_spreadsheet_loads_rooms_and_places_as_given(): void
     {
         $admin = User::factory()->create(['role' => 'administrador']);
         $lines = "HAB\tLLAVE 1\n#101\t1234\n#999\t1111\nMUCAMAS:\t2222\nPuerta electricidad: 3333 (Presiona el candado para abrir)\n";
 
         $this->actingAs($admin)->post(route('access_codes.import'), ['lines' => $lines])
             ->assertRedirect(route('access_codes.index'))
-            ->assertSessionHas('status', fn ($s) => str_contains($s, '3 claves guardadas') && str_contains($s, '999'));
+            ->assertSessionHas('status', fn ($s) => $s === '4 claves guardadas.');
 
         $this->assertSame('1234', AccessCode::where('room_id', $this->room->id)->first()->code);
         $this->assertSame('2222', AccessCode::where('name', 'MUCAMAS')->first()->code);
+        // Un número que no es habitación queda tal cual, como recinto.
+        $this->assertSame('1111', AccessCode::whereNull('room_id')->where('name', '#999')->first()->code);
         $door = AccessCode::where('name', 'Puerta electricidad')->first();
         $this->assertSame('3333', $door->code);
         $this->assertSame('(Presiona el candado para abrir)', $door->notes);
 
         $this->actingAs($admin)->post(route('access_codes.import'), ['lines' => '#101 5555']);
-        $this->assertSame(3, AccessCode::count());
+        $this->assertSame(4, AccessCode::count());
         $this->assertSame('5555', AccessCode::where('room_id', $this->room->id)->first()->code);
     }
 }

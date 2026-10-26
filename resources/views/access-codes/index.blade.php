@@ -72,7 +72,7 @@
             <summary>Pegar listado desde una planilla</summary>
             <form method="POST" action="{{ route('access_codes.import') }}">
                 @csrf
-                <p class="sec-note" style="margin:10px 0 8px;">Una clave por línea: el nombre y luego la clave, por ejemplo <code>#101 1234</code> o <code>Puerta electricidad: 3333 (presiona el candado)</code>. Puedes copiar las dos columnas directo desde Excel. Lo que vaya después de la clave queda como nota. Si el nombre es un número de habitación se carga en esa habitación; si no, se crea como recinto. Las claves que ya existan se reemplazan.</p>
+                <p class="sec-note" style="margin:10px 0 8px;">Una clave por línea: el nombre y luego la clave, por ejemplo <code>#101 1234</code> o <code>Puerta electricidad: 3333 (presiona el candado)</code>. Puedes copiar las dos columnas directo desde Excel. Lo que vaya después de la clave queda como nota. Si el nombre es una habitación del sistema se carga en esa habitación; si no, se guarda tal cual como recinto. Las claves que ya existan se reemplazan.</p>
                 <textarea name="lines" rows="8" placeholder="#101	1234&#10;#102	4444&#10;Mucamas	2222" autocomplete="off"></textarea>
                 <button class="btn primary" style="margin-top:8px;">Cargar claves</button>
             </form>
