@@ -24,6 +24,7 @@
     <dt>Habitación</dt><dd>{{ $booking->room->name }} · {{ $booking->room->category->name }}</dd>
     <dt>Fecha</dt><dd>{{ $booking->starts_at->timezone($tz)->locale('es')->isoFormat('ddd D [de] MMM YYYY') }}</dd>
     <dt>Horario</dt><dd>{{ $booking->starts_at->timezone($tz)->format('H:i') }} — {{ $booking->ends_at->timezone($tz)->format('H:i') }} ({{ $dur }})</dd>
+    <dt>Origen</dt><dd>{{ $booking->originLabel() }}</dd>
     <dt>Personas</dt><dd>{{ $booking->guests_count }}</dd>
     @if ($booking->checked_in_at)<dt>Check-in</dt><dd>{{ $booking->checked_in_at->timezone($tz)->format('d/m H:i') }}</dd>@endif
     @if ($booking->checked_out_at)<dt>Check-out</dt><dd>{{ $booking->checked_out_at->timezone($tz)->format('d/m H:i') }}</dd>@endif

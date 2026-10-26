@@ -163,4 +163,11 @@
         .chart-detail summary { color:#6b7280; border-top:1px solid #eef0f3; }
         .chart-detail summary:hover, .chart-detail[open] summary { color:#111827; }
         .empty { color:#9ca3af; }
+.origin-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:2px 0 14px}
+        .origin-tile{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px}
+        .origin-tile .o-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;font-weight:700}
+        .origin-tile .o-count{font-size:30px;font-weight:800;letter-spacing:-.03em;color:#111827;line-height:1.1;margin:2px 0}
+        .origin-tile .o-sub{font-size:12px;color:#6b7280}
+        .origin-tile.origin-presencial{border-color:#fed7aa;background:#fff7ed}.origin-tile.origin-presencial .o-count{color:#c2410c}
+        .origin-tile.origin-catalogo{border-color:#bfdbfe;background:#eff6ff}.origin-tile.origin-catalogo .o-count{color:#1d4ed8}
     </style>

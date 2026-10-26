@@ -210,7 +210,7 @@
         <a class="lnk" href="{{ route('sales.monthly', ['month' => $first->format('Y-m'), 'export' => 'detalle']) }}">Exportar detalle a Excel (CSV)</a>
     </div>
     <div class="table-wrap scroll-detail"><table id="detail-table">
-        <thead><tr><th class="n">N°</th><th>Fecha</th><th>Reserva</th><th>Documento</th><th>N° voucher</th><th>N° boleta</th><th>Tipo</th><th>Detalle</th><th class="n">Cant.</th><th>Cliente</th><th>RUT / documento</th><th>Nacionalidad</th><th class="n">Edad</th><th>Hab.</th><th>Categoría</th><th class="n">Pers.</th><th>Entrada</th><th>Salida</th><th class="n">Horas</th><th>Tarifa</th><th class="n">Precio</th><th>Pago</th><th>Turno</th><th>Registró</th><th>Faltan</th></tr></thead>
+        <thead><tr><th class="n">N°</th><th>Fecha</th><th>Reserva</th><th>Documento</th><th>N° voucher</th><th>N° boleta</th><th>Tipo</th><th>Detalle</th><th class="n">Cant.</th><th>Cliente</th><th>RUT / documento</th><th>Nacionalidad</th><th class="n">Edad</th><th>Hab.</th><th>Categoría</th><th class="n">Pers.</th><th>Entrada</th><th>Salida</th><th class="n">Horas</th><th>Tarifa</th><th class="n">Precio</th><th>Pago</th><th>Turno</th><th>Registró</th><th>Origen</th><th>Faltan</th></tr></thead>
         <tbody>
         @forelse ($detail as $r)
             <tr class="{{ $r['kind'] === 'EXTRAS' ? 'extra' : '' }}" data-missing="{{ count($r['missing']) ? 1 : 0 }}" data-booking="{{ $r['code'] }}" data-sale="{{ $r['code'] }}" title="Ver el detalle completo">
@@ -238,10 +238,11 @@
                 <td>{{ $r['method'] ?: '—' }}</td>
                 <td>{{ $r['shift'] }}</td>
                 <td>{{ $r['by'] ?: '—' }}</td>
+                <td>{{ $r['origin'] }}</td>
                 <td>@if (count($r['missing']))<span class="miss">{{ implode(', ', $r['missing']) }}</span>@elseif ($r['kind'] === 'ALOJAMIENTO')<span class="ok">completo</span>@endif</td>
             </tr>
         @empty
-            <tr class="zero"><td colspan="25">Sin ventas este mes.</td></tr>
+            <tr class="zero"><td colspan="26">Sin ventas este mes.</td></tr>
         @endforelse
         </tbody>
     </table></div>

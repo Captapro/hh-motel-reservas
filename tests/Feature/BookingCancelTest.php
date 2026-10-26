@@ -36,6 +36,7 @@ class BookingCancelTest extends TestCase
             '2026_08_18_120008_create_coupons_table.php',
             '2026_08_18_120010_create_customers_table.php',
             '2026_08_18_120011_create_bookings_table.php',
+            '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
             '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
         ] as $migration) {

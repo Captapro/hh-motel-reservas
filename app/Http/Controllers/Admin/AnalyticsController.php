@@ -65,6 +65,7 @@ class AnalyticsController extends Controller
                 ->map(fn ($g, $k) => ['date' => Carbon::parse($k), 'value' => $sum($g), 'count' => $g->count()])
                 ->sortByDesc('value')->take(8)->values(),
 
+            'byOrigin' => $this->byOrigin($current, $val),
             'monthly' => $this->monthlyComparison($metric, $categoryId),
             'projection' => $this->monthProjection($categoryId),
             'operations' => $this->operations($current),
@@ -328,6 +329,27 @@ class AnalyticsController extends Controller
             'days_elapsed' => $daysElapsed,
             'days_in_month' => $daysInMonth,
         ];
+    }
+
+    /**
+     * Cuántos llegan por cada vía: reserva en línea (catálogo), ingreso
+     * presencial y reserva tomada por recepción. Las antiguas sin dato quedan
+     * aparte para no inflar ninguna de las tres.
+     *
+     * @return array{rows: Collection, total: int}
+     */
+    private function byOrigin(Collection $bookings, callable $val): array
+    {
+        $rows = collect(['catalogo' => 'En línea', 'presencial' => 'Presencial', 'recepcion' => 'Reserva en recepción', '' => 'Sin dato (antiguas)'])
+            ->map(function (string $label, string $key) use ($bookings, $val) {
+                $group = $bookings->filter(fn (Booking $b) => (string) $b->origin === $key);
+
+                return ['key' => $key, 'label' => $label, 'count' => $group->count(), 'value' => (int) $group->sum($val)];
+            })
+            ->filter(fn (array $r) => $r['count'] > 0 || $r['key'] !== '')
+            ->values();
+
+        return ['rows' => $rows, 'total' => $bookings->count()];
     }
 
     private function operations(Collection $bookings): array

@@ -84,7 +84,7 @@ class CustomerBehaviorController extends Controller
             'weekdays' => $this->weekdays($inRange),
             'dayparts' => $this->dayparts($inRange),
             'party' => $this->tally($inRange, fn (Booking $b) => $b->guests_count >= 3 ? '3 o más personas' : $b->guests_count.' '.($b->guests_count === 1 ? 'persona' : 'personas'), $value),
-            'channel' => $this->tally($inRange, fn (Booking $b) => $b->created_by ? 'Recepción' : 'Catálogo web', $value),
+            'channel' => $this->tally($inRange, fn (Booking $b) => $b->origin ? $b->originLabel() : ($b->created_by ? 'Recepción (sin detalle)' : 'En línea'), $value),
             'lead' => $this->lead($inRange),
             'payments' => $inRange->flatMap->payments->where('status', 'aprobado')->groupBy(fn ($p) => $p->paymentMethod?->name ?? 'Sin método')->map(fn ($rows) => (int) $rows->sum('amount'))->sortDesc(),
             'extras' => [

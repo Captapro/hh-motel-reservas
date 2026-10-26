@@ -209,6 +209,27 @@
     </div>
     </div>
 
+    <h2 class="an-title">Cómo llegan los clientes</h2>
+    <div class="an-grid">
+    <div class="card t-orange span2">
+        <h3>Reservan en línea vs. llegan presencial</h3>
+        @php $oTotal = max(1, $byOrigin['total']); @endphp
+        <div class="origin-tiles">
+            @foreach ($byOrigin['rows'] as $o)
+                <div class="origin-tile origin-{{ $o['key'] ?: 'none' }}">
+                    <div class="o-label">{{ $o['label'] }}</div>
+                    <div class="o-count">{{ $o['count'] }}</div>
+                    <div class="o-sub">{{ round($o['count'] / $oTotal * 100) }}% de las reservas · {{ $money($o['value']) }}</div>
+                </div>
+            @endforeach
+        </div>
+        @foreach ($byOrigin['rows'] as $o)
+            <div class="bar-row"><div class="name">{{ $o['label'] }}</div><div class="bar-track"><div class="bar-fill {{ $o['key'] === 'presencial' ? '' : 'alt' }}" style="width:{{ round($o['count'] / $oTotal * 100) }}%"></div></div><div class="val">{{ $o['count'] }} <small>({{ round($o['count'] / $oTotal * 100) }}%)</small></div></div>
+        @endforeach
+        <p class="legend" style="margin-top:8px;">En línea = catálogo web · Presencial = ingreso en recepción · Las reservas anteriores a este cambio no tienen el dato; solo las en línea se pudieron deducir.</p>
+    </div>
+    </div>
+
     <h2 class="an-title">Cobros y evolución</h2>
     <div class="an-grid">
     <div class="card t-blue">

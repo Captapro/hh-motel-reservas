@@ -57,6 +57,7 @@ class BookingIntegrityTest extends TestCase
             '2026_08_18_120009_create_coupon_rooms_table.php',
             '2026_08_18_120010_create_customers_table.php',
             '2026_08_18_120011_create_bookings_table.php',
+            '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
@@ -167,6 +168,19 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('sales.detail', $booking->code))
             ->assertOk()->assertSee($booking->code)->assertSee('Débito')->assertSee('Voucher 4455')->assertSee('Abrir la reserva completa');
         $this->get(route('sales.detail', 'NO-EXISTE'))->assertNotFound();
+    }
+
+    public function test_booking_remembers_how_it_was_born_walk_in_team_or_catalog(): void
+    {
+        $walkIn = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'walk_in' => true, 'created_by' => auth()->id()]);
+        $team = $this->booking(['starts_at' => Carbon::parse('2026-11-02 15:00'), 'created_by' => auth()->id()]);
+        $online = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00'), 'created_by' => null]);
+
+        $this->assertSame('presencial', $walkIn->fresh()->origin);
+        $this->assertSame('recepcion', $team->fresh()->origin);
+        $this->assertSame('catalogo', $online->fresh()->origin);
+        $this->assertSame('Presencial', $walkIn->fresh()->originLabel());
+        $this->assertSame('En línea', $online->fresh()->originLabel());
     }
 
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void

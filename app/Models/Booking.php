@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
 #[Fillable([
-    'code', 'pass_token', 'customer_id', 'room_id', 'created_by', 'starts_at', 'ends_at', 'duration_minutes', 'guests_count',
+    'code', 'pass_token', 'customer_id', 'room_id', 'created_by', 'origin', 'starts_at', 'ends_at', 'duration_minutes', 'guests_count',
     'booking_status', 'payment_status',
     'rate_rule_id', 'rate_rule_name_snapshot', 'price_original', 'extra_guests_fee',
     'coupon_id', 'coupon_code_snapshot', 'discount_amount', 'price_final', 'deposit_amount',
@@ -102,6 +102,14 @@ class Booking extends Model
     public function couponRedemption(): HasMany
     {
         return $this->hasMany(CouponRedemption::class);
+    }
+
+    /** Cómo nació la reserva (columna origin). Las antiguas sin dato se muestran como "—". */
+    public const ORIGIN_LABELS = ['presencial' => 'Presencial', 'recepcion' => 'Reserva (recepción)', 'catalogo' => 'En línea'];
+
+    public function originLabel(): string
+    {
+        return self::ORIGIN_LABELS[$this->origin] ?? '—';
     }
 
     /** Suma de pagos aprobados — nunca se resta el saldo directo, siempre se recalcula. */

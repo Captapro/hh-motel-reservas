@@ -142,6 +142,8 @@ class BookingService
                         'customer_id' => $customer->id,
                         'room_id' => $room->id,
                         'created_by' => $data['created_by'] ?? null,
+                        // Cómo nació: ingreso presencial, reserva del equipo o catálogo en línea.
+                        'origin' => ! empty($data['walk_in']) ? 'presencial' : (($data['created_by'] ?? null) ? 'recepcion' : 'catalogo'),
                         'starts_at' => $startsAt,
                         'ends_at' => $endsAt,
                         'duration_minutes' => $durationMinutes,

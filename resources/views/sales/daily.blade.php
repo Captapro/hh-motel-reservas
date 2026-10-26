@@ -120,7 +120,7 @@
                 <tr>
                     <th>Hora</th><th>Reserva</th><th>Hab.</th><th>Categoría</th><th>Cliente</th><th>Tarifa</th>
                     <th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th>
-                    <th>Pago</th><th>Voucher / boleta</th><th>Estado</th>
+                    <th>Pago</th><th>Voucher / boleta</th><th>Estado</th><th>Origen</th>
                 </tr>
             </thead>
             <tbody>
@@ -148,19 +148,20 @@
                         <td>{{ $methods ?: '—' }}</td>
                         <td>{!! $docs ?: ($paid > 0 ? '<span class="miss">falta</span>' : '—') !!}</td>
                         <td><span class="pill {{ $cancelled ? 'bad' : ($balance <= 0 ? 'ok' : 'warn') }}">{{ $booking->booking_status }}</span></td>
+                        <td>{{ $booking->originLabel() }}</td>
                     </tr>
                 @endforeach
                 @if ($bookings->isEmpty())
-                    <tr class="zero"><td colspan="14" style="text-align:center;padding:12px;">Sin reservas asignadas a este día</td></tr>
+                    <tr class="zero"><td colspan="15" style="text-align:center;padding:12px;">Sin reservas asignadas a este día</td></tr>
                 @endif
                 {{-- Filas en blanco para que se vea como hoja de cálculo --}}
                 @for ($i = max(0, 10 - max($bookings->count(), 1)); $i > 0; $i--)
-                    <tr class="blank">@for ($c = 0; $c < 14; $c++)<td>&nbsp;</td>@endfor</tr>
+                    <tr class="blank">@for ($c = 0; $c < 15; $c++)<td>&nbsp;</td>@endfor</tr>
                 @endfor
                 <tr class="total">
                     <td colspan="6">Total del día ({{ $live->count() }} {{ $live->count() === 1 ? 'habitación' : 'habitaciones' }})</td>
                     <td class="n">{{ $money($lodging) }}</td><td class="n">{{ $money($extrasSum) }}</td><td class="n">{{ $money($revenue) }}</td>
-                    <td class="n">{{ $money($collected) }}</td><td class="n">{{ $money($pending) }}</td><td colspan="3"></td>
+                    <td class="n">{{ $money($collected) }}</td><td class="n">{{ $money($pending) }}</td><td colspan="4"></td>
                 </tr>
             </tbody>
         </table>

@@ -240,7 +240,7 @@ class MonthlySalesController extends Controller
                 'guests' => $b->guests_count, 'in' => $in, 'out' => $out, 'minutes' => $b->duration_minutes,
                 'tariff' => $b->rate_rule_name_snapshot, 'shift' => $this->shift($in),
                 'method' => $approved->map(fn ($p) => $this->methodGroup($p->paymentMethod?->code))->unique()->implode(' + '),
-                'by' => $pay?->registeredBy?->name, 'status' => $b->booking_status, 'repeated' => $repeated,
+                'by' => $pay?->registeredBy?->name, 'status' => $b->booking_status, 'repeated' => $repeated, 'origin' => $b->originLabel(),
             ];
 
             $rows->push($base + [
@@ -264,9 +264,9 @@ class MonthlySalesController extends Controller
         return response()->streamDownload(function () use ($detail) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['N° REGISTRO', 'Fecha', 'Tipo de documento', 'N° voucher', 'N° boleta', 'Tipo de venta', 'Detalle', 'Cantidad', 'Nombre', 'RUT o documento', 'Nacionalidad', 'Edad', 'Habitación', 'Categoría', 'Personas', 'Hora entrada', 'Hora salida', 'Duración (h)', 'Tarifa', 'Precio', 'Descuento', 'Medio de pago', 'Turno', 'Registrado por', 'Código reserva', 'Estado', 'Datos faltantes']);
+            fputcsv($out, ['N° REGISTRO', 'Fecha', 'Tipo de documento', 'N° voucher', 'N° boleta', 'Tipo de venta', 'Detalle', 'Cantidad', 'Nombre', 'RUT o documento', 'Nacionalidad', 'Edad', 'Habitación', 'Categoría', 'Personas', 'Hora entrada', 'Hora salida', 'Duración (h)', 'Tarifa', 'Precio', 'Descuento', 'Medio de pago', 'Turno', 'Registrado por', 'Código reserva', 'Estado', 'Origen', 'Datos faltantes']);
             foreach ($detail as $r) {
-                fputcsv($out, [$r['n'], $r['date']->format('d/m/Y'), $r['doc_type'], $r['voucher'], $r['receipt'], $r['kind'], $r['detail'], $r['qty'], $r['name'], $r['doc_id'], $r['nationality'], $r['age'], $r['room'], $r['category'], $r['guests'], $r['in']->format('H:i'), $r['out']->format('H:i'), round($r['minutes'] / 60, 2), $r['tariff'], $r['price'], $r['discount'], $r['method'], $r['shift'], $r['by'], $r['code'], $r['status'], implode(', ', $r['missing'])]);
+                fputcsv($out, [$r['n'], $r['date']->format('d/m/Y'), $r['doc_type'], $r['voucher'], $r['receipt'], $r['kind'], $r['detail'], $r['qty'], $r['name'], $r['doc_id'], $r['nationality'], $r['age'], $r['room'], $r['category'], $r['guests'], $r['in']->format('H:i'), $r['out']->format('H:i'), round($r['minutes'] / 60, 2), $r['tariff'], $r['price'], $r['discount'], $r['method'], $r['shift'], $r['by'], $r['code'], $r['status'], $r['origin'], implode(', ', $r['missing'])]);
             }
             fclose($out);
         }, 'detalle-ventas-'.$first->format('Y-m').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);

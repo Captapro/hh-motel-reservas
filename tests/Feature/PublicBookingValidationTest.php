@@ -47,6 +47,7 @@ class PublicBookingValidationTest extends TestCase
             '2026_08_18_120010_create_customers_table.php',
             '2026_09_11_090000_add_identity_fields_to_customers_table.php',
             '2026_08_18_120011_create_bookings_table.php',
+            '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',

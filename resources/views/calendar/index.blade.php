@@ -54,6 +54,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
 .st-finalizada{background:#eff6ff;color:#1d4ed8}.st-confirmada,.st-check_in{background:#fff7ed;color:#c2410c}.st-pendiente_pago{background:#fffbeb;color:#b45309}
 .hist-period{display:flex;align-items:center;gap:6px;margin:0 0 10px;font-size:12.5px;color:#6b7280}.hist-period a{color:#4c4c4a;text-decoration:none;padding:5px 12px;border-radius:999px;background:#fff;border:1px solid #dededb}.hist-period a.active,.hist-period a:hover{background:#ff7918;border-color:#ff7918;color:#fff}
 .day-list{margin-top:12px}.day-list h2{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;display:flex;align-items:baseline;gap:10px}.day-list .booking-row{grid-template-columns:90px 1fr 150px 20px}
+.org{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#6b7280;white-space:nowrap}.org-presencial{background:#fff7ed;color:#c2410c}.org-catalogo{background:#eff6ff;color:#1d4ed8}.org-recepcion{background:#f5f3ff;color:#6d28d9}
 </style>
 </head><body>
 @include('partials.navbar')
@@ -150,7 +151,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
  <div class="sheet-wrap">
   <table class="sheet">
    <thead><tr>
-    <th class="n">N°</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th class="n">Duración</th><th>Reserva</th><th>Cliente</th><th>Teléfono</th>
+    <th class="n">N°</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th class="n">Duración</th><th>Reserva</th><th>Origen</th><th>Cliente</th><th>Teléfono</th>
     <th>Hab.</th><th>Categoría</th><th class="n">Pers.</th><th>Tarifa</th>
     <th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th><th>Estado</th>
    </tr></thead>
@@ -164,6 +165,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
      <td>{{ $b->ends_at->format('H:i') }}</td>
      <td class="n">{{ \App\Support\TimeFormat::minutes($b->duration_minutes) }}</td>
      <td><a class="code" href="{{ route('reservations.show', $b->code) }}">{{ $b->code }}</a></td>
+     <td><span class="org org-{{ $b->origin ?: 'none' }}">{{ $b->originLabel() }}</span></td>
      <td>{{ $b->customer->name }}</td>
      <td>{{ $b->customer->phone ?: '—' }}</td>
      <td>{{ $b->room->name }}</td>
@@ -178,11 +180,11 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
      <td><span class="st st-{{ strtolower($b->booking_status) }}">{{ $statusLabel[$b->booking_status] ?? $b->booking_status }}</span></td>
     </tr>
    @empty
-    <tr class="zero"><td colspan="18">Todavía no pasó ninguna reserva en este período.</td></tr>
+    <tr class="zero"><td colspan="19">Todavía no pasó ninguna reserva en este período.</td></tr>
    @endforelse
    @if ($histRows->isNotEmpty())
     <tr class="total">
-     <td colspan="12">Total · {{ $histRows->count() }} {{ Str::plural('reserva', $histRows->count()) }}</td>
+     <td colspan="13">Total · {{ $histRows->count() }} {{ Str::plural('reserva', $histRows->count()) }}</td>
      <td class="n">{{ $money($histRows->sum(fn ($r) => $r['b']->price_final)) }}</td>
      <td class="n">{{ $money($histRows->sum('extras')) }}</td>
      <td class="n">{{ $money($histRows->sum('total')) }}</td>
