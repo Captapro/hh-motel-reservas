@@ -133,7 +133,10 @@
         .sidebar-title h2 { font-size: 13px; margin:0; text-transform:uppercase; letter-spacing:.05em; color:#e8c76f; }
         .sidebar-title .count { font-family: ui-monospace, monospace; font-size: 12px; color:#777; }
         .sidebar-hint { font-size:11.5px; color:#999; margin:0 0 14px; line-height:1.4; }
-        .sidebar-empty { color:#666; font-size:12.5px; border:1px dashed #333; border-radius:8px; padding:14px; text-align:center; }
+        .sidebar-empty { color:#8a8d94; font-size:12.5px; border:1px dashed #d4d6da; border-radius:10px; padding:14px; text-align:center; margin-bottom:10px; }
+        .sidebar.is-empty .sidebar-hint { display:none; }
+        @media (max-width: 1100px) { .sidebar.is-empty { display:none; } }
+        @media (orientation: portrait) and (min-width: 650px) { .sidebar.is-empty { display:none; } }
         .proxima-card { background:#231f14; border:1px solid #5a5230; border-left-width:4px; border-radius:10px; padding:10px 12px; margin-bottom:10px; max-width:520px; transition: transform .13s ease, box-shadow .13s ease; }
         .proxima-card { cursor:pointer; }
         .proxima-card:focus-visible { outline:2px solid #111; outline-offset:2px; }
@@ -474,7 +477,7 @@
 
     </div>
 
-    <div class="page-grid {{ $grouped['proximas']->isEmpty() ? 'no-sidebar' : '' }}">
+    <div class="page-grid">
         <div class="main-col">
             @if ($grouped['ocupadas']->isNotEmpty())
             <div class="section ocupadas">
@@ -543,8 +546,8 @@
             @endif
         </div>
 
-        @if ($grouped['proximas']->isNotEmpty())
-        <div class="sidebar">
+        {{-- La columna "Por llegar" siempre ocupa su lugar: así las habitaciones no se corren cuando aparece o desaparece una reserva. --}}
+        <div class="sidebar {{ $grouped['proximas']->isEmpty() ? 'is-empty' : '' }}">
             <div class="sidebar-title"><h2>Por llegar</h2><span class="count">{{ $grouped['proximas']->count() }}</span></div>
             <p class="sidebar-hint">Libres ahora, con una reserva próxima: no las asignes a clientes sin reserva.</p>
             @foreach ($grouped['proximas'] as $entry)
@@ -562,8 +565,8 @@
                     <a class="checkin-btn" href="{{ route('bookings.checkin.show', $entry['status']['next_booking']->code) }}">Marcar check-in</a>
                 </div>
             @endforeach
+            <div class="sidebar-empty" id="sidebar-empty" @if ($grouped['proximas']->isNotEmpty()) hidden @endif>Ninguna reserva por llegar ahora.</div>
         </div>
-        @endif
     </div>
     </div>
     <script>
@@ -704,6 +707,7 @@
             const proximas = document.querySelectorAll('.sidebar .proxima-card:not(.wing-hidden)').length;
             const pc = document.querySelector('.summary .chip.proximas b'); if (pc) pc.textContent = proximas;
             const sc = document.querySelector('.sidebar-title .count'); if (sc) sc.textContent = proximas;
+            const se = document.getElementById('sidebar-empty'); if (se) se.hidden = proximas > 0;
         }
         // Los contadores de arriba llevan a su sección (útil con "En aseo" debajo de "Disponibles").
         document.querySelectorAll('.summary .chip').forEach(function (chip) {
