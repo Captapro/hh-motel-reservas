@@ -3,14 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="color-scheme" content="light">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#111111">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>@yield('title') — HH Motel</title>
     <style>{!! file_get_contents(public_path('css/hh-theme.css')) !!}</style>
+    @include('catalog._app-head')
     <style>
         :root { --accent:var(--hh-accent); --muted:#c1c3c7; }
         body { min-height:100svh; padding:0; }
-        .shell { width:min(100%,480px); margin:auto; padding:28px 20px 24px; }
+        .shell { width:min(100%,480px); margin:auto; padding:22px 18px calc(24px + var(--safe-b)); }
         .brand { background:#000; padding:22px 20px 20px; border-radius:0 0 18px 18px; }
         .brand-inner { max-width:440px; margin:auto; text-align:center; }
         .brand img { display:block; width:auto; max-width:min(260px,70vw); height:78px; object-fit:contain; margin:auto; }
@@ -26,7 +26,7 @@
         .rating-option { position:relative; flex:1; max-width:78px; cursor:pointer; }
         .rating-option input { position:absolute; opacity:0; width:1px; height:1px; }
         .rating-tile { display:flex; align-items:center; justify-content:center; aspect-ratio:1; border:1px solid transparent; border-radius:8px; background:transparent; color:#bbbfc5; transition:background .18s,transform .18s,color .18s; }
-        .rating-tile svg { width:44px; height:44px; fill:transparent; stroke:currentColor; stroke-width:1.5; }
+        .rating-tile svg { width:48px; height:48px; fill:transparent; stroke:currentColor; stroke-width:1.5; }
         .rating-option input:checked + .rating-tile,.rating-option:has(~ .rating-option input:checked) .rating-tile { color:var(--accent); background:transparent; border-color:transparent; }
         .rating-option input:checked + .rating-tile svg,.rating-option:has(~ .rating-option input:checked) svg { fill:currentColor; }
         .rating-option:hover .rating-tile {  color:#ffb379;  }
@@ -50,14 +50,15 @@
         .field-note { text-align:right; margin:5px 0 20px; color:var(--muted); font-size:14px; }
         @media(max-width:400px) { .shell { padding:26px 20px 24px; } .brand { padding:20px; } .review-form { padding:20px 16px; } .stars { gap:4px; } .rating-tile svg { width:38px; height:38px; } }
         @media(prefers-reduced-motion:reduce) { *,*::before { transition:none!important; } .rating-option:hover .rating-tile { transform:none; } }
-        .submit { min-height:52px; }
+        .submit { min-height:58px; position:sticky; bottom:calc(12px + var(--safe-b)); z-index:20; box-shadow:0 10px 26px rgba(0,0,0,.35); border-radius:14px; }
+        .review-form { border-radius:22px; }
+        .rating-option { -webkit-tap-highlight-color:transparent; }
+        textarea { font-size:16px; }
         footer { padding-bottom:env(safe-area-inset-bottom, 0px); }
     </style>
 </head>
 <body>
-    <header class="brand"><div class="brand-inner">
-            <img src="{{ asset('images/hh-logo-wide.png').'?v=2' }}" alt="HH Motel Santiago Playrooms" width="720" height="280">
-    </div></header>
+    @include('catalog._app-bar')
     <div class="shell">
         <main class="review-content">
             @yield('content')
