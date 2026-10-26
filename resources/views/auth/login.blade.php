@@ -5,6 +5,8 @@
     <meta name="color-scheme" content="dark">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Iniciar sesión — HH Motel</title>
+    {{-- Quien comparte la dirección raíz del sitio (app.hhmotel.cl) cae acá: sin esto no sale imagen ni texto en WhatsApp o redes. --}}
+    @include('partials.social-meta')
     <style>
         :root { --hh-accent: #ff7918; --hh-accent-hover: #ee6909; }
         * { box-sizing: border-box; }
