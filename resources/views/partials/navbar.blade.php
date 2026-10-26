@@ -43,7 +43,7 @@
     $hhRoute = request()->route()?->getName();
     $hhLight = ! \Illuminate\Support\Str::is('admin.analytics.*', (string) $hhRoute) && (
         \Illuminate\Support\Str::is('admin.*', (string) $hhRoute)
-        || in_array(\App\Support\AccessSections::forRoute($hhRoute), ['clientes', 'productos', 'caja', 'operaciones', 'ventas', 'opiniones'], true)
+        || in_array(\App\Support\AccessSections::forRoute($hhRoute), ['clientes', 'productos', 'caja', 'operaciones', 'ventas', 'opiniones', 'claves'], true)
     );
 @endphp
 @if ($hhLight)

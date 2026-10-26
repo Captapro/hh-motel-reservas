@@ -26,6 +26,7 @@ class AccessSections
         'operaciones' => ['Operaciones (aseo, rondas, mantención)', 'aseo.daily', ['aseo.*', 'shift_round.*', 'mucamas.activity*', 'rooms.inspections.*']],
         'analytics' => ['Analytics', 'admin.analytics.index', ['admin.analytics.*']],
         'opiniones' => ['Opiniones', 'admin.reviews.index', ['admin.reviews.*']],
+        'claves' => ['Claves de acceso (chapas digitales)', 'access_codes.index', ['access_codes.*']],
     ];
 
     /** Punto de partida: lo que cada perfil ve si nadie lo ha configurado. */

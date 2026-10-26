@@ -39,6 +39,7 @@ use App\Http\Controllers\DailySalesController;
 use App\Http\Controllers\GuestReviewController;
 use App\Http\Controllers\ImageResizeController;
 use App\Http\Controllers\MercadoPagoController;
+use App\Http\Controllers\AccessCodeController;
 use App\Http\Controllers\MonthlySalesController;
 use App\Http\Controllers\MucamaActivityController;
 use App\Http\Controllers\MucamaAuthController;
@@ -126,6 +127,14 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/reservas/{code}/pagos/{payment}/devolver', [PaymentRefundController::class, 'store'])->middleware('role:administrador')->name('payments.refund');
     Route::put('/pagos/{payment}/documento', [PaymentDocumentController::class, 'update'])->name('payments.document');
     Route::get('/resumen-mensual/{month?}', [MonthlySalesController::class, 'show'])->name('sales.monthly');
+    Route::get('/claves', [AccessCodeController::class, 'index'])->name('access_codes.index');
+    Route::post('/claves/ver', [AccessCodeController::class, 'reveal'])->middleware('throttle:30,1,access_codes.reveal')->name('access_codes.reveal');
+    Route::middleware('role:administrador')->group(function () {
+        Route::put('/claves/habitacion/{room}', [AccessCodeController::class, 'saveRoom'])->name('access_codes.room');
+        Route::post('/claves', [AccessCodeController::class, 'store'])->name('access_codes.store');
+        Route::put('/claves/{accessCode}', [AccessCodeController::class, 'update'])->name('access_codes.update');
+        Route::delete('/claves/{accessCode}', [AccessCodeController::class, 'destroy'])->name('access_codes.destroy');
+    });
     Route::get('/caja/{date?}', [CashRegisterController::class, 'show'])->name('cash.show');
     Route::post('/caja', [CashRegisterController::class, 'store'])->name('cash.store');
     Route::get('/aseo/semana/{date?}', [AseoSummaryController::class, 'week'])->name('aseo.week');
