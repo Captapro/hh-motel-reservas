@@ -36,12 +36,13 @@ class AnalyticsController extends Controller
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->whereBetween('starts_at', [$prevStart->copy()->timezone('UTC'), $end->copy()->timezone('UTC')])
-            ->get();
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale());
 
         $current = $all->filter(fn (Booking $b) => $this->inRange($b, $start, $end))->values();
         $previous = $all->filter(fn (Booking $b) => $this->inRange($b, $prevStart, $prevEnd))->values();
 
-        $val = fn (Booking $b) => $metric === 'revenue' ? $b->price_final + $b->addons->sum('amount') : 1;
+        $val = fn (Booking $b) => $metric === 'revenue' ? $b->price_final + $b->paidAddonsAmount() : 1;
         $sum = fn (Collection $c) => (int) $c->sum($val);
 
         $weekdayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -72,7 +73,7 @@ class AnalyticsController extends Controller
             'paymentMethods' => $this->paymentMethods($current),
             'bookingStatuses' => $current->groupBy('booking_status')->map->count()->sortDesc(),
             'segments' => $this->segments(),
-            'extras' => $current->flatMap->addons->groupBy('description')->map(fn ($rows) => ['quantity' => (int) $rows->sum('quantity'), 'value' => (int) $rows->sum('amount')])->sortByDesc('value'),
+            'extras' => $current->flatMap(fn (Booking $b) => $b->paidAddons())->groupBy('description')->map(fn ($rows) => ['quantity' => (int) $rows->sum('quantity'), 'value' => (int) $rows->sum('amount')])->sortByDesc('value'),
         ]));
     }
 
@@ -92,7 +93,8 @@ class AnalyticsController extends Controller
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->whereBetween('starts_at', [$start->copy()->timezone('UTC'), $end->copy()->timezone('UTC')])
             ->orderBy('starts_at')
-            ->get();
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale());
 
         $filename = 'ventas_hh_motel_'.$start->format('Y-m-d').'_a_'.$end->format('Y-m-d').'.csv';
 
@@ -107,7 +109,7 @@ class AnalyticsController extends Controller
             ]);
             foreach ($bookings as $b) {
                 $startsAt = $b->starts_at->timezone('America/Santiago');
-                $extrasTotal = (int) $b->addons->sum('amount');
+                $extrasTotal = (int) $b->paidAddonsAmount();
                 fputcsv($out, [
                     $b->code,
                     $startsAt->format('d-m-Y'),
@@ -180,7 +182,7 @@ class AnalyticsController extends Controller
      */
     private function kpis(Collection $current, Collection $previous, string $metric): array
     {
-        $rev = fn (Collection $c) => (int) $c->sum(fn (Booking $b) => $b->price_final + $b->addons->sum('amount'));
+        $rev = fn (Collection $c) => (int) $c->sum(fn (Booking $b) => $b->price_final + $b->paidAddonsAmount());
         $disc = fn (Collection $c) => (int) $c->sum('discount_amount');
 
         $mk = function (int $now, int $prev, bool $money) {
@@ -260,13 +262,14 @@ class AnalyticsController extends Controller
     {
         $firstMonth = now('America/Santiago')->startOfMonth()->subMonths(11);
 
-        $bookings = Booking::with('addons')
+        $bookings = Booking::with(['addons', 'payments'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->where('starts_at', '>=', $firstMonth->copy()->timezone('UTC'))
-            ->get();
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale());
 
-        $val = fn (Booking $b) => $metric === 'revenue' ? $b->price_final + $b->addons->sum('amount') : 1;
+        $val = fn (Booking $b) => $metric === 'revenue' ? $b->price_final + $b->paidAddonsAmount() : 1;
 
         $monthly = collect();
         $prev = null;
@@ -305,13 +308,14 @@ class AnalyticsController extends Controller
         $monthStart = $now->copy()->startOfMonth();
         $monthEnd = $now->copy()->endOfMonth();
 
-        $bookings = Booking::with('addons')
+        $bookings = Booking::with(['addons', 'payments'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->whereBetween('starts_at', [$monthStart->copy()->timezone('UTC'), $monthEnd->copy()->timezone('UTC')])
-            ->get();
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale());
 
-        $rev = fn (Booking $b) => $b->price_final + $b->addons->sum('amount');
+        $rev = fn (Booking $b) => $b->price_final + $b->paidAddonsAmount();
 
         $soFar = (int) $bookings->filter(fn (Booking $b) => $b->starts_at->timezone($tz)->lte($now))->sum($rev);
         $bookedRest = (int) $bookings->filter(fn (Booking $b) => $b->starts_at->timezone($tz)->gt($now))->sum($rev);
@@ -354,14 +358,14 @@ class AnalyticsController extends Controller
 
     private function operations(Collection $bookings): array
     {
-        $revenue = (int) $bookings->sum(fn (Booking $b) => $b->price_final + $b->addons->sum('amount'));
+        $revenue = (int) $bookings->sum(fn (Booking $b) => $b->price_final + $b->paidAddonsAmount());
         $collected = (int) $bookings->sum(fn (Booking $b) => $b->payments->where('status', 'aprobado')->sum('amount'));
 
         return [
             'revenue' => $revenue,
             'collected' => $collected,
             'balance' => max(0, $revenue - $collected),
-            'addons' => (int) $bookings->sum(fn (Booking $b) => $b->addons->sum('amount')),
+            'addons' => (int) $bookings->sum(fn (Booking $b) => $b->paidAddonsAmount()),
             'cancelled' => 0,
         ];
     }

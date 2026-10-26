@@ -55,7 +55,6 @@ return [
         'custom_field_pago_id' => env('GHL_CUSTOM_FIELD_PAGO_ID'),
         // Webhooks de entrada de los flujos que mandan los correos de reserva confirmada y pago recibido.
         'webhook_confirmada' => env('GHL_WEBHOOK_RESERVA_CONFIRMADA'),
-        'webhook_pago' => env('GHL_WEBHOOK_PAGO_RECIBIDO'),
     ],
 
     'hh_payment' => [

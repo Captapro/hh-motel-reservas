@@ -16,7 +16,7 @@
         <a href="{{ route('admin.analytics.customers') }}">Comportamiento de clientes</a>
     </div>
     <h1>Analytics</h1>
-    <p class="sub">{{ $rangeLabel }}{{ $categoryId ? ' · '.$categories->firstWhere('id', $categoryId)?->name : '' }}. No cuenta reservas canceladas.</p>
+    <p class="sub">{{ $rangeLabel }}{{ $categoryId ? ' · '.$categories->firstWhere('id', $categoryId)?->name : '' }}. Solo cuenta estadías con su pago completo (no canceladas, vencidas ni pendientes de pago).</p>
 
     <form class="flt" method="GET" action="{{ route('admin.analytics.index') }}">
         <div class="flt-row">

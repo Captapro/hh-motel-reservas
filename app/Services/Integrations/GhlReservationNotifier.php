@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Avisa a GHL (por webhook de entrada) cuando una reserva queda confirmada o
- * entra un pago, para que sus flujos manden el correo al cliente. Nunca
- * lanza: un problema con GHL no puede romper el registro del pago.
+ * Avisa a GHL (por webhook de entrada) cuando una reserva queda confirmada, para
+ * que su flujo mande el correo "Reserva confirmada" al cliente. Nunca lanza:
+ * un problema con GHL no puede romper el registro del pago.
  *
- *  - La primera vez que un pago deja la reserva confirmada → "reserva confirmada"
- *    (ese correo ya incluye lo pagado y el saldo).
- *  - Los pagos siguientes de una reserva ya confirmada → "pago recibido".
+ *  - Solo se avisa la primera vez que un pago deja la reserva confirmada (ese
+ *    correo ya incluye lo pagado y el saldo). Los pagos siguientes, como el
+ *    cobro de consumos, no mandan nada al cliente.
  *  - Los ingresos presenciales no mandan nada: el cliente está en recepción.
  */
 class GhlReservationNotifier
@@ -28,13 +28,8 @@ class GhlReservationNotifier
                 return;
             }
 
-            $becameConfirmed = $statusBefore !== 'CONFIRMADA' && $booking->booking_status === 'CONFIRMADA';
-            $alreadyConfirmed = in_array($booking->booking_status, ['CONFIRMADA', 'CHECK_IN'], true) && ! $becameConfirmed;
-
-            if ($becameConfirmed) {
+            if ($statusBefore !== 'CONFIRMADA' && $booking->booking_status === 'CONFIRMADA') {
                 $this->send('confirmada', config('services.ghl.webhook_confirmada'), $booking, $payment);
-            } elseif ($alreadyConfirmed) {
-                $this->send('pago', config('services.ghl.webhook_pago'), $booking, $payment);
             }
         } catch (Throwable $e) {
             Log::warning('GHL: no se pudo preparar el aviso de la reserva '.$booking->code, ['error' => $e->getMessage()]);

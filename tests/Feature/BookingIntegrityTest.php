@@ -319,21 +319,20 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('reembolsado', $payment->fresh()->status);
     }
 
-    public function test_ghl_gets_confirmed_then_payment_notices_and_skips_walk_ins_and_missing_emails(): void
+    public function test_ghl_is_told_only_when_the_booking_is_confirmed_and_skips_walk_ins_and_missing_emails(): void
     {
-        config(['services.ghl.webhook_confirmada' => 'https://services.leadconnectorhq.com/hooks/confirmada', 'services.ghl.webhook_pago' => 'https://services.leadconnectorhq.com/hooks/pago']);
+        config(['services.ghl.webhook_confirmada' => 'https://services.leadconnectorhq.com/hooks/confirmada']);
         Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
         $this->customer->update(['email' => 'cliente@example.com', 'name' => 'Camila Rojas']);
 
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
         app(PaymentService::class)->register($booking, $method, 10000, null, null, auth()->id(), null, '1');   // confirma
-        app(PaymentService::class)->register($booking, $method, 10000, null, null, auth()->id(), null, '2');   // segundo pago
+        app(PaymentService::class)->register($booking, $method, 10000, null, null, auth()->id(), null, '2');   // segundo pago: no manda nada
 
-        Http::assertSentCount(2);
+        Http::assertSentCount(1);
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/confirmada') && $r['codigo'] === $booking->code
             && $r['email'] === 'cliente@example.com' && $r['first_name'] === 'Camila' && $r['pagado'] === '$10.000' && $r['saldo'] === '$10.000' && $r['token'] === $booking->pass_token);
-        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/pago') && $r['monto'] === '$10.000' && $r['medio_pago'] === 'Efectivo' && $r['saldo'] === '$0');
 
         // Ingreso presencial y cliente sin correo: no se avisa.
         Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
