@@ -8,7 +8,7 @@
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
-        .page-inner { max-width: 1100px; margin: 0; padding: 24px 24px 60px; }
+        .page-inner { max-width: none; margin: 0; padding: 24px 24px 60px; }
         .topline { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom: 8px; }
         h1 { font-size: 19px; margin:0; }
         .sub { color:#999; font-size: 13px; margin: 4px 0 24px; }
@@ -133,7 +133,7 @@
                         $paid = $booking->paidAmount();
                         $balance = $booking->balanceDue();
                     @endphp
-                    <tr class="{{ $cancelled ? 'cancelada' : '' }}">
+                    <tr class="{{ $cancelled ? 'cancelada' : '' }}" data-sale="{{ $booking->code }}" title="Ver el detalle completo">
                         <td>{{ $booking->starts_at->timezone('America/Santiago')->format('H:i') }}</td>
                         <td><a class="code" href="{{ route('reservations.show', $booking->code) }}">{{ $booking->code }}</a></td>
                         <td>{{ $booking->room->name }}</td>
@@ -169,5 +169,6 @@
         <p class="sub">{{ $cancelledCount }} {{ Str::plural('reserva', $cancelledCount) }} cancelada{{ $cancelledCount > 1 ? 's' : '' }} ese día — no se cuenta en los totales, aparece atenuada en la tabla.</p>
     @endif
     </div>
+    @include('sales._drawer')
 </body>
 </html>

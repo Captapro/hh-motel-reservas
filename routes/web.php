@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\CleanupController;
 use App\Http\Controllers\Admin\ComboController;
 use App\Http\Controllers\Admin\CouponController;
+use App\Http\Controllers\Admin\CustomerBehaviorController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\FurnitureController;
 use App\Http\Controllers\Admin\GhlTestController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\CustomerLoyaltyController;
 use App\Http\Controllers\DailyAseoController;
 use App\Http\Controllers\DailySalesController;
 use App\Http\Controllers\GuestReviewController;
+use App\Http\Controllers\ImageResizeController;
 use App\Http\Controllers\MonthlySalesController;
 use App\Http\Controllers\MucamaActivityController;
 use App\Http\Controllers\MucamaAuthController;
@@ -45,6 +47,7 @@ use App\Http\Controllers\ReservationSearchController;
 use App\Http\Controllers\RoomBoardController;
 use App\Http\Controllers\RoomInspectionController;
 use App\Http\Controllers\RoomQrController;
+use App\Http\Controllers\SaleDetailController;
 use App\Http\Controllers\ShiftRoundController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,7 +56,7 @@ Route::get('/', function () {
 });
 
 // Público -- sin login, pensado para compartir el link con clientes.
-Route::get('/img', [\App\Http\Controllers\ImageResizeController::class, 'show'])->middleware('throttle:240,1')->name('img.resize');
+Route::get('/img', [ImageResizeController::class, 'show'])->middleware('throttle:240,1')->name('img.resize');
 Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.index');
 Route::get('/catalogo/habitacion/{room}', [CatalogController::class, 'room'])->name('catalog.room');
 Route::get('/catalogo/reservar', [PublicBookingController::class, 'create'])->name('catalog.reserve');
@@ -112,6 +115,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/reservas/{code}/editar', [ReservationController::class, 'edit'])->name('reservations.edit');
     Route::put('/reservas/{code}', [ReservationController::class, 'update'])->name('reservations.update');
 
+    Route::get('/ventas/reserva/{code}', [SaleDetailController::class, 'show'])->name('sales.detail');
     Route::get('/ventas/{date?}', [DailySalesController::class, 'show'])->name('sales.daily');
     Route::put('/pagos/{payment}/documento', [PaymentDocumentController::class, 'update'])->name('payments.document');
     Route::get('/resumen-mensual/{month?}', [MonthlySalesController::class, 'show'])->name('sales.monthly');
@@ -246,7 +250,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/exportar', [AnalyticsController::class, 'export'])->name('analytics.export');
-    Route::get('/analytics/clientes', [\App\Http\Controllers\Admin\CustomerBehaviorController::class, 'index'])->name('analytics.customers');
+    Route::get('/analytics/clientes', [CustomerBehaviorController::class, 'index'])->name('analytics.customers');
 
     Route::get('/opiniones', [App\Http\Controllers\Admin\GuestReviewController::class, 'index'])->name('reviews.index');
     Route::delete('/opiniones', [App\Http\Controllers\Admin\GuestReviewController::class, 'destroyAll'])->middleware('role:administrador')->name('reviews.destroy_all');

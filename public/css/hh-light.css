@@ -183,3 +183,34 @@ a.row-card.now { background: #fff7ed !important; border-color: #ff7918 !importan
 .client-fields input, .client-fields select { background: #fff !important; }
 [style*="background:#211d10"] { background: #fffbeb !important; border-color: #fde68a !important; color: #92400e !important; }
 [style*="background:#b3202f"] { background: #dc2626 !important; color: #fff !important; }
+
+/* ===== Ventas (venta de hoy e historial) ===== */
+.table-wrap { background: #fff !important; }
+.table-wrap td { background: #fff !important; border: 1px solid #e5e7eb !important; color: #1f2937; }
+.table-wrap th { background: #f3f4f6 !important; color: #4b5563 !important; border: 1px solid #e5e7eb !important; }
+.scroll-detail thead th { background: #f3f4f6 !important; }
+tr.total td { background: #f3f4f6 !important; color: #111827 !important; border-top: 2px solid #d1d5db !important; }
+tr.today td, tr.cur-month td { background: #fff7ed !important; }
+tr.today td:first-child { color: #c2410c !important; }
+tr.zero td { color: #9ca3af !important; }
+tr.weekend td:first-child { color: #b45309 !important; }
+tr.extra td { color: #6b7280 !important; }
+tr.cancelada { opacity: .5; }
+td a, td a.code, .sub a, a.lnk { color: #c2410c !important; }
+.sec-label { border-top: 1px solid #e5e7eb !important; color: #6b7280 !important; }
+.sec-note { color: #6b7280 !important; }
+.cards .card .label { color: #6b7280 !important; }
+.card.green .value, .card.collected .value, .card.cash-total .value { color: #2563eb !important; }
+.card.blue .value, .card.count .value { color: #0f766e !important; }
+.card.gold .value, .card.advance .value { color: #b45309 !important; }
+.card.pending .value { color: #dc2626 !important; } .card.late .value { color: #7c3aed !important; }
+.card.revenue .value { color: #111827 !important; }
+.miss { background: #fffbeb !important; border: 1px solid #fde68a !important; color: #b45309 !important; }
+.ok { color: #2563eb !important; }
+.filter { color: #4b5563 !important; }
+.pill.ok { background: #eff6ff !important; color: #1d4ed8 !important; }
+.pill.warn, .pill.advance { background: #fffbeb !important; color: #b45309 !important; }
+.pill.bad { background: #fef2f2 !important; color: #b91c1c !important; }
+.panel .row, .row { border-top-color: #eef0f3 !important; }
+.row.total { color: #111827 !important; border-top-color: #e5e7eb !important; }
+details.adv { background: #fff !important; border: 1px solid #e5e7eb !important; }

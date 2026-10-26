@@ -158,6 +158,17 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('CONFIRMADA', $paid->fresh()->booking_status);
     }
 
+    public function test_sale_detail_panel_shows_payments_and_consumptions(): void
+    {
+        $method = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        app(PaymentService::class)->register($booking, $method, 1000, null, null, auth()->id(), '4455', null);
+
+        $this->get(route('sales.detail', $booking->code))
+            ->assertOk()->assertSee($booking->code)->assertSee('Débito')->assertSee('Voucher 4455')->assertSee('Abrir la reserva completa');
+        $this->get(route('sales.detail', 'NO-EXISTE'))->assertNotFound();
+    }
+
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void
     {
         $current = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);

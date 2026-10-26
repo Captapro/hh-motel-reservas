@@ -8,7 +8,7 @@
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
-        .page-inner { max-width: 1180px; margin: 0; padding: 24px 24px 60px; }
+        .page-inner { max-width: none; margin: 0; padding: 24px 24px 60px; }
         .topline { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom: 8px; }
         h1 { font-size: 19px; margin:0; text-transform:capitalize; }
         .sub { color:#999; font-size: 13px; margin: 4px 0 22px; }
@@ -204,7 +204,7 @@
     </div>
 
     <div class="sec-label">Detalle de ventas</div>
-    <p class="sec-note">Una fila por habitación vendida y una por cada extra, en el orden de tu Excel. Toca el código de la reserva para <b>completar lo que falte</b> (documento, RUT, nacionalidad).</p>
+    <p class="sec-note">Una fila por habitación vendida y una por cada extra, en el orden de tu Excel. <b>Toca una fila</b> para ver el detalle completo de la venta; el código de la reserva te lleva a completar lo que falte (documento, RUT, nacionalidad).</p>
     <div class="filter">
         <label><input type="checkbox" id="only-missing"> Mostrar solo reservas con datos faltantes ({{ $missingCount }})</label>
         <a class="lnk" href="{{ route('sales.monthly', ['month' => $first->format('Y-m'), 'export' => 'detalle']) }}">Exportar detalle a Excel (CSV)</a>
@@ -213,7 +213,7 @@
         <thead><tr><th class="n">N°</th><th>Fecha</th><th>Reserva</th><th>Documento</th><th>N° voucher</th><th>N° boleta</th><th>Tipo</th><th>Detalle</th><th class="n">Cant.</th><th>Cliente</th><th>RUT / documento</th><th>Nacionalidad</th><th class="n">Edad</th><th>Hab.</th><th>Categoría</th><th class="n">Pers.</th><th>Entrada</th><th>Salida</th><th class="n">Horas</th><th>Tarifa</th><th class="n">Precio</th><th>Pago</th><th>Turno</th><th>Registró</th><th>Faltan</th></tr></thead>
         <tbody>
         @forelse ($detail as $r)
-            <tr class="{{ $r['kind'] === 'EXTRAS' ? 'extra' : '' }}" data-missing="{{ count($r['missing']) ? 1 : 0 }}" data-booking="{{ $r['code'] }}">
+            <tr class="{{ $r['kind'] === 'EXTRAS' ? 'extra' : '' }}" data-missing="{{ count($r['missing']) ? 1 : 0 }}" data-booking="{{ $r['code'] }}" data-sale="{{ $r['code'] }}" title="Ver el detalle completo">
                 <td class="n">{{ $r['n'] }}</td>
                 <td>{{ $r['date']->format('d/m') }}</td>
                 <td><a href="{{ route('reservations.show', $r['code']) }}">{{ $r['code'] }}</a></td>
@@ -254,5 +254,6 @@
         });
     </script>
 </div>
+@include('sales._drawer')
 </body>
 </html>
