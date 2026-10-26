@@ -31,6 +31,12 @@
         label { display:block; font-size: 12.5px; color:#c1c3c7; margin: 16px 0 6px; }
         input, select { width:100%; box-sizing:border-box; background:#202123; border:1px solid #62656b; color:#f4f5f7; padding:11px 12px; border-radius:8px; font-size:15px; min-height:46px; }
         input[type="date"], input[type="time"] { color-scheme: dark; }
+        .people-stepper { display:grid; grid-template-columns:60px 1fr 60px; gap:8px; align-items:stretch; }
+        .people-stepper button { min-height:54px; border-radius:12px; border:1px solid #4a4d53; background:#26272a; color:#f4f5f7; font-size:28px; font-weight:700; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+        .people-stepper button:active:not(:disabled) { background:#ff7918; border-color:#ff7918; color:#21170e; }
+        .people-stepper button:disabled { opacity:.3; cursor:not-allowed; }
+        .people-stepper input { text-align:center; font-size:24px; font-weight:800; min-height:54px; -moz-appearance:textfield; appearance:textfield; }
+        .people-stepper input::-webkit-inner-spin-button, .people-stepper input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
         .time-native { font-size:26px; font-weight:800; text-align:center; min-height:58px; letter-spacing:.04em; font-variant-numeric:tabular-nums; }
         .time-native.bad { border-color:#e5747f; color:#f3b8b8; }
         .time-range { font-size:12px; color:#8a8d93; margin-top:6px; min-height:16px; }
@@ -143,7 +149,11 @@
             <div class="avail-status" id="avail-status" aria-live="polite"></div>
 
             <label for="guests_count">Cantidad de personas</label>
-            <input type="number" id="guests_count" name="guests_count" min="1" max="10" value="{{ old('guests_count', 2) }}" required>
+            <div class="people-stepper" id="people-stepper">
+                <button type="button" data-d="-1" aria-label="Una persona menos">−</button>
+                <input type="number" id="guests_count" name="guests_count" min="1" max="10" value="{{ old('guests_count', 2) }}" required inputmode="numeric" aria-live="polite">
+                <button type="button" data-d="1" aria-label="Una persona más">+</button>
+            </div>
 
             @if ($publicUpsells->isNotEmpty() || $categoryUpsells->isNotEmpty())
                 <section class="extras" aria-labelledby="extras-title">
@@ -381,6 +391,25 @@
             if (el) el.textContent = total ? `Extras seleccionados: + $${total.toLocaleString('es-CL')}` : 'Sin extras seleccionados';
         }
 
+        // Personas: botones − y + (1 a 10), sin teclear.
+        (function () {
+            const input = document.getElementById('guests_count');
+            const buttons = document.querySelectorAll('#people-stepper button');
+            const paint = function () {
+                const v = Number(input.value) || 1;
+                buttons.forEach(function (b) { b.disabled = Number(b.dataset.d) < 0 ? v <= Number(input.min) : v >= Number(input.max); });
+            };
+            buttons.forEach(function (b) {
+                b.addEventListener('click', function () {
+                    const next = Math.min(Number(input.max), Math.max(Number(input.min), (Number(input.value) || 1) + Number(b.dataset.d)));
+                    input.value = next;
+                    paint();
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
+            input.addEventListener('input', paint);
+            paint();
+        })();
         document.getElementById('reserve-form').addEventListener('submit', hhSyncTime);
         document.getElementById('reserve-form').addEventListener('submit', function (e) {
             if (!hhTimeOk(document.getElementById('time-select').value)) {
