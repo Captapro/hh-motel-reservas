@@ -214,3 +214,32 @@ td a, td a.code, .sub a, a.lnk { color: #c2410c !important; }
 .panel .row, .row { border-top-color: #eef0f3 !important; }
 .row.total { color: #111827 !important; border-top-color: #e5e7eb !important; }
 details.adv { background: #fff !important; border: 1px solid #e5e7eb !important; }
+
+/* ===== Administración ===== */
+.pop-body { background: #fff !important; border: 1px solid #e5e7eb !important; box-shadow: 0 14px 34px rgba(16,24,40,.18) !important; color: #1f2937; }
+.pop-body label, .wrap label { color: #4b5563 !important; }
+.pop-body .danger { border-top: 1px solid #eef0f3 !important; }
+details.pop > summary.btn.secondary, summary.btn.secondary { background: #fff !important; color: #374151 !important; border: 1px solid #d1d5db !important; }
+details.pop > summary.btn:not(.secondary) { color: #fff !important; }
+.wing-toggle { background: #fff !important; border: 1px solid #d1d5db !important; color: #374151 !important; }
+.wing-toggle.on { background: #eff6ff !important; border-color: #2563eb !important; color: #1d4ed8 !important; }
+.wing-toggle.on .wing-toggle-dot { background: #2563eb !important; }
+.wing-toggle.off { background: #fef2f2 !important; border-color: #dc2626 !important; color: #b91c1c !important; }
+.wing-toggle.off .wing-toggle-dot { background: #dc2626 !important; }
+.toggle-btn { background: #fff !important; border: 1px solid #d1d5db !important; color: #374151 !important; }
+.toggle-btn:hover, .shift-nav a.navbtn:hover { border-color: #ff7918 !important; color: #c2410c !important; }
+.shift-nav a.navbtn { background: #fff !important; border: 1px solid #d1d5db !important; color: #374151 !important; }
+.today-pill { background: #eff6ff !important; color: #1d4ed8 !important; }
+.u-type { background: #f3f4f6 !important; color: #4b5563 !important; }
+.u-type.category_upgrade { background: #f5f3ff !important; color: #6d28d9 !important; }
+.u-type.time_extension { background: #ecfeff !important; color: #0e7490 !important; }
+.u-type.combo { background: #eff6ff !important; color: #1d4ed8 !important; }
+.danger-btn, button.danger-btn { background: #dc2626 !important; color: #fff !important; border: none !important; }
+[style*="background:#383838"], [style*="background:#2f2f2f"], [style*="background:#2a1414"] { background: #f3f4f6 !important; color: #1f2937 !important; }
+[style*="background:#2f2f2f"] { border: 1px solid #e5e7eb; }
+[style*="border:1px solid #7a2d2d"], [style*="border-color:#7a2d2d"] { border-color: #fecaca !important; }
+[style*="color:#f3b8b8"], [style*="color:#c1c3c7"] { color: #6b7280 !important; }
+[style*="color:#f3b8b8"] { color: #b91c1c !important; }
+.hh-subnav-sep { background: #d1d5db !important; }
+input, select, textarea, button { color-scheme: light !important; }
+input[type=checkbox], input[type=radio] { accent-color: #ff7918; }
