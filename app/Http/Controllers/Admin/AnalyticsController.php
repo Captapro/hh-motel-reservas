@@ -33,7 +33,7 @@ class AnalyticsController extends Controller
         $prevEnd = $start->copy()->subSecond();
 
         $all = Booking::with(['room.category', 'addons.product', 'addons.combo', 'payments.paymentMethod'])
-            ->where('booking_status', '!=', 'CANCELADA')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->whereBetween('starts_at', [$prevStart->copy()->timezone('UTC'), $end->copy()->timezone('UTC')])
             ->get();
@@ -88,7 +88,7 @@ class AnalyticsController extends Controller
         $categoryId = (int) $request->query('category', 0) ?: null;
 
         $bookings = Booking::with(['room.category', 'customer', 'addons', 'payments.paymentMethod'])
-            ->where('booking_status', '!=', 'CANCELADA')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->whereBetween('starts_at', [$start->copy()->timezone('UTC'), $end->copy()->timezone('UTC')])
             ->orderBy('starts_at')
@@ -261,7 +261,7 @@ class AnalyticsController extends Controller
         $firstMonth = now('America/Santiago')->startOfMonth()->subMonths(11);
 
         $bookings = Booking::with('addons')
-            ->where('booking_status', '!=', 'CANCELADA')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->where('starts_at', '>=', $firstMonth->copy()->timezone('UTC'))
             ->get();
@@ -306,7 +306,7 @@ class AnalyticsController extends Controller
         $monthEnd = $now->copy()->endOfMonth();
 
         $bookings = Booking::with('addons')
-            ->where('booking_status', '!=', 'CANCELADA')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->whereBetween('starts_at', [$monthStart->copy()->timezone('UTC'), $monthEnd->copy()->timezone('UTC')])
             ->get();

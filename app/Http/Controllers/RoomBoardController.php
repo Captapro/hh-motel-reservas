@@ -154,7 +154,7 @@ class RoomBoardController extends Controller
 
         $bookings = Booking::with('addons')
             ->whereBetween('starts_at', [$day->copy(), $dayEnd])
-            ->where('booking_status', '!=', 'CANCELADA')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->get();
 
         $addons = $bookings->flatMap->addons;

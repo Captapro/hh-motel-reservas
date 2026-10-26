@@ -39,7 +39,7 @@ class MonthlySalesController extends Controller
         // ESTADÍA y las canceladas no cuentan; el cobro es de la fecha de pago.
         $bookings = Booking::with(['room.category', 'addons', 'customer', 'payments.paymentMethod', 'payments.registeredBy'])
             ->whereBetween('starts_at', [$first->copy(), $last->copy()])
-            ->where('booking_status', '!=', 'CANCELADA')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->orderBy('starts_at')
             ->get();
 
@@ -162,7 +162,7 @@ class MonthlySalesController extends Controller
         $addons = DB::table('booking_addons')
             ->selectRaw('booking_id, SUM(amount) as total')->groupBy('booking_id')->pluck('total', 'booking_id');
 
-        $sales = Booking::where('booking_status', '!=', 'CANCELADA')->get(['id', 'starts_at', 'price_final'])
+        $sales = Booking::whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])->get(['id', 'starts_at', 'price_final'])
             ->groupBy(fn (Booking $b) => $b->starts_at->copy()->timezone(self::TZ)->format('Y-m'))
             ->map(fn (Collection $rows) => [
                 'rooms' => $rows->count(),

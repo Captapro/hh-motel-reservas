@@ -483,6 +483,18 @@ class BookingIntegrityTest extends TestCase
         $again->assertSee('Voucher')->assertSee('4521');
     }
 
+    public function test_expired_holds_do_not_count_as_sales(): void
+    {
+        $sold = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $expired = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);
+        $expired->update(['booking_status' => 'EXPIRADA']);
+
+        $totals = $this->get(route('sales.monthly', '2026-10'))->assertOk()->viewData('totals');
+
+        $this->assertSame(1, $totals['rooms']);
+        $this->assertSame((int) $sold->price_final, (int) $totals['total']);
+    }
+
     public function test_public_confirmation_shows_qr_and_payment_data_when_configured(): void
     {
         $booking = $this->booking();

@@ -37,7 +37,7 @@ class DailySalesController extends Controller
             ->orderBy('starts_at')
             ->get();
 
-        $active = $bookings->reject(fn (Booking $b) => $b->booking_status === 'CANCELADA');
+        $active = $bookings->reject(fn (Booking $b) => in_array($b->booking_status, ['CANCELADA', 'EXPIRADA'], true));
 
         $revenue = $active->sum(fn (Booking $b) => $b->price_final + $b->addonsTotal());
         $collected = $active->sum(fn (Booking $b) => $b->paidAmount());
