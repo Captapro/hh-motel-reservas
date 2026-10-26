@@ -124,7 +124,7 @@
         .cat-filter .upcoming-filter:hover { border-color:#f0c95f; color:#f0c95f; }
         .cat-filter .upcoming-filter.active { border-color:#f0c95f; background:#3a3216; color:#f0c95f; font-weight:800; }
 
-        .sidebar { position:sticky; top:20px; align-self:start; border:1px solid #111; border-radius:18px; background:#fff; padding:14px 14px 4px; }
+        .sidebar { position:sticky; top:20px; align-self:start; border:1px solid #dddfe1; border-radius:18px; background:#fff; padding:14px 14px 4px; }
         .sidebar .sidebar-title h2 { color:#8a5a00; }
         .sidebar .sidebar-hint { color:#6b6b6b; }
         .sidebar .proxima-card { max-width:none; }
