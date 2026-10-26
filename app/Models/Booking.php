@@ -105,7 +105,7 @@ class Booking extends Model
     }
 
     /** Cómo nació la reserva (columna origin). Las antiguas sin dato se muestran como "—". */
-    public const ORIGIN_LABELS = ['presencial' => 'Presencial', 'recepcion' => 'Reserva (recepción)', 'catalogo' => 'En línea'];
+    public const ORIGIN_LABELS = ['presencial' => 'Presencial', 'recepcion' => 'Reserva asistida', 'catalogo' => 'Reserva en línea'];
 
     public function originLabel(): string
     {

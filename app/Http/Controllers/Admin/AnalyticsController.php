@@ -340,7 +340,7 @@ class AnalyticsController extends Controller
      */
     private function byOrigin(Collection $bookings, callable $val): array
     {
-        $rows = collect(['catalogo' => 'En línea', 'presencial' => 'Presencial', 'recepcion' => 'Reserva en recepción', '' => 'Sin dato (antiguas)'])
+        $rows = collect(['catalogo' => 'Reserva en línea', 'recepcion' => 'Reserva asistida', 'presencial' => 'Presencial', '' => 'Sin dato (antiguas)'])
             ->map(function (string $label, string $key) use ($bookings, $val) {
                 $group = $bookings->filter(fn (Booking $b) => (string) $b->origin === $key);
 

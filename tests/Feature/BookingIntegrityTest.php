@@ -180,7 +180,8 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('recepcion', $team->fresh()->origin);
         $this->assertSame('catalogo', $online->fresh()->origin);
         $this->assertSame('Presencial', $walkIn->fresh()->originLabel());
-        $this->assertSame('En línea', $online->fresh()->originLabel());
+        $this->assertSame('Reserva en línea', $online->fresh()->originLabel());
+        $this->assertSame('Reserva asistida', $team->fresh()->originLabel());
     }
 
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void

@@ -212,7 +212,7 @@
     <h2 class="an-title">Cómo llegan los clientes</h2>
     <div class="an-grid">
     <div class="card t-orange span2">
-        <h3>Reservan en línea vs. llegan presencial</h3>
+        <h3>Reserva en línea, reserva asistida o presencial</h3>
         @php $oTotal = max(1, $byOrigin['total']); @endphp
         <div class="origin-tiles">
             @foreach ($byOrigin['rows'] as $o)
@@ -226,7 +226,7 @@
         @foreach ($byOrigin['rows'] as $o)
             <div class="bar-row"><div class="name">{{ $o['label'] }}</div><div class="bar-track"><div class="bar-fill {{ $o['key'] === 'presencial' ? '' : 'alt' }}" style="width:{{ round($o['count'] / $oTotal * 100) }}%"></div></div><div class="val">{{ $o['count'] }} <small>({{ round($o['count'] / $oTotal * 100) }}%)</small></div></div>
         @endforeach
-        <p class="legend" style="margin-top:8px;">En línea = catálogo web · Presencial = ingreso en recepción · Las reservas anteriores a este cambio no tienen el dato; solo las en línea se pudieron deducir.</p>
+        <p class="legend" style="margin-top:8px;"><b>Reserva en línea</b>: la hace solo el cliente en el catálogo y paga. <b>Reserva asistida</b>: la gestiona el anfitrión o recepcionista (por ejemplo, por WhatsApp). <b>Presencial</b>: venta en recepción sin reserva previa. Las reservas anteriores a este cambio no tienen el dato; solo las en línea se pudieron deducir.</p>
     </div>
     </div>
 
