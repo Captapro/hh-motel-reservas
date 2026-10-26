@@ -22,20 +22,6 @@
 
     <div class="card">
         <div class="toggle-group">
-            <div class="toggle-group-label">Disponibilidad por categoría</div>
-            <div class="wing-toggle-row">
-                @foreach ($categories as $cat)
-                    <form method="POST" action="{{ route('admin.categories.toggle', $cat) }}">
-                        @csrf
-                        <button type="submit" class="wing-toggle {{ $cat->is_active ? 'on' : 'off' }}">
-                            <span class="wing-toggle-dot"></span>
-                            {{ $cat->name }} {{ $cat->is_active ? 'habilitada' : 'deshabilitada' }}
-                        </button>
-                    </form>
-                @endforeach
-            </div>
-        </div>
-        <div class="toggle-group">
             <div class="toggle-group-label">Disponibilidad por piso y ala <span style="text-transform:none; letter-spacing:normal;">— prioriza el Ala Norte y anda abriendo el Ala Sur piso por piso según la capacidad que necesites. El piso 1 (GO 101-103) no tiene ala.</span></div>
             <div class="wing-toggle-row">
                 @foreach ([
@@ -55,7 +41,7 @@
                 @endforeach
             </div>
         </div>
-        <p class="sub" style="margin:14px 0 0;">Apagar una categoría o un piso/ala solo saca sus habitaciones libres de "Disponibles" en el tablero — lo que ya está ocupado, por llegar, en aseo o fuera de servicio no se toca.</p>
+        <p class="sub" style="margin:14px 0 0;">Apagar un piso/ala solo saca sus habitaciones libres de "Disponibles" en el tablero — lo que ya está ocupado, por llegar, en aseo o fuera de servicio no se toca.</p>
     </div>
 
     <div class="card">
