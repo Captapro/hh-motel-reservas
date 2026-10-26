@@ -38,6 +38,10 @@
      el texto sin estilo antes de que cargara -- ese era el "flash" al
      navegar entre secciones. Incrustado no depende de una segunda descarga. --}}
 <style>{!! file_get_contents(public_path('css/hh-theme.css')) !!}</style>
+{{-- Clientes, Productos, Caja y Operaciones van en fondo blanco, como Analytics. --}}
+@if (in_array(\App\Support\AccessSections::forRoute(request()->route()?->getName()), ['clientes', 'productos', 'caja', 'operaciones'], true))
+    <style>{!! file_get_contents(public_path('css/hh-light.css')) !!}</style>
+@endif
 @include('partials.sidebar')
 <div class="hh-nav-wrap">
     <div class="hh-navbar">

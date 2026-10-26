@@ -1,0 +1,185 @@
+/* Tema claro (fondo blanco) para Clientes, Productos, Caja y Operaciones.
+   Se inyecta desde partials/navbar.blade.php después del CSS propio de cada
+   pantalla, así que pisa sus colores oscuros. Mismo criterio que Analytics:
+   tarjetas blancas, bordes grises suaves, naranja de marca y nada de verdes. */
+:root, html[style] { color-scheme: light !important; }
+html, html[style], html:root, body { background: #f5f5f4 !important; background-color: #f5f5f4 !important; color: #1f2937 !important; }
+html { min-height: 100%; }
+body { min-height: 100vh; }
+h1, h2, h3, h4 { color: #111827; }
+.sub, .muted, .hint, small { color: #6b7280; }
+
+/* Contenedores */
+.card, .panel, .table-wrap, .saldo-card, .extras-card, .box, .tile, .kpi, .stat, .summary-card,
+.wrap > table, body > .wrap > table, .page-inner > table {
+    background: #fff !important; color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important; box-shadow: 0 1px 2px rgba(16,24,40,.05) !important;
+}
+.card h3, .card h2 { color: #111827; }
+.card h3 { color: #6b7280; }
+
+/* Tablas */
+table { color: #1f2937; }
+th { background: #f9fafb !important; color: #6b7280 !important; border-color: #e5e7eb !important; }
+td { color: #1f2937; border-color: #eef0f3 !important; }
+tr { border-color: #eef0f3 !important; }
+tbody tr:hover td { background: #fafafa; }
+tfoot td, tfoot th { background: #f9fafb !important; }
+
+/* Campos */
+:is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]), select, textarea) {
+    background: #fff !important; color: #111827 !important;
+    border: 1px solid #d1d5db !important; color-scheme: light;
+}
+::placeholder { color: #9ca3af !important; opacity: 1; }
+label { color: #4b5563; }
+input:focus, select:focus, textarea:focus { border-color: #ff7918 !important; box-shadow: 0 0 0 3px #ff791826 !important; }
+
+/* Botones secundarios (los naranjas de acción se dejan como están) */
+.page-inner button:not([class*="primary"]):not(.go):not(.save):not(.submit):not(.submit-btn):not(.btn):not([type=submit]),
+.wrap button:not([class*="primary"]):not(.go):not(.save):not(.submit):not(.submit-btn):not(.btn):not([type=submit]),
+.btn-sec, a.btn-sec {
+    background: #fff; color: #374151; border: 1px solid #d1d5db;
+}
+button[type=submit]:not([class]) { background: #ff7918; color: #fff; border: none; }
+
+/* Chips y filtros */
+.chip, .flt .chip, .tab, .pill-btn { background: #fff; border: 1px solid #d1d5db; color: #374151; }
+.chip.active, .tab.active, .tab.on { background: #ff7918; border-color: #ff7918; color: #fff; }
+.chip:hover, .tab:hover { border-color: #ff7918; }
+
+/* Textos y colores con inline style: de pastel sobre negro a legibles sobre blanco */
+[style*="#eee"], [style*="#ddd"], [style*="#ccc"], [style*="#fff;"], [style*="color:#fff"] { color: #1f2937 !important; }
+[style*="color:#999"], [style*="color:#888"], [style*="color:#aaa"], [style*="color:#777"], [style*="color:#666"], [style*="color:#bbb"] { color: #6b7280 !important; }
+[style*="#8fe0ad"], [style*="#6fd39a"], [style*="#34d399"], [style*="#6ee7b7"], [style*="#9fcf9f"], [style*="#7fbf8f"] { color: #2563eb !important; }
+[style*="#e8c76f"], [style*="#e8a23f"], [style*="#f0d98a"] { color: #b45309 !important; }
+[style*="#7fbcdc"], [style*="#8fbfff"], [style*="#cde"] { color: #2563eb !important; }
+[style*="#e88a9a"], [style*="#ff9a9a"], [style*="#e88a8a"] { color: #dc2626 !important; }
+[style*="background:#1c1c1c"], [style*="background:#111"], [style*="background:#141414"], [style*="background:#262626"], [style*="background:#242424"], [style*="background:#2a2a2a"] { background: #fff !important; }
+[style*="background:#14251c"] { background: #eff6ff !important; border-color: #bfdbfe !important; }
+[style*="border:1px solid #333"], [style*="border-color:#333"] { border-color: #e5e7eb !important; }
+hr { border-color: #e5e7eb; }
+
+/* ===== Clientes ===== */
+.segment-guide { background: #fff !important; }
+.segment-guide h2 { color: #111827 !important; }
+.segment-guide p, .segment-guide small, .segment-rules span { color: #6b7280 !important; }
+.segment-rules div { background: #f9fafb !important; border: 1px solid #e5e7eb !important; }
+.rule-new { color: #0891b2 !important; } .rule-frequent { color: #2563eb !important; }
+.rule-occasional { color: #b45309 !important; } .rule-sporadic { color: #dc2626 !important; }
+.seg-chip { background: #fff !important; border: 1px solid #d1d5db !important; color: #374151 !important; }
+.seg-chip.active { border-color: #ff7918 !important; background: #fff7ed !important; }
+.seg-chip.nuevo b { color: #0891b2 !important; } .seg-chip.frecuente b { color: #2563eb !important; }
+.seg-chip.ocasional b { color: #b45309 !important; } .seg-chip.esporadico b { color: #dc2626 !important; }
+.pill { background: #f3f4f6 !important; color: #4b5563 !important; }
+.pill-nuevo { background: #ecfeff !important; color: #0e7490 !important; }
+.pill-frecuente { background: #eff6ff !important; color: #1d4ed8 !important; }
+.pill-ocasional, .pill-warn { background: #fffbeb !important; color: #b45309 !important; }
+.pill-esporadico, .pill-bad { background: #fef2f2 !important; color: #b91c1c !important; }
+.name-link { color: #111827 !important; }
+.name-link:hover, a.link:hover { color: #ff7918 !important; }
+a.btn.secondary, button.btn.secondary { background: #fff !important; color: #374151 !important; border: 1px solid #d1d5db !important; }
+.stock-form input { background: #fff !important; } .stock-form button { background: #fff !important; color: #374151 !important; border: 1px solid #d1d5db !important; }
+.errors { background: #fef2f2 !important; border: 1px solid #fecaca !important; color: #b91c1c !important; }
+.hh-subnav, .subnav, .admin-nav { background: #fff !important; border-bottom: 1px solid #e5e7eb !important; }
+.hh-subnav a, .subnav a, .admin-nav a { color: #6b7280 !important; }
+.hh-subnav a.hh-active, .hh-subnav a:hover, .subnav a.on, .subnav a:hover { background: #fff7ed !important; color: #c2410c !important; }
+details > summary { color: #111827; }
+
+/* ===== Botones y pestañas tipo enlace (Día anterior, Día/Semana/Mes, Volver) ===== */
+.nav-day a, .period-tabs a, a.back-btn, a.room-card, .mini-nav a {
+    background: #fff !important; color: #374151 !important; border: 1px solid #d1d5db !important;
+}
+.nav-day a:hover, .period-tabs a:hover, a.back-btn:hover, a.room-card:hover { border-color: #ff7918 !important; color: #c2410c !important; }
+.period-tabs a.active { background: #ff7918 !important; border-color: #ff7918 !important; color: #fff !important; }
+.nav-day .today, .day-label { color: #6b7280 !important; }
+
+/* ===== Caja ===== */
+.banner { background: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #1d4ed8 !important; }
+.kpi .label, .panel h3, .kpi .note { color: #6b7280 !important; }
+.kpi .note b { color: #111827 !important; }
+.kpi .value { color: #111827; }
+.kpi.saldo { background: #fff7ed !important; border-color: #fed7aa !important; }
+.kpi.saldo .value { color: #ea580c !important; }
+.kpi.in .value, .row1.ingreso .amt { color: #2563eb !important; }
+.kpi.out .value, .row1.egreso .amt { color: #dc2626 !important; }
+.panel .hint { color: #6b7280 !important; }
+table.g td { background: #fff !important; border: 1px solid #e5e7eb !important; color: #1f2937; }
+table.g tr.zero td { color: #9ca3af !important; }
+table.g tr.total td { background: #f3f4f6 !important; color: #111827 !important; border-top: 2px solid #d1d5db !important; }
+.type-row button { background: #fff !important; border: 1.5px solid #d1d5db !important; color: #6b7280 !important; }
+.type-row button.active[data-type="ingreso"] { background: #eff6ff !important; border-color: #2563eb !important; color: #1d4ed8 !important; }
+.type-row button.active[data-type="egreso"] { background: #fef2f2 !important; border-color: #dc2626 !important; color: #b91c1c !important; }
+button.submit, button.submit-btn { background: #ff7918 !important; color: #fff !important; border: none !important; }
+.row1 { border-top: 1px solid #eef0f3 !important; }
+.row1 .when { color: #6b7280; } .row1 .desc { color: #1f2937; }
+.empty { color: #9ca3af !important; }
+details.adv summary { color: #b45309 !important; }
+details.adv .adv-row { border-top: 1px solid #eef0f3 !important; }
+
+/* ===== Aseo ===== */
+.card .label { color: #6b7280 !important; }
+.card .value { color: #111827; }
+.card.count .value { color: #2563eb !important; } .card.manual .value { color: #b45309 !important; } .card.auto .value { color: #0f766e !important; }
+.pill.manual { background: #fffbeb !important; color: #b45309 !important; }
+.pill.auto { background: #eff6ff !important; color: #1d4ed8 !important; }
+.pill.no-cama { background: #f3f4f6 !important; color: #6b7280 !important; }
+.linen-panel { background: #fff !important; border: 1px solid #e5e7eb !important; color: #1f2937 !important; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+.linen-panel h3 { color: #6b7280 !important; } .linen-panel .total, .linen-chip b { color: #2563eb !important; }
+.linen-panel .hint, .linen-panel p { color: #6b7280 !important; }
+.linen-chip { background: #f9fafb !important; border: 1px solid #e5e7eb !important; color: #1f2937 !important; }
+
+/* ===== Mantención / Ronda de turno / Mucamas ===== */
+.sec-label { color: #6b7280 !important; }
+.sec-label .count { background: #f3f4f6 !important; color: #4b5563 !important; }
+.sec-label.warn .count { background: #fef2f2 !important; color: #b91c1c !important; }
+.room-card, .progress-card, .mucama-card, .last-panel, .page-inner > form { background: #fff !important; border: 1px solid #e5e7eb !important; color: #1f2937 !important; }
+.room-card.warn, .last-panel.warn { background: #fef2f2 !important; border-color: #fecaca !important; }
+.room-card .cat, .room-card .meta, a.room-card .cat, .progress-card .label, .mucama-row .who small, .mucama-row .where .ago, .field-label, .photo-help { color: #6b7280 !important; }
+.room-card .meta.warn, .warn-tag { color: #dc2626 !important; }
+a.room-card .go { color: #c2410c !important; }
+.progress-bar { background: #eef0f3 !important; }
+.all-done { background: #eff6ff !important; border-color: #bfdbfe !important; color: #1d4ed8 !important; }
+.done-card { background: #f9fafb !important; border: 1px solid #e5e7eb !important; color: #4b5563 !important; opacity: 1 !important; }
+.done-card .name { color: #111827 !important; } .done-card .when { color: #6b7280 !important; }
+h2.section { color: #6b7280 !important; }
+table.log-table th { color: #6b7280 !important; } table.log-table td { border-top: 1px solid #eef0f3 !important; color: #1f2937; }
+table.log-table td.open { color: #2563eb !important; }
+.status-tag.working { background: #fffbeb !important; color: #b45309 !important; }
+.status-tag.reported { background: #eff6ff !important; color: #1d4ed8 !important; }
+.status-tag.done { background: #f3f4f6 !important; color: #4b5563 !important; }
+.status-tag.none { background: #f3f4f6 !important; color: #9ca3af !important; }
+.shift-tag.on { color: #2563eb !important; } .shift-tag.off { color: #9ca3af !important; }
+.route-trail { color: #2563eb !important; }
+.toast { background: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #1d4ed8 !important; box-shadow: 0 6px 18px rgba(16,24,40,.15) !important; }
+.check-row { border-bottom: 1px solid #eef0f3 !important; } .check-row span { color: #374151 !important; }
+.checklist { border-top: 1px solid #eef0f3 !important; }
+.toggle label { border: 1px solid #d1d5db !important; color: #6b7280 !important; background: #fff !important; }
+.toggle input:checked + label.opt-ok { background: #eff6ff !important; border-color: #2563eb !important; color: #1d4ed8 !important; }
+.toggle input:checked + label.opt-falla { background: #fef2f2 !important; border-color: #dc2626 !important; color: #b91c1c !important; }
+.pill.ok { background: #eff6ff !important; color: #1d4ed8 !important; } .pill.warn { background: #fef2f2 !important; color: #b91c1c !important; }
+.date-readonly { background: #f3f4f6 !important; color: #6b7280 !important; }
+.section-title { color: #c2410c !important; }
+a.scan-btn { color: #fff !important; }
+
+/* ===== Resumen de aseo (semana/mes) ===== */
+tr.empty-day td { color: #9ca3af !important; }
+.day-link { color: #111827 !important; } .day-link:hover { color: #ff7918 !important; }
+td { color: #1f2937; }
+
+/* ===== Ficha de cliente ===== */
+.danger-zone { background: #fff !important; border: 1px solid #fecaca !important; }
+.row-card { background: #fff !important; border: 1px solid #e5e7eb !important; color: #1f2937 !important; }
+.row-card:hover { border-color: #ff7918 !important; }
+.seg-banner { color: #1f2937 !important; }
+.seg-banner.nuevo { background: #ecfeff !important; border: 1px solid #a5f3fc !important; }
+.seg-banner.frecuente { background: #eff6ff !important; border: 1px solid #bfdbfe !important; }
+.seg-banner.ocasional { background: #fffbeb !important; border: 1px solid #fde68a !important; }
+.seg-banner.esporadico { background: #fef2f2 !important; border: 1px solid #fecaca !important; }
+.seg-banner .seg-title { color: #111827; } .seg-banner .seg-why { color: #4b5563 !important; }
+.seg-stats div span { color: #6b7280 !important; } .seg-stats div b { color: #111827; }
+.row .muted, .meta { color: #6b7280 !important; }
+a.row-card.now { background: #fff7ed !important; border-color: #ff7918 !important; }
+.client-fields input, .client-fields select { background: #fff !important; }
+[style*="background:#211d10"] { background: #fffbeb !important; border-color: #fde68a !important; color: #92400e !important; }
+[style*="background:#b3202f"] { background: #dc2626 !important; color: #fff !important; }
