@@ -117,6 +117,55 @@
         .chart-detail summary:hover { color:#ccc; }
         .chart-detail[open] summary { color:#ccc; }
         .chart-table tr:first-child td { border-top:none; }
+
+        /* ===== Tema claro: fondos blancos, sin verdes ===== */
+        .an-nav { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
+        .an-nav a { padding:7px 14px; border-radius:8px; background:#fff; border:1px solid #e5e7eb; color:#374151; font-size:13px; text-decoration:none; }
+        .an-nav a:hover { border-color:#ff7918; color:#c2410c; }
+        .an-nav a.on { background:#ff7918; border-color:#ff7918; color:#fff; font-weight:600; }
+        .wrap h1 { color:#111827; }
+        .wrap > .sub { color:#6b7280; }
+        .an-title { color:#6b7280; }
+        .an-title::after { background:#e5e7eb; }
+        .wrap > .flt, .wrap .kpi, .wrap > .proj, .wrap .card { background:#fff !important; border:1px solid #e5e7eb; box-shadow:0 1px 2px rgba(16,24,40,.05); color:#1f2937; }
+        .wrap .card { border-color:#e5e7eb #e5e7eb #e5e7eb; }
+        .wrap > .proj { background:#fff7ed !important; }
+        .wrap .flt input, .wrap .flt select { background:#fff !important; color:#111827 !important; border:1px solid #d1d5db !important; color-scheme:light; }
+        .wrap .flt select { min-height:34px; }
+        .flt label { color:#6b7280; }
+        .flt input[type=date], .flt select { background:#fff; border:1px solid #d1d5db; color:#111827; }
+        .flt .chip { background:#fff; border:1px solid #d1d5db; color:#374151; }
+        .export-btn { background:#fff; border:1px solid #ff7918; color:#c2410c; }
+        .export-btn:hover { background:#fff7ed; border-color:#ff7918; color:#9a3412; }
+        .kpi .k-label { color:#6b7280; }
+        .kpi .k-value { color:#111827; }
+        .k-delta.up, .m-delta.up { color:#2563eb; } .k-delta.down, .m-delta.down { color:#dc2626; } .k-delta.flat, .m-delta.flat { color:#6b7280; }
+        .wrap > .proj { border:1px solid #fed7aa; }
+        .proj h3 { color:#c2410c; }
+        .proj-grid div span { color:#9a3412; }
+        .proj-grid div b { color:#111827; }
+        .proj-grid div.big b { color:#ea580c; }
+        .proj .hint { color:#9a3412; }
+        .card h3 { color:#6b7280; }
+        .an-grid > .card.t-orange { border-top:3px solid #ff7918; }
+        .an-grid > .card.t-green { border-top:3px solid #3b82f6; }
+        .an-grid > .card.t-blue { border-top:3px solid #64748b; }
+        .bar-row .name { color:#374151; }
+        .bar-row .cat, .bar-row .val small, .hour-label, .hour-count, .month-row .m-count, .legend { color:#6b7280; }
+        .bar-row .val, .month-row .m-val { color:#111827; }
+        .bar-track, .hour-track, .month-row .m-track { background:#eef0f3; }
+        .bar-fill.alt, .month-row .m-fill { background:#3b82f6; }
+        .month-row { border-top:1px solid #eef0f3; }
+        .month-row .m-name { color:#374151; }
+        .chart-legend-row { color:#6b7280; }
+        .chart-grid line { stroke:#e5e7eb; }
+        .chart-axis-label, .chart-xlabel { fill:#6b7280; }
+        .chart-crosshair { stroke:#9ca3af; }
+        .chart-table td { color:#4b5563; border-top:1px solid #f1f2f4; }
+        .chart-table td.v { color:#111827; }
+        .chart-detail summary { color:#6b7280; border-top:1px solid #eef0f3; }
+        .chart-detail summary:hover, .chart-detail[open] summary { color:#111827; }
+        .empty { color:#9ca3af; }
     </style>
 
     @php
@@ -125,10 +174,10 @@
         $qs = fn ($over) => array_merge(['preset' => $preset, 'from' => $preset === 'custom' ? $from : null, 'to' => $preset === 'custom' ? $to : null, 'metric' => $metric, 'category' => $categoryId], $over);
     @endphp
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;">
-        <a href="{{ route('sales.daily') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Venta de hoy</a>
-        <a href="{{ route('sales.monthly') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Historial de ventas</a>
-        <a href="{{ route('admin.analytics.index') }}" style="padding:7px 14px;border-radius:7px;background:#ff7918;color:#111;font-weight:600;font-size:13px;text-decoration:none;">Analytics</a>
+    <div class="an-nav">
+        <a href="{{ route('sales.daily') }}">Venta de hoy</a>
+        <a href="{{ route('sales.monthly') }}">Historial de ventas</a>
+        <a href="{{ route('admin.analytics.index') }}" class="on">Analytics</a>
     </div>
     <h1>Analytics</h1>
     <p class="sub">{{ $rangeLabel }}{{ $categoryId ? ' · '.$categories->firstWhere('id', $categoryId)?->name : '' }}. No cuenta reservas canceladas.</p>
@@ -378,7 +427,7 @@
                         <tr>
                             <td>{{ $m['label'] }} <span style="color:#555;">· {{ $m['count'] }} {{ Str::plural('reserva', $m['count']) }}</span></td>
                             <td class="v">{{ $metricVal($m['value']) }}</td>
-                            <td class="v" style="width:70px; color:{{ $m['delta_pct'] === null ? '#777' : ($m['delta_pct'] > 0 ? '#6fd39a' : ($m['delta_pct'] < 0 ? '#e88a9a' : '#777')) }};">
+                            <td class="v" style="width:70px; color:{{ $m['delta_pct'] === null ? '#777' : ($m['delta_pct'] > 0 ? '#2563eb' : ($m['delta_pct'] < 0 ? '#dc2626' : '#777')) }};">
                                 @if ($m['delta_pct'] === null) —
                                 @elseif ($m['delta_pct'] > 0) ▲{{ $m['delta_pct'] }}%
                                 @elseif ($m['delta_pct'] < 0) ▼{{ abs($m['delta_pct']) }}%
