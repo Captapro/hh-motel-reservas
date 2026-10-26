@@ -246,6 +246,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/exportar', [AnalyticsController::class, 'export'])->name('analytics.export');
+    Route::get('/analytics/clientes', [\App\Http\Controllers\Admin\CustomerBehaviorController::class, 'index'])->name('analytics.customers');
 
     Route::get('/opiniones', [App\Http\Controllers\Admin\GuestReviewController::class, 'index'])->name('reviews.index');
     Route::delete('/opiniones', [App\Http\Controllers\Admin\GuestReviewController::class, 'destroyAll'])->middleware('role:administrador')->name('reviews.destroy_all');

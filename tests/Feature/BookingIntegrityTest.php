@@ -214,6 +214,40 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('Ana Pérez | 12.345.678-5', GuestLine::format($guests[0]->name, $guests[0]->id_document));
     }
 
+    public function test_customer_behavior_page_counts_new_returning_and_at_risk_clients(): void
+    {
+        foreach (['2026_09_11_090000_add_identity_fields_to_customers_table.php', '2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        $loyal = $this->customer;
+        $newbie = Customer::create(['name' => 'Cliente Nuevo', 'phone_e164' => '+56955555501']);
+        $returning = Customer::create(['name' => 'Cliente Que Vuelve', 'phone_e164' => '+56955555502']);
+
+        // Las estadías son del pasado: se crean viajando a esa fecha y se vuelve al "hoy" del test.
+        $today = now();
+        $this->travelTo(Carbon::parse('2026-03-01 09:00'));
+        // El "fiel" vino 3 veces cada ~2 semanas y lleva meses sin volver; el "que vuelve" ya había venido antes del rango.
+        foreach (['2026-04-06', '2026-04-20', '2026-05-04'] as $day) {
+            $this->booking(['customer' => $loyal, 'starts_at' => Carbon::parse($day.' 12:00')]);
+        }
+        $this->booking(['customer' => $returning, 'starts_at' => Carbon::parse('2026-07-06 12:00')]);
+        $this->booking(['customer' => $returning, 'starts_at' => Carbon::parse('2026-08-03 12:00')]);
+        $this->booking(['customer' => $newbie, 'starts_at' => Carbon::parse('2026-08-10 12:00')]);
+
+        $this->travelTo($today);
+        $page = $this->get(route('admin.analytics.customers', ['from' => '2026-08-01', 'to' => '2026-08-31']));
+        $page->assertOk()->assertSee('Comportamiento de clientes');
+        $data = $page->viewData('kpis');
+        $this->assertSame(2, $data['active']);      // newbie + returning vinieron en agosto
+        $this->assertSame(1, $data['new']);         // solo newbie es la primera vez
+        $this->assertSame(1, $data['repeaters']);   // returning ya había venido antes
+        $this->assertSame(50, $data['repeat_rate']);
+        // En riesgo: el fiel (3 visitas cada ~14 días, meses sin volver) y el que vuelve (cada ~28 días, ya van 58); el recién llegado no.
+        $this->assertSame(2, $data['at_risk']);
+        $this->assertSame($loyal->id, $page->viewData('risk')->first()['customer']->id);
+    }
+
     public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void
     {
         $first = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
