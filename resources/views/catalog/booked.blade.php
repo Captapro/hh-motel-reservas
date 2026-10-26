@@ -133,12 +133,11 @@
             <strong>¿Qué sigue ahora?</strong>
             <ul>
                 <li>@if ($hasBank || ! empty($pay['mercadopago_link']))Puedes adelantar el pago con los datos de arriba, o pagar al llegar al motel.@else Todavía no cobramos nada — el pago se hace al llegar al motel.@endif</li>
-                <li>Esta reserva queda pendiente hasta que la confirmemos por WhatsApp.</li>
+                <li>Esta reserva queda pendiente hasta que se registre tu pago.</li>
                 <li>Presenta tu documento de identidad al llegar.</li>
             </ul>
         </div>
 
-        <a class="btn" href="https://wa.me/56977683108?text={{ rawurlencode('Hola! Tengo la reserva '.$booking->code.' en HH.') }}" target="_blank" rel="noopener">Avisar por WhatsApp que ya reservé →</a>
         <a class="back" href="{{ route('catalog.index') }}">← Volver al catálogo</a>
     </div>
 </body>
