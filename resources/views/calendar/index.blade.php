@@ -11,6 +11,7 @@
 .calendar-split .calendar-history{margin-top:0}
 .calendar-split .calendar-card.upcoming h2{color:#1c9169}
 .calendar-split .calendar-card.past h2{color:#888}
+.soon-stats{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.soon-stats span{background:#fff4ea;border:1px solid #ffd5b0;color:#9a4a00;border-radius:20px;padding:5px 12px;font-size:12px}.soon-stats b{font-size:15px;color:#c2410c;margin-right:3px}.soon-day{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;background:#f4f4f2;border-radius:6px;padding:5px 9px;margin:12px 0 2px}.soon-day:first-of-type{margin-top:4px}.calendar-split .calendar-card.upcoming h2{color:#c2410c}
 </style>
 </head><body>
 @include('partials.navbar')
@@ -50,11 +51,21 @@
 
 <div class="calendar-split">
  <section class="calendar-card upcoming calendar-history">
-  <h2>◷ Próximas {{ $view==='month' ? 'del mes' : ($view==='week' ? 'de la semana' : 'del día') }} <span class="hist-count">{{ $upcomingBookings->count() }} {{ Str::plural('reserva', $upcomingBookings->count()) }}</span></h2>
-  @forelse ($upcomingBookings as $booking)
-   <a class="booking-row" href="{{ route('reservations.show',$booking->code) }}"><div class="booking-time"><b>{{ $booking->starts_at->locale('es')->isoFormat('D MMM') }}</b><span>{{ $booking->starts_at->format('H:i') }}</span></div><div><strong>{{ $booking->room->name }}</strong><small>{{ $booking->room->category->name }} · {{ $booking->customer->name }}</small></div><div class="booking-status">{{ str_replace('_',' ', $booking->booking_status) }}</div><span class="arrow">→</span></a>
+  <h2>◷ Próximas reservas <span class="hist-count">desde ahora, sin importar el período</span></h2>
+  <div class="soon-stats">
+   <span><b>{{ $soonStats['today'] }}</b> hoy</span>
+   <span><b>{{ $soonStats['tomorrow'] }}</b> mañana</span>
+   <span><b>{{ $soonStats['week'] }}</b> próx. 7 días</span>
+   <span><b>{{ $soonStats['total'] }}</b> en total</span>
+  </div>
+  @forelse ($soon->groupBy(fn ($b) => $b->starts_at->toDateString()) as $day => $rows)
+   @php $d = \Carbon\Carbon::parse($day); @endphp
+   <div class="soon-day">{{ $d->isToday() ? 'Hoy' : ($d->isTomorrow() ? 'Mañana' : ucfirst($d->locale('es')->isoFormat('ddd D MMM'))) }} · {{ $rows->count() }} {{ Str::plural('reserva', $rows->count()) }}</div>
+   @foreach ($rows as $booking)
+    <a class="booking-row" href="{{ route('reservations.show',$booking->code) }}"><div class="booking-time"><b>{{ $booking->starts_at->format('H:i') }}</b><span>{{ \App\Support\TimeFormat::minutes($booking->duration_minutes) }}</span></div><div><strong>{{ $booking->room->name }}</strong><small>{{ $booking->room->category->name }} · {{ $booking->customer->name }}</small></div><div class="booking-status">{{ str_replace('_',' ', $booking->booking_status) }}</div><span class="arrow">→</span></a>
+   @endforeach
   @empty
-   <p class="empty">No hay reservas todavía por llegar en este período.</p>
+   <p class="empty">No hay reservas futuras por ahora.</p>
   @endforelse
  </section>
  <section class="calendar-card past calendar-history">

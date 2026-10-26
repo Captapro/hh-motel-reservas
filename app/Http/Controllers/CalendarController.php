@@ -37,6 +37,17 @@ class CalendarController extends Controller
         $now = now();
         [$pastBookings, $upcomingBookings] = $bookings->partition(fn ($booking) => $booking->starts_at->lt($now));
 
-        return view('calendar.index', compact('view', 'date', 'rangeStart', 'rangeEnd', 'bookings', 'days', 'previous', 'next', 'pastBookings', 'upcomingBookings'));
+        // Próximas reservas desde ahora, sin importar si se mira el mes, la semana o el día.
+        $futureBase = Booking::whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'])
+            ->whereNull('checked_in_at')->where('starts_at', '>=', $now);
+        $soon = (clone $futureBase)->with(['room.category', 'customer'])->orderBy('starts_at')->limit(40)->get();
+        $soonStats = [
+            'today' => (clone $futureBase)->where('starts_at', '<=', $now->copy()->endOfDay())->count(),
+            'tomorrow' => (clone $futureBase)->whereBetween('starts_at', [$now->copy()->addDay()->startOfDay(), $now->copy()->addDay()->endOfDay()])->count(),
+            'week' => (clone $futureBase)->where('starts_at', '<=', $now->copy()->addDays(6)->endOfDay())->count(),
+            'total' => (clone $futureBase)->count(),
+        ];
+
+        return view('calendar.index', compact('view', 'date', 'rangeStart', 'rangeEnd', 'bookings', 'days', 'previous', 'next', 'pastBookings', 'upcomingBookings', 'soon', 'soonStats'));
     }
 }
