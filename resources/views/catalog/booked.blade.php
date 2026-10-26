@@ -83,7 +83,11 @@
             @foreach ($booking->addons as $addon)
                 <div class="row"><span class="muted">{{ $addon->description }}</span><span>${{ number_format($addon->amount, 0, ',', '.') }}</span></div>
             @endforeach
-            <div class="row"><span class="muted">Total a pagar</span><span>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</span></div>
+            @if ($confirmed && $booking->balanceDue() <= 0)
+                <div class="row"><span class="muted">Total pagado</span><span>${{ number_format($booking->paidAmount(), 0, ',', '.') }}</span></div>
+            @else
+                <div class="row"><span class="muted">Total a pagar</span><span>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</span></div>
+            @endif
         </div>
 
         <div class="qr-box">
@@ -129,14 +133,23 @@
             </div>
         @endif
 
+        @unless ($expired)
         <div class="next-steps">
             <strong>¿Qué sigue ahora?</strong>
             <ul>
-                <li>@if ($hasBank || ! empty($pay['mercadopago_link']))Puedes adelantar el pago con los datos de arriba, o pagar al llegar al motel.@else Todavía no cobramos nada — el pago se hace al llegar al motel.@endif</li>
-                <li>Esta reserva queda pendiente hasta que se registre tu pago.</li>
+                @if ($confirmed)
+                    <li>{{ $booking->balanceDue() > 0 ? 'Tu reserva está confirmada. Queda un saldo de $'.number_format($booking->balanceDue(), 0, ',', '.').' por pagar al llegar al motel.' : 'Tu pago está registrado y tu reserva está confirmada.' }}</li>
+                    <li>Muestra el código QR o el código {{ $booking->code }} en recepción al llegar.</li>
+                @elseif ($holdOpen)
+                    <li>Paga antes de las {{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }} para confirmar tu reserva; si no, la habitación se libera.</li>
+                    <li>Apenas se registre tu pago, la reserva queda confirmada.</li>
+                @else
+                    <li>Esta reserva queda pendiente hasta que se registre tu pago.</li>
+                @endif
                 <li>Presenta tu documento de identidad al llegar.</li>
             </ul>
         </div>
+        @endunless
 
         <a class="back" href="{{ route('catalog.index') }}">← Volver al catálogo</a>
     </div>
