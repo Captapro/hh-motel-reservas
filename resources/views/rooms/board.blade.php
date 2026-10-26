@@ -262,6 +262,29 @@
         .compact details button { width: 100%; font-size: 10.5px; padding: 5px; }
         .compact .section { margin-bottom: 20px; }
         .compact .proxima-card { padding: 8px 10px; margin-bottom: 8px; }
+        /* Vista compacta: tarjeta de ~80px. Nombre + estado, categoría + situación y una sola fila de botones. */
+        .card .sm, .card .brk { display:none; }
+        .compact .page-grid .main-col .grid, .compact .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)) !important; gap: 8px; align-items: start; }
+        .compact .card, .compact .page-grid .main-col .card { display:flex; flex-wrap:wrap; align-items:center; gap:3px 5px; padding:6px 8px; }
+        .compact .card .card-head { order:1; flex:1 1 auto; margin:0; min-width:0; }
+        .compact .card .pill { order:2; flex:0 1 auto; margin:0 0 0 auto; max-width:100%; white-space:normal; }
+        .compact .card .brk { display:block; flex:1 1 100%; height:0; }
+        .compact .card .b1 { order:3; } .compact .card .b2 { order:6; }
+        .compact .card .cat { order:4; flex:0 0 auto; margin:0; }
+        .compact .card .cat-label { display:none; }
+        .compact .card .eta { order:5; flex:1 1 0; min-width:0; margin:0; text-align:right; }
+        .compact .card .eta.aseo-help, .compact .card .eta[style] { flex:1 1 100%; text-align:left; }
+        .compact .card .code { order:5; flex:1 1 100%; margin:0; }
+        .compact .card a.reserve-btn { order:7; flex:1 1 0; min-width:0; margin:0; padding:5px 4px; font-size:11px; white-space:nowrap; }
+        .compact .card a.consumo-btn, .compact .card a.checkout-btn, .compact .card .checkin-btn { order:7; flex:1 1 100%; margin:0; padding:5px; }
+        .compact .card .aseo-ready-form { order:7; flex:1 1 100%; margin:2px 0 0; }
+        .compact .card .chip-actions { order:7; }
+        .compact .card .bookings-btn, .compact .card .copy-link-btn { order:8; flex:0 0 auto; width:auto; margin:0; padding:4px 6px; font-size:11px; white-space:nowrap; }
+        .compact .card details { order:8; flex:0 0 auto; margin:0; }
+        .compact .card details[open] { flex:1 1 100%; }
+        .compact .card summary { padding:4px 7px; font-size:11px; margin:0; }
+        .compact .card .lg { display:none; } .compact .card .sm { display:inline; }
+        .compact .section { margin-bottom: 14px; }
 
         /* Vista chips — máxima densidad: solo categoría, número y estado.
            El resto (botones, código, detalle de estado) se oculta; la
@@ -581,10 +604,10 @@
         // con execCommand('copy').
         function hhCopyRoomLink(btn) {
             const url = btn.dataset.roomLink;
-            const original = btn.textContent;
+            const original = btn.innerHTML;
             const show = (ok) => {
                 btn.textContent = ok ? '¡Copiado!' : 'No se pudo copiar';
-                setTimeout(() => { btn.textContent = original; }, 1800);
+                setTimeout(() => { btn.innerHTML = original; }, 1800);
             };
             const fallback = () => {
                 const tmp = document.createElement('input');

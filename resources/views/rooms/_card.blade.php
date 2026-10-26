@@ -10,7 +10,8 @@
             <span class="maintenance-badge" title="{{ $room->latestInspection->notes }}">Mantención</span>
         @endif
     </div>
-    <div class="cat">Categoría {{ $room->category->name }}</div>
+    <div class="cat"><span class="cat-label">Categoría </span>{{ $room->category->name }}</div>
+    <span class="brk b1"></span><span class="brk b2"></span>
 
     @if ($room->operational_status === 'aseo')
         <span class="pill pill-aseo">EN ASEO</span>
@@ -90,16 +91,16 @@
     @endif
 
     @if ($status['upcoming_count'] > 0)
-        <a class="bookings-btn has-bookings" href="{{ route('rooms.bookings', $room) }}">
-            {{ $status['upcoming_count'] }} {{ Str::plural('reserva', $status['upcoming_count']) }} →
+        <a class="bookings-btn has-bookings" href="{{ route('rooms.bookings', $room) }}" title="Reservas futuras de {{ $room->name }}">
+            <span class="lg">{{ $status['upcoming_count'] }} {{ Str::plural('reserva', $status['upcoming_count']) }} →</span><span class="sm">📅 {{ $status['upcoming_count'] }}</span>
         </a>
     @else
-        <a class="bookings-btn empty" href="{{ route('rooms.bookings', $room) }}">Sin reservas próximas</a>
+        <a class="bookings-btn empty" href="{{ route('rooms.bookings', $room) }}" title="Sin reservas próximas: ver las reservas de {{ $room->name }}"><span class="lg">Sin reservas próximas</span><span class="sm">📅 0</span></a>
     @endif
-    <button type="button" class="copy-link-btn" data-room-link="{{ route('catalog.room', $room) }}" onclick="hhCopyRoomLink(this)">📋 Copiar link de ficha</button>
+    <button type="button" class="copy-link-btn" data-room-link="{{ route('catalog.room', $room) }}" onclick="hhCopyRoomLink(this)" title="Copiar el link de la ficha de {{ $room->name }}"><span class="lg">📋 Copiar link de ficha</span><span class="sm">📋</span></button>
 
     <details>
-        <summary>Cambiar estado</summary>
+        <summary title="Cambiar estado de {{ $room->name }}"><span class="lg">Cambiar estado</span><span class="sm">⚙</span></summary>
         <form method="POST" action="{{ route('rooms.status', $room) }}" onsubmit="return this.operational_status.value !== '__aseo' || confirm('¿Mandar {{ $room->name }} a aseo? Queda fuera de disponibles hasta que la marques como activa.');">
             @csrf
             <select name="operational_status">
