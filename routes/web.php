@@ -36,19 +36,19 @@ use App\Http\Controllers\DailyAseoController;
 use App\Http\Controllers\DailySalesController;
 use App\Http\Controllers\GuestReviewController;
 use App\Http\Controllers\ImageResizeController;
+use App\Http\Controllers\MercadoPagoController;
 use App\Http\Controllers\MonthlySalesController;
 use App\Http\Controllers\MucamaActivityController;
 use App\Http\Controllers\MucamaAuthController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentDocumentController;
+use App\Http\Controllers\PaymentRefundController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ReservationSearchController;
 use App\Http\Controllers\RoomBoardController;
 use App\Http\Controllers\RoomInspectionController;
 use App\Http\Controllers\RoomQrController;
-use App\Http\Controllers\MercadoPagoController;
-use App\Http\Controllers\PaymentRefundController;
 use App\Http\Controllers\SaleDetailController;
 use App\Http\Controllers\ShiftRoundController;
 use Illuminate\Support\Facades\Route;
@@ -58,18 +58,18 @@ Route::get('/', function () {
 });
 
 // Público -- sin login, pensado para compartir el link con clientes.
-Route::get('/img', [ImageResizeController::class, 'show'])->middleware('throttle:240,1')->name('img.resize');
+Route::get('/img', [ImageResizeController::class, 'show'])->middleware('throttle:240,1,img.resize')->name('img.resize');
 Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.index');
 Route::get('/catalogo/habitacion/{room}', [CatalogController::class, 'room'])->name('catalog.room');
 Route::get('/catalogo/reservar', [PublicBookingController::class, 'create'])->name('catalog.reserve');
-Route::get('/catalogo/reservar/horarios', [PublicBookingController::class, 'times'])->middleware('throttle:30,1')->name('catalog.reserve.times');
-Route::get('/catalogo/reservar/disponibilidad', [PublicBookingController::class, 'checkAvailability'])->middleware('throttle:30,1')->name('catalog.reserve.availability');
-Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->middleware('throttle:8,1')->name('catalog.reserve.store');
+Route::get('/catalogo/reservar/horarios', [PublicBookingController::class, 'times'])->middleware('throttle:30,1,catalog.reserve.times')->name('catalog.reserve.times');
+Route::get('/catalogo/reservar/disponibilidad', [PublicBookingController::class, 'checkAvailability'])->middleware('throttle:30,1,catalog.reserve.availability')->name('catalog.reserve.availability');
+Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->middleware('throttle:8,1,catalog.reserve.store')->name('catalog.reserve.store');
 // pass_token, no code -- el código es secuencial por día (fácil de
 // adivinar) y esta página muestra habitación, fecha, consumo y saldo sin
 // pedir sesión.
-Route::get('/catalogo/pagar/{token}', [MercadoPagoController::class, 'pay'])->middleware('throttle:10,1')->name('catalog.pay');
-Route::post('/webhooks/mercadopago', [MercadoPagoController::class, 'webhook'])->middleware('throttle:120,1')->name('webhooks.mercadopago');
+Route::get('/catalogo/pagar/{token}', [MercadoPagoController::class, 'pay'])->middleware('throttle:10,1,catalog.pay')->name('catalog.pay');
+Route::post('/webhooks/mercadopago', [MercadoPagoController::class, 'webhook'])->middleware('throttle:120,1,webhooks.mercadopago')->name('webhooks.mercadopago');
 Route::get('/catalogo/reservado/{token}', [PublicBookingController::class, 'booked'])->name('catalog.booked');
 // El pase PDF se manda directo al cliente por WhatsApp (ver el botón de
 // "instrucciones de pago" en reservations/show) -- tiene que poder abrirlo
@@ -82,34 +82,34 @@ Route::get('/reservas/pase/{token}/pdf', [BookingPassController::class, 'downloa
 // adentro (ver GuestReviewController). {code} es opcional: el QR fijo de
 // recepción no viene de una reserva puntual, el link post-check-out sí.
 Route::get('/opinion/{code?}', [GuestReviewController::class, 'create'])->name('reviews.create');
-Route::post('/opinion/{code?}', [GuestReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
+Route::post('/opinion/{code?}', [GuestReviewController::class, 'store'])->middleware('throttle:10,1,reviews.store')->name('reviews.store');
 Route::get('/opinion/{review}/comentario', [GuestReviewController::class, 'editComment'])->name('reviews.comment.edit');
-Route::post('/opinion/{review}/comentario', [GuestReviewController::class, 'updateComment'])->middleware('throttle:10,1')->name('reviews.comment.update');
+Route::post('/opinion/{review}/comentario', [GuestReviewController::class, 'updateComment'])->middleware('throttle:10,1,reviews.comment.update')->name('reviews.comment.update');
 
 // QR pegado en la puerta de cada habitación + panel general de mucamas --
 // login liviano por PIN (ver MucamaAuthController), no el guard de auth()
 // del panel interno (Staff no es un usuario del sistema).
 Route::get('/qr/mucamas/entrar', [MucamaAuthController::class, 'showLogin'])->name('mucamas.login');
-Route::post('/qr/mucamas/entrar', [MucamaAuthController::class, 'login'])->middleware('throttle:15,1')->name('mucamas.login.store');
+Route::post('/qr/mucamas/entrar', [MucamaAuthController::class, 'login'])->middleware('throttle:15,1,mucamas.login.store')->name('mucamas.login.store');
 Route::post('/qr/mucamas/salir', [MucamaAuthController::class, 'logout'])->name('mucamas.logout');
 
 Route::get('/qr/habitacion/{room}', [RoomQrController::class, 'show'])->name('rooms.qr.show');
 Route::get('/qr/habitacion/{room}/imagen.png', [RoomQrController::class, 'image'])->name('rooms.qr.image');
-Route::post('/qr/habitacion/{room}/aseo', [RoomQrController::class, 'reportAseo'])->middleware(['throttle:20,1', 'mucama'])->name('rooms.qr.report_aseo');
-Route::post('/qr/habitacion/{room}/confirmar', [RoomQrController::class, 'confirmRoomReady'])->middleware(['throttle:20,1', 'mucama'])->name('rooms.qr.confirm_ready');
+Route::post('/qr/habitacion/{room}/aseo', [RoomQrController::class, 'reportAseo'])->middleware(['throttle:20,1,rooms.qr.report_aseo', 'mucama'])->name('rooms.qr.report_aseo');
+Route::post('/qr/habitacion/{room}/confirmar', [RoomQrController::class, 'confirmRoomReady'])->middleware(['throttle:20,1,rooms.qr.confirm_ready', 'mucama'])->name('rooms.qr.confirm_ready');
 Route::get('/qr/mucamas', [RoomQrController::class, 'mucamaPanel'])->middleware('mucama')->name('rooms.qr.mucama_panel');
 Route::get('/qr/mucamas/imagen.png', [RoomQrController::class, 'mucamaPanelImage'])->name('rooms.qr.mucama_panel_image');
 Route::get('/qr/ronda-de-turno/imagen.png', [RoomQrController::class, 'shiftRoundImage'])->name('rooms.qr.shift_round_image');
 
 Route::get('/login', [LoginController::class, 'create'])->middleware('guest')->name('login');
-Route::post('/login', [LoginController::class, 'store'])->middleware(['guest', 'throttle:8,1'])->name('login.store');
+Route::post('/login', [LoginController::class, 'store'])->middleware(['guest', 'throttle:8,1,login.store'])->name('login.store');
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth', 'section'])->group(function () {
 
     Route::get('/reservar', [ReservationController::class, 'create'])->name('reservations.create');
-    Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1')->name('customers.lookup');
-    Route::get('/reservar/precio', [ReservationController::class, 'priceQuote'])->middleware('throttle:80,1')->name('reservations.price');
+    Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1,customers.lookup')->name('customers.lookup');
+    Route::get('/reservar/precio', [ReservationController::class, 'priceQuote'])->middleware('throttle:80,1,reservations.price')->name('reservations.price');
     Route::get('/buscar', [ReservationSearchController::class, 'index'])->name('reservations.search');
     Route::get('/calendario', [CalendarController::class, 'index'])->name('calendar.index');
     Route::post('/reservar', [ReservationController::class, 'store'])->name('reservations.store');
