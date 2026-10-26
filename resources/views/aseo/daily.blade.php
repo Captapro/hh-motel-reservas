@@ -8,7 +8,7 @@
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
-        .page-inner { max-width: 1100px; margin: 0; padding: 24px 24px 60px; }
+        .page-inner { max-width: none; margin: 0; padding: 24px 24px 60px; }
         .topline { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom: 8px; }
         h1 { font-size: 19px; margin:0; }
         .sub { color:#999; font-size: 13px; margin: 4px 0 24px; }

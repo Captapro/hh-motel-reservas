@@ -88,8 +88,6 @@ class RoomInspectionController extends Controller
 
         return view('rooms.inspection-panel', [
             'needsMaintenance' => $entries->filter(fn (array $e) => $e['inspection']?->needs_maintenance)->values(),
-            'neverInspected' => $entries->filter(fn (array $e) => ! $e['inspection'])->values(),
-            'ok' => $entries->filter(fn (array $e) => $e['inspection'] && ! $e['inspection']->needs_maintenance)->values(),
         ]);
     }
 }

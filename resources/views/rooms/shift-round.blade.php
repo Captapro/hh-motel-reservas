@@ -8,7 +8,7 @@
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
-        .page-inner { max-width: 680px; margin: 0; padding: 24px 24px 60px; }
+        .page-inner { max-width: none; margin: 0; padding: 24px 24px 60px; }
         h1 { font-size: 18px; letter-spacing: .04em; margin-bottom: 2px; }
         .sub { color:#999; font-size: 13px; margin:0 0 20px; }
         .progress-card { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:16px 18px; margin-bottom:20px; color:#eee; }
@@ -30,6 +30,9 @@
         .empty { color:#777; padding:20px 0; text-align:center; font-size:14px; }
         a.scan-btn { display:block; text-align:center; background:#ff7918; color:#21170e; text-decoration:none; font-weight:800; font-size:15px; padding:14px; border-radius:10px; margin-bottom:20px; }
         a.scan-btn:hover { background:#ee6909; }
+        .rg { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; }
+        .rg > a.room-card, .rg > .done-card { margin-bottom:0; }
+        .rg > .empty { grid-column:1 / -1; }
     </style>
 </head>
 <body>
@@ -52,6 +55,7 @@
     <a class="scan-btn" href="{{ route('shift_round.scan') }}?ronda=1">📷 Escanear QR de la habitación →</a>
 
     <h2 class="section">Pendientes ({{ $pending->count() }})</h2>
+    <div class="rg">
     @forelse ($pending as $room)
         <a class="room-card" href="{{ route('rooms.qr.show', $room) }}?ronda=1">
             <div>
@@ -63,9 +67,11 @@
     @empty
         <p class="empty">@if($total > 0) ¡Ronda completa! No queda ninguna disponible sin revisar hoy. @else No hay Playrooms disponibles en este momento (todas ocupadas, en aseo o inactivas). @endif</p>
     @endforelse
+    </div>
 
     @if ($done->isNotEmpty())
         <h2 class="section">Ya revisadas hoy ({{ $done->count() }})</h2>
+        <div class="rg">
         @foreach ($done as $room)
             <div class="done-card">
                 <div>
@@ -79,6 +85,7 @@
                 @endif
             </div>
         @endforeach
+        </div>
     @endif
 </div>
 </body>

@@ -9,7 +9,7 @@
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
-        .page-inner { max-width: 760px; margin: 0; padding: 24px 24px 60px; }
+        .page-inner { max-width: none; margin: 0; padding: 24px 24px 60px; }
         h1 { font-size: 18px; letter-spacing: .04em; margin-bottom: 2px; }
         .sub { color:#999; font-size: 13px; margin:0 0 22px; }
         /* hh-theme.css (inyectado por partials.navbar) fuerza "body { color:
@@ -42,6 +42,10 @@
         .toast-wrap { position:fixed; top:16px; right:16px; z-index:50; display:flex; flex-direction:column; gap:8px; }
         .toast { background:#1c2f1c; border:1px solid #2e5a2e; color:#8fe0ad; padding:12px 16px; border-radius:9px; font-size:13.5px; box-shadow:0 6px 18px #0006; animation:hh-toast-in .2s ease; max-width:280px; }
         @keyframes hh-toast-in { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+        .mg { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:10px; align-items:start; }
+        .mg > .mucama-card { margin-bottom:0; }
+        .mg > .empty { grid-column:1 / -1; }
+        table.log-table { max-width:900px; }
     </style>
 </head>
 <body>
@@ -52,6 +56,7 @@
     <h1>HH MOTEL — Dónde están las mucamas</h1>
     <p class="sub">Solo las mucamas en turno ahora · última habitación que cada una escaneó por QR y cuándo · se avisa solo, sin recargar · <a href="{{ route('mucamas.activity') }}" style="color:#ff7918;">actualizar ahora</a></p>
 
+    <div class="mg">
     @forelse ($mucamas as $mucama)
         <div class="mucama-card">
             <div class="mucama-row">
@@ -91,6 +96,7 @@
     @empty
         <p class="empty">Ninguna mucama en turno ahora. El turno empieza cuando entra al panel de mucamas con su PIN y termina cuando sale.</p>
     @endforelse
+    </div>
 
     <h2 class="section">Registro de turnos de hoy</h2>
     @if ($todayLogs->isEmpty())
