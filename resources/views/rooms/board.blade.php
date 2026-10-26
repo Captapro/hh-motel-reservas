@@ -134,6 +134,8 @@
         .sidebar-hint { font-size:11.5px; color:#999; margin:0 0 14px; line-height:1.4; }
         .sidebar-empty { color:#666; font-size:12.5px; border:1px dashed #333; border-radius:8px; padding:14px; text-align:center; }
         .proxima-card { background:#231f14; border:1px solid #5a5230; border-left-width:4px; border-radius:10px; padding:10px 12px; margin-bottom:10px; max-width:520px; transition: transform .13s ease, box-shadow .13s ease; }
+        .proxima-card { cursor:pointer; }
+        .proxima-card:focus-visible { outline:2px solid #111; outline-offset:2px; }
         .proxima-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(232,199,111,.18); }
         .proxima-card.cat-go { border-left-color:#5b9dd9; }
         .proxima-card.cat-lite { border-left-color:#4ecdc4; }
@@ -523,7 +525,7 @@
             <p class="sidebar-hint">Libres ahora, con una reserva próxima: no las asignes a clientes sin reserva.</p>
             @foreach ($grouped['proximas'] as $entry)
                 @php $mins = $entry['status']['minutes_until_next']; @endphp
-                <div class="proxima-card cat-{{ Str::slug($entry['room']->category->name) }}" data-wing="{{ $entry['room']->wing ?? 'none' }}">
+                <div class="proxima-card cat-{{ Str::slug($entry['room']->category->name) }}" data-wing="{{ $entry['room']->wing ?? 'none' }}" data-href="{{ route('reservations.show', $entry['status']['next_booking']->code) }}" role="link" tabindex="0" title="Abrir la reserva">
                     <div class="card-head"><b>{{ $entry['room']->name }}</b></div>
                     <div class="cat">{{ $entry['room']->category->name }}</div>
                     <div class="guest">{{ $entry['status']['next_booking']->customer->name }}</div>
@@ -540,6 +542,14 @@
         @endif
     </div>
     </div>
+    <script>
+        // Tarjetas de "Por llegar": un clic en cualquier parte abre la reserva
+        // (el botón de check-in conserva su propio enlace).
+        document.querySelectorAll('.proxima-card[data-href]').forEach(function (card) {
+            card.addEventListener('click', function (e) { if (!e.target.closest('a, button')) window.location.href = card.dataset.href; });
+            card.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.target.closest('a, button')) window.location.href = card.dataset.href; });
+        });
+    </script>
     <script>
         // Ciclo de densidad: normal → compacta → chips → normal. Un solo
         // botón en vez de sumar más controles al toolbar — pedido explícito
