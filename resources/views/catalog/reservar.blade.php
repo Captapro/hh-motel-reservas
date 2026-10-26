@@ -212,10 +212,9 @@
             });
         }
 
-        // Una sola lista de horas (cada 15 minutos). Las de hoy que ya pasaron no se ofrecen.
+        // Una sola lista de horas en formato 24 h (cada 15 minutos). Las de hoy que ya pasaron no se ofrecen.
         function hhTimeLabel(h, m) {
-            const h12 = h % 12 === 0 ? 12 : h % 12;
-            return h12 + ':' + String(m).padStart(2, '0') + ' ' + (h >= 12 ? 'PM' : 'AM');
+            return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
         }
         function hhBuildTimes() {
             const select = document.getElementById('time-select');
@@ -226,7 +225,7 @@
             const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
             const isToday = dateValue === todayIso;
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
-            const groups = [['Mañana y tarde', 10.5, 17.75], ['Noche', 18, 23.75], ['Madrugada (00:00 a 03:00)', 0, 3]];
+            const groups = [['Día · 10:30 a 17:45', 10.5, 17.75], ['Noche · 18:00 a 23:45', 18, 23.75], ['Madrugada · 00:00 a 03:00', 0, 3]];
             select.innerHTML = '<option value="">Elige la hora</option>';
             groups.forEach(function (g) {
                 const og = document.createElement('optgroup');
