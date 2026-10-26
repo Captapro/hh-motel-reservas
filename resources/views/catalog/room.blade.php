@@ -106,7 +106,7 @@
             @if ($photos->isNotEmpty())
                 <div class="gallery">
                     @foreach ($photos->take(8) as $url)
-                        <a href="{{ $url }}" data-viewer="room" aria-label="Ampliar foto {{ $loop->iteration }}"><img src="{{ $url }}" alt="Foto {{ $room->name }}" loading="lazy"></a>
+                        <a href="{{ \App\Support\Img::url($url, 1280) }}" data-viewer="room" aria-label="Ampliar foto {{ $loop->iteration }}"><img src="{{ \App\Support\Img::url($url, 640) }}" alt="Foto {{ $room->name }}" loading="lazy" decoding="async"></a>
                     @endforeach
                 </div>
             @else

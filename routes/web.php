@@ -53,6 +53,7 @@ Route::get('/', function () {
 });
 
 // Público -- sin login, pensado para compartir el link con clientes.
+Route::get('/img', [\App\Http\Controllers\ImageResizeController::class, 'show'])->middleware('throttle:240,1')->name('img.resize');
 Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.index');
 Route::get('/catalogo/habitacion/{room}', [CatalogController::class, 'room'])->name('catalog.room');
 Route::get('/catalogo/reservar', [PublicBookingController::class, 'create'])->name('catalog.reserve');

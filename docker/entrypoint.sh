@@ -49,4 +49,7 @@ chown -R www-data:www-data /app/storage /app/bootstrap/cache
 # (además se libera al crear reservas y al abrir el tablero).
 ( while true; do sleep 30; runuser -u www-data -- php artisan app:reservas-expirar >/dev/null 2>&1 || true; done ) &
 
+# Prepara las fotos reducidas del catálogo en segundo plano, ya con el servidor arriba.
+( sleep 25; runuser -u www-data -- php artisan app:catalogo-precalentar >/dev/null 2>&1 || true ) &
+
 exec apache2-foreground

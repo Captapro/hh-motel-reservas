@@ -12,9 +12,8 @@
         h1 { font-size: 18px; margin-bottom:2px; }
         .sub { color:#999; font-size: 13px; margin-bottom: 22px; }
         .sub a { color:#ff7918; text-decoration:none; }
-        a.back-btn { display:inline-block; background:#1c1c1c; border:1px solid #333; color:#ccc; text-decoration:none; padding:8px 13px; border-radius:7px; font-size:12.5px; font-weight:600; margin-bottom:16px; }
-        a.back-btn:hover, button.back-btn:hover { border-color:#ff7918; color:#ff7918; }
-        button.back-btn { cursor:pointer; font-family:inherit; }
+        .back-btn { display:inline-block; background:#1c1c1c; border:1px solid #333; color:#ccc; text-decoration:none; padding:8px 13px; border-radius:7px; font-size:12.5px; font-weight:600; margin-bottom:16px; cursor:pointer; font-family:inherit; line-height:1.2; appearance:none; -webkit-appearance:none; }
+        .back-btn:hover, .back-btn:focus-visible { border-color:#ff7918; color:#ff7918; background:#1c1c1c; outline:none; }
         .top-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
         .top-actions .back-btn { margin-bottom:0; }
         .sec-label { font-size: 11px; color:#888; text-transform:uppercase; letter-spacing:.05em; margin: 22px 0 10px; }
@@ -35,7 +34,7 @@
     <div class="page-inner hh-room-history">
     <div class="top-actions">
         <a class="back-btn" href="{{ route('rooms.board') }}">← Volver al tablero</a>
-        <button type="button" class="back-btn" id="copy-room-link" data-link="{{ route('catalog.room', $room) }}">📋 Copiar link de la ficha</button>
+        <button type="button" class="back-btn" id="copy-room-link" data-link="{{ route('catalog.room', $room) }}">Copiar link de la ficha</button>
         <a class="back-btn" href="{{ route('catalog.room', $room) }}" target="_blank" rel="noopener">Ver ficha ↗</a>
     </div>
     <h1>{{ $room->name }} — reservas</h1>

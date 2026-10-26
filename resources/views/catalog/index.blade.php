@@ -78,6 +78,8 @@
         .deal-card.is-offer { background:#191a1c; border:1px solid #ff7918; }
         .deal-card.is-coupon { background:#111214; border:1px solid #3a5a72; }
         .deal-card.is-coupon:hover, .deal-card.is-coupon:active, .deal-card.is-coupon:focus-visible { border-color:#9edaff; }
+        .deal-band { padding:8px 15px; font-size:11px; font-weight:800; letter-spacing:.08em; color:#ffb379; background:linear-gradient(90deg, #3a1f0c, #241912); border-bottom:1px solid #4a2c14; }
+        .deal-band.coupon { color:#9edaff; background:linear-gradient(90deg, #12293a, #151d24); border-bottom-color:#243a4c; }
         .deal-thumb { width:100%; aspect-ratio:16/10; object-fit:cover; background:#303136; display:block; }
         .deal-thumb-empty { width:100%; aspect-ratio:16/10; background:#242527; display:flex; align-items:center; justify-content:center; color:#8a8c90; font-size:12px; }
         .deal-body { padding:13px 15px 15px; display:flex; flex-direction:column; flex:1; }
@@ -161,7 +163,7 @@
 <body>
     <div class="wrap">
         <header class="hero">
-            <div class="brand"><img src="https://assets.cdn.filesafe.space/ksYYfSiY8nP4YFvkrJFJ/media/6aab44cf9f8b31b6ab530587.png" alt="HH Motel Santiago Playrooms"></div>
+            <div class="brand"><img src="{{ \App\Support\Img::url('https://assets.cdn.filesafe.space/ksYYfSiY8nP4YFvkrJFJ/media/6aab44cf9f8b31b6ab530587.png', 320) }}" alt="HH Motel Santiago Playrooms" width="160" height="auto"></div>
             <h1>Nuestras Playrooms</h1>
             <p>Elige la que más te guste — reserva online o escríbenos por WhatsApp.</p>
         </header>
@@ -195,13 +197,7 @@
                             @if (count($entry['offer']['rooms']))
                                 @foreach ($entry['offer']['rooms'] as $offerRoom)
                                     <div class="deal-card is-offer">
-                                        <a href="{{ route('catalog.room', $offerRoom['id']) }}">
-                                            @if ($offerRoom['photo'])
-                                                <img class="deal-thumb" src="{{ $offerRoom['photo'] }}" alt="{{ $offerRoom['name'] }}">
-                                            @else
-                                                <div class="deal-thumb-empty">Foto próximamente</div>
-                                            @endif
-                                        </a>
+                                        <div class="deal-band">✦ OFERTA · {{ $entry['category']->name }}</div>
                                         <div class="deal-body">
                                             <strong class="deal-title">{{ $offerRoom['name'] }}{{ $entry['offer']['durationLabel'] ? ' · '.$entry['offer']['durationLabel'] : '' }}</strong>
                                             {!! $offerPriceRow($entry['offer']) !!}
@@ -213,11 +209,7 @@
                                 @endforeach
                             @else
                                 <div class="deal-card is-offer">
-                                    @if ($entry['photos']->isNotEmpty())
-                                        <img class="deal-thumb" src="{{ $entry['photos']->first() }}" alt="{{ $entry['category']->name }}">
-                                    @else
-                                        <div class="deal-thumb-empty">{{ $entry['category']->name }}</div>
-                                    @endif
+                                    <div class="deal-band">✦ OFERTA · {{ $entry['category']->name }}</div>
                                     <div class="deal-body">
                                         <strong class="deal-title">{{ $entry['category']->name }}{{ $entry['offer']['durationLabel'] ? ' · '.$entry['offer']['durationLabel'] : '' }}</strong>
                                         {!! $offerPriceRow($entry['offer']) !!}
@@ -229,9 +221,7 @@
                         @endforeach
                         @foreach ($coupons as $coupon)
                             <a class="deal-card is-coupon" href="{{ route('catalog.reserve', ['cupon' => $coupon['code']]) }}">
-                                @if ($coupon['image'])
-                                    <img class="deal-thumb" src="{{ $coupon['image'] }}" alt="{{ $coupon['name'] }}">
-                                @endif
+                                <div class="deal-band coupon">🎟 CUPÓN</div>
                                 <div class="deal-body">
                                     <div class="deal-coupon-benefit">{{ $coupon['benefit'] }}</div>
                                     <strong class="deal-title">{{ $coupon['name'] }}</strong>
@@ -252,7 +242,7 @@
                 @if ($photos->isNotEmpty())
                     <div class="cat-gallery gallery-{{ min($photos->count(), 4) }}">
                         @foreach ($photos->take(4) as $url)
-                            <a href="{{ $url }}" class="photo-trigger" data-photo="{{ $url }}" aria-label="Ver foto {{ $category->name }}"><img src="{{ $url }}" alt="Foto {{ $category->name }}" loading="lazy"></a>
+                            <a href="{{ $url }}" class="photo-trigger" data-photo="{{ \App\Support\Img::url($url, 1280) }}" aria-label="Ver foto {{ $category->name }}"><img src="{{ \App\Support\Img::url($url, 640) }}" alt="Foto {{ $category->name }}" loading="lazy" decoding="async"></a>
                         @endforeach
                     </div>
                 @else
