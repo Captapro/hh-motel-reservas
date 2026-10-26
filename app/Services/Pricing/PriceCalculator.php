@@ -22,6 +22,17 @@ class PriceCalculator
             throw new PricingException('El horario solicitado no corresponde a ninguna tarifa vigente.');
         }
 
+        return $this->priceWith($rateRule, $room, $durationMinutes, $guestsCount);
+    }
+
+    /**
+     * Precio de una tarifa ya elegida (sin exigir que cubra el rango
+     * completo) -- lo usa la estadía corta por cierre.
+     *
+     * @return array{rate_rule: RateRule, price_original: int, extra_guests_fee: int}
+     */
+    public function priceWith(RateRule $rateRule, Room $room, int $durationMinutes, int $guestsCount): array
+    {
         $price = $rateRule->prices()
             ->where('room_category_id', $room->room_category_id)
             ->where('duration_minutes', $durationMinutes)

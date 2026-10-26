@@ -129,6 +129,12 @@
         .price-box .p-note.err { color:#f3b8b8; }
         .price-box .p-err { color:#f3b8b8; font-size:13px; }
         .price-box .p-wait { color:#777; font-size:12.5px; }
+        .short-stay { margin-top:9px; padding:10px 12px; border-radius:8px; background:#2e2410; border:1px solid #c98a1b; color:#f3d9a4; font-size:13px; line-height:1.45; }
+        .short-stay b { color:#fff; }
+        .short-stay .ss-title { display:block; font-size:14px; color:#ffcf6e; margin-bottom:2px; }
+        .short-stay label { display:flex; gap:8px; align-items:center; margin:8px 0 0; color:#fff; font-weight:600; cursor:pointer; }
+        .short-stay label input { width:18px; height:18px; flex:none; }
+        .short-stay.short-pending { border-color:#ff9f1c; box-shadow:0 0 0 2px rgba(255,159,28,.25); }
 
         .upsell-overlay { position:fixed; inset:0; background:rgba(0,0,0,.72); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px; }
         .upsell-overlay[hidden] { display:none; }
@@ -283,6 +289,7 @@
         @csrf
 
         <input type="hidden" name="walk_in" id="walk-in-flag" value="{{ $walkInMode ? 1 : 0 }}">
+        <input type="hidden" name="short_stay" id="short-stay-flag" value="0">
         <div class="form-grid{{ $walkInMode ? ' walkin-grid' : '' }}">
             <div class="panel step-panel" data-step="1">
                 <div class="form-col-head"><span class="step-num">1</span>La estadía<span class="step-tag"></span></div>
@@ -943,10 +950,16 @@
                 if (d.error) {
                     box.className = 'price-box';
                     box.innerHTML = '<div class="p-err">' + d.error + '</div>';
+                    document.getElementById('short-stay-flag').value = '0';
+                    box.dataset.shortKey = '';
+                    hhValidateSchedule();
                     hhClosedNote(/tarifa vigente/i.test(d.error));
                     return;
                 }
                 hhClosedNote(false);
+                const shortFlag = document.getElementById('short-stay-flag');
+                const prevShort = box.dataset.shortKey || '';
+                const shortKey = d.short_stay ? [room, date, h, m, dur, d.short_stay.closes_at].join('|') : '';
                 const fmt = n => '$' + Number(n).toLocaleString('es-CL');
                 const applied = d.applied;
                 const finalPrice = applied ? applied.price_final : d.price_original;
@@ -954,20 +967,42 @@
 
                 let rows = '<div class="p-sum"><span>Precio habitación</span><span>' + fmt(d.price_original) + '</span></div>';
                 if (applied) {
-                    const tag = applied.kind === 'offer' ? 'Oferta: ' + applied.label : 'Código: ' + applied.label;
+                    const tag = applied.kind === 'offer' ? 'Oferta: ' + applied.label : (applied.kind === 'short_stay' ? applied.label : 'Código: ' + applied.label);
                     rows += '<div class="p-sum disc"><span>' + tag + '</span><span>−' + fmt(applied.discount).slice(1) + '</span></div>';
                 }
                 rows += '<div class="p-sum total"><span>Total a pagar</span><span class="' + (hasDiscount ? 'offer' : '') + '">' + fmt(finalPrice) + '</span></div>';
                 let note = '';
                 if (d.code_blocked) {
-                    note = '<div class="p-note">El código no aplica — esta habitación ya está en oferta.</div>';
+                    note = '<div class="p-note">El código no aplica — ' + (d.short_stay ? 'la estadía corta ya tiene precio especial.' : 'esta habitación ya está en oferta.') + '</div>';
                 } else if (d.code_error) {
                     note = '<div class="p-note err">Código: ' + d.code_error + '</div>';
                 }
 
+                // Estadía corta por cierre: recepción tiene que confirmar que el
+                // cliente acepta salir a la hora de cierre antes de crearla.
+                const accepted = !!d.short_stay && prevShort === shortKey && shortFlag.value === '1';
+                if (d.short_stay) {
+                    const ss = d.short_stay;
+                    note += '<div class="short-stay' + (accepted ? '' : ' short-pending') + '">'
+                        + '<span class="ss-title">⏱ Estadía corta por cierre</span>'
+                        + 'Quedan <b>' + ss.minutes_label + '</b> para el cierre y lo mínimo que se vende es ' + ss.duration_label + '. '
+                        + 'Precio proporcional y <b>salida a las ' + ss.closes_at + '</b>.'
+                        + '<label><input type="checkbox" id="short-stay-accept"' + (accepted ? ' checked' : '') + '> El cliente acepta salir a las ' + ss.closes_at + '</label>'
+                        + '</div>';
+                }
+                shortFlag.value = accepted ? '1' : '0';
+                box.dataset.shortKey = shortKey;
+
                 box.className = 'price-box' + (hasDiscount ? ' has-offer' : '');
                 box.innerHTML = rows + note;
                 box.dataset.final = finalPrice;
+                const acceptEl = document.getElementById('short-stay-accept');
+                if (acceptEl) acceptEl.addEventListener('change', function () {
+                    shortFlag.value = acceptEl.checked ? '1' : '0';
+                    acceptEl.closest('.short-stay').classList.toggle('short-pending', !acceptEl.checked);
+                    hhValidateSchedule();
+                });
+                hhValidateSchedule();
                 if (window.hhRefreshConsumo) window.hhRefreshConsumo();
                 hhLatestUpsells = Array.isArray(d.upsells) ? d.upsells : [];
             } catch (e) { box.className = 'price-box'; box.innerHTML = '<div class="p-wait">—</div>'; }
@@ -1063,10 +1098,17 @@
             const endDate = new Date(startDate.getTime() + parseInt(durationEl.value, 10) * 60000);
 
             const covered = hhRangeFullyCovered(startDate, endDate);
+            // Abre a esa hora pero cierra antes de que termine: puede ser una
+            // estadía corta por cierre -- lo decide la cotización del servidor.
+            const startOpen = !covered && !!hhFindWindowCovering(startDate);
+            // Sin estadía corta posible (el servidor respondió error) o sin
+            // confirmar que el cliente acepta salir al cierre: no se crea.
+            const shortPending = !!document.querySelector('#price-box .short-pending')
+                || (startOpen && !!document.querySelector('#price-box .p-err'));
 
-            warningEl.style.display = covered ? 'none' : 'block';
-            submitBtn.disabled = !covered;
-            hhClosedNote(!covered);
+            warningEl.style.display = covered || startOpen ? 'none' : 'block';
+            submitBtn.disabled = !(covered || startOpen) || shortPending;
+            hhClosedNote(!covered && !startOpen);
         }
         // Aviso fijo junto al botón cuando el horario no tiene tarifa vigente.
         function hhClosedNote(show) {
@@ -1565,7 +1607,8 @@
                 const warn = document.getElementById('time-warning');
                 const quoteOk = box && !box.hidden && !box.querySelector('.p-err, .p-wait');
                 const warned = warn && getComputedStyle(warn).display !== 'none';
-                return !!val('room-select') && !!val('duration-select') && quoteOk && !warned;
+                const shortPending = box && !!box.querySelector('.short-pending');
+                return !!val('room-select') && !!val('duration-select') && quoteOk && !warned && !shortPending;
             }
 
             function clientDone() {

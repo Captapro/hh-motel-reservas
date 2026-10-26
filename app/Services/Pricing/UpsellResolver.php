@@ -16,14 +16,16 @@ use Illuminate\Support\Collection;
  */
 class UpsellResolver
 {
-    public function __construct(private AvailabilityChecker $availability) {}
+    public function __construct(private AvailabilityChecker $availability, private RateRuleResolver $rates) {}
 
     /**
+     * $endsAt: salida real si no es inicio + duración (estadía corta por cierre).
+     *
      * @return Collection<int, array{offer: UpsellOffer, target_room_id: ?int, label: string, price: int, detail: string}>
      */
-    public function applicableFor(Room $room, int $durationMinutes, Carbon $startsAt, ?int $excludeBookingId = null): Collection
+    public function applicableFor(Room $room, int $durationMinutes, Carbon $startsAt, ?int $excludeBookingId = null, ?Carbon $endsAt = null): Collection
     {
-        $endsAt = $startsAt->copy()->addMinutes($durationMinutes);
+        $endsAt ??= $startsAt->copy()->addMinutes($durationMinutes);
 
         return UpsellOffer::active()
             ->with(['fromCategory', 'toCategory', 'combo'])
@@ -58,6 +60,10 @@ class UpsellResolver
                 return null;
             }
             $extendedEnd = $endsAt->copy()->addMinutes($o->extra_minutes);
+            // Más tiempo que pasa la hora de cierre no se puede vender.
+            if (! $this->rates->resolve($startsAt, $extendedEnd)) {
+                return null;
+            }
             if (! $this->availability->isAvailable($room, $startsAt, $extendedEnd, $excludeBookingId)) {
                 return null;
             }

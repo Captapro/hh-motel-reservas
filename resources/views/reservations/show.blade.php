@@ -239,7 +239,7 @@
             ."Código: {$booking->code}\n"
             ."Playroom: {$booking->room->name}\n"
             ."Fecha: ".$booking->starts_at->timezone('America/Santiago')->format('d/m/Y')."\n"
-            ."Horario: ".$booking->starts_at->timezone('America/Santiago')->format('H:i')." a ".$booking->ends_at->timezone('America/Santiago')->format('H:i')."\n"
+            ."Horario: ".$booking->starts_at->timezone('America/Santiago')->format('H:i')." a ".$booking->ends_at->timezone('America/Santiago')->format('H:i').($booking->short_stay ? ' (salida a la hora de cierre)' : '')."\n"
             ."Monto pendiente: $".number_format($booking->balanceDue(), 0, ',', '.')."\n\n"
             .($paymentLines ? implode("\n", $paymentLines)."\n\nEnvíanos el comprobante por este mismo WhatsApp.\n\n" : '')
             ."Pase de reserva: ".url(route('bookings.pass.pdf', $booking->pass_token));
@@ -316,8 +316,8 @@
                 </div>
                 <div class="row"><span class="muted">Teléfono</span><span>{{ $booking->customer->phone_e164 }}</span></div>
                 <div class="row"><span class="muted">Fecha / hora de ingreso</span><span>{{ $booking->starts_at->timezone('America/Santiago')->format('d/m/Y H:i') }}</span></div>
-                <div class="row"><span class="muted">Hora de salida</span><span>{{ $booking->ends_at->timezone('America/Santiago')->format('d/m/Y H:i') }}</span></div>
-                <div class="row"><span class="muted">Duración</span><span>{{ $booking->duration_minutes / 60 }} h</span></div>
+                <div class="row"><span class="muted">Hora de salida</span><span>{{ $booking->ends_at->timezone('America/Santiago')->format('d/m/Y H:i') }}@if ($booking->short_stay) <span class="pill" style="margin-left:6px; background:#2e2410; color:#ffcf6e; border-color:#c98a1b;">SALE AL CIERRE</span>@endif</span></div>
+                <div class="row"><span class="muted">Duración</span><span>@if ($booking->short_stay){{ \App\Support\TimeFormat::minutes((int) $booking->starts_at->diffInMinutes($booking->ends_at)) }} · estadía corta por cierre (tarifa de {{ $booking->duration_minutes / 60 }} h)@else{{ $booking->duration_minutes / 60 }} h @endif</span></div>
                 <div class="row"><span class="muted">Reservado el</span><span>{{ $booking->created_at->timezone('America/Santiago')->format('d/m/Y H:i') }}</span></div>
                 <div class="row"><span class="muted">Tarifa aplicada</span><span class="pill">{{ $booking->rate_rule_name_snapshot }}</span></div>
                 @if ($booking->checked_in_at)

@@ -72,7 +72,7 @@ class BookingCheckInController extends Controller
         $products = Product::where('is_active', true)->orderBy('display_order')->get();
         $combos = Combo::with('items.product')->where('is_active', true)->orderBy('display_order')->get();
 
-        $applicable = $upsells->applicableFor($booking->room, $booking->duration_minutes, $booking->starts_at, $booking->id)
+        $applicable = $upsells->applicableFor($booking->room, $booking->duration_minutes, $booking->starts_at, $booking->id, $booking->ends_at)
             ->map(fn ($u) => [
                 'id' => $u['offer']->id,
                 'type' => $u['offer']->type,

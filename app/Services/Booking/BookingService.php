@@ -17,6 +17,7 @@ use App\Services\Pricing\CouponValidator;
 use App\Services\Pricing\PriceCalculator;
 use App\Services\Pricing\PromotionResolver;
 use App\Services\Pricing\RateRuleResolver;
+use App\Services\Pricing\ShortStayPricer;
 use App\Support\GuestLine;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
@@ -34,13 +35,14 @@ class BookingService
         private PaymentService $paymentService,
         private GhlBookingSync $ghlSync,
         private RateRuleResolver $rateRuleResolver,
+        private ShortStayPricer $shortStayPricer,
     ) {}
 
     /**
      * @param  array{
      *     room: Room, customer: Customer, starts_at: Carbon, duration_minutes: int,
      *     guests_count: int, coupon_code: ?string, deposit_amount: int, created_by: ?int,
-     *     verified_by: ?int, notes: ?string,
+     *     verified_by: ?int, notes: ?string, short_stay?: bool,
      * }  $data
      */
     public function create(array $data): Booking
@@ -85,6 +87,18 @@ class BookingService
         $this->assertRoomEnabled($room);
         $this->assertCapacity($room, (int) $data['guests_count']);
 
+        // Estadía corta por cierre (solo la pide recepción): sale a la hora de
+        // cierre con precio proporcional. Si con la hora elegida ya no hace
+        // falta (cabe completa), sigue como reserva normal.
+        $short = ! empty($data['short_stay']) ? $this->shortStayPricer->quote($room, $startsAt, $durationMinutes) : null;
+        if ($short) {
+            if ($extraMinutes > 0) {
+                throw new RoomNotAvailableException('A una estadía corta por cierre no se le puede sumar tiempo extra.');
+            }
+            $baseEndsAt = $short['closes_at']->copy();
+            $endsAt = $short['closes_at']->copy();
+        }
+
         // El precio se calcula contra baseEndsAt (la tarifa no conoce el
         // upsell), así que valida el horario operativo por su cuenta -- si
         // no, un "más tiempo" que cruza el cierre pasaba porque solo se
@@ -101,17 +115,24 @@ class BookingService
             throw new RoomNotAvailableException("La habitación {$room->name} ya no está disponible en ese horario.");
         }
 
-        $pricing = $this->priceCalculator->calculate($room, $startsAt, $baseEndsAt, $durationMinutes, $data['guests_count']);
+        $pricing = $short
+            ? $this->priceCalculator->priceWith($short['rate_rule'], $room, $durationMinutes, $data['guests_count'])
+            : $this->priceCalculator->calculate($room, $startsAt, $baseEndsAt, $durationMinutes, $data['guests_count']);
         $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];
 
         $coupon = null;
         $discountAmount = 0;
+        $discountLabel = null;
 
         // Regla: la oferta programada gana. Un código promocional NO acumula
         // sobre una habitación en oferta — se ignora si hay oferta vigente.
-        $offer = $this->promotionResolver->bestFor($room, $startsAt, $durationMinutes, $customer, $priceOriginal, (int) $data['guests_count'], (int) $pricing['rate_rule']->extra_person_price);
+        // La estadía corta ya es un precio especial: no acumula ofertas ni cupones.
+        $offer = $short ? null : $this->promotionResolver->bestFor($room, $startsAt, $durationMinutes, $customer, $priceOriginal, (int) $data['guests_count'], (int) $pricing['rate_rule']->extra_person_price);
 
-        if ($offer) {
+        if ($short) {
+            $discountAmount = max(0, $short['full_price'] - $short['price']);
+            $discountLabel = ShortStayPricer::LABEL;
+        } elseif ($offer) {
             $coupon = $offer['coupon'];
             $discountAmount = $offer['discount'];
             $pricing['extra_guests_fee'] = max(0, $pricing['extra_guests_fee'] - $offer['waived']);
@@ -125,6 +146,7 @@ class BookingService
             }
             $discountAmount = $this->couponValidator->validate($coupon, $room, $startsAt, $durationMinutes, $customer, $priceOriginal);
         }
+        $discountLabel ??= $coupon?->label();
 
         $priceFinal = max(0, $priceOriginal - $discountAmount);
 
@@ -135,7 +157,7 @@ class BookingService
         $attemptsLeft = 5;
         while (true) {
             try {
-                $booking = DB::transaction(function () use ($room, $customer, $startsAt, $endsAt, $durationMinutes, $data, $pricing, $coupon, $discountAmount, $priceOriginal, $priceFinal) {
+                $booking = DB::transaction(function () use ($room, $customer, $startsAt, $endsAt, $durationMinutes, $data, $pricing, $coupon, $discountAmount, $discountLabel, $short, $priceOriginal, $priceFinal) {
                     $booking = Booking::create([
                         'code' => $this->codeGenerator->generate($startsAt),
                         'pass_token' => Str::random(40),
@@ -147,6 +169,7 @@ class BookingService
                         'starts_at' => $startsAt,
                         'ends_at' => $endsAt,
                         'duration_minutes' => $durationMinutes,
+                        'short_stay' => (bool) $short,
                         'guests_count' => $data['guests_count'],
                         // Ingreso presencial: el cliente ya está en recepción, no es una
                         // reserva a la espera de que alguien le cobre ni la persigue
@@ -159,7 +182,7 @@ class BookingService
                         'price_original' => $priceOriginal,
                         'extra_guests_fee' => $pricing['extra_guests_fee'],
                         'coupon_id' => $coupon?->id,
-                        'coupon_code_snapshot' => $coupon?->label(),
+                        'coupon_code_snapshot' => $discountLabel,
                         'discount_amount' => $discountAmount,
                         'price_final' => $priceFinal,
                         'deposit_amount' => $data['deposit_amount'] ?? 0,
@@ -267,6 +290,14 @@ class BookingService
         $currentExtraMinutes = max(0, (int) $booking->starts_at->copy()->addMinutes($booking->duration_minutes)->diffInMinutes($booking->ends_at, false));
         $endsAt = $startsAt->copy()->addMinutes($durationMinutes + $currentExtraMinutes);
 
+        // Una estadía corta por cierre sigue siéndolo al moverla (sale a la
+        // hora de cierre del nuevo horario); si el nuevo horario ya cabe
+        // completo, pasa a ser una reserva normal con su precio completo.
+        $short = $booking->short_stay ? $this->shortStayPricer->quote($room, $startsAt, $durationMinutes) : null;
+        if ($short) {
+            $endsAt = $short['closes_at']->copy();
+        }
+
         // Si ya hay check-in real, se permite correr el inicio hacia el pasado
         // reciente para que coincida con la llegada real del huésped — no es
         // un error de tipeo, es una corrección deliberada.
@@ -297,7 +328,9 @@ class BookingService
         $onlyGuestsChanged = (int) $room->id === (int) $booking->room_id
             && $startsAt->eq($booking->starts_at)
             && (int) $durationMinutes === (int) $booking->duration_minutes;
-        if ($onlyGuestsChanged && $booking->rateRule) {
+        if ($short) {
+            $pricing = $this->priceCalculator->priceWith($short['rate_rule'], $room, $durationMinutes, $data['guests_count']);
+        } elseif ($onlyGuestsChanged && $booking->rateRule && ! $booking->short_stay) {
             $pricing = [
                 'rate_rule' => $booking->rateRule,
                 'price_original' => $booking->price_original - $booking->extra_guests_fee,
@@ -317,7 +350,11 @@ class BookingService
         $discountAmount = $booking->discount_amount;
         $reResolveOffer = ($existingCoupon === null || $existingCoupon->auto_apply);
 
-        if ($reResolveOffer) {
+        if ($short) {
+            $couponId = null;
+            $couponSnapshot = ShortStayPricer::LABEL;
+            $discountAmount = max(0, $short['full_price'] - $short['price']);
+        } elseif ($reResolveOffer) {
             $offer = $this->promotionResolver->bestFor($room, $startsAt, $durationMinutes, $booking->customer, $priceOriginal, (int) $data['guests_count'], (int) $pricing['rate_rule']->extra_person_price, $booking->id);
             if ($offer) {
                 $couponId = $offer['coupon']->id;
@@ -335,7 +372,7 @@ class BookingService
         $priceFinal = max(0, $priceOriginal - $discountAmount);
 
         try {
-            return DB::transaction(function () use ($booking, $room, $startsAt, $endsAt, $durationMinutes, $data, $pricing, $priceOriginal, $priceFinal, $couponId, $couponSnapshot, $discountAmount, $reResolveOffer) {
+            return DB::transaction(function () use ($booking, $room, $startsAt, $endsAt, $durationMinutes, $data, $pricing, $priceOriginal, $priceFinal, $couponId, $couponSnapshot, $discountAmount, $reResolveOffer, $short) {
                 $old = $booking->toArray();
 
                 $booking->update([
@@ -343,6 +380,7 @@ class BookingService
                     'starts_at' => $startsAt,
                     'ends_at' => $endsAt,
                     'duration_minutes' => $durationMinutes,
+                    'short_stay' => (bool) $short,
                     'guests_count' => $data['guests_count'],
                     'rate_rule_id' => $pricing['rate_rule']->id,
                     'rate_rule_name_snapshot' => $pricing['rate_rule']->name,

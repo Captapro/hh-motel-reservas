@@ -27,6 +27,7 @@ use App\Services\Pricing\CouponValidator;
 use App\Services\Pricing\PriceCalculator;
 use App\Services\Pricing\PromotionResolver;
 use App\Services\Pricing\RateRuleResolver;
+use App\Services\Pricing\ShortStayPricer;
 use App\Services\Pricing\UpsellResolver;
 use App\Support\Phone;
 use App\Support\Rut;
@@ -156,6 +157,7 @@ class ReservationController extends Controller
             'coupon_code' => ['nullable', 'string'],
             'deposit_amount' => ['nullable', 'integer', 'min:0'],
             'walk_in' => ['nullable', 'boolean'],
+            'short_stay' => ['nullable', 'boolean'],
             'guest_names' => ['nullable', 'string'],
             'quantities' => ['nullable', 'array'],
             'quantities.*' => ['nullable', 'integer', 'min:0', 'max:20'],
@@ -262,6 +264,7 @@ class ReservationController extends Controller
                 'coupon_code' => $validated['coupon_code'] ?? null,
                 'deposit_amount' => (int) ($validated['deposit_amount'] ?? 0),
                 'walk_in' => $walkIn,
+                'short_stay' => (bool) ($validated['short_stay'] ?? false),
                 'created_by' => auth()->id(),
                 'verified_by' => auth()->id(),
                 'notes' => null,
@@ -391,7 +394,7 @@ class ReservationController extends Controller
      * programada gana y el código promocional NO acumula sobre ella — solo
      * cuando la habitación no está en oferta el código aplica su descuento.
      */
-    public function priceQuote(Request $request, PriceCalculator $calculator, PromotionResolver $promotions, CouponValidator $couponValidator, UpsellResolver $upsells): JsonResponse
+    public function priceQuote(Request $request, PriceCalculator $calculator, PromotionResolver $promotions, CouponValidator $couponValidator, UpsellResolver $upsells, ShortStayPricer $shortStays): JsonResponse
     {
         $data = $request->validate([
             'room_id' => ['required', 'exists:rooms,id'],
@@ -414,7 +417,46 @@ class ReservationController extends Controller
         try {
             $pricing = $calculator->calculate($room, $startsAt, $endsAt, $duration, $guests);
         } catch (PricingException $e) {
-            return response()->json(['error' => $e->getMessage()]);
+            // Queda menos tiempo para el cierre que la duración mínima:
+            // recepción puede ofrecer la estadía corta en vez de rechazarla.
+            $short = $shortStays->quote($room, $startsAt, $duration);
+            if (! $short) {
+                return response()->json(['error' => $e->getMessage()]);
+            }
+
+            try {
+                $pricing = $calculator->priceWith($short['rate_rule'], $room, $duration, $guests);
+            } catch (PricingException $e) {
+                return response()->json(['error' => $e->getMessage()]);
+            }
+            $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];
+            $discount = max(0, $short['full_price'] - $short['price']);
+
+            return response()->json([
+                'price_original' => $priceOriginal,
+                'tariff' => $pricing['rate_rule']->name,
+                'applied' => [
+                    'kind' => 'short_stay',
+                    'label' => ShortStayPricer::LABEL,
+                    'discount' => $discount,
+                    'price_final' => max(0, $priceOriginal - $discount),
+                ],
+                'short_stay' => [
+                    'closes_at' => $short['closes_at']->copy()->timezone('America/Santiago')->format('H:i'),
+                    'minutes_label' => TimeFormat::minutes($short['minutes']),
+                    'duration_label' => TimeFormat::minutes($duration),
+                ],
+                'code_blocked' => $code !== '',
+                'code_error' => null,
+                'upsells' => $upsells->applicableFor($room, $duration, $startsAt, null, $short['closes_at'])
+                    ->map(fn ($u) => [
+                        'id' => $u['offer']->id,
+                        'type' => $u['offer']->type,
+                        'label' => $u['label'],
+                        'price' => $u['price'],
+                        'detail' => $u['detail'],
+                    ])->values(),
+            ]);
         }
 
         $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];

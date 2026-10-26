@@ -55,6 +55,9 @@
             @else
                 <div class="eta">Libera en {{ \App\Support\TimeFormat::minutes($status['eta_minutes']) }}</div>
             @endif
+            @if ($status['current_booking']->short_stay)
+                <div class="eta" style="color:#ffcf6e;">⏱ Estadía corta · sale al cierre, {{ $status['current_booking']->ends_at->timezone('America/Santiago')->format('H:i') }}</div>
+            @endif
             <div class="code">{{ $status['current_booking']->code }}</div>
             <a class="consumo-btn" href="{{ route('reservations.show', $status['current_booking']->code) }}#consumo">+ Agregar consumo →</a>
             @if ($status['current_booking']->checked_in_at)

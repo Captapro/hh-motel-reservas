@@ -245,7 +245,7 @@ class MonthlySalesController extends Controller
 
             $rows->push($base + [
                 'n' => ++$n, 'doc_type' => $receipt ? 'Boleta' : ($voucher ? 'Voucher' : ''), 'voucher' => $voucher, 'receipt' => $receipt,
-                'kind' => 'ALOJAMIENTO', 'detail' => $b->coupon_code_snapshot ? 'Cupón '.$b->coupon_code_snapshot : '', 'qty' => '',
+                'kind' => 'ALOJAMIENTO', 'detail' => $b->short_stay ? 'Estadía corta por cierre' : ($b->coupon_code_snapshot ? 'Cupón '.$b->coupon_code_snapshot : ''), 'qty' => '',
                 'price' => $b->price_final, 'discount' => (int) $b->discount_amount, 'missing' => $missing,
             ]);
             foreach ($b->paidAddons() as $a) {
