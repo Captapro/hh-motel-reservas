@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Exceptions\RoomNotAvailableException;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\BookingCancelController;
+use App\Http\Controllers\RoomBoardController;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Coupon;
@@ -518,6 +519,77 @@ class BookingIntegrityTest extends TestCase
         $totals = $this->get(route('sales.monthly', '2026-10'))->viewData('totals');
         $this->assertSame(3000, (int) $totals['extras']);
         $this->assertSame((int) $booking->price_final + 3000, (int) $totals['total']);
+    }
+
+    /** Resumen del día del tablero (método privado): se lee directo para no depender de toda la vista. */
+    private function boardDailySummary(): array
+    {
+        $method = new \ReflectionMethod(RoomBoardController::class, 'dailySummary');
+
+        return $method->invoke(app(RoomBoardController::class));
+    }
+
+    public function test_full_lifecycle_online_payment_then_consumption_keeps_sales_cash_and_board_consistent(): void
+    {
+        Cache::flush();
+        config(['services.mercadopago.access_token' => 'TEST-token', 'services.mercadopago.webhook_secret' => 'sekret']);
+        PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago', 'requires_external_id' => true]);
+        $cash = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $this->travelTo(Carbon::parse('2026-11-02 11:00'));
+
+        // 1) Reserva del catálogo: retenida y todavía sin pago -> no es venta.
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'origin' => 'catalogo']);
+        $booking->update(['expires_at' => now()->addMinutes(10)]);
+        $this->assertSame('PENDIENTE_PAGO', $booking->booking_status);
+        $this->assertSame(0, $this->get(route('sales.monthly', '2026-11'))->viewData('totals')['rooms']);
+
+        // 2) Mercado Pago avisa el pago completo -> confirmada, sin vencimiento, ya es venta y entra a caja.
+        Http::fake(['api.mercadopago.com/v1/payments/9001' => Http::response(['id' => 9001, 'status' => 'approved', 'external_reference' => $booking->code, 'transaction_amount' => 20000])]);
+        $this->mpWebhook('9001')->assertOk();
+        $booking->refresh();
+        $this->assertSame('CONFIRMADA', $booking->booking_status);
+        $this->assertNull($booking->expires_at);
+        $totals = $this->get(route('sales.monthly', '2026-11'))->viewData('totals');
+        $this->assertSame([1, 20000, 20000], [$totals['rooms'], (int) $totals['total'], (int) $totals['cash_total']]);
+
+        // 3) Check-in y consumo sin pagar: la habitación sigue siendo venta, el consumo no.
+        $booking->update(['booking_status' => 'CHECK_IN', 'checked_in_at' => now()]);
+        $booking->addons()->create(['description' => 'Cerveza', 'quantity' => 2, 'amount' => 5000]);
+        $this->assertSame(5000, $booking->fresh()->balanceDue());
+        $board = $this->boardDailySummary();
+        $this->assertSame([1, 20000, 0], [$board['rooms_count'], $board['rooms_revenue'], $board['extras_revenue']]);
+
+        // 4) Se paga el consumo en efectivo -> suma a la venta y a la caja, sin deuda.
+        app(PaymentService::class)->register($booking->fresh(), $cash, 5000, null, null, auth()->id());
+        $this->assertSame(0, $booking->fresh()->balanceDue());
+        $totals = $this->get(route('sales.monthly', '2026-11'))->viewData('totals');
+        $this->assertSame([25000, 5000, 25000], [(int) $totals['total'], (int) $totals['extras'], (int) $totals['cash_total']]);
+        $board = $this->boardDailySummary();
+        $this->assertSame(5000, $board['extras_revenue']);
+    }
+
+    public function test_late_online_payment_after_hold_expired_is_cash_but_not_a_sale_and_frees_the_slot(): void
+    {
+        Cache::flush();
+        config(['services.mercadopago.access_token' => 'TEST-token', 'services.mercadopago.webhook_secret' => 'sekret']);
+        $this->travelTo(Carbon::parse('2026-11-02 11:00'));
+        $held = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'origin' => 'catalogo']);
+        $held->update(['expires_at' => now()->addMinutes(10)]);
+
+        // Pasados los 10 minutos, otro cliente puede tomar el mismo horario.
+        $this->travelTo(now()->addMinutes(11));
+        $other = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'customer' => Customer::create(['name' => 'Otro', 'phone_e164' => '+56922222222'])]);
+        $this->assertSame('EXPIRADA', $held->fresh()->booking_status);
+        $this->assertNotSame($held->id, $other->id);
+
+        // El pago del primero llega tarde: queda registrado y marcado para revisar, pero no es venta.
+        Http::fake(['api.mercadopago.com/v1/payments/9002' => Http::response(['id' => 9002, 'status' => 'approved', 'external_reference' => $held->code, 'transaction_amount' => 20000])]);
+        $this->mpWebhook('9002')->assertOk()->assertJsonPath('result', 'registrado_revisar');
+        $this->assertSame('EXPIRADA', $held->fresh()->booking_status);
+        $totals = $this->get(route('sales.monthly', '2026-11'))->viewData('totals');
+        $this->assertSame(0, $totals['rooms']);
+        $this->assertSame(20000, (int) $totals['cash_total']);
+        $this->getJson(route('rooms.pass_scans'))->assertJsonFragment(['type' => 'pago', 'review' => true]);
     }
 
     public function test_public_confirmation_shows_qr_and_payment_data_when_configured(): void
