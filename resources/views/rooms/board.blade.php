@@ -281,6 +281,12 @@
         .chips .aseo-ready-btn { font-size:10px; padding:4px; }
         .chips .eta.aseo-help { font-size:10px; }
         .chips .proxima-card { padding: 8px 10px; margin-bottom: 8px; }
+        /* Atajos de la vista chips (habitaciones ocupadas): historial y consumo rápido. */
+        .chip-actions { display:none; flex-wrap:wrap; gap:5px; margin-top:7px; }
+        .chips .chip-actions { display:flex; }
+        .chip-actions a { flex:1 1 auto; text-align:center; text-decoration:none; background:#262626; border:1px solid #3a3a3a; color:#ddd; border-radius:6px; padding:5px 4px; font-size:10.5px; font-weight:600; white-space:nowrap; }
+        .chip-actions a:hover { border-color:#ff7918; color:#fff; }
+        .chip-actions a.plus { background:#ff7918; border-color:#ff7918; color:#111; }
             #pass-scans:empty { display:none; }
         #pass-scans { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
         .pass-scan { display:flex; align-items:center; gap:14px; background:#0f2b22; border:1px solid #1c9169; border-left:5px solid #2dd4a0; color:#d6fff0; padding:12px 16px; border-radius:10px; animation:passPulse 1.6s ease-in-out 3; }
