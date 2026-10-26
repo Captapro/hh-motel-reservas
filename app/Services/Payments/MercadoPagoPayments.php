@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Refund;
 use App\Services\Booking\PaymentService;
+use App\Services\Integrations\GhlReservationNotifier;
 use App\Support\PaymentAlerts;
 use Illuminate\Support\Facades\DB;
 
@@ -64,7 +65,9 @@ class MercadoPagoPayments
                 'raw_payload' => ['id' => $mp['id'] ?? null, 'status' => $mp['status'] ?? null, 'payment_type_id' => $mp['payment_type_id'] ?? null, 'date_approved' => $mp['date_approved'] ?? null],
                 'notes' => 'Pago en línea (Mercado Pago)',
             ]);
+            $statusBefore = (string) $locked->booking_status;
             $this->payments->recalculateStatus($locked->fresh());
+            DB::afterCommit(fn () => app(GhlReservationNotifier::class)->paymentRegistered($locked->fresh(), $payment, $statusBefore));
 
             if ($wasClosed || $overpaid) {
                 $aviso = $wasClosed

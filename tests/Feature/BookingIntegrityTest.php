@@ -286,6 +286,32 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('reembolsado', $payment->fresh()->status);
     }
 
+    public function test_ghl_gets_confirmed_then_payment_notices_and_skips_walk_ins_and_missing_emails(): void
+    {
+        config(['services.ghl.webhook_confirmada' => 'https://services.leadconnectorhq.com/hooks/confirmada', 'services.ghl.webhook_pago' => 'https://services.leadconnectorhq.com/hooks/pago']);
+        Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $this->customer->update(['email' => 'cliente@example.com', 'name' => 'Camila Rojas']);
+
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        app(PaymentService::class)->register($booking, $method, 10000, null, null, auth()->id(), null, '1');   // confirma
+        app(PaymentService::class)->register($booking, $method, 10000, null, null, auth()->id(), null, '2');   // segundo pago
+
+        Http::assertSentCount(2);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/confirmada') && $r['codigo'] === $booking->code
+            && $r['email'] === 'cliente@example.com' && $r['first_name'] === 'Camila' && $r['pagado'] === '$10.000' && $r['saldo'] === '$10.000' && $r['token'] === $booking->pass_token);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/pago') && $r['monto'] === '$10.000' && $r['medio_pago'] === 'Efectivo' && $r['saldo'] === '$0');
+
+        // Ingreso presencial y cliente sin correo: no se avisa.
+        Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $walkIn = $this->booking(['starts_at' => Carbon::parse('2026-11-09 12:00'), 'walk_in' => true, 'created_by' => auth()->id()]);
+        app(PaymentService::class)->register($walkIn, $method, 20000, null, null, auth()->id(), null, '3');
+        $this->customer->update(['email' => null]);
+        $noEmail = $this->booking(['starts_at' => Carbon::parse('2026-11-16 12:00')]);
+        app(PaymentService::class)->register($noEmail, $method, 20000, null, null, auth()->id(), null, '4');
+        Http::assertNothingSent();
+    }
+
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void
     {
         $current = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);

@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Services\Integrations\GhlReservationNotifier;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -83,9 +84,13 @@ class PaymentService
                 throw $e;
             }
 
+            $statusBefore = (string) $locked->booking_status;
             $this->recalculateStatus($booking->fresh());
 
             AuditLog::record($registeredBy, 'pago.registrar', 'Payment', $payment->id, null, $payment->toArray());
+
+            // Aviso a GHL recién cuando la transacción quedó guardada.
+            DB::afterCommit(fn () => app(GhlReservationNotifier::class)->paymentRegistered($booking->fresh(), $payment, $statusBefore));
 
             return $payment;
         });
