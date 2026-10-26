@@ -35,8 +35,10 @@
            prefijo ".panel >" para ganar por especificidad, no por orden. */
         .panel > .row-datetime > div:first-child { flex: 1 1 220px; }
         .panel > .row-datetime > div:last-child { flex: 1 1 300px; }
-        .dob-row { display:flex; gap:8px; }
-        .dob-row select { flex:1; min-width:0; }
+        .dob-row { display:grid; grid-template-columns: minmax(0,.85fr) minmax(0,1.05fr) minmax(0,1.15fr); gap:6px; }
+        /* El tema global deja 38px a la derecha para la flecha: en estos tres
+           selectores angostos esa flecha se montaba sobre "Día / Mes / Año". */
+        .page-inner .dob-row select:not([multiple]) { min-width:0; width:100%; padding:11px 22px 11px 10px; background-position: right 7px center; background-size: 11px 8px; text-overflow:clip; }
         .guest-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; align-items:center; }
         .guest-row input { flex:1; min-width:0; }
         .guest-row .guest-remove { flex:none; width:auto; background:#241717; border:1px solid #4a2a2a; color:#c47a7a; padding:10px 13px; border-radius:7px; cursor:pointer; font-size:14px; }
