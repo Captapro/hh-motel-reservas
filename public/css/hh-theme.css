@@ -128,7 +128,6 @@ a.consumo-btn, a.bookings-btn.has-bookings { background: #27282a; border-color: 
 a.bookings-btn.empty { color: #bbbfc5; border-color: #67696f; }
 .compact-toggle { background: #fff; color: #42464e; border-color: #d1d3d8; }
 .compact-toggle:hover { color: #a74600; border-color: #d66b1b; }
-.cat-filter button { background: #292a2c; }
 #consumo { border-left-color: var(--hh-accent); }
 .balance { color: #ffb379; }
 .col-btn:hover, details[open] summary { color: #ffb379; border-color: var(--hh-accent); }

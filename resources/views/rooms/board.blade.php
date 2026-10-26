@@ -100,29 +100,20 @@
         .section-empty { color:#666; font-size:13px; }
 
         .cat-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
-        .cat-filter button { background:#1c1c1c; border:1px solid #333; color:#888; border-radius:7px; padding:6px 13px; font-size:12px; font-weight:600; cursor:pointer; }
-        /* Cada chip lleva el color de su categoría (mismo que el borde de la tarjeta). */
-        .cat-filter button[data-cat="todas"] { color:#6fd39a; }
-        .cat-filter button[data-cat="go"]   { color:#5b9dd9; }
-        .cat-filter button[data-cat="lite"] { color:#4ecdc4; }
-        .cat-filter button[data-cat="plus"] { color:#b088e8; }
-        .cat-filter button[data-cat="max"]  { color:#f2994a; }
-        .cat-filter button[data-cat="new-lite"] { color:#e8c76f; background:#2a2410; border-color:#6b5a1e; }
-        .cat-filter button:hover { border-color: currentColor; }
-        .cat-filter button.active { border-color: currentColor; background:#242424; }
-        .cat-filter button[data-cat="new-lite"].active { background:#3a3216; }
+        /* Sin relleno y con un punto del color de la categoría (el mismo del
+           borde de la tarjeta); el filtro activo queda blanco con borde oscuro. */
+        .cat-filter button { display:inline-flex; align-items:center; gap:7px; background:transparent; border:1px solid #d1d3d8; color:#42464e; border-radius:7px; padding:6px 13px; font-size:12px; font-weight:600; cursor:pointer; --dot:#888; }
+        .cat-filter button[data-cat]::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--dot); flex:none; }
+        .cat-filter button[data-cat="todas"] { --dot:#6fd39a; }
+        .cat-filter button[data-cat="go"]   { --dot:#5b9dd9; }
+        .cat-filter button[data-cat="lite"] { --dot:#4ecdc4; }
+        .cat-filter button[data-cat="plus"] { --dot:#b088e8; }
+        .cat-filter button[data-cat="max"]  { --dot:#f2994a; }
+        .cat-filter button[data-cat="new-lite"] { --dot:#e8c76f; }
+        .cat-filter button:hover { border-color:#9a9da3; color:#202124; }
+        .cat-filter button.active { background:#fff; border-color:#202124; color:#202124; box-shadow:0 1px 3px #10111214; }
         .cat-hidden { display:none !important; }
-        /* Igual que los demás filtros: apagado se ve neutro (fondo/borde
-           oscuro, texto apagado), prendido "enciende" con borde+fondo+texto
-           ámbar y negrita -- antes ambos estados eran casi del mismo color
-           ámbar y no se notaba cuál estaba activo. */
-        /* .cat-filter button (arriba) es más específico (clase + elemento)
-           que .upcoming-filter sola -- sin calificar con .cat-filter acá
-           también, el botón queda siempre gris en reposo, el mismo bug de
-           especificidad que ".bookings-btn.has-bookings" antes. */
-        .cat-filter .upcoming-filter { background:#1c1c1c; border:1px solid #333; color:#a68a4a; }
-        .cat-filter .upcoming-filter:hover { border-color:#f0c95f; color:#f0c95f; }
-        .cat-filter .upcoming-filter.active { border-color:#f0c95f; background:#3a3216; color:#f0c95f; font-weight:800; }
+        .cat-filter .upcoming-filter svg { width:14px; height:14px; flex:none; }
 
         .sidebar { position:sticky; top:20px; align-self:start; border:1px solid #dddfe1; border-radius:18px; background:#fff; padding:14px 14px 4px; }
         .sidebar .sidebar-title h2 { color:#8a5a00; }
@@ -489,7 +480,7 @@
                             <button type="button" data-cat="{{ Str::slug($cat->name) }}" onclick="hhFilterCategory('{{ Str::slug($cat->name) }}')">{{ $cat->name }}</button>
                         @endforeach
                     @endif
-                    <button type="button" class="upcoming-filter" id="upcoming-filter-btn" onclick="hhToggleUpcomingFilter()">🔮 Con reservas futuras</button>
+                    <button type="button" class="upcoming-filter" id="upcoming-filter-btn" onclick="hhToggleUpcomingFilter()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.8 21H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M16 3v4M8 3v4M4 11h10"/><circle cx="18" cy="18" r="4"/><path d="M18 16.5V18l1 1"/></svg>Con reservas futuras</button>
                 </div>
                 @if ($grouped['disponibles']->isEmpty())
                     <p class="section-empty">No hay habitaciones disponibles ahora mismo.</p>
