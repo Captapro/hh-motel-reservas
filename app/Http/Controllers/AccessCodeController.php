@@ -84,6 +84,64 @@ class AccessCodeController extends Controller
         return back()->with('status', "Clave de {$room->name} guardada.");
     }
 
+    /**
+     * Carga varias claves de una vez, pegadas desde una planilla: una por línea,
+     * nombre y clave (ej. "#101 1234" o "Puerta electricidad: 3333 (nota)"). Si el nombre termina en
+     * un número de habitación, va a esa habitación; si no, se crea o actualiza
+     * un recinto con ese nombre.
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['lines' => ['required', 'string', 'max:20000']], [], ['lines' => 'listado']);
+        $rooms = Room::all()->keyBy(fn (Room $r) => preg_match('/(\d{3})$/', $r->name, $m) ? $m[1] : $r->name);
+        $saved = [];
+        $skipped = [];
+
+        foreach (preg_split('/\R/', $validated['lines']) as $raw) {
+            $line = trim($raw);
+            // Encabezado de la planilla ("HAB  LLAVE 1"): se ignora.
+            if ($line === '' || preg_match('/^hab\b.*llave/iu', $line)) {
+                continue;
+            }
+            // Nombre y valor separados por tabulación (copiado de Excel) o por ":";
+            // si no, el nombre es todo menos la última palabra.
+            $parts = preg_split('/\t+|\s*:\s+/u', $line, 2);
+            if (count($parts) < 2 && preg_match('/^(.+?)\s+(\S+)$/u', $line, $m)) {
+                $parts = [$m[1], $m[2]];
+            }
+            if (count($parts) < 2 || trim($parts[1]) === '') {
+                $skipped[] = $line;
+                continue;
+            }
+            $label = trim($parts[0], " :#\t");
+            // El valor es la clave y, si trae algo más, eso va como nota: "3333 (Presiona el candado...)".
+            [$code, $notes] = array_pad(preg_split('/\s+/u', trim($parts[1]), 2), 2, null);
+            if (preg_match('/^(?:hab(?:itaci[oó]n)?\.?\s*)?#?\s*(\d{3})$/iu', $label, $n)) {
+                $room = $rooms->get($n[1]);
+                if (! $room) {
+                    $skipped[] = $line.' (no existe la habitación '.$n[1].')';
+                    continue;
+                }
+                AccessCode::updateOrCreate(['room_id' => $room->id], ['kind' => 'habitacion', 'code' => $code, 'notes' => $notes, 'updated_by' => auth()->id()]);
+                $saved[] = $room->name;
+            } else {
+                $row = AccessCode::whereNull('room_id')->where('name', $label)->first()
+                    ?? new AccessCode(['name' => $label, 'kind' => 'acceso']);
+                $row->fill(['code' => $code, 'notes' => $notes, 'updated_by' => auth()->id()])->save();
+                $saved[] = $label;
+            }
+        }
+
+        AuditLog::record(auth()->id(), 'claves.importar', 'AccessCode', 'lote', null, ['recintos' => $saved, 'omitidas' => $skipped]);
+
+        $message = count($saved).' claves guardadas.';
+        if ($skipped) {
+            $message .= ' No se cargaron: '.implode(' · ', $skipped).'.';
+        }
+
+        return redirect()->route('access_codes.index')->with('status', $message);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $code = AccessCode::create($this->validatePlace($request) + ['updated_by' => auth()->id()]);

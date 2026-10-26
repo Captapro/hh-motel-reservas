@@ -131,6 +131,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/claves/ver', [AccessCodeController::class, 'reveal'])->middleware('throttle:30,1,access_codes.reveal')->name('access_codes.reveal');
     Route::middleware('role:administrador')->group(function () {
         Route::put('/claves/habitacion/{room}', [AccessCodeController::class, 'saveRoom'])->name('access_codes.room');
+        Route::post('/claves/importar', [AccessCodeController::class, 'import'])->name('access_codes.import');
         Route::post('/claves', [AccessCodeController::class, 'store'])->name('access_codes.store');
         Route::put('/claves/{accessCode}', [AccessCodeController::class, 'update'])->name('access_codes.update');
         Route::delete('/claves/{accessCode}', [AccessCodeController::class, 'destroy'])->name('access_codes.destroy');

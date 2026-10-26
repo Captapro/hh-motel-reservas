@@ -42,6 +42,9 @@
         .add-box .edit-form input, .add-box .edit-form select { background:#fff; border-color:#d1d3d8; color:#202124; }
         .add-box .edit-form { margin-top:0; }
         tr.filtered { display:none; }
+        .import-box { background:#fff; border:1px solid #dddfe1; border-radius:10px; padding:12px 14px; margin-top:18px; }
+        .import-box summary { font-size:13px; font-weight:600; }
+        .import-box textarea { width:100%; max-width:520px; font-family: ui-monospace, monospace; font-size:13px; border:1px solid #d1d3d8; border-radius:7px; padding:8px; background:#fff; color:#202124; display:block; }
         @media print { .tools, details, .hh-rail, .hh-nav-wrap, .add-box, .btn { display:none !important; } }
     </style>
 </head>
@@ -63,6 +66,18 @@
 
     @if (session('status'))<div class="status">{{ session('status') }}</div>@endif
     @if ($errors->any())<div class="errors">{{ $errors->first() }}</div>@endif
+
+    @if ($canEdit)
+        <details class="import-box">
+            <summary>Pegar listado desde una planilla</summary>
+            <form method="POST" action="{{ route('access_codes.import') }}">
+                @csrf
+                <p class="sec-note" style="margin:10px 0 8px;">Una clave por línea: el nombre y luego la clave, por ejemplo <code>#101 1234</code> o <code>Puerta electricidad: 3333 (presiona el candado)</code>. Puedes copiar las dos columnas directo desde Excel. Lo que vaya después de la clave queda como nota. Si el nombre es un número de habitación se carga en esa habitación; si no, se crea como recinto. Las claves que ya existan se reemplazan.</p>
+                <textarea name="lines" rows="8" placeholder="#101	1234&#10;#102	4444&#10;Mucamas	2222" autocomplete="off"></textarea>
+                <button class="btn primary" style="margin-top:8px;">Cargar claves</button>
+            </form>
+        </details>
+    @endif
 
     <div class="sec-label">Habitaciones</div>
     <div class="table-wrap"><table>
