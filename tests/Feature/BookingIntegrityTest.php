@@ -483,16 +483,21 @@ class BookingIntegrityTest extends TestCase
         $again->assertSee('Voucher')->assertSee('4521');
     }
 
-    public function test_expired_holds_do_not_count_as_sales(): void
+    public function test_only_fully_paid_stays_count_as_sales(): void
     {
-        $sold = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
-        $expired = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);
+        $paid = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $unpaid = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);
+        $expired = $this->booking(['starts_at' => Carbon::parse('2026-10-19 12:00')]);
         $expired->update(['booking_status' => 'EXPIRADA']);
+        $method = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        app(PaymentService::class)->register($paid, $method, (int) $paid->price_final, null, null, auth()->id());
+        app(PaymentService::class)->register($unpaid, $method, 1000, null, null, auth()->id());   // solo un anticipo
 
         $totals = $this->get(route('sales.monthly', '2026-10'))->assertOk()->viewData('totals');
 
         $this->assertSame(1, $totals['rooms']);
-        $this->assertSame((int) $sold->price_final, (int) $totals['total']);
+        $this->assertSame((int) $paid->price_final, (int) $totals['total']);
+        $this->assertSame((int) $paid->price_final + 1000, (int) $totals['cash_total']);   // la caja sí tiene los dos pagos
     }
 
     public function test_public_confirmation_shows_qr_and_payment_data_when_configured(): void

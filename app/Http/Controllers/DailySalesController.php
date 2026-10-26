@@ -39,11 +39,15 @@ class DailySalesController extends Controller
 
         $active = $bookings->reject(fn (Booking $b) => in_array($b->booking_status, ['CANCELADA', 'EXPIRADA'], true));
 
-        $revenue = $active->sum(fn (Booking $b) => $b->price_final + $b->addonsTotal());
+        // Venta = solo estadías con su pago completo; las pendientes se ven
+        // en la tabla y en "Pendiente", pero no suman a la venta.
+        $sold = $active->filter(fn (Booking $b) => $b->isPaidSale());
+
+        $revenue = $sold->sum(fn (Booking $b) => $b->price_final + $b->addonsTotal());
         $collected = $active->sum(fn (Booking $b) => $b->paidAmount());
         $pending = $active->sum(fn (Booking $b) => $b->balanceDue());
 
-        $byTariff = $active
+        $byTariff = $sold
             ->groupBy('rate_rule_name_snapshot')
             ->map(fn ($group) => [
                 'count' => $group->count(),
@@ -86,6 +90,7 @@ class DailySalesController extends Controller
         return view('sales.daily', [
             'day' => $day,
             'bookings' => $bookings,
+            'sold' => $sold,
             'revenue' => $revenue,
             'collected' => $collected,
             'pending' => $pending,

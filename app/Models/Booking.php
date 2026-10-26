@@ -171,6 +171,25 @@ class Booking extends Model
         return (int) $this->addons()->sum('amount');
     }
 
+    /**
+     * Cuenta como venta solo la estadía con su pago completo: ni las
+     * canceladas o vencidas, ni las que aún no pagan (aunque lleguen hoy).
+     * Usa las relaciones ya cargadas si las hay, para no consultar por fila.
+     */
+    public function isPaidSale(): bool
+    {
+        if (in_array($this->booking_status, ['CANCELADA', 'EXPIRADA'], true)) {
+            return false;
+        }
+
+        $addons = $this->relationLoaded('addons') ? (int) $this->addons->sum('amount') : $this->addonsTotal();
+        $paid = $this->relationLoaded('payments')
+            ? (int) $this->payments->where('status', 'aprobado')->sum('amount')
+            : $this->paidAmount();
+
+        return $this->price_final + $addons - $paid <= 0;
+    }
+
     /** Total a cobrar: precio final de la habitación + consumo, menos lo ya pagado. */
     public function balanceDue(): int
     {

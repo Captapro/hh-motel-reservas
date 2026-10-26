@@ -152,10 +152,11 @@ class RoomBoardController extends Controller
         $day = now('America/Santiago')->startOfDay();
         $dayEnd = $day->copy()->endOfDay();
 
-        $bookings = Booking::with('addons')
+        $bookings = Booking::with(['addons', 'payments'])
             ->whereBetween('starts_at', [$day->copy(), $dayEnd])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
-            ->get();
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale());
 
         $addons = $bookings->flatMap->addons;
 

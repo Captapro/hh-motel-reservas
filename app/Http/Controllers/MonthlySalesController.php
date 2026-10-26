@@ -41,7 +41,9 @@ class MonthlySalesController extends Controller
             ->whereBetween('starts_at', [$first->copy(), $last->copy()])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->orderBy('starts_at')
-            ->get();
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale())
+            ->values();
 
         $payments = Payment::with('paymentMethod')
             ->where('status', 'aprobado')
@@ -162,7 +164,11 @@ class MonthlySalesController extends Controller
         $addons = DB::table('booking_addons')
             ->selectRaw('booking_id, SUM(amount) as total')->groupBy('booking_id')->pluck('total', 'booking_id');
 
+        $paidByBooking = DB::table('payments')->where('status', 'aprobado')
+            ->selectRaw('booking_id, SUM(amount) as total')->groupBy('booking_id')->pluck('total', 'booking_id');
+
         $sales = Booking::whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])->get(['id', 'starts_at', 'price_final'])
+            ->filter(fn (Booking $b) => $b->price_final + (int) ($addons[$b->id] ?? 0) - (int) ($paidByBooking[$b->id] ?? 0) <= 0)
             ->groupBy(fn (Booking $b) => $b->starts_at->copy()->timezone(self::TZ)->format('Y-m'))
             ->map(fn (Collection $rows) => [
                 'rooms' => $rows->count(),

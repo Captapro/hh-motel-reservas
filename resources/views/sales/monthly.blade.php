@@ -115,7 +115,7 @@
         </tbody>
     </table></div>
     <div class="sec-label">Registro diario</div>
-    <p class="sec-note">La <b>venta</b> cuenta por el día de la estadía. Lo <b>cobrado</b> cuenta por el día en que entró el pago (puede ser un anticipo o el saldo de otro día). Toca una fecha para ver su detalle.</p>
+    <p class="sec-note">La <b>venta</b> cuenta por el día de la estadía y solo si está pagada completa (las pendientes de pago o por llegar sin pagar no suman). Lo <b>cobrado</b> cuenta por el día en que entró el pago (puede ser un anticipo o el saldo de otro día). Toca una fecha para ver su detalle.</p>
     <div class="table-wrap"><table>
         <thead><tr><th>Fecha</th><th class="n">Hab. vendidas</th><th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th><th class="n">Otro</th><th class="n">Cobrado</th></tr></thead>
         <tbody>
