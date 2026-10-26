@@ -236,6 +236,8 @@
         .offer-ok { background:#ff7918; border:1px solid #ff7918; color:#111; }
         .step-panel.step-done .offer-actions { display:none; }
         #submit-btn:disabled { opacity:.4; cursor:not-allowed; animation:none; }
+        .closed-note { margin:0 0 10px; padding:12px 14px; border-radius:10px; background:#3a1c1c; border:1px solid #b3202f; color:#ffd0ca; font-size:13.5px; line-height:1.45; }
+        .closed-note b { display:block; font-size:14.5px; color:#fff; margin-bottom:2px; }
         .offer-needed { margin-top:8px; font-size:12px; color:#e8c76f; text-align:center; }
         .consumo-sum { margin:0 0 4px; padding:8px 14px; border-radius:8px; background:#1c1c1c; border:1px solid #333; font-size:13.5px; }
         .consumo-sum .p-sum { display:flex; justify-content:space-between; padding:2px 0; color:#bbb; }
@@ -627,6 +629,10 @@
                 @endunless
 
 
+                <div class="closed-note" id="closed-note" role="alert" hidden>
+                    <b>⛔ No se puede terminar la reserva: estamos fuera de horario.</b>
+                    Este horario no tiene tarifa vigente{{ ! empty($nextOpeningLabel) ? ' (el motel abre en '.$nextOpeningLabel.')' : '' }}. Cuando haya tarifa podrás crear el ingreso o la reserva.
+                </div>
                 <button class="submit" id="submit-btn" type="submit">Crear reserva</button>
                 @if ($walkInMode)
                     <div class="offer-needed" id="offer-needed" hidden>Antes de cobrar, ofrece productos y combos (paso 3).</div>
@@ -929,8 +935,10 @@
                 if (d.error) {
                     box.className = 'price-box';
                     box.innerHTML = '<div class="p-err">' + d.error + '</div>';
+                    hhClosedNote(/tarifa vigente/i.test(d.error));
                     return;
                 }
+                hhClosedNote(false);
                 const fmt = n => '$' + Number(n).toLocaleString('es-CL');
                 const applied = d.applied;
                 const finalPrice = applied ? applied.price_final : d.price_original;
@@ -1050,6 +1058,12 @@
 
             warningEl.style.display = covered ? 'none' : 'block';
             submitBtn.disabled = !covered;
+            hhClosedNote(!covered);
+        }
+        // Aviso fijo junto al botón cuando el horario no tiene tarifa vigente.
+        function hhClosedNote(show) {
+            const note = document.getElementById('closed-note');
+            if (note) note.hidden = !show;
         }
 
         hhValidateSchedule();
