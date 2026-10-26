@@ -115,8 +115,7 @@
         <div class="add-box">
             <form class="edit-form" method="POST" action="{{ route('access_codes.store') }}">
                 @csrf
-                <input name="name" placeholder="Nombre (ej: Bodega de blancos)" maxlength="80" required value="{{ old('name') }}">
-                <select name="kind">@foreach ($kinds as $key => $label)<option value="{{ $key }}" @selected(old('kind') === $key)>{{ $label }}</option>@endforeach</select>
+                <input name="name" placeholder="Nombre del recinto" maxlength="80" required value="{{ old('name') }}">
                 <input name="location" placeholder="Ubicación (opcional)" maxlength="120" value="{{ old('location') }}">
                 <input name="code" placeholder="Clave" maxlength="100" required autocomplete="off">
                 <input name="notes" placeholder="Nota (opcional)" maxlength="500" autocomplete="off">
@@ -125,12 +124,11 @@
         </div>
     @endif
     <div class="table-wrap"><table>
-        <thead><tr><th>Recinto</th><th>Tipo</th><th>Ubicación</th><th>Clave</th><th>Nota</th><th>Actualizada</th><th></th></tr></thead>
+        <thead><tr><th>Recinto</th><th>Ubicación</th><th>Clave</th><th>Nota</th><th>Actualizada</th><th></th></tr></thead>
         <tbody>
         @forelse ($places as $place)
-            <tr class="searchable" data-search="{{ Str::lower($place->name.' '.$place->location.' '.($kinds[$place->kind] ?? '')) }}">
+            <tr class="searchable" data-search="{{ Str::lower($place->name.' '.$place->location) }}">
                 <td><b>{{ $place->name }}</b></td>
-                <td><span class="tag">{{ $kinds[$place->kind] ?? $place->kind }}</span></td>
                 <td>{{ $place->location }}</td>
                 <td><span class="code masked" data-code-id="{{ $place->id }}">{{ $masked }}</span></td>
                 <td class="muted" data-notes-id="{{ $place->id }}">@if ($place->notes)…@endif</td>
@@ -143,7 +141,6 @@
                             <form class="edit-form" method="POST" action="{{ route('access_codes.update', $place) }}">
                                 @csrf @method('PUT')
                                 <input name="name" value="{{ $place->name }}" maxlength="80" required>
-                                <select name="kind">@foreach ($kinds as $key => $label)<option value="{{ $key }}" @selected($place->kind === $key)>{{ $label }}</option>@endforeach</select>
                                 <input name="location" value="{{ $place->location }}" placeholder="Ubicación" maxlength="120">
                                 <input name="code" placeholder="Nueva clave" maxlength="100" required autocomplete="off">
                                 <input name="notes" placeholder="Nota (opcional)" maxlength="500" autocomplete="off">
@@ -158,7 +155,7 @@
                 </td>
             </tr>
         @empty
-            <tr class="zero"><td colspan="7">Todavía no hay recintos. @if ($canEdit)Agrega bodegas, sala de máquinas, oficina, portón…@endif</td></tr>
+            <tr class="zero"><td colspan="6">Todavía no hay recintos.</td></tr>
         @endforelse
         </tbody>
     </table></div>

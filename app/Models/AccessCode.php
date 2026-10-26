@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['room_id', 'name', 'kind', 'location', 'code', 'notes', 'updated_by'])]
 class AccessCode extends Model
 {
-    public const KINDS = ['bodega' => 'Bodega', 'recinto' => 'Recinto', 'acceso' => 'Acceso / portón', 'otro' => 'Otro'];
 
     protected $hidden = ['code', 'notes'];
 

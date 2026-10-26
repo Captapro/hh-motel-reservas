@@ -56,7 +56,7 @@ class AccessCodeTest extends TestCase
         $admin = User::factory()->create(['role' => 'administrador']);
 
         $this->actingAs($admin)->put(route('access_codes.room', $this->room), ['code' => '4471#'])->assertRedirect();
-        $this->actingAs($admin)->post(route('access_codes.store'), ['name' => 'Bodega de blancos', 'kind' => 'bodega', 'code' => '9090'])->assertRedirect();
+        $this->actingAs($admin)->post(route('access_codes.store'), ['name' => 'Bodega de blancos', 'code' => '9090'])->assertRedirect();
 
         $this->assertSame(2, AccessCode::count());
         $this->assertStringNotContainsString('4471', (string) DB::table('access_codes')->where('room_id', $this->room->id)->value('code'));

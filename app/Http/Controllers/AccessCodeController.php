@@ -8,7 +8,6 @@ use App\Models\Room;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -18,20 +17,21 @@ use Illuminate\View\View;
  */
 class AccessCodeController extends Controller
 {
-    private const FIELDS = ['name' => 'nombre', 'kind' => 'tipo', 'location' => 'ubicación', 'code' => 'clave', 'notes' => 'nota'];
+    private const FIELDS = ['name' => 'nombre', 'location' => 'ubicación', 'code' => 'clave', 'notes' => 'nota'];
 
     public function index(): View
     {
         $codes = AccessCode::with('editor')->get();
         $byRoom = $codes->whereNotNull('room_id')->keyBy('room_id');
-        $rooms = Room::with('category')->orderBy('name')->get()
+        // Mismo orden que la planilla: por número de habitación; los recintos, en el orden en que se cargaron.
+        $rooms = Room::with('category')->get()
+            ->sortBy(fn (Room $r) => preg_match('/(\d{3})$/', $r->name, $m) ? (int) $m[1] : PHP_INT_MAX)->values()
             ->map(fn (Room $room) => ['room' => $room, 'code' => $byRoom->get($room->id)]);
-        $places = $codes->whereNull('room_id')->sortBy([['kind', 'asc'], ['name', 'asc']])->values();
+        $places = $codes->whereNull('room_id')->sortBy('id')->values();
 
         return view('access-codes.index', [
             'rooms' => $rooms,
             'places' => $places,
-            'kinds' => AccessCode::KINDS,
             'canEdit' => auth()->user()->isAdministrador(),
         ]);
     }
@@ -125,7 +125,7 @@ class AccessCodeController extends Controller
             } else {
                 $label = trim($parts[0], " :\t");
                 $row = AccessCode::whereNull('room_id')->where('name', $label)->first()
-                    ?? new AccessCode(['name' => $label, 'kind' => 'acceso']);
+                    ?? new AccessCode(['name' => $label, 'kind' => 'recinto']);
                 $row->fill(['code' => $code, 'notes' => $notes, 'updated_by' => auth()->id()])->save();
                 $saved[] = $label;
             }
@@ -143,7 +143,7 @@ class AccessCodeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $code = AccessCode::create($this->validatePlace($request) + ['updated_by' => auth()->id()]);
+        $code = AccessCode::create($this->validatePlace($request) + ['kind' => 'recinto', 'updated_by' => auth()->id()]);
         AuditLog::record(auth()->id(), 'claves.crear', 'AccessCode', $code->id, null, ['recinto' => $code->name]);
 
         return back()->with('status', "{$code->name} agregado.");
@@ -172,7 +172,6 @@ class AccessCodeController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:80'],
-            'kind' => ['required', Rule::in(array_keys(AccessCode::KINDS))],
             'location' => ['nullable', 'string', 'max:120'],
             'code' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
