@@ -94,6 +94,10 @@
         .section-head .count { font-family: ui-monospace, monospace; font-size: 12px; color:#777; }
         .section-head .bar { flex:1; height:1px; background:#292929; }
         .section.ocupadas .section-head h2 { color:#e88a9a; }
+        /* Panel enmarcado: mismo marco que "Por llegar", pero horizontal. */
+        .section.panel-box { border:1px solid #dddfe1; border-radius:18px; background:#fff; padding:14px 14px 4px; }
+        .section.ocupadas.panel-box .section-head h2 { color:#a63a4a; }
+        .section.panel-box .grid { margin-bottom:10px; }
         .section.aseo .section-head h2 { color:#e8c76f; }
         .section.disponibles .section-head h2 { color:#34d399; }
         .section.fuera .section-head h2 { color:#aaa; }
@@ -479,17 +483,18 @@
 
     <div class="page-grid">
         <div class="main-col">
-            @if ($grouped['ocupadas']->isNotEmpty())
-            <div class="section ocupadas">
-                <div class="section-head"><h2>Ocupadas</h2><span class="count">{{ $grouped['ocupadas']->count() }}</span><span class="bar"></span></div>
+            {{-- Siempre ocupa su lugar (aunque no haya ocupadas), igual que "Por llegar", para que nada se corra al ocuparse una habitación. --}}
+            <div class="section ocupadas panel-box">
+                <div class="section-head"><h2>Ocupadas</h2><span class="count" id="ocupadas-count">{{ $grouped['ocupadas']->count() }}</span></div>
+                <div class="sidebar-empty" id="ocupadas-empty" @if ($grouped['ocupadas']->isNotEmpty()) hidden @endif>Ninguna habitación ocupada ahora.</div>
+                @if ($grouped['ocupadas']->isNotEmpty())
                     <div class="grid">
                         @foreach ($grouped['ocupadas'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
                         @endforeach
                     </div>
-
+                @endif
             </div>
-            @endif
 
             <div class="section disponibles">
                 <div class="section-head"><h2>Disponibles</h2><span class="count" id="disponibles-count">{{ $grouped['disponibles']->count() }}</span><span class="bar"></span></div>
@@ -700,7 +705,8 @@
                 const n = sec.querySelectorAll('.card:not(.wing-hidden)').length;
                 const count = sec.querySelector('.section-head .count');
                 if (count && name !== 'disponibles') count.textContent = n;
-                if (name !== 'disponibles') sec.classList.toggle('wing-hidden', n === 0);
+                if (name !== 'disponibles' && name !== 'ocupadas') sec.classList.toggle('wing-hidden', n === 0);
+                if (name === 'ocupadas') { const oe = document.getElementById('ocupadas-empty'); if (oe) oe.hidden = n > 0; }
                 const chip = document.querySelector('.summary .chip.' + name + ' b');
                 if (chip) chip.textContent = n;
             });
