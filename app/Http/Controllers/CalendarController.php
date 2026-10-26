@@ -11,10 +11,17 @@ class CalendarController extends Controller
 {
     public function index(Request $request): View
     {
-        $view = in_array($request->query('view'), ['month', 'week', 'day'], true) ? $request->query('view') : 'day';
+        $view = in_array($request->query('view'), ['month', 'week', 'day', 'history'], true) ? $request->query('view') : 'day';
+        // "Historial" es una vista aparte (planilla de detalle) que se puede ver
+        // por día, semana o mes; las otras vistas son su propio período.
+        $period = $view === 'history'
+            ? (in_array($request->query('periodo'), ['day', 'week', 'month'], true) ? $request->query('periodo') : 'month')
+            : $view;
         $date = Carbon::parse($request->query('date', now()->toDateString()), config('app.timezone'));
-        $rangeStart = $view === 'month' ? $date->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY) : $date->copy()->startOf($view === 'week' ? 'week' : 'day');
-        $rangeEnd = $view === 'month' ? $date->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY) : $date->copy()->endOf($view === 'week' ? 'week' : 'day');
+        // La grilla del mes incluye días de las semanas vecinas; la planilla, solo el mes.
+        $gridMonth = $view === 'month';
+        $rangeStart = $period === 'month' ? ($gridMonth ? $date->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY) : $date->copy()->startOfMonth()) : $date->copy()->startOf($period === 'week' ? 'week' : 'day');
+        $rangeEnd = $period === 'month' ? ($gridMonth ? $date->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY) : $date->copy()->endOfMonth()) : $date->copy()->endOf($period === 'week' ? 'week' : 'day');
 
         $bookings = Booking::with(['room.category', 'customer', 'payments', 'addons'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
@@ -28,8 +35,9 @@ class CalendarController extends Controller
             $days->push(['date' => $cursor->copy(), 'bookings' => $bookings->filter(fn ($booking) => $booking->starts_at->lt($cursor->copy()->endOfDay()) && $booking->ends_at->gt($cursor->copy()->startOfDay()))]);
         }
 
-        $previous = $date->copy()->sub($view === 'month' ? '1 month' : ($view === 'week' ? '1 week' : '1 day'))->toDateString();
-        $next = $date->copy()->add($view === 'month' ? '1 month' : ($view === 'week' ? '1 week' : '1 day'))->toDateString();
+        $step = $period === 'month' ? '1 month' : ($period === 'week' ? '1 week' : '1 day');
+        $previous = $date->copy()->sub($step)->toDateString();
+        $next = $date->copy()->add($step)->toDateString();
 
         // Separadas para que se distinga de un vistazo qué ya pasó de qué
         // todavía no llega -- antes era una sola lista "Historial" mezclando
@@ -48,6 +56,6 @@ class CalendarController extends Controller
             'total' => (clone $futureBase)->count(),
         ];
 
-        return view('calendar.index', compact('view', 'date', 'rangeStart', 'rangeEnd', 'bookings', 'days', 'previous', 'next', 'pastBookings', 'upcomingBookings', 'soon', 'soonStats'));
+        return view('calendar.index', compact('view', 'period', 'date', 'rangeStart', 'rangeEnd', 'bookings', 'days', 'previous', 'next', 'pastBookings', 'upcomingBookings', 'soon', 'soonStats'));
     }
 }

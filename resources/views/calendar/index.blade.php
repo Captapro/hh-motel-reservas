@@ -34,11 +34,12 @@
 .empty{padding:14px 8px;font-size:13.5px}
 @media(max-width:700px){.day-cell{min-height:74px;padding:4px}.event{font-size:9.5px;padding:2px 3px;margin-top:3px}}
 
+html{background:#f5f5f4 !important}body{min-height:100vh}
 .calendar-split-one{grid-template-columns:1fr}
 .calendar-history{max-height:300px}
 .sheet-card{margin-top:12px}
 .sheet-card h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.sheet-wrap{overflow:auto;max-height:540px;border:1px solid #e5e7eb;border-radius:8px}
+.sheet-wrap{overflow:auto;max-height:calc(100vh - 290px);min-height:240px;border:1px solid #e5e7eb;border-radius:8px}
 table.sheet{width:100%;border-collapse:collapse;font-size:12.5px}
 table.sheet th{position:sticky;top:0;z-index:1;background:#f3f4f6;color:#4b5563;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:8px 9px;border:1px solid #e5e7eb;white-space:nowrap}
 table.sheet td{padding:6px 9px;border:1px solid #e5e7eb;white-space:nowrap;background:#fff;color:#1f2937}
@@ -51,6 +52,8 @@ table.sheet tr.zero td{color:#9ca3af;text-align:center;padding:14px}
 table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db;position:sticky;bottom:0}
 .st{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#4b5563}
 .st-finalizada{background:#eff6ff;color:#1d4ed8}.st-confirmada,.st-check_in{background:#fff7ed;color:#c2410c}.st-pendiente_pago{background:#fffbeb;color:#b45309}
+.hist-period{display:flex;align-items:center;gap:6px;margin:0 0 10px;font-size:12.5px;color:#6b7280}.hist-period a{color:#4c4c4a;text-decoration:none;padding:5px 12px;border-radius:999px;background:#fff;border:1px solid #dededb}.hist-period a.active,.hist-period a:hover{background:#ff7918;border-color:#ff7918;color:#fff}
+.day-list{margin-top:12px}.day-list h2{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;display:flex;align-items:baseline;gap:10px}.day-list .booking-row{grid-template-columns:90px 1fr 150px 20px}
 </style>
 </head><body>
 @include('partials.navbar')
@@ -62,9 +65,16 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
  </form>
 </div>
 <section class="calendar-toolbar">
- <div class="calendar-views"><a class="{{ $view==='month'?'active':'' }}" href="{{ route('calendar.index',['view'=>'month','date'=>$date->toDateString()]) }}">Mes</a><a class="{{ $view==='week'?'active':'' }}" href="{{ route('calendar.index',['view'=>'week','date'=>$date->toDateString()]) }}">Semana</a><a class="{{ $view==='day'?'active':'' }}" href="{{ route('calendar.index',['view'=>'day','date'=>$date->toDateString()]) }}">Día</a></div>
- <div class="calendar-nav"><a href="{{ route('calendar.index',['view'=>$view,'date'=>$previous]) }}">‹</a><strong>{{ $view==='month' ? ucfirst($date->locale('es')->isoFormat('MMMM YYYY')) : ($view==='week' ? 'Semana del '.$rangeStart->format('d/m').' al '.$rangeEnd->format('d/m/Y') : ucfirst($date->locale('es')->isoFormat('dddd D [de] MMMM YYYY'))) }}</strong><a href="{{ route('calendar.index',['view'=>$view,'date'=>$next]) }}">›</a></div>
+ <div class="calendar-views"><a class="{{ $view==='month'?'active':'' }}" href="{{ route('calendar.index',['view'=>'month','date'=>$date->toDateString()]) }}">Mes</a><a class="{{ $view==='week'?'active':'' }}" href="{{ route('calendar.index',['view'=>'week','date'=>$date->toDateString()]) }}">Semana</a><a class="{{ $view==='day'?'active':'' }}" href="{{ route('calendar.index',['view'=>'day','date'=>$date->toDateString()]) }}">Día</a><a class="{{ $view==='history'?'active':'' }}" href="{{ route('calendar.index',['view'=>'history','date'=>$date->toDateString()]) }}">Historial</a></div>
+ <div class="calendar-nav"><a href="{{ route('calendar.index',['view'=>$view,'date'=>$previous,'periodo'=>$view==='history'?$period:null]) }}">‹</a><strong>{{ $period==='month' ? ucfirst($date->locale('es')->isoFormat('MMMM YYYY')) : ($period==='week' ? 'Semana del '.$rangeStart->format('d/m').' al '.$rangeEnd->format('d/m/Y') : ucfirst($date->locale('es')->isoFormat('dddd D [de] MMMM YYYY'))) }}</strong><a href="{{ route('calendar.index',['view'=>$view,'date'=>$next,'periodo'=>$view==='history'?$period:null]) }}">›</a></div>
 </section>
+@if($view==='history')
+<div class="hist-period"><span>Ver por:</span>
+ @foreach(['day'=>'Día','week'=>'Semana','month'=>'Mes'] as $pk => $pl)
+  <a class="{{ $period===$pk?'active':'' }}" href="{{ route('calendar.index',['view'=>'history','date'=>$date->toDateString(),'periodo'=>$pk]) }}">{{ $pl }}</a>
+ @endforeach
+</div>
+@endif
 @if($view==='month')
 <section class="calendar-card">
  <div class="weekdays">
@@ -88,6 +98,22 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
      $bookings de "Historial" de más abajo, mostrada dos veces con menos
      información (sin fecha por fila, ambigua en vista semana). --}}
 
+@if($view==='week' || $view==='day')
+<section class="calendar-card day-list">
+ <h2>{{ $view==='week' ? 'Reservas de la semana' : 'Reservas del día' }} <span class="hist-count">{{ $bookings->count() }} {{ Str::plural('reserva', $bookings->count()) }}</span></h2>
+ @forelse ($bookings as $booking)
+  <a class="booking-row" href="{{ route('reservations.show',$booking->code) }}">
+   <div class="booking-time"><b>{{ $booking->starts_at->format('H:i') }}</b><span>{{ $view==='week' ? $booking->starts_at->locale('es')->isoFormat('ddd D MMM') : \App\Support\TimeFormat::minutes($booking->duration_minutes) }}</span></div>
+   <div><b>{{ $booking->room->name }}</b> <small style="display:inline">· {{ $booking->room->category->name }}</small><small>{{ $booking->customer->name }} · {{ $booking->code }}</small></div>
+   <div class="booking-status">{{ str_replace('_', ' ', $booking->booking_status) }}</div>
+   <span class="arrow">›</span>
+  </a>
+ @empty
+  <p class="empty">No hay reservas en este período.</p>
+ @endforelse
+</section>
+@endif
+@if($view!=='history')
 <div class="calendar-split calendar-split-one">
  <section class="calendar-card upcoming calendar-history">
   <h2>◷ Próximas reservas <span class="hist-count">desde ahora, sin importar el período</span></h2>
@@ -108,6 +134,8 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
   @endforelse
  </section>
 </div>
+@endif
+@if($view==='history')
 @php
  $money = fn ($n) => '$'.number_format((int) $n, 0, ',', '.');
  $histRows = $pastBookings->sortBy('starts_at')->values()->map(function ($b) {
@@ -118,7 +146,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
  $statusLabel = ['PENDIENTE_PAGO' => 'Pendiente de pago', 'CONFIRMADA' => 'Confirmada', 'CHECK_IN' => 'En curso', 'FINALIZADA' => 'Finalizada'];
 @endphp
 <section class="calendar-card sheet-card">
- <h2>✓ Historial {{ $view==='month' ? 'del mes' : ($view==='week' ? 'de la semana' : 'del día') }} <span class="hist-count">{{ $histRows->count() }} {{ Str::plural('reserva', $histRows->count()) }} · toca una fila para ver el detalle</span></h2>
+ <h2>✓ Historial {{ $period==='month' ? 'del mes' : ($period==='week' ? 'de la semana' : 'del día') }} <span class="hist-count">{{ $histRows->count() }} {{ Str::plural('reserva', $histRows->count()) }} · toca una fila para ver el detalle</span></h2>
  <div class="sheet-wrap">
   <table class="sheet">
    <thead><tr>
@@ -167,6 +195,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
   </table>
  </div>
 </section>
+@endif
 <script>document.addEventListener('click',function(e){var r=e.target.closest('table.sheet tr[data-href]');if(r&&!e.target.closest('a'))location.href=r.dataset.href;});</script>
 </main>
 </body></html>
