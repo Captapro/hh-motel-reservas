@@ -108,7 +108,7 @@
 
         <div class="step-title"><b>1</b> ¿Cómo paga?</div>
         <div class="method-chips" id="method-chips" role="group" aria-label="Medio de pago">
-            @php $order = ['efectivo', 'transferencia', 'debito', 'credito', 'mercado_pago', 'otro']; @endphp
+            @php $order = ['efectivo', 'transferencia', 'debito', 'credito', 'otro']; @endphp
             @foreach ($methods->sortBy(fn ($m) => ($i = array_search($m->code, $order, true)) === false ? 99 : $i) as $method)
                 <button type="button" class="chip" data-id="{{ $method->id }}" data-code="{{ $method->code }}">{{ $method->name }}</button>
             @endforeach
@@ -133,7 +133,6 @@
                 <button type="button" class="full-balance" id="full-balance" data-amount="{{ $balance }}">Saldo completo · ${{ number_format($balance, 0, ',', '.') }}</button>
             @endif
 
-            <div id="doc-block">
             <div class="step-title"><b>3</b> <span id="doc-title">Comprobante</span></div>
             <div class="pay-grid" id="doc-grid">
                 <div id="voucher-field">
@@ -146,7 +145,6 @@
                 </div>
             </div>
             <p class="doc-hint" id="doc-hint"></p>
-            </div>
 
             <button type="button" class="note-toggle" id="note-toggle" @if (old('notes')) hidden @endif>+ Agregar una nota</button>
             <div id="note-box" @if (! old('notes')) hidden @endif>
@@ -199,8 +197,8 @@
         })();
 
         // Según el medio se pide UN solo comprobante: efectivo/transferencia
-        // → boleta; débito/crédito → voucher del POS. Con Mercado Pago no
-        // se pide nada; con Otro se muestran los dos y basta con uno. Todo el bloque de
+        // → boleta; débito/crédito → voucher del POS. Con Mercado Pago u
+        // Otro se muestran los dos y basta con uno. Todo el bloque de
         // monto y comprobante aparece recién al elegir el medio.
         (function () {
             const select = document.getElementById('payment-method');
@@ -221,11 +219,6 @@
                 if (!code) return;
                 const cashLike = code === 'efectivo' || code === 'transferencia';
                 const cardLike = code === 'debito' || code === 'credito';
-
-                // Mercado Pago no pide comprobante: se oculta todo el paso 3.
-                const noDoc = code === 'mercado_pago';
-                document.getElementById('doc-block').hidden = noDoc;
-                if (noDoc) { voucherInput.value = ''; receiptInput.value = ''; return; }
 
                 voucherField.style.display = cashLike ? 'none' : '';
                 receiptField.style.display = cardLike ? 'none' : '';

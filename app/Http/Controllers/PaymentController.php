@@ -18,7 +18,9 @@ class PaymentController extends Controller
         $booking = Booking::with(['room.category', 'customer', 'payments.paymentMethod', 'addons'])
             ->where('code', $code)->firstOrFail();
 
-        $methods = PaymentMethod::where('is_active', true)->orderBy('name')->get();
+        // Mercado Pago no se ofrece: la máquina de recepción cobra como
+        // débito o crédito, y así se registra.
+        $methods = PaymentMethod::where('is_active', true)->where('code', '!=', 'mercado_pago')->orderBy('name')->get();
         $after = in_array($request->query('after'), ['board', 'checkin', 'pase'], true) ? $request->query('after') : null;
 
         // Recién creada con abono: se sugiere ese monto en vez del saldo
@@ -45,14 +47,9 @@ class PaymentController extends Controller
 
         // Efectivo/transferencia solo traen boleta; débito/crédito solo
         // traen voucher -- no tiene sentido pedir el otro. Para medios sin
-        // esta convención clara (Otro) basta con uno de los
+        // esta convención clara (Mercado Pago, Otro) basta con uno de los
         // dos, como antes.
         $referenceRules = match ($method->code) {
-            // Mercado Pago deja su propio comprobante en la plataforma.
-            'mercado_pago' => [
-                'receipt_number' => ['nullable', 'string', 'max:100'],
-                'voucher_number' => ['nullable', 'string', 'max:100'],
-            ],
             'efectivo', 'transferencia' => [
                 'receipt_number' => ['required', 'string', 'max:100'],
                 'voucher_number' => ['nullable', 'string', 'max:100'],

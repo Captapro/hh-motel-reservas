@@ -157,20 +157,6 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('CONFIRMADA', $paid->fresh()->booking_status);
     }
 
-    public function test_mercado_pago_payment_needs_no_voucher_or_receipt(): void
-    {
-        $method = PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago']);
-        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
-
-        $this->post(route('payments.store', $booking->code), [
-            'payment_method_id' => $method->id,
-            'amount' => 1000,
-            'request_token' => (string) Str::uuid(),
-        ])->assertSessionHasNoErrors();
-
-        $this->assertSame(1000, $booking->fresh()->paidAmount());
-    }
-
     public function test_several_products_can_be_added_at_once_during_the_stay_all_or_nothing(): void
     {
         (require database_path('migrations/2026_08_19_150001_add_inventory_to_products_table.php'))->up();
