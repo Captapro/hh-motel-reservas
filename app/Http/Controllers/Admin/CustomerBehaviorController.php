@@ -28,7 +28,7 @@ class CustomerBehaviorController extends Controller
 
         $inRange = Booking::with(['room.category', 'addons', 'payments.paymentMethod', 'customer', 'couponRedemption'])
             ->whereNotIn('booking_status', self::EXCLUDED)
-            ->whereBetween('starts_at', [$start->copy()->timezone('UTC'), $end->copy()->timezone('UTC')])
+            ->whereBetween('starts_at', [$start->copy(), $end->copy()])
             ->get();
 
         $customerIds = $inRange->pluck('customer_id')->unique()->values();
@@ -130,7 +130,6 @@ class CustomerBehaviorController extends Controller
     private function newVsReturning(): Collection
     {
         $months = collect(range(5, 0))->map(fn ($i) => now(self::TZ)->startOfMonth()->subMonthsNoOverflow($i));
-        $from = $months->first()->copy()->timezone('UTC');
 
         $stays = Booking::whereNotIn('booking_status', self::EXCLUDED)->where('starts_at', '<=', now())
             ->orderBy('starts_at')->get(['customer_id', 'starts_at']);

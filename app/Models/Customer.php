@@ -114,8 +114,8 @@ class Customer extends Model
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->where('starts_at', '<=', now())
             ->whereBetween('starts_at', [
-                now('America/Santiago')->startOfMonth()->timezone('UTC'),
-                now('America/Santiago')->endOfMonth()->timezone('UTC'),
+                now('America/Santiago')->startOfMonth(),
+                now('America/Santiago')->endOfMonth(),
             ])
             ->count();
     }

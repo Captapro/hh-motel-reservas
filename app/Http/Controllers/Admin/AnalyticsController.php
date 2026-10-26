@@ -35,7 +35,7 @@ class AnalyticsController extends Controller
         $all = Booking::with(['room.category', 'addons.product', 'addons.combo', 'payments.paymentMethod'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
-            ->whereBetween('starts_at', [$prevStart->copy()->timezone('UTC'), $end->copy()->timezone('UTC')])
+            ->whereBetween('starts_at', [$prevStart->copy(), $end->copy()])
             ->get()
             ->filter(fn (Booking $b) => $b->isPaidSale());
 
@@ -91,7 +91,7 @@ class AnalyticsController extends Controller
         $bookings = Booking::with(['room.category', 'customer', 'addons', 'payments.paymentMethod'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
-            ->whereBetween('starts_at', [$start->copy()->timezone('UTC'), $end->copy()->timezone('UTC')])
+            ->whereBetween('starts_at', [$start->copy(), $end->copy()])
             ->orderBy('starts_at')
             ->get()
             ->filter(fn (Booking $b) => $b->isPaidSale());
@@ -265,7 +265,7 @@ class AnalyticsController extends Controller
         $bookings = Booking::with(['addons', 'payments'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
-            ->where('starts_at', '>=', $firstMonth->copy()->timezone('UTC'))
+            ->where('starts_at', '>=', $firstMonth->copy())
             ->get()
             ->filter(fn (Booking $b) => $b->isPaidSale());
 
@@ -311,7 +311,7 @@ class AnalyticsController extends Controller
         $bookings = Booking::with(['addons', 'payments'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
-            ->whereBetween('starts_at', [$monthStart->copy()->timezone('UTC'), $monthEnd->copy()->timezone('UTC')])
+            ->whereBetween('starts_at', [$monthStart->copy(), $monthEnd->copy()])
             ->get()
             ->filter(fn (Booking $b) => $b->isPaidSale());
 
