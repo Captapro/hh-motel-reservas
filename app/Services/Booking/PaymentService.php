@@ -44,7 +44,7 @@ class PaymentService
 
             if ($amount > $locked->balanceDue()) {
                 throw new PaymentExceedsBalanceException(
-                    'El saldo pendiente cambió justo antes de registrar este pago (probablemente por otro pago simultáneo) — el monto ya no corresponde. Revisa la reserva y volvé a intentar.'
+                    'El monto ($'.number_format($amount, 0, ',', '.').') es mayor que el saldo pendiente ($'.number_format($locked->balanceDue(), 0, ',', '.').'). Si alguien registró otro pago recién, revisa la reserva e intenta de nuevo.'
                 );
             }
 
@@ -57,7 +57,7 @@ class PaymentService
             // detecta) chocaba contra ese índice con un QueryException sin
             // capturar -- un 500 en vez de un error entendible.
             if ($externalId !== null && Payment::where('external_id', $externalId)->exists()) {
-                throw ValidationException::withMessages(['external_id' => 'Esa referencia / N° de operación ya está usada en otro pago. Si es una operación distinta, dejá el campo vacío o escribí una referencia distinta.']);
+                throw ValidationException::withMessages(['external_id' => 'Esa referencia / N° de operación ya está usada en otro pago. Si es una operación distinta, deja el campo vacío o escribe una referencia distinta.']);
             }
 
             try {
@@ -79,7 +79,7 @@ class PaymentService
                 // pasar el chequeo de arriba los dos antes de que cualquiera
                 // inserte -- acá lo agarra el índice único mismo.
                 if ($e->getCode() === '23505' && str_contains($e->getMessage(), 'payments_external_id_unique')) {
-                    throw ValidationException::withMessages(['external_id' => 'Esa referencia / N° de operación ya está usada en otro pago. Si es una operación distinta, dejá el campo vacío o escribí una referencia distinta.']);
+                    throw ValidationException::withMessages(['external_id' => 'Esa referencia / N° de operación ya está usada en otro pago. Si es una operación distinta, deja el campo vacío o escribe una referencia distinta.']);
                 }
                 throw $e;
             }

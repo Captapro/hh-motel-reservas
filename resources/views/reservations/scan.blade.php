@@ -87,7 +87,7 @@
                 try {
                     url = new URL(text, allowedOrigin);
                 } catch (e) {
-                    retry('Ese código no se pudo leer -- probá de nuevo.');
+                    retry('Ese código no se pudo leer -- prueba de nuevo.');
                     return;
                 }
 
@@ -95,7 +95,7 @@
                 // sistema -- nunca se navega a un dominio o ruta distinta,
                 // aunque el QR esté dañado o sea de otra cosa.
                 if (url.origin !== allowedOrigin || !/^\/reservas\/[A-Za-z0-9-]+(\/validar)?$/.test(url.pathname)) {
-                    retry('Ese QR no es un pase de reserva de HH Motel -- probá con otro.');
+                    retry('Ese QR no es un pase de reserva de HH Motel -- prueba con otro.');
                     return;
                 }
 

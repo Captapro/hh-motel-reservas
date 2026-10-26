@@ -73,7 +73,7 @@ class UpsellResolver
                 'target_room_id' => null,
                 'label' => $o->name,
                 'price' => (int) $o->price,
-                'detail' => '+'.($o->extra_minutes / 60).' h · quedás hasta '.$extendedEnd->timezone('America/Santiago')->format('H:i'),
+                'detail' => '+'.($o->extra_minutes / 60).' h · quedas hasta '.$extendedEnd->timezone('America/Santiago')->format('H:i'),
             ];
         }
 
@@ -98,7 +98,7 @@ class UpsellResolver
             'target_room_id' => $targetRoom->id,
             'label' => $o->name,
             'price' => (int) $o->price,
-            'detail' => 'Pasás a '.$targetRoom->name.' ('.$o->toCategory?->name.')',
+            'detail' => 'Pasas a '.$targetRoom->name.' ('.$o->toCategory?->name.')',
         ];
     }
 }

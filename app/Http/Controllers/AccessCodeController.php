@@ -18,6 +18,8 @@ use Illuminate\View\View;
  */
 class AccessCodeController extends Controller
 {
+    private const FIELDS = ['name' => 'nombre', 'kind' => 'tipo', 'location' => 'ubicación', 'code' => 'clave', 'notes' => 'nota'];
+
     public function index(): View
     {
         $codes = AccessCode::with('editor')->get();
@@ -59,7 +61,7 @@ class AccessCodeController extends Controller
         $validated = $request->validate([
             'code' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], [], self::FIELDS);
         $existing = AccessCode::where('room_id', $room->id)->first();
 
         if (blank($validated['code'] ?? null)) {
@@ -117,6 +119,6 @@ class AccessCodeController extends Controller
             'location' => ['nullable', 'string', 'max:120'],
             'code' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], [], self::FIELDS);
     }
 }

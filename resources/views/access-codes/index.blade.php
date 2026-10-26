@@ -38,7 +38,8 @@
         .edit-form { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
         .edit-form input, .edit-form select { background:#111; border:1px solid #333; color:#eee; padding:6px 8px; border-radius:6px; font-size:13px; }
         .edit-form input[name=code] { font-family: ui-monospace, monospace; width:130px; }
-        .add-box { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:14px; margin-bottom:14px; }
+        .add-box { background:#fff; border:1px solid #dddfe1; border-radius:10px; padding:14px; margin-bottom:14px; }
+        .add-box .edit-form input, .add-box .edit-form select { background:#fff; border-color:#d1d3d8; color:#202124; }
         .add-box .edit-form { margin-top:0; }
         tr.filtered { display:none; }
         @media print { .tools, details, .hh-rail, .hh-nav-wrap, .add-box, .btn { display:none !important; } }

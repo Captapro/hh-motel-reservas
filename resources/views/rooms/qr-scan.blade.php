@@ -82,7 +82,7 @@
                 try {
                     url = new URL(text, allowedOrigin);
                 } catch (e) {
-                    statusLine.textContent = 'Ese código no se pudo leer -- probá de nuevo.';
+                    statusLine.textContent = 'Ese código no se pudo leer -- prueba de nuevo.';
                     scanning = true;
                     rafId = requestAnimationFrame(tick);
                     return;
@@ -92,7 +92,7 @@
                 // nunca se navega a un dominio o ruta distinta, aunque el QR físico
                 // esté dañado o alguien pegue uno que no corresponde.
                 if (url.origin !== allowedOrigin || !/^\/qr\/habitacion\/\d+$/.test(url.pathname)) {
-                    statusLine.textContent = 'Ese QR no es de una habitación de HH Motel -- probá con otro.';
+                    statusLine.textContent = 'Ese QR no es de una habitación de HH Motel -- prueba con otro.';
                     scanning = true;
                     rafId = requestAnimationFrame(tick);
                     return;
@@ -115,7 +115,7 @@
                     @endif
                     window.location.href = finalUrl.toString();
                 }).catch(function () {
-                    statusLine.textContent = 'No se pudo confirmar el escaneo -- probá de nuevo.';
+                    statusLine.textContent = 'No se pudo confirmar el escaneo -- prueba de nuevo.';
                     scanning = true;
                     rafId = requestAnimationFrame(tick);
                 });
