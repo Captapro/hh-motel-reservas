@@ -22,6 +22,7 @@ use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\PaymentService;
+use App\Services\Booking\RoomBoardService;
 use App\Services\Integrations\GhlBookingSync;
 use App\Support\GuestLine;
 use Carbon\Carbon;
@@ -155,6 +156,18 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(0, Booking::releaseExpired());
         $this->assertSame('PENDIENTE_PAGO', $held->fresh()->booking_status);
         $this->assertSame('CONFIRMADA', $paid->fresh()->booking_status);
+    }
+
+    public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void
+    {
+        $current = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $this->booking(['starts_at' => Carbon::parse('2026-11-02 15:00')]);
+        $current->update(['checked_in_at' => Carbon::parse('2026-11-02 12:05')]);
+
+        $status = app(RoomBoardService::class)->statusFor($this->room, Carbon::parse('2026-11-02 12:20'));
+
+        $this->assertSame('ocupada', $status['occupancy']);
+        $this->assertSame(1, $status['upcoming_count']);
     }
 
     public function test_several_products_can_be_added_at_once_during_the_stay_all_or_nothing(): void

@@ -42,7 +42,7 @@ class RoomBoardService
     {
         $now = $now ?? now();
 
-        // Cuenta la actual (si hay) + todas las futuras — para saber, sin entrar,
+        // Cuenta las reservas vigentes — para saber, sin entrar,
         // si vale la pena revisar el listado de esta habitación o está vacío.
         $upcomingCount = $room->bookings()
             ->whereNotIn('booking_status', self::INACTIVE_STATUSES)
@@ -59,6 +59,13 @@ class RoomBoardService
             ->first();
 
         if ($checkedIn) {
+            // La estadía en curso ya no es "próxima": solo cuentan las otras.
+            $upcomingCount = $room->bookings()
+                ->whereNotIn('booking_status', self::INACTIVE_STATUSES)
+                ->where('ends_at', '>', $now)
+                ->where('id', '!=', $checkedIn->id)
+                ->count();
+
             return [
                 'occupancy' => 'ocupada',
                 'eta_minutes' => (int) $now->diffInMinutes($checkedIn->ends_at, false),
