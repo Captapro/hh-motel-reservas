@@ -611,6 +611,41 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('payments.create', $booking->code))->assertDontSee('Enviar por WhatsApp');
     }
 
+    public function test_day_agenda_lists_every_reservation_with_its_operational_state(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-02 09:00'));
+        $day = fn (string $time) => ['starts_at' => Carbon::parse('2026-11-02 '.$time)];
+        $late = $this->booking($day('12:00'));
+        $coming = $this->booking($day('14:00'));
+        $inside = $this->booking($day('16:00'));
+        $done = $this->booking($day('18:00'));
+        $pending = $this->booking($day('20:00'));
+        $lapsed = $this->booking($day('22:00'));
+        foreach ([$late, $coming] as $b) {
+            $b->update(['booking_status' => 'CONFIRMADA']);
+        }
+        $inside->update(['booking_status' => 'CHECK_IN', 'checked_in_at' => Carbon::parse('2026-11-02 16:05')]);
+        $done->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 18:02'), 'checked_out_at' => Carbon::parse('2026-11-02 19:01')]);
+        $lapsed->update(['booking_status' => 'EXPIRADA']);
+
+        // 13:00: la de las 12:00 ya debería haber llegado y no hizo check-in.
+        $this->travelTo(Carbon::parse('2026-11-02 13:00'));
+        $page = $this->get(route('calendar.index', ['view' => 'day', 'date' => '2026-11-02']))->assertOk();
+
+        $states = $page->viewData('agenda')->mapWithKeys(fn ($b) => [$b->code => $b->agendaState()['key']]);
+        $this->assertSame('atrasada', $states[$late->code]);
+        $this->assertSame('por_llegar', $states[$coming->code]);
+        $this->assertSame('en_alojamiento', $states[$inside->code]);
+        $this->assertSame('finalizada', $states[$done->code]);
+        $this->assertSame('pendiente', $states[$pending->code]);
+        $this->assertSame('vencida', $states[$lapsed->code]);
+
+        $page->assertSee('Reservas del día')->assertSee('Atrasada · sin check-in')->assertSee('En alojamiento')
+            ->assertSee('Finalizada')->assertSee('Vencida (sin pago)')->assertSee('16:05')->assertSee('19:01')
+            ->assertSee(route('bookings.checkin.show', $coming->code), false)
+            ->assertSee(route('bookings.finalize.show', $inside->code), false);
+    }
+
     public function test_public_confirmation_shows_qr_and_payment_data_when_configured(): void
     {
         $booking = $this->booking();

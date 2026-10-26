@@ -35,6 +35,20 @@ class CalendarController extends Controller
             $days->push(['date' => $cursor->copy(), 'bookings' => $bookings->filter(fn ($booking) => $booking->starts_at->lt($cursor->copy()->endOfDay()) && $booking->ends_at->gt($cursor->copy()->startOfDay()))]);
         }
 
+        // Agenda del día: todas las reservas de la fecha con su estado operativo
+        // (por llegar, en alojamiento, finalizada...), incluidas las que no
+        // siguieron adelante, más las estadías que siguen en curso desde antes.
+        $agenda = collect();
+        if ($view === 'day') {
+            $agenda = Booking::with(['room.category', 'customer', 'payments', 'addons'])
+                ->where(function ($q) use ($rangeStart, $rangeEnd) {
+                    $q->whereBetween('starts_at', [$rangeStart, $rangeEnd])
+                        ->orWhere(fn ($q) => $q->where('booking_status', 'CHECK_IN')->where('starts_at', '<', $rangeStart));
+                })
+                ->orderBy('starts_at')
+                ->get();
+        }
+
         $step = $period === 'month' ? '1 month' : ($period === 'week' ? '1 week' : '1 day');
         $previous = $date->copy()->sub($step)->toDateString();
         $next = $date->copy()->add($step)->toDateString();
@@ -56,6 +70,6 @@ class CalendarController extends Controller
             'total' => (clone $futureBase)->count(),
         ];
 
-        return view('calendar.index', compact('view', 'period', 'date', 'rangeStart', 'rangeEnd', 'bookings', 'days', 'previous', 'next', 'pastBookings', 'upcomingBookings', 'soon', 'soonStats'));
+        return view('calendar.index', compact('agenda', 'view', 'period', 'date', 'rangeStart', 'rangeEnd', 'bookings', 'days', 'previous', 'next', 'pastBookings', 'upcomingBookings', 'soon', 'soonStats'));
     }
 }

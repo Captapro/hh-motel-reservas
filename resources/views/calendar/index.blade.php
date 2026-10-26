@@ -99,7 +99,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
      $bookings de "Historial" de más abajo, mostrada dos veces con menos
      información (sin fecha por fila, ambigua en vista semana). --}}
 
-@if($view==='week' || $view==='day')
+@if($view==='week')
 <section class="calendar-card day-list">
  <h2>{{ $view==='week' ? 'Reservas de la semana' : 'Reservas del día' }} <span class="hist-count">{{ $bookings->count() }} {{ Str::plural('reserva', $bookings->count()) }}</span></h2>
  @forelse ($bookings as $booking)
@@ -113,6 +113,94 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
   <p class="empty">No hay reservas en este período.</p>
  @endforelse
 </section>
+@endif
+@if($view==='day')
+@php
+ $money = fn ($n) => '$'.number_format((int) $n, 0, ',', '.');
+ $agendaRows = $agenda->map(function ($b) {
+  $extras = (int) $b->addons->sum('amount');
+  $paid = (int) $b->payments->where('status', 'aprobado')->sum('amount');
+  $total = (int) $b->price_final + $extras;
+  return ['b' => $b, 'state' => $b->agendaState(), 'extras' => $extras, 'paid' => $paid, 'total' => $total, 'balance' => max(0, $total - $paid)];
+ });
+ $groupsDef = [
+  'todas' => ['Todas', null],
+  'por_llegar' => ['Por llegar', ['por_llegar', 'atrasada']],
+  'en_alojamiento' => ['En alojamiento', ['en_alojamiento']],
+  'finalizada' => ['Finalizadas', ['finalizada']],
+  'pendiente' => ['Pendientes de pago', ['pendiente']],
+  'otras' => ['Canceladas / no llegaron', ['cancelada', 'vencida', 'no_show']],
+ ];
+ $countOf = fn ($keys) => $keys === null ? $agendaRows->count() : $agendaRows->whereIn('state.key', $keys)->count();
+@endphp
+<section class="calendar-card agenda-card sheet-card">
+ <h2>Reservas del día <span class="hist-count">{{ $agendaRows->count() }} {{ Str::plural('reserva', $agendaRows->count()) }} · toca una fila para ver el detalle</span></h2>
+ <div class="agenda-chips">
+  @foreach ($groupsDef as $gk => [$glabel, $gkeys])
+   <button type="button" class="agenda-chip {{ $gk === 'todas' ? 'on' : '' }}" data-filter="{{ $gk }}" data-keys="{{ $gkeys ? implode(',', $gkeys) : '' }}">{{ $glabel }} <b>{{ $countOf($gkeys) }}</b></button>
+  @endforeach
+ </div>
+ <div class="sheet-wrap">
+  <table class="sheet" id="agenda-table">
+   <thead><tr>
+    <th>Entrada</th><th>Salida</th><th>Hab.</th><th>Cliente</th><th>Reserva</th><th>Origen</th><th>Estado</th>
+    <th>Check-in</th><th>Salida real</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th><th></th>
+   </tr></thead>
+   <tbody>
+   @forelse ($agendaRows as $r)
+    @php $b = $r['b']; $k = $r['state']['key']; @endphp
+    <tr data-href="{{ route('reservations.show', $b->code) }}" data-state="{{ $k }}" class="{{ in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'dim' : '' }}">
+     <td><b>{{ $b->starts_at->format('H:i') }}</b>@if(! $b->starts_at->isSameDay($date)) <small>({{ $b->starts_at->locale('es')->isoFormat('ddd D') }})</small>@endif</td>
+     <td>{{ $b->ends_at->format('H:i') }}</td>
+     <td><b>{{ $b->room->name }}</b> <small>{{ $b->room->category->name }}</small></td>
+     <td>{{ $b->customer->name }}</td>
+     <td><a class="code" href="{{ route('reservations.show', $b->code) }}">{{ $b->code }}</a></td>
+     <td><span class="org org-{{ $b->origin ?: 'none' }}">{{ $b->originLabel() }}</span></td>
+     <td><span class="ag ag-{{ $k }}">{{ $r['state']['label'] }}</span></td>
+     <td>{{ $b->checked_in_at ? $b->checked_in_at->timezone('America/Santiago')->format('H:i') : '—' }}</td>
+     <td>{{ $b->checked_out_at ? $b->checked_out_at->timezone('America/Santiago')->format('H:i') : '—' }}</td>
+     <td class="n">{{ $money($r['total']) }}</td>
+     <td class="n">{{ $money($r['paid']) }}</td>
+     <td class="n {{ $r['balance'] > 0 && ! in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'owe' : '' }}">{{ $r['balance'] > 0 ? $money($r['balance']) : '—' }}</td>
+     <td>
+      @if (in_array($k, ['por_llegar', 'atrasada'], true))<a class="ag-act" href="{{ route('bookings.checkin.show', $b->code) }}">Check-in →</a>
+      @elseif ($k === 'en_alojamiento')<a class="ag-act" href="{{ route('bookings.finalize.show', $b->code) }}">Finalizar →</a>
+      @elseif ($k === 'pendiente')<a class="ag-act" href="{{ route('payments.create', ['code' => $b->code]) }}">Cobrar →</a>
+      @endif
+     </td>
+    </tr>
+   @empty
+    <tr class="zero"><td colspan="13">No hay reservas para este día.</td></tr>
+   @endforelse
+   <tr class="zero" id="agenda-empty" style="display:none"><td colspan="13">No hay reservas en este grupo.</td></tr>
+   </tbody>
+  </table>
+ </div>
+</section>
+<style>
+.agenda-chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.agenda-chip{background:#fff;border:1px solid #d1d5db;color:#374151;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
+.agenda-chip b{margin-left:4px;color:#c2410c}
+.agenda-chip.on{background:#111;border-color:#111;color:#fff}.agenda-chip.on b{color:#ffb27a}
+.ag{display:inline-block;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.ag-por_llegar{background:#ffedd5;color:#c2410c}.ag-atrasada{background:#fee2e2;color:#b91c1c}
+.ag-en_alojamiento{background:#dcfce7;color:#15803d}.ag-finalizada{background:#e0e7ff;color:#3730a3}
+.ag-pendiente{background:#fef3c7;color:#92400e}.ag-cancelada,.ag-vencida,.ag-no_show{background:#f3f4f6;color:#6b7280}
+table.sheet tr.dim td{color:#9ca3af}
+a.ag-act{color:#c2410c;font-weight:700;text-decoration:none;white-space:nowrap}
+</style>
+<script>
+document.querySelectorAll('.agenda-chip').forEach(function (chip) {
+ chip.addEventListener('click', function () {
+  document.querySelectorAll('.agenda-chip').forEach(function (c) { c.classList.toggle('on', c === chip); });
+  var keys = chip.dataset.keys ? chip.dataset.keys.split(',') : null, shown = 0;
+  document.querySelectorAll('#agenda-table tbody tr[data-state]').forEach(function (tr) {
+   var ok = !keys || keys.indexOf(tr.dataset.state) !== -1; tr.style.display = ok ? '' : 'none'; if (ok) shown++;
+  });
+  var empty = document.getElementById('agenda-empty'); if (empty) empty.style.display = shown ? 'none' : '';
+ });
+});
+</script>
 @endif
 @if($view!=='history')
 <div class="calendar-split calendar-split-one">

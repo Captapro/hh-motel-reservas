@@ -171,6 +171,26 @@ class Booking extends Model
         return (int) $this->addons()->sum('amount');
     }
 
+    /**
+     * Estado operativo de la reserva para la agenda del día: en qué punto
+     * de la estadía está (no el estado interno de pago).
+     *
+     * @return array{key: string, label: string}
+     */
+    public function agendaState(): array
+    {
+        return match (true) {
+            $this->booking_status === 'CANCELADA' => ['key' => 'cancelada', 'label' => 'Cancelada'],
+            $this->booking_status === 'EXPIRADA' => ['key' => 'vencida', 'label' => 'Vencida (sin pago)'],
+            $this->booking_status === 'NO_SHOW' => ['key' => 'no_show', 'label' => 'No llegó'],
+            $this->booking_status === 'FINALIZADA' => ['key' => 'finalizada', 'label' => 'Finalizada'],
+            $this->booking_status === 'CHECK_IN' => ['key' => 'en_alojamiento', 'label' => 'En alojamiento'],
+            $this->booking_status === 'PENDIENTE_PAGO' => ['key' => 'pendiente', 'label' => 'Pendiente de pago'],
+            $this->starts_at->lt(now()) => ['key' => 'atrasada', 'label' => 'Atrasada · sin check-in'],
+            default => ['key' => 'por_llegar', 'label' => 'Por llegar'],
+        };
+    }
+
     /** Pagos aprobados, usando la relación ya cargada si existe (evita una consulta por fila). */
     private function approvedPaidFast(): int
     {
