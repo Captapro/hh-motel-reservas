@@ -286,6 +286,8 @@
         .chips .chip-actions { display:flex; }
         .chip-actions a { flex:1 1 auto; text-align:center; text-decoration:none; background:#262626; border:1px solid #3a3a3a; color:#ddd; border-radius:6px; padding:5px 4px; font-size:10.5px; font-weight:600; white-space:nowrap; }
         .chip-actions a:hover { border-color:#ff7918; color:#fff; }
+        .chip-actions a.has { border-color:#e8c76f; color:#e8c76f; }
+        .chip-actions a.none { color:#888; }
         .chip-actions a.plus { background:#ff7918; border-color:#ff7918; color:#111; }
             #pass-scans:empty { display:none; }
         #pass-scans { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }

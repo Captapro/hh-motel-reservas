@@ -81,7 +81,7 @@
     @if ($room->operational_status === 'activa' && $status['occupancy'] === 'ocupada' && $status['current_booking'])
         {{-- Solo se ve en la vista comprimida (chips): atajos sin entrar a la tarjeta completa. --}}
         <div class="chip-actions">
-            <a href="{{ route('rooms.bookings', $room) }}" title="Historial de reservas de {{ $room->name }}">🕘 Historial</a>
+            <a href="{{ route('rooms.bookings', $room) }}" class="{{ $status['upcoming_count'] > 0 ? 'has' : 'none' }}" title="Reservas futuras de {{ $room->name }}">📅 {{ $status['upcoming_count'] > 0 ? 'Próximas · '.$status['upcoming_count'] : 'Sin próximas' }}</a>
             <a href="{{ route('reservations.show', $status['current_booking']->code) }}#consumo" class="plus" title="Agregar consumo a {{ $room->name }}">+ Consumo</a>
         </div>
     @endif
