@@ -6,13 +6,21 @@
            1500px pegada a la izquierda, dejando un hueco enorme en
            monitores anchos). auto-fit reparte 2, 3 o más columnas según
            el espacio real en vez de un 50%/50% fijo. */
-        .wrap { max-width:1900px !important; margin:0 auto !important; display:grid; grid-template-columns:repeat(auto-fit, minmax(440px, 1fr)); gap:16px; align-items:start; }
-        .wrap > h1, .wrap > .sub, .wrap > .errors { grid-column:1 / -1; }
-        .wrap > .card { margin-bottom:0; }
-        .wrap > .card:nth-of-type(odd) { border-top:3px solid #ff7918; }
-        .wrap > .card:nth-of-type(even) { border-top:3px solid #6fd39a; }
-        .wrap > .flt, .wrap > .proj, .wrap > .kpis { grid-column:1 / -1; }
-        @media(max-width:850px){ .wrap { grid-template-columns:1fr; } }
+        .wrap { max-width:1700px !important; margin:0 auto !important; }
+        .wrap > .flt, .wrap > .proj, .wrap > .kpis { grid-column:auto; }
+        /* Secciones con título y tarjetas parejas: se lee de arriba hacia abajo (cuándo, qué, cómo se cobra). */
+        .an-title { display:flex; align-items:center; gap:12px; margin:26px 0 12px; font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#9a9a9a; }
+        .an-title::after { content:''; flex:1; height:1px; background:#2a2a2a; }
+        .an-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; align-items:stretch; }
+        .an-grid > .card { margin:0; height:100%; }
+        .an-grid > .card.t-orange { border-top:3px solid #ff7918; }
+        .an-grid > .card.t-green { border-top:3px solid #6fd39a; }
+        .an-grid > .card.t-blue { border-top:3px solid #5b9dd9; }
+        .an-grid > .card.span2 { grid-column: span 2; }
+        @media (max-width:1150px) { .an-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } .an-grid > .card.span2 { grid-column:1 / -1; } }
+        @media (max-width:760px) { .an-grid { grid-template-columns:1fr; } }
+        .kpis.kpis-all { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+        @media (max-width:900px) { .kpis.kpis-all { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
         .flt { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:14px 16px; margin-bottom:18px; }
         .flt-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
         .flt-row:last-child { margin-bottom:0; }
@@ -150,7 +158,7 @@
         </div>
     </form>
 
-    <div class="kpis">
+    <div class="kpis kpis-all">
         @foreach (['reservas' => 'Reservas', 'venta' => 'Venta total', 'ticket' => 'Ticket promedio', 'descuentos' => 'Descuentos dados'] as $k => $lbl)
             @php $kp = $kpis[$k]; @endphp
             <div class="kpi">
@@ -165,6 +173,10 @@
                 </div>
             </div>
         @endforeach
+        @foreach (['collected' => 'Cobrado', 'balance' => 'Saldo pendiente', 'addons' => 'Venta de extras'] as $key => $label)
+            <div class="kpi"><div class="k-label">{{ $label }}</div><div class="k-value">{{ $money($operations[$key]) }}</div><div class="k-delta flat">Periodo seleccionado</div></div>
+        @endforeach
+        <div class="kpi"><div class="k-label">Clientes por recurrencia</div><div class="k-value">{{ $segments['frecuente'] }}</div><div class="k-delta flat">Alta recurrencia</div></div>
     </div>
 
     <div class="proj">
@@ -177,96 +189,9 @@
         <p class="hint">Ritmo actual: {{ $money((int) round($projection['so_far'] / $projection['days_elapsed'])) }}/día · día {{ $projection['days_elapsed'] }} de {{ $projection['days_in_month'] }}.</p>
     </div>
 
-    <div class="kpis">
-        @foreach (['collected' => 'Cobrado', 'balance' => 'Saldo pendiente', 'addons' => 'Venta de extras'] as $key => $label)
-            <div class="kpi"><div class="k-label">{{ $label }}</div><div class="k-value">{{ $money($operations[$key]) }}</div><div class="k-delta flat">Periodo seleccionado</div></div>
-        @endforeach
-        <div class="kpi"><div class="k-label">Clientes por recurrencia</div><div class="k-value">{{ $segments['frecuente'] }}</div><div class="k-delta flat">Alta recurrencia</div></div>
-    </div>
-
-    <div class="card">
-        <h3>Estado de las reservas</h3>
-        @foreach ($bookingStatuses as $status => $count)<div class="bar-row"><div class="name">{{ str_replace('_',' ', $status) }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ $kpis['reservas']['value'] ? round($count/$kpis['reservas']['value']*100) : 0 }}%"></div></div><div class="val">{{ $count }}</div></div>@endforeach
-    </div>
-
-    <div class="card">
-        <h3>Medios de pago cobrados</h3>
-        @forelse ($paymentMethods as $method => $amount)<div class="bar-row"><div class="name">{{ $method }}</div><div class="bar-track"><div class="bar-fill alt" style="width:{{ $paymentMethods->max() ? round($amount/$paymentMethods->max()*100) : 0 }}%"></div></div><div class="val">{{ $money($amount) }}</div></div>@empty<p class="empty">Sin pagos aprobados en el rango.</p>@endforelse
-    </div>
-
-    <div class="card">
-        <h3>Extras vendidos</h3>
-        @forelse ($extras as $description => $extra)
-            <div class="bar-row"><div class="name">{{ $description }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ $extras->max('value') ? round($extra['value']/$extras->max('value')*100) : 0 }}%"></div></div><div class="val">{{ $money($extra['value']) }} <small>· {{ $extra['quantity'] }} u.</small></div></div>
-        @empty
-            <p class="empty">Sin extras vendidos en el periodo.</p>
-        @endforelse
-    </div>
-
-    <div class="card">
-        <h3>Por mes — últimos 12 ({{ $metricLabel }})</h3>
-        @if ($monthly['rows']->isNotEmpty())
-            @php
-                $mW = 720; $mH = 200; $mPadL = 46; $mPadR = 10; $mPadT = 14; $mPadB = 24;
-                $mPlotW = $mW - $mPadL - $mPadR; $mPlotH = $mH - $mPadT - $mPadB;
-                $monthlyArr = $monthly['rows']->values();
-                $mCount = max(1, $monthlyArr->count() - 1);
-                $mAxisMax = max(1, $monthly['max'] * 1.15);
-                $mX = fn ($i) => $mPadL + ($i / $mCount) * $mPlotW;
-                $mY = fn ($v) => $mPadT + $mPlotH - ($v / $mAxisMax) * $mPlotH;
-                $mColWidth = $mPlotW / max(1, $monthlyArr->count());
-                $mPoints = $monthlyArr->map(fn ($row, $i) => ['x' => $mX($i), 'y' => $mY($row['value']), 'row' => $row]);
-                $mLinePath = $mPoints->map(fn ($p, $i) => ($i === 0 ? 'M' : 'L').round($p['x'], 1).','.round($p['y'], 1))->implode(' ');
-                $mAreaPath = $mLinePath.' L'.round($mPoints->last()['x'], 1).','.($mPadT + $mPlotH).' L'.round($mPoints->first()['x'], 1).','.($mPadT + $mPlotH).' Z';
-                $mTicks = collect([1, 0.66, 0.33, 0])->map(fn ($f) => ['v' => $mAxisMax * $f, 'y' => $mPadT + $mPlotH - $f * $mPlotH]);
-            @endphp
-            <div class="svg-chart-wrap">
-                <svg viewBox="0 0 {{ $mW }} {{ $mH }}" preserveAspectRatio="none" role="img" aria-label="Evolución mensual de {{ $metricLabel }}">
-                    <g class="chart-grid">
-                        @foreach ($mTicks as $tick)
-                            <line x1="{{ $mPadL }}" y1="{{ $tick['y'] }}" x2="{{ $mW - $mPadR }}" y2="{{ $tick['y'] }}" />
-                            <text class="chart-axis-label" x="{{ $mPadL - 6 }}" y="{{ $tick['y'] + 3 }}" text-anchor="end">{{ $metricVal((int) $tick['v']) }}</text>
-                        @endforeach
-                    </g>
-                    <path class="chart-area" d="{{ $mAreaPath }}" fill="#ff7918"></path>
-                    <path class="chart-line" d="{{ $mLinePath }}" stroke="#ff7918"></path>
-                    <line class="chart-crosshair" x1="0" y1="{{ $mPadT }}" x2="0" y2="{{ $mPadT + $mPlotH }}"></line>
-                    @foreach ($mPoints as $i => $p)
-                        <circle class="chart-point" cx="{{ $p['x'] }}" cy="{{ $p['y'] }}" r="3.2" stroke="#ff7918"></circle>
-                        <text class="chart-xlabel" x="{{ $p['x'] }}" y="{{ $mH - 6 }}">{{ explode(' ', $p['row']['label'])[0] }}</text>
-                        <rect class="chart-hit" tabindex="0"
-                              data-title="{{ $p['row']['label'] }}"
-                              data-rows="{{ $metricLabel }}:{{ $metricVal($p['row']['value']) }}|Reservas:{{ $p['row']['count'] }}{{ $p['row']['delta_pct'] !== null ? '|vs mes anterior:'.($p['row']['delta_pct'] > 0 ? '+' : '').$p['row']['delta_pct'].'%' : '' }}"
-                              data-cx="{{ round($p['x'] / $mW * 100, 2) }}" data-cy="{{ round($p['y'] / $mH * 100, 2) }}" data-crosshair-x="{{ round($p['x'], 1) }}"
-                              x="{{ round($p['x'] - $mColWidth / 2, 1) }}" y="{{ $mPadT }}" width="{{ round($mColWidth, 1) }}" height="{{ $mPlotH }}"></rect>
-                    @endforeach
-                </svg>
-                <div class="chart-tooltip"></div>
-            </div>
-            <details class="chart-detail">
-                <summary>Ver detalle mes a mes</summary>
-                <table class="chart-table">
-                    @foreach ($monthlyArr as $m)
-                        <tr>
-                            <td>{{ $m['label'] }} <span style="color:#555;">· {{ $m['count'] }} {{ Str::plural('reserva', $m['count']) }}</span></td>
-                            <td class="v">{{ $metricVal($m['value']) }}</td>
-                            <td class="v" style="width:70px; color:{{ $m['delta_pct'] === null ? '#777' : ($m['delta_pct'] > 0 ? '#6fd39a' : ($m['delta_pct'] < 0 ? '#e88a9a' : '#777')) }};">
-                                @if ($m['delta_pct'] === null) —
-                                @elseif ($m['delta_pct'] > 0) ▲{{ $m['delta_pct'] }}%
-                                @elseif ($m['delta_pct'] < 0) ▼{{ abs($m['delta_pct']) }}%
-                                @else 0%
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </table>
-            </details>
-        @else
-            <p class="empty">Sin datos.</p>
-        @endif
-    </div>
-
-    <div class="card">
+    <h2 class="an-title">Cuándo se vende</h2>
+    <div class="an-grid">
+    <div class="card t-orange">
         <h3>Días de la semana ({{ $metricLabel }})</h3>
         @php
             $maxWd = max(1, $byWeekday->max(fn ($e) => max($e['value'], $e['prev'])));
@@ -332,21 +257,7 @@
         </details>
     </div>
 
-    <div class="card">
-        <h3>Mejores días del rango ({{ $metricLabel }})</h3>
-        @php $maxTd = max(1, $topDays->max('value')); @endphp
-        @forelse ($topDays as $d)
-            <div class="bar-row">
-                <div class="name">{{ ucfirst($d['date']->locale('es')->isoFormat('ddd D/MM')) }}</div>
-                <div class="bar-track"><div class="bar-fill alt" style="width: {{ round($d['value'] / $maxTd * 100) }}%;"></div></div>
-                <div class="val">{{ $metricVal($d['value']) }} <small>· {{ $d['count'] }}r</small></div>
-            </div>
-        @empty
-            <p class="empty">Sin reservas en el rango.</p>
-        @endforelse
-    </div>
-
-    <div class="card">
+    <div class="card t-orange">
         <h3>Ventas por hora de inicio ({{ $metricLabel }})</h3>
         @php $maxH = max(1, $byHour->max('value')); @endphp
         @if ($byHour->sum('value') > 0)
@@ -364,7 +275,24 @@
         @endif
     </div>
 
-    <div class="card">
+    <div class="card t-orange">
+        <h3>Mejores días del rango ({{ $metricLabel }})</h3>
+        @php $maxTd = max(1, $topDays->max('value')); @endphp
+        @forelse ($topDays as $d)
+            <div class="bar-row">
+                <div class="name">{{ ucfirst($d['date']->locale('es')->isoFormat('ddd D/MM')) }}</div>
+                <div class="bar-track"><div class="bar-fill alt" style="width: {{ round($d['value'] / $maxTd * 100) }}%;"></div></div>
+                <div class="val">{{ $metricVal($d['value']) }} <small>· {{ $d['count'] }}r</small></div>
+            </div>
+        @empty
+            <p class="empty">Sin reservas en el rango.</p>
+        @endforelse
+    </div>
+    </div>
+
+    <h2 class="an-title">Qué se vende</h2>
+    <div class="an-grid">
+    <div class="card t-green">
         <h3>Playrooms ({{ $metricLabel }})</h3>
         @php $maxR = max(1, $byRoom->max('value')); @endphp
         @forelse ($byRoom as $e)
@@ -379,6 +307,92 @@
         @empty
             <p class="empty">Sin reservas en el rango.</p>
         @endforelse
+    </div>
+
+    <div class="card t-green">
+        <h3>Extras vendidos</h3>
+        @forelse ($extras as $description => $extra)
+            <div class="bar-row"><div class="name">{{ $description }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ $extras->max('value') ? round($extra['value']/$extras->max('value')*100) : 0 }}%"></div></div><div class="val">{{ $money($extra['value']) }} <small>· {{ $extra['quantity'] }} u.</small></div></div>
+        @empty
+            <p class="empty">Sin extras vendidos en el periodo.</p>
+        @endforelse
+    </div>
+
+    <div class="card t-green">
+        <h3>Estado de las reservas</h3>
+        @foreach ($bookingStatuses as $status => $count)<div class="bar-row"><div class="name">{{ str_replace('_',' ', $status) }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ $kpis['reservas']['value'] ? round($count/$kpis['reservas']['value']*100) : 0 }}%"></div></div><div class="val">{{ $count }}</div></div>@endforeach
+    </div>
+    </div>
+
+    <h2 class="an-title">Cobros y evolución</h2>
+    <div class="an-grid">
+    <div class="card t-blue">
+        <h3>Medios de pago cobrados</h3>
+        @forelse ($paymentMethods as $method => $amount)<div class="bar-row"><div class="name">{{ $method }}</div><div class="bar-track"><div class="bar-fill alt" style="width:{{ $paymentMethods->max() ? round($amount/$paymentMethods->max()*100) : 0 }}%"></div></div><div class="val">{{ $money($amount) }}</div></div>@empty<p class="empty">Sin pagos aprobados en el rango.</p>@endforelse
+    </div>
+
+    <div class="card t-blue span2">
+        <h3>Por mes — últimos 12 ({{ $metricLabel }})</h3>
+        @if ($monthly['rows']->isNotEmpty())
+            @php
+                $mW = 720; $mH = 200; $mPadL = 46; $mPadR = 10; $mPadT = 14; $mPadB = 24;
+                $mPlotW = $mW - $mPadL - $mPadR; $mPlotH = $mH - $mPadT - $mPadB;
+                $monthlyArr = $monthly['rows']->values();
+                $mCount = max(1, $monthlyArr->count() - 1);
+                $mAxisMax = max(1, $monthly['max'] * 1.15);
+                $mX = fn ($i) => $mPadL + ($i / $mCount) * $mPlotW;
+                $mY = fn ($v) => $mPadT + $mPlotH - ($v / $mAxisMax) * $mPlotH;
+                $mColWidth = $mPlotW / max(1, $monthlyArr->count());
+                $mPoints = $monthlyArr->map(fn ($row, $i) => ['x' => $mX($i), 'y' => $mY($row['value']), 'row' => $row]);
+                $mLinePath = $mPoints->map(fn ($p, $i) => ($i === 0 ? 'M' : 'L').round($p['x'], 1).','.round($p['y'], 1))->implode(' ');
+                $mAreaPath = $mLinePath.' L'.round($mPoints->last()['x'], 1).','.($mPadT + $mPlotH).' L'.round($mPoints->first()['x'], 1).','.($mPadT + $mPlotH).' Z';
+                $mTicks = collect([1, 0.66, 0.33, 0])->map(fn ($f) => ['v' => $mAxisMax * $f, 'y' => $mPadT + $mPlotH - $f * $mPlotH]);
+            @endphp
+            <div class="svg-chart-wrap">
+                <svg viewBox="0 0 {{ $mW }} {{ $mH }}" preserveAspectRatio="none" role="img" aria-label="Evolución mensual de {{ $metricLabel }}">
+                    <g class="chart-grid">
+                        @foreach ($mTicks as $tick)
+                            <line x1="{{ $mPadL }}" y1="{{ $tick['y'] }}" x2="{{ $mW - $mPadR }}" y2="{{ $tick['y'] }}" />
+                            <text class="chart-axis-label" x="{{ $mPadL - 6 }}" y="{{ $tick['y'] + 3 }}" text-anchor="end">{{ $metricVal((int) $tick['v']) }}</text>
+                        @endforeach
+                    </g>
+                    <path class="chart-area" d="{{ $mAreaPath }}" fill="#ff7918"></path>
+                    <path class="chart-line" d="{{ $mLinePath }}" stroke="#ff7918"></path>
+                    <line class="chart-crosshair" x1="0" y1="{{ $mPadT }}" x2="0" y2="{{ $mPadT + $mPlotH }}"></line>
+                    @foreach ($mPoints as $i => $p)
+                        <circle class="chart-point" cx="{{ $p['x'] }}" cy="{{ $p['y'] }}" r="3.2" stroke="#ff7918"></circle>
+                        <text class="chart-xlabel" x="{{ $p['x'] }}" y="{{ $mH - 6 }}">{{ explode(' ', $p['row']['label'])[0] }}</text>
+                        <rect class="chart-hit" tabindex="0"
+                              data-title="{{ $p['row']['label'] }}"
+                              data-rows="{{ $metricLabel }}:{{ $metricVal($p['row']['value']) }}|Reservas:{{ $p['row']['count'] }}{{ $p['row']['delta_pct'] !== null ? '|vs mes anterior:'.($p['row']['delta_pct'] > 0 ? '+' : '').$p['row']['delta_pct'].'%' : '' }}"
+                              data-cx="{{ round($p['x'] / $mW * 100, 2) }}" data-cy="{{ round($p['y'] / $mH * 100, 2) }}" data-crosshair-x="{{ round($p['x'], 1) }}"
+                              x="{{ round($p['x'] - $mColWidth / 2, 1) }}" y="{{ $mPadT }}" width="{{ round($mColWidth, 1) }}" height="{{ $mPlotH }}"></rect>
+                    @endforeach
+                </svg>
+                <div class="chart-tooltip"></div>
+            </div>
+            <details class="chart-detail">
+                <summary>Ver detalle mes a mes</summary>
+                <table class="chart-table">
+                    @foreach ($monthlyArr as $m)
+                        <tr>
+                            <td>{{ $m['label'] }} <span style="color:#555;">· {{ $m['count'] }} {{ Str::plural('reserva', $m['count']) }}</span></td>
+                            <td class="v">{{ $metricVal($m['value']) }}</td>
+                            <td class="v" style="width:70px; color:{{ $m['delta_pct'] === null ? '#777' : ($m['delta_pct'] > 0 ? '#6fd39a' : ($m['delta_pct'] < 0 ? '#e88a9a' : '#777')) }};">
+                                @if ($m['delta_pct'] === null) —
+                                @elseif ($m['delta_pct'] > 0) ▲{{ $m['delta_pct'] }}%
+                                @elseif ($m['delta_pct'] < 0) ▼{{ abs($m['delta_pct']) }}%
+                                @else 0%
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </table>
+            </details>
+        @else
+            <p class="empty">Sin datos.</p>
+        @endif
+    </div>
     </div>
 
     <script>
