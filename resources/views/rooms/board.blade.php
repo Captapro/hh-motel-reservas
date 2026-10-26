@@ -127,7 +127,17 @@
         .sidebar { position:sticky; top:20px; align-self:start; border:1px solid #dddfe1; border-radius:18px; background:#fff; padding:14px 14px 4px; }
         .sidebar .sidebar-title h2 { color:#8a5a00; }
         .sidebar .sidebar-hint { color:#6b6b6b; }
-        .sidebar .proxima-card { max-width:none; }
+        .sidebar .proxima-card { max-width:none; background:#fff1e3 !important; border:1px solid #f5b98a !important; border-left-width:4px !important; box-shadow:none; }
+        .sidebar .proxima-card.cat-go { border-left-color:#5b9dd9 !important; }
+        .sidebar .proxima-card.cat-lite { border-left-color:#2fb3aa !important; }
+        .sidebar .proxima-card.cat-plus { border-left-color:#9b6fe0 !important; }
+        .sidebar .proxima-card.cat-max { border-left-color:#f2994a !important; }
+        .sidebar .proxima-card.cat-new-lite { border-left-color:#d4a72c !important; }
+        .sidebar .proxima-card .card-head b { color:#1a1a1a; }
+        .sidebar .proxima-card .cat { color:#7a6a58; }
+        .sidebar .proxima-card .guest { color:#2a2a2a; }
+        .sidebar .proxima-card .when { color:#b4540a; }
+        .sidebar .proxima-card:hover { box-shadow:0 6px 18px rgba(255,121,24,.22); }
         .sidebar-title { display:flex; align-items:baseline; gap:8px; margin-bottom:12px; }
         .sidebar-title h2 { font-size: 13px; margin:0; text-transform:uppercase; letter-spacing:.05em; color:#e8c76f; }
         .sidebar-title .count { font-family: ui-monospace, monospace; font-size: 12px; color:#777; }
