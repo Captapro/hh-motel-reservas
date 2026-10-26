@@ -31,6 +31,14 @@
         label { display:block; font-size: 12.5px; color:#c1c3c7; margin: 16px 0 6px; }
         input, select { width:100%; box-sizing:border-box; background:#202123; border:1px solid #62656b; color:#f4f5f7; padding:11px 12px; border-radius:8px; font-size:15px; min-height:46px; }
         input[type="date"], input[type="time"] { color-scheme: dark; }
+        .time-stepper { display:grid; grid-template-columns:52px 52px 1fr 52px 52px; gap:6px; align-items:stretch; }
+        .time-stepper button { min-height:52px; border-radius:10px; border:1px solid #4a4d53; background:#26272a; color:#f4f5f7; font-size:14px; font-weight:700; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+        .time-stepper button:active:not(:disabled) { background:#ff7918; border-color:#ff7918; color:#21170e; }
+        .time-stepper button:disabled { opacity:.3; cursor:not-allowed; }
+        .time-stepper output { display:flex; align-items:center; justify-content:center; border-radius:10px; border:1px solid #62656b; background:#202123; font-size:26px; font-weight:800; letter-spacing:.02em; color:#f4f5f7; font-variant-numeric:tabular-nums; }
+        .time-stepper output.set { border-color:#ff7918; color:#ff7918; }
+        .time-range { font-size:12px; color:#8a8d93; margin-top:6px; min-height:16px; }
+        .time-range.err { color:#f3b8b8; }
         .time-parts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
         input:focus, select:focus { outline:none; border-color:var(--hh-accent); box-shadow: 0 0 0 3px #ff791833; }
         .row2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
@@ -125,7 +133,15 @@
                 </div>
                 <div>
                     <label for="time">Hora</label>
-                    <select id="time-select" aria-label="Hora de llegada" required><option value="">Elige la hora</option></select>
+                    <div class="time-stepper" id="time-stepper" role="group" aria-label="Hora de llegada">
+                        <button type="button" data-d="-60" aria-label="Una hora antes">−1 h</button>
+                        <button type="button" data-d="-15" aria-label="Quince minutos antes">−15</button>
+                        <output id="time-display" aria-live="polite">--:--</output>
+                        <button type="button" data-d="15" aria-label="Quince minutos después">+15</button>
+                        <button type="button" data-d="60" aria-label="Una hora después">+1 h</button>
+                    </div>
+                    <div class="time-range" id="time-range"></div>
+                    <input type="hidden" id="time-select" value="">
                     <input type="hidden" id="time" value="">
                     <input type="hidden" name="time_hour" id="time_hour" value="{{ old('time_hour') }}">
                     <input type="hidden" name="time_minute" id="time_minute" value="{{ old('time_minute') }}">
@@ -231,40 +247,70 @@
             }
             hhBuildTimes();
         }
+        let hhTimeList = [];
+        const hhToMin = (v) => { const p = v.split(':').map(Number); return p[0] * 60 + p[1]; };
+        const hhFromMin = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
         function hhBuildTimes() {
-            const select = document.getElementById('time-select');
-            if (!select) return;
-            const keep = select.value;
+            const input = document.getElementById('time-select');
+            if (!input) return;
             const dateValue = document.getElementById('date').value;
             const now = new Date();
             const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-            const isToday = dateValue === todayIso;
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
             const all = [];
-            for (let t = 0; t < 24 * 60; t += 15) all.push(String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'));
-            const times = (hhAllowedTimes || all).filter(function (v) {
-                if (!isToday) return true;
-                const parts = v.split(':').map(Number);
-                return (parts[0] * 60 + parts[1]) >= nowMinutes - 5;
-            });
-            const groups = [['Día', 6, 18], ['Noche', 18, 24], ['Madrugada', 0, 6]];
-            select.innerHTML = '<option value="">' + (hhAllowedTimes && !times.length ? 'Sin horarios para esta fecha' : 'Elige la hora') + '</option>';
-            groups.forEach(function (g) {
-                const inGroup = times.filter(function (v) { const h = parseInt(v, 10); return h >= g[1] && h < g[2]; });
-                if (!inGroup.length) return;
-                const og = document.createElement('optgroup');
-                og.label = g[0] + ' · ' + inGroup[0] + ' a ' + inGroup[inGroup.length - 1];
-                inGroup.forEach(function (v) {
-                    const o = document.createElement('option');
-                    o.value = v;
-                    o.textContent = v;
-                    og.appendChild(o);
-                });
-                select.appendChild(og);
-            });
-            if (keep && select.querySelector('option[value="' + keep + '"]')) select.value = keep;
-            else if (keep) { document.getElementById('time_hour').value = ''; document.getElementById('time_minute').value = ''; hhUpdateSummary(); hhCheckAvailability(); }
+            for (let t = 0; t < 24 * 60; t += 15) all.push(hhFromMin(t));
+            hhTimeList = (hhAllowedTimes || all).filter((v) => dateValue !== todayIso || hhToMin(v) >= nowMinutes - 5);
+            const range = document.getElementById('time-range');
+            range.classList.remove('err');
+            if (hhAllowedTimes && !hhTimeList.length) range.textContent = 'Sin horarios disponibles para esta fecha.';
+            else if (hhTimeList.length) range.textContent = 'Horarios disponibles: ' + hhTimeList[0] + ' a ' + hhTimeList[hhTimeList.length - 1] + ' · avanza de a 15 minutos o 1 hora';
+            else range.textContent = '';
+            // Si la hora que estaba elegida ya no se ofrece, se limpia.
+            if (input.value && !hhTimeList.includes(input.value)) {
+                hhSetTime('', false);
+                document.getElementById('time_hour').value = '';
+                document.getElementById('time_minute').value = '';
+                hhUpdateSummary(); hhCheckAvailability();
+            } else {
+                hhPaintTime();
+            }
         }
+        function hhPaintTime() {
+            const value = document.getElementById('time-select').value;
+            const out = document.getElementById('time-display');
+            out.textContent = value || '--:--';
+            out.classList.toggle('set', !!value);
+            const idx = hhTimeList.indexOf(value);
+            document.querySelectorAll('#time-stepper button').forEach(function (b) {
+                const d = Number(b.dataset.d);
+                if (!hhTimeList.length) { b.disabled = true; return; }
+                if (!value) { b.disabled = false; return; }
+                b.disabled = d < 0 ? idx <= 0 : idx >= hhTimeList.length - 1;
+            });
+        }
+        function hhSetTime(value, notify) {
+            document.getElementById('time-select').value = value;
+            hhPaintTime();
+            if (notify) document.getElementById('time-select').dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        function hhStepTime(delta) {
+            if (!hhTimeList.length) return;
+            const current = document.getElementById('time-select').value;
+            let target;
+            if (!current) {
+                // Primera vez: se parte de la primera hora del día (desde las 10:00), no de la madrugada.
+                target = delta > 0 ? (hhTimeList.find((v) => hhToMin(v) >= 600) || hhTimeList[0]) : hhTimeList[hhTimeList.length - 1];
+            } else {
+                const want = hhToMin(current) + delta;
+                target = delta > 0
+                    ? (hhTimeList.find((v) => hhToMin(v) >= want) || hhTimeList[hhTimeList.length - 1])
+                    : ([...hhTimeList].reverse().find((v) => hhToMin(v) <= want) || hhTimeList[0]);
+            }
+            hhSetTime(target, true);
+        }
+        document.querySelectorAll('#time-stepper button').forEach(function (b) {
+            b.addEventListener('click', function () { hhStepTime(Number(b.dataset.d)); });
+        });
 
         function hhSyncTime() {
             const value = document.getElementById('time-select').value;
@@ -359,6 +405,15 @@
         }
 
         document.getElementById('reserve-form').addEventListener('submit', hhSyncTime);
+        document.getElementById('reserve-form').addEventListener('submit', function (e) {
+            if (!document.getElementById('time-select').value) {
+                e.preventDefault();
+                const range = document.getElementById('time-range');
+                range.textContent = 'Elige la hora de llegada.';
+                range.classList.add('err');
+                document.getElementById('time-stepper').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
         // Un solo envío: sin esto, un doble toque creaba dos reservas en dos habitaciones.
         (function () {
             const form = document.getElementById('reserve-form');
@@ -377,15 +432,14 @@
         })();
         ['room_category_id','date','time-select','duration_minutes'].forEach(id => document.getElementById(id).addEventListener('change', () => { hhSyncTime(); hhUpdateSummary(); hhCheckCouponWindow(); hhCheckAvailability(); }));
         hhBuildTimes();
-        // Si el formulario vuelve con una hora ya elegida (por un error al enviar), se deja seleccionada.
+        // Si el formulario vuelve con una hora ya elegida (por un error al enviar), se deja puesta.
         (function () {
             const oh = document.getElementById('time_hour').value;
             if (oh !== '') {
-                const v = String(parseInt(oh, 10)).padStart(2, '0') + ':' + String(parseInt(document.getElementById('time_minute').value || '0', 10)).padStart(2, '0');
-                const sel = document.getElementById('time-select');
-                if (sel.querySelector('option[value="' + v + '"]')) sel.value = v;
+                document.getElementById('time-select').value = String(parseInt(oh, 10)).padStart(2, '0') + ':' + String(parseInt(document.getElementById('time_minute').value || '0', 10)).padStart(2, '0');
             }
         })();
+        hhBuildTimes();
         hhLoadTimes();
         document.getElementById('date').addEventListener('change', hhLoadTimes);
         document.getElementById('room_category_id').addEventListener('change', hhLoadTimes);
