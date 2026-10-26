@@ -32,6 +32,12 @@
         label { display:block; font-size: 12.5px; color:#c1c3c7; margin: 16px 0 6px; }
         input, select { width:100%; box-sizing:border-box; background:#202123; border:1px solid #62656b; color:#f4f5f7; padding:11px 12px; border-radius:8px; font-size:15px; min-height:46px; }
         input[type="date"], input[type="time"] { color-scheme: dark; }
+        /* En iOS/Safari los campos de fecha y hora tienen un ancho propio y se
+           salían del rectángulo: se les quita el estilo nativo para que
+           respeten el 100% del contenedor (el selector de fecha/hora del
+           teléfono se abre igual al tocarlos). */
+        input[type="date"], input[type="time"] { -webkit-appearance:none; appearance:none; display:block; width:100%; max-width:100%; min-width:0; margin:0; }
+        .card, .card form, .card label, .card > * { min-width:0; }
         .people-stepper { display:grid; grid-template-columns:60px 1fr 60px; gap:8px; align-items:stretch; }
         .people-stepper button { min-height:54px; border-radius:12px; border:1px solid #4a4d53; background:#26272a; color:#f4f5f7; font-size:28px; font-weight:700; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
         .people-stepper button:active:not(:disabled) { background:#ff7918; border-color:#ff7918; color:#21170e; }
@@ -44,14 +50,14 @@
         .time-range.err { color:#f3b8b8; }
         .time-parts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
         input:focus, select:focus { outline:none; border-color:var(--hh-accent); box-shadow: 0 0 0 3px #ff791833; }
-        .row2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+        .row2 { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:12px; }
         /* Fecha + Hora compartiendo fila deja los 3 selectores de hora con
            tan poco ancho en el celular que el texto ("AM/PM") se corta
            ("AI") -- se apilan uno debajo del otro para que la hora tenga
            todo el ancho de la tarjeta. Tiene que ir DESPUÉS de ".row2" acá
            arriba -- misma especificidad, así que gana el que aparece último. */
         @media (max-width: 640px) {
-            .row2-datetime { grid-template-columns: 1fr; }
+            .row2-datetime { grid-template-columns: minmax(0,1fr); }
         }
         .honey-field { position:absolute; left:-9999px; top:-9999px; }
         button.submit { position:sticky; bottom:calc(10px + var(--safe-b)); z-index:30; box-shadow:0 10px 28px rgba(0,0,0,.45); min-height:56px; width:100%; margin-top:26px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:15px; font-weight:750; cursor:pointer; }
