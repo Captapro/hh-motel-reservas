@@ -7,7 +7,7 @@
            la tabla, que sí aprovechan bien una columna más ancha. */
         .wrap { max-width: 1400px !important; }
         .opiniones-grid { display:grid; grid-template-columns: 1.6fr 1fr; gap:16px; align-items:start; }
-        @media (max-width: 900px) { .opiniones-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .opiniones-grid { grid-template-columns: minmax(0, 1fr); } }
     </style>
 
     <div class="actions" style="justify-content:space-between; margin-bottom:18px;">

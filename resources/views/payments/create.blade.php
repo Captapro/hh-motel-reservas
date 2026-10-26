@@ -24,6 +24,7 @@
         .page-inner { max-width: 1250px; padding-top:16px; padding-bottom:20px; }
         .hh-payment-page .hh-payment-layout { grid-template-columns: minmax(280px,.7fr) minmax(0,1.3fr); gap:18px; }
         .hh-payment-page .hh-payment-layout > .card { padding:18px 22px 20px; }
+        @media (max-width: 850px) { .hh-payment-page .hh-payment-layout { grid-template-columns: minmax(0, 1fr); } }
         .hh-payment-layout h2 { margin:0 0 12px; }
         .hh-payment-summary .row { padding:9px 0; gap:14px; border-top:1px solid #292929; }
         .hh-payment-summary .row:first-of-type { border-top:none; }
@@ -38,7 +39,7 @@
         .chip.active { background:#ff7918; border-color:#ff7918; color:#111; }
         .chip-error { margin-top:8px; color:#f3b8b8; font-size:13px; }
         .pay-grid { display:grid; grid-template-columns: 1fr 1fr; gap:0 16px; align-items:start; }
-        @media (max-width: 700px) { .pay-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 700px) { .pay-grid { grid-template-columns: minmax(0, 1fr); } }
         .pay-actions { display:flex; align-items:center; gap:18px; margin-top:20px; flex-wrap:wrap; }
         .pay-actions button.primary { width:auto; min-width:280px; margin:0; padding:13px 28px; }
         a.skip-inline { color:#bbb; font-size:14px; text-decoration:none; font-weight:600; }

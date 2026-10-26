@@ -103,7 +103,7 @@
         .hint-box { padding:8px 12px; margin-bottom:12px; }
         .ci-grid.express { grid-template-columns: minmax(0, 560px); }
         .express-sum .existing-row { display:flex; justify-content:space-between; gap:14px; padding:5px 0; font-size:14px; }
-        @media (max-width: 860px) { .ci-grid { grid-template-columns: 1fr; }  .offer-block { column-count:1; } }
+        @media (max-width: 860px) { .ci-grid { grid-template-columns: minmax(0, 1fr); }  .offer-block { column-count:1; } }
     </style>
 </head>
 <body>

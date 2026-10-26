@@ -42,7 +42,7 @@
         .cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
         .cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
         @media (max-width:1200px) { .cols-3, .cols-4 { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-        @media (max-width:820px) { .cols-2, .cols-3, .cols-4 { grid-template-columns:1fr; } }
+        @media (max-width:820px) { .cols-2, .cols-3, .cols-4 { grid-template-columns: minmax(0, 1fr); } }
         .cols > .card { margin-bottom:0; }
         .stack { display:flex; flex-direction:column; gap:14px; min-width:0; }
         .stack > .card { margin-bottom:0; }
@@ -66,6 +66,12 @@
         .pop-body label { margin:0 0 3px; }
         .pop-body .danger { margin-top:10px; padding-top:10px; border-top:1px solid #3a3a3a; }
         .danger-btn { background:#b3202f; color:#fff; border:0; border-radius:7px; padding:6px 12px; font-size:12.5px; cursor:pointer; }
+        /* Celular: las tablas anchas se deslizan dentro de su tarjeta en vez de ensanchar la página. */
+        @media (max-width: 649px) {
+            .card, .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .card > table, .table-wrap > table { min-width: 100%; }
+            .page-inner h1 + .sub, .actions { flex-wrap: wrap; }
+        }
     </style>
 </head>
 <body>

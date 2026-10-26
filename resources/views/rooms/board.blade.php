@@ -86,7 +86,7 @@
         .dsum-value { font-family: ui-monospace, monospace; font-weight:700; font-size:16px; color:#eee; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
         .page-grid { display:grid; grid-template-columns: 1fr 280px; gap:28px; align-items:start; }
-        @media (max-width: 1100px) { .page-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px) { .page-grid { grid-template-columns: minmax(0, 1fr); } }
 
         .section { margin-bottom: 34px; }
         .section-head { display:flex; align-items:baseline; gap:10px; margin-bottom: 14px; }
@@ -335,10 +335,10 @@
         .stats-row { display:flex; gap:14px; align-items:stretch; flex-wrap:wrap; margin-bottom:18px; }
         .stats-row .summary { margin-bottom:0; gap:8px; }
         .stats-row .summary .chip { padding:7px 12px; }
-        .stats-row .daily-summary { flex:1; min-width:480px; margin-bottom:0; gap:6px; }
+        .stats-row .daily-summary { flex:1; min-width:min(480px, 100%); margin-bottom:0; gap:6px; }
         .stats-row .dsum-tile { padding:6px 10px; }
         .pending-row-wrap { margin-bottom:14px; }
-        .page-grid.no-sidebar { grid-template-columns: 1fr; }
+        .page-grid.no-sidebar { grid-template-columns: minmax(0, 1fr); }
         .section { margin-bottom:22px; }
         .section-head { margin-bottom:10px; }
 </style>

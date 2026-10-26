@@ -7,7 +7,7 @@
 .calendar-history .booking-row{grid-template-columns:70px 1fr 170px 25px}
 .calendar-history{max-height:420px;overflow-y:auto}
 .calendar-split{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
-@media(max-width:900px){.calendar-split{grid-template-columns:1fr}}
+@media(max-width:900px){.calendar-split{grid-template-columns: minmax(0, 1fr)}}
 .calendar-split .calendar-history{margin-top:0}
 .calendar-split .calendar-card.upcoming h2{color:#1c9169}
 .calendar-split .calendar-card.past h2{color:#888}
@@ -35,7 +35,7 @@
 @media(max-width:700px){.day-cell{min-height:74px;padding:4px}.event{font-size:9.5px;padding:2px 3px;margin-top:3px}}
 
 html{background:#f5f5f4 !important}body{min-height:100vh}
-.calendar-split-one{grid-template-columns:1fr}
+.calendar-split-one{grid-template-columns: minmax(0, 1fr)}
 .calendar-history{max-height:300px}
 .sheet-card{margin-top:12px}
 .sheet-card h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -150,18 +150,18 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
    @forelse ($agendaRows as $r)
     @php $b = $r['b']; $k = $r['state']['key']; @endphp
     <tr data-href="{{ route('reservations.show', $b->code) }}" data-state="{{ $k }}" class="{{ in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'dim' : '' }}">
-     <td><b>{{ $b->starts_at->format('H:i') }}</b>@if(! $b->starts_at->isSameDay($date)) <small>({{ $b->starts_at->locale('es')->isoFormat('ddd D') }})</small>@endif</td>
-     <td>{{ $b->ends_at->format('H:i') }}</td>
-     <td><b>{{ $b->room->name }}</b> <small>{{ $b->room->category->name }}</small></td>
-     <td>{{ $b->customer->name }}</td>
-     <td><a class="code" href="{{ route('reservations.show', $b->code) }}">{{ $b->code }}</a></td>
-     <td><span class="org org-{{ $b->origin ?: 'none' }}">{{ $b->originLabel() }}</span></td>
-     <td><span class="ag ag-{{ $k }}">{{ $r['state']['label'] }}</span></td>
-     <td>{{ $b->checked_in_at ? $b->checked_in_at->timezone('America/Santiago')->format('H:i') : '—' }}</td>
-     <td>{{ $b->checked_out_at ? $b->checked_out_at->timezone('America/Santiago')->format('H:i') : '—' }}</td>
-     <td class="n">{{ $money($r['total']) }}</td>
-     <td class="n">{{ $money($r['paid']) }}</td>
-     <td class="n {{ $r['balance'] > 0 && ! in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'owe' : '' }}">{{ $r['balance'] > 0 ? $money($r['balance']) : '—' }}</td>
+     <td data-label="Entrada"><b>{{ $b->starts_at->format('H:i') }}</b>@if(! $b->starts_at->isSameDay($date)) <small>({{ $b->starts_at->locale('es')->isoFormat('ddd D') }})</small>@endif</td>
+     <td data-label="Salida">{{ $b->ends_at->format('H:i') }}</td>
+     <td data-label="Habitación"><b>{{ $b->room->name }}</b> <small>{{ $b->room->category->name }}</small></td>
+     <td data-label="Cliente">{{ $b->customer->name }}</td>
+     <td data-label="Reserva"><a class="code" href="{{ route('reservations.show', $b->code) }}">{{ $b->code }}</a></td>
+     <td data-label="Origen"><span class="org org-{{ $b->origin ?: 'none' }}">{{ $b->originLabel() }}</span></td>
+     <td data-label="Estado"><span class="ag ag-{{ $k }}">{{ $r['state']['label'] }}</span></td>
+     <td data-label="Check-in">{{ $b->checked_in_at ? $b->checked_in_at->timezone('America/Santiago')->format('H:i') : '—' }}</td>
+     <td data-label="Salida real">{{ $b->checked_out_at ? $b->checked_out_at->timezone('America/Santiago')->format('H:i') : '—' }}</td>
+     <td class="n" data-label="Total">{{ $money($r['total']) }}</td>
+     <td class="n" data-label="Pagado">{{ $money($r['paid']) }}</td>
+     <td class="n {{ $r['balance'] > 0 && ! in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'owe' : '' }}" data-label="Saldo">{{ $r['balance'] > 0 ? $money($r['balance']) : '—' }}</td>
      <td>
       @if (in_array($k, ['por_llegar', 'atrasada'], true))<a class="ag-act" href="{{ route('bookings.checkin.show', $b->code) }}">Check-in →</a>
       @elseif ($k === 'en_alojamiento')<a class="ag-act" href="{{ route('bookings.finalize.show', $b->code) }}">Finalizar →</a>
@@ -178,6 +178,18 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
  </div>
 </section>
 <style>
+@media (max-width:700px){
+ .agenda-card .sheet-wrap{max-height:none;border:0;overflow:visible}
+ #agenda-table thead{display:none}
+ #agenda-table,#agenda-table tbody,#agenda-table tr,#agenda-table td{display:block;width:100%}
+ #agenda-table tr[data-state]{border:1px solid #e5e7eb;border-radius:12px;margin:0 0 10px;padding:8px 12px;background:#fff}
+ #agenda-table tr[data-state] td{border:0;padding:4px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;white-space:normal;text-align:right;background:transparent}
+ #agenda-table tr[data-state] td::before{content:attr(data-label);color:#6b7280;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;font-weight:700;text-align:left;flex:0 0 auto}
+ #agenda-table tr[data-state] td:last-child{justify-content:flex-end;padding-top:8px}
+ #agenda-table tr[data-state] td:last-child::before{content:none}
+ #agenda-table tr.zero td{display:block;text-align:center}
+ #agenda-table tr[data-state] td:nth-child(6),#agenda-table tr[data-state] td:nth-child(10),#agenda-table tr[data-state] td:nth-child(11){display:none}
+}
 .agenda-chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
 .agenda-chip{background:#fff;border:1px solid #d1d5db;color:#374151;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
 .agenda-chip b{margin-left:4px;color:#c2410c}

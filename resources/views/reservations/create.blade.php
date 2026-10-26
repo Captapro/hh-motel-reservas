@@ -154,7 +154,7 @@
            pagina a la vista en vez de verse como dos columnas parejas. */
         .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
         .form-grid > .panel { height:100%; }
-        @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 700px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
         .form-col-head { font-size:13.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#eee; margin-top:0; padding-bottom:14px; margin-bottom:6px; border-bottom:1px solid #292929; }
         .sub-head { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#777; margin:28px 0 4px; padding-top:18px; border-top:1px solid #232323; }
         .sub-head span { text-transform:none; letter-spacing:normal; font-weight:400; color:#666; }
@@ -255,7 +255,7 @@
         @media (max-width: 1499px) and (min-width: 701px) { .form-grid.walkin-grid { grid-template-columns: 1fr 1fr; gap:16px; } .form-grid.walkin-grid .panel-summary { grid-column:auto; position:static; margin-top:0; } }
         @media (max-width: 700px) { .consumo-panel .prod-cols { column-count:1; } }
         @media (max-width: 1280px) { .form-grid { grid-template-columns: 1fr 1fr; } .panel-summary { grid-column: 1 / -1; position:static; margin-top:16px; } }
-        @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 700px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
     </style>
 </head>
 <body>

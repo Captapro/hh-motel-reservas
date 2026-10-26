@@ -175,8 +175,13 @@ a.bookings-btn.empty { color: #bbbfc5; border-color: #67696f; }
     .hh-navbar { padding: 10px 12px !important; gap: 6px !important; }
     .hh-navbar .hh-brand { display: none; }
     .hh-navbar .hh-spacer { display: none; }
-    .hh-navbar .hh-new-btn { margin-left: auto; font-size: 12px; }
-    .hh-tariff-chip { padding: 7px; font-size: 11px; }
+    /* Una fila con los dos botones de crear y Salir; el chip de tarifa debajo. */
+    .hh-navbar { display: flex; flex-wrap: wrap; align-items: center; }
+    .hh-navbar > a:not(.hh-new-btn), .hh-navbar > span:not(.hh-spacer):not(.hh-brand) { display: none !important; }
+    .hh-navbar .hh-new-btn { order: 1; flex: 1 1 0; text-align: center; padding: 10px 6px; font-size: 12px; margin: 0; white-space: nowrap; }
+    .hh-navbar > form { order: 2; margin-left: 2px; }
+    .hh-navbar > form button { padding: 8px 6px; font-size: 13px; }
+    .hh-tariff-chip { order: 3; flex: 1 0 100%; justify-content: center; padding: 7px; font-size: 11px; }
     .page-inner, body > .wrap { padding: 20px 12px 45px; }
     .summary { gap: 6px; }
     .summary .chip { padding: 8px 10px; }

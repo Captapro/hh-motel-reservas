@@ -34,7 +34,7 @@
         .card.late .value { color:#b088e8; }
 
         .cols { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:20px; }
-        @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) { .cols { grid-template-columns: minmax(0, 1fr); } }
         .panel { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:16px 18px; }
         .panel h3 { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#999; margin:0 0 12px; }
         .row { display:flex; justify-content:space-between; padding:6px 0; font-size:14px; border-top:1px solid #262626; }

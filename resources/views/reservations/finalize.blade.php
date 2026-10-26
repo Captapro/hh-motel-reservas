@@ -46,7 +46,7 @@
         .fin-col .manual-extras .prod-row .name { font-size:13px; line-height:1.25; }
         .fin-col .manual-extras .prod-row .price { font-size:11px; }
         .fin-col .manual-extras .prod-row input { width:48px; padding:5px 4px; font-size:13px; }
-        @media (max-width: 860px) { .fin-grid { grid-template-columns: 1fr; } .fin-col .manual-extras .card { column-count:1; } }
+        @media (max-width: 860px) { .fin-grid { grid-template-columns: minmax(0, 1fr); } .fin-col .manual-extras .card { column-count:1; } }
     </style>
 </head>
 <body>

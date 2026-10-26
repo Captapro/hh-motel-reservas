@@ -15,7 +15,7 @@
         .an-grid > .card.t-blue { border-top:3px solid #5b9dd9; }
         .an-grid > .card.span2 { grid-column: span 2; }
         @media (max-width:1150px) { .an-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } .an-grid > .card.span2 { grid-column:1 / -1; } }
-        @media (max-width:760px) { .an-grid { grid-template-columns:1fr; } }
+        @media (max-width:760px) { .an-grid { grid-template-columns: minmax(0, 1fr); } }
         .kpis.kpis-all { grid-template-columns:repeat(4, minmax(0, 1fr)); }
         @media (max-width:900px) { .kpis.kpis-all { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
         .flt { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:14px 16px; margin-bottom:18px; }

@@ -35,7 +35,7 @@
         /* Tres columnas: cobros | movimientos | registrar */
         .cols { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(300px,.8fr); gap:16px; align-items:start; }
         @media (max-width: 1200px) { .cols { grid-template-columns: 1fr 1fr; } .cols > .col-form { grid-column: 1 / -1; } }
-        @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+        @media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
         .panel { background:#1c1c1c; border:1px solid #333; border-radius:12px; padding:16px 18px; }
         .panel h3 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#999; margin:0 0 4px; }
         .panel .hint { font-size:12px; color:#777; margin:0 0 10px; }

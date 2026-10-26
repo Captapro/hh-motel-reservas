@@ -52,7 +52,7 @@
         .edit-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items:start; }
         .edit-col > label:first-child { margin-top:0; }
         button.save { width:auto; min-width:300px; padding:12px 28px; margin-top:22px; }
-        @media (max-width: 860px) { .edit-grid { grid-template-columns: 1fr; } button.save { width:100%; } }
+        @media (max-width: 860px) { .edit-grid { grid-template-columns: minmax(0, 1fr); } button.save { width:100%; } }
     </style>
 </head>
 <body>

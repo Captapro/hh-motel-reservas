@@ -31,7 +31,7 @@
         input[type=file], select { width:100%; background:#111; border:1px solid #333; color:#eee; padding:10px 11px; border-radius:8px; font-size:14px; }
         .photo-help { color:#888; font-size:12px; margin-top:5px; }
         .date-readonly { background:#242424!important; color:#aaa!important; }
-        @media(max-width:680px){ .top-fields{grid-template-columns:1fr;} }
+        @media(max-width:680px){ .top-fields{grid-template-columns: minmax(0, 1fr);} }
         .checklist { border-top:1px solid #292929; padding-top:14px; margin-bottom:16px; }
         .check-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid #242424; gap:12px; }
         .check-row:last-child { border-bottom:none; }

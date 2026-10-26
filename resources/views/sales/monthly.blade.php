@@ -47,7 +47,7 @@
         .scroll-detail { max-height:640px; overflow:auto; }
         .scroll-detail thead th { position:sticky; top:0; background:#1c1c1c; z-index:1; }
         .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-        @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+        @media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
         /* Cuadrícula tipo Excel */
         table { border-collapse: collapse; }
         th { background:#2a2a2a; color:#d6d6d6; font-size:11px; border:1px solid #4a4a4a; padding:9px 10px; }
