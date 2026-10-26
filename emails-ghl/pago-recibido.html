@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<title>Pago recibido — HH Motel</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f2;-webkit-text-size-adjust:100%;">
+<!-- Texto que se ve en la bandeja de entrada antes de abrir el correo -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f4f4f2;">Recibimos tu pago de {{inboundWebhookRequest.monto}} por la reserva {{inboundWebhookRequest.codigo}}.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f2;">
+<tr><td align="center" style="padding:24px 12px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:18px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+    <!-- Cabecera con el logo -->
+    <tr><td align="center" bgcolor="#000000" style="background:#000000;padding:26px 20px;">
+      <img src="https://app.hhmotel.cl/images/hh-logo-wide.png" width="220" alt="HH Motel Santiago Playrooms" style="display:block;width:220px;max-width:70%;height:auto;border:0;">
+    </td></tr>
+    <!-- Título -->
+    <tr><td style="padding:30px 32px 6px;">
+      <h1 style="margin:0;font-size:26px;line-height:1.2;color:#111827;letter-spacing:-0.5px;">¡Pago recibido!</h1>
+      <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#4b5563;">Hola {{contact.first_name}}, recibimos tu pago correctamente. Gracias por reservar con nosotros.</p>
+    </td></tr>
+    <!-- Detalle -->
+    <tr><td style="padding:18px 32px 4px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;">
+        <tr><td style="padding:6px 18px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#6b7280;font-size:13px;width:42%;">Reserva</td><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#111827;font-size:14px;font-weight:600;text-align:right;"><span style="font-family:Menlo,Consolas,monospace;color:#c2410c;font-size:15px;">{{inboundWebhookRequest.codigo}}</span></td></tr><tr><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#6b7280;font-size:13px;width:42%;">Habitación</td><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#111827;font-size:14px;font-weight:600;text-align:right;">{{inboundWebhookRequest.habitacion}} · {{inboundWebhookRequest.categoria}}</td></tr><tr><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#6b7280;font-size:13px;width:42%;">Fecha y hora</td><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#111827;font-size:14px;font-weight:600;text-align:right;">{{inboundWebhookRequest.fecha}} · {{inboundWebhookRequest.hora_entrada}}</td></tr><tr><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#6b7280;font-size:13px;width:42%;">Medio de pago</td><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#111827;font-size:14px;font-weight:600;text-align:right;">{{inboundWebhookRequest.medio_pago}}</td></tr><tr><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#6b7280;font-size:13px;width:42%;">Monto pagado</td><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#111827;font-size:14px;font-weight:600;text-align:right;"><span style="font-size:17px;">{{inboundWebhookRequest.monto}}</span></td></tr><tr><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#6b7280;font-size:13px;width:42%;">Saldo pendiente</td><td style="padding:10px 0;border-bottom:1px solid #ececec;color:#111827;font-size:14px;font-weight:600;text-align:right;">{{inboundWebhookRequest.saldo}}</td></tr></table></td></tr>
+      </table>
+    </td></tr>
+    
+    <!-- Botón -->
+    <tr><td align="center" style="padding:22px 32px 8px;">
+      <a href="https://app.hhmotel.cl/catalogo/reservado/{{inboundWebhookRequest.token}}" style="display:inline-block;background:#ff7918;color:#21170e;text-decoration:none;font-weight:700;font-size:16px;padding:15px 30px;border-radius:12px;">Ver mi reserva y mi pase</a>
+    </td></tr>
+    <tr><td style="padding:14px 32px 26px;">
+      <p style="margin:0;font-size:13px;line-height:1.55;color:#6b7280;text-align:center;">Este correo es un comprobante de pago operacional, no un documento tributario. Si algo no calza con lo que pagaste, escríbenos por WhatsApp y lo revisamos.</p>
+    </td></tr>
+    <!-- Pie -->
+    <tr><td bgcolor="#f9fafb" style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 32px;">
+      <p style="margin:0;font-size:12.5px;line-height:1.6;color:#6b7280;text-align:center;">
+        <strong style="color:#374151;">HH Motel Santiago · Playrooms</strong><br>
+        Almte. Barroso 334, Santiago<br>
+        WhatsApp <a href="https://wa.me/56977683108" style="color:#c2410c;text-decoration:none;">+56 9 7768 3108</a>
+      </p>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>
