@@ -58,7 +58,6 @@
         .offer-price-old { color:#8a8d93; text-decoration:line-through; font-size:13px; }
         .offer-price-new { color:#ffd9b8; font-weight:800; font-size:18px; }
         .offer-save-badge { background:#4a2410; color:#ffb078; border-radius:6px; padding:2px 6px; font-size:10.5px; font-weight:800; }
-        .offer-viewers { display:block; color:#ffb078; font-size:11px; margin-top:3px; min-height:14px; }
         .deal-coupon-benefit { color:#9edaff; font-size:26px; font-weight:800; letter-spacing:-.02em; }
         .deal-coupon-hint { color:#8a8d93; font-size:11.5px; margin-top:4px; }
         .deal-cta-btn { display:block; text-align:center; margin-top:auto; padding-top:12px; }
@@ -194,7 +193,6 @@
                                             <strong class="deal-title">{{ $offerRoom['name'] }}{{ $entry['offer']['durationLabel'] ? ' · '.$entry['offer']['durationLabel'] : '' }}</strong>
                                             {!! $offerPriceRow($entry['offer']) !!}
                                             <a class="deal-sub-link" href="{{ route('catalog.room', $offerRoom['id']) }}">{{ $entry['category']->name }} · Ver ficha y fotos →</a>
-                                            <span class="offer-viewers" data-hh-viewers></span>
                                             <a class="deal-cta-btn" href="{{ route('catalog.reserve', ['categoria' => $entry['category']->id, 'room_id' => $offerRoom['id']]) }}"><span>Reservar oferta →</span></a>
                                         </div>
                                     </div>
@@ -205,7 +203,6 @@
                                     <div class="deal-body">
                                         <strong class="deal-title">{{ $entry['category']->name }}{{ $entry['offer']['durationLabel'] ? ' · '.$entry['offer']['durationLabel'] : '' }}</strong>
                                         {!! $offerPriceRow($entry['offer']) !!}
-                                        <span class="offer-viewers" data-hh-viewers></span>
                                         <a class="deal-cta-btn" href="{{ route('catalog.reserve', ['categoria' => $entry['category']->id]) }}"><span>Reservar oferta →</span></a>
                                     </div>
                                 </div>
@@ -430,18 +427,6 @@
             document.querySelector('.deals-nav.prev')?.addEventListener('click', () => scrollByCard(-1));
             document.querySelector('.deals-nav.next')?.addEventListener('click', () => scrollByCard(1));
         }
-
-        // "Viendo esto ahora" en las ofertas -- la mayoría de las veces no
-        // muestra nada; cuando aparece es 1 o 2 personas, y cada tarjeta
-        // cambia sola en su propio momento.
-        document.querySelectorAll('[data-hh-viewers]').forEach((el) => {
-            function roll() {
-                const r = Math.random();
-                el.textContent = r < 0.68 ? '' : (r < 0.9 ? '👀 1 persona viendo esto ahora' : '👀 2 personas viendo esto ahora');
-                setTimeout(roll, 18000 + Math.random() * 22000);
-            }
-            setTimeout(roll, Math.random() * 6000);
-        });
     </script>
 </body>
 </html>
