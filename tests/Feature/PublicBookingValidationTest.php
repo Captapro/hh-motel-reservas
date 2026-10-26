@@ -129,6 +129,19 @@ class PublicBookingValidationTest extends TestCase
         $this->assertSame($first->headers->get('Location'), $second->headers->get('Location'));
     }
 
+    public function test_catalog_offers_only_arrival_times_inside_the_tariff_schedule(): void
+    {
+        // Lunes 10:00-23:00 con precio solo a 3 h: la última llegada posible es las 20:00.
+        $monday = $this->getJson('/catalogo/reservar/horarios?'.http_build_query(['date' => '2026-10-05', 'room_category_id' => $this->category->id]))->assertOk()->json('times');
+        $this->assertSame('10:00', $monday[0]);
+        $this->assertSame('20:00', end($monday));
+        $this->assertNotContains('09:45', $monday);
+        $this->assertNotContains('20:15', $monday);
+
+        // Martes: no hay tarifa cargada, no se ofrece ninguna hora.
+        $this->getJson('/catalogo/reservar/horarios?'.http_build_query(['date' => '2026-10-06', 'room_category_id' => $this->category->id]))->assertOk()->assertExactJson(['times' => []]);
+    }
+
     public function test_catalog_booking_requires_a_valid_email(): void
     {
         $this->post('/catalogo/reservar', $this->bookingPayload(['email' => '']))->assertSessionHasErrors('email');

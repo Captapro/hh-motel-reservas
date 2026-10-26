@@ -309,6 +309,47 @@ class PublicBookingController extends Controller
         return response()->json(['available' => (bool) $room]);
     }
 
+    /**
+     * Horas de llegada que de verdad se pueden pedir ese día para esa categoría: las que caen dentro
+     * del horario de alguna tarifa vigente (no todas las del reloj). Se calcula con la misma
+     * regla que usa la reserva, con la duración más corta que se vende, y se guarda unos minutos.
+     */
+    public function times(Request $request, RateRuleResolver $rateRules): JsonResponse
+    {
+        $validated = $request->validate([
+            'date' => ['required', 'date', 'after_or_equal:today'],
+            'room_category_id' => ['required', 'exists:room_categories,id'],
+        ]);
+        $category = (int) $validated['room_category_id'];
+        $date = Carbon::parse($validated['date'])->toDateString();
+
+        $minDuration = RateRulePrice::where('room_category_id', $category)->min('duration_minutes');
+        if (! $minDuration) {
+            return response()->json(['times' => []]);
+        }
+
+        $times = Cache::remember("catalog-times:{$date}:{$category}:{$minDuration}", 300, function () use ($date, $category, $minDuration, $rateRules) {
+            $valid = [];
+            for ($minute = 0; $minute < 24 * 60; $minute += 15) {
+                $start = Carbon::parse($date)->addMinutes($minute);
+                $rate = $rateRules->resolve($start, $start->copy()->addMinutes((int) $minDuration));
+                if ($rate && $rate->prices()->where('room_category_id', $category)->where('duration_minutes', (int) $minDuration)->exists()) {
+                    $valid[] = $start->format('H:i');
+                }
+            }
+
+            return $valid;
+        });
+
+        // Hoy no se ofrecen las horas que ya pasaron (se filtra fuera del caché).
+        if ($date === now()->toDateString()) {
+            $limit = now()->subMinutes(5)->format('H:i');
+            $times = array_values(array_filter($times, fn ($t) => $t >= $limit));
+        }
+
+        return response()->json(['times' => $times]);
+    }
+
     private function findAvailableRoom(int $categoryId, ?int $roomId, Carbon $startsAt, Carbon $endsAt, AvailabilityChecker $availability, RateRuleResolver $rateRules): ?Room
     {
         // Una retención vencida no debe seguir bloqueando la habitación.

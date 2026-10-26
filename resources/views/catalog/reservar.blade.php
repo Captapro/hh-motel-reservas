@@ -216,6 +216,21 @@
         function hhTimeLabel(h, m) {
             return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
         }
+        // Horas realmente ofrecidas ese día para esa categoría (según el horario de las tarifas).
+        // Si la consulta falla, se muestra la lista completa y la disponibilidad se valida igual al elegir.
+        let hhAllowedTimes = null;
+        async function hhLoadTimes() {
+            const date = document.getElementById('date').value;
+            const category = document.getElementById('room_category_id').value;
+            hhAllowedTimes = null;
+            if (date && category) {
+                try {
+                    const r = await fetch('{{ route('catalog.reserve.times') }}?' + new URLSearchParams({ date: date, room_category_id: category }), { headers: { 'Accept': 'application/json' } });
+                    if (r.ok) hhAllowedTimes = (await r.json()).times;
+                } catch (e) { /* se usa la lista completa */ }
+            }
+            hhBuildTimes();
+        }
         function hhBuildTimes() {
             const select = document.getElementById('time-select');
             if (!select) return;
@@ -225,22 +240,30 @@
             const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
             const isToday = dateValue === todayIso;
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
-            const groups = [['Día · 10:30 a 17:45', 10.5, 17.75], ['Noche · 18:00 a 23:45', 18, 23.75], ['Madrugada · 00:00 a 03:00', 0, 3]];
-            select.innerHTML = '<option value="">Elige la hora</option>';
+            const all = [];
+            for (let t = 0; t < 24 * 60; t += 15) all.push(String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'));
+            const times = (hhAllowedTimes || all).filter(function (v) {
+                if (!isToday) return true;
+                const parts = v.split(':').map(Number);
+                return (parts[0] * 60 + parts[1]) >= nowMinutes - 5;
+            });
+            const groups = [['Día', 6, 18], ['Noche', 18, 24], ['Madrugada', 0, 6]];
+            select.innerHTML = '<option value="">' + (hhAllowedTimes && !times.length ? 'Sin horarios para esta fecha' : 'Elige la hora') + '</option>';
             groups.forEach(function (g) {
+                const inGroup = times.filter(function (v) { const h = parseInt(v, 10); return h >= g[1] && h < g[2]; });
+                if (!inGroup.length) return;
                 const og = document.createElement('optgroup');
-                og.label = g[0];
-                for (let t = g[1]; t <= g[2] + 0.001; t += 0.25) {
-                    const h = Math.floor(t + 0.001), m = Math.round((t - h) * 60);
-                    if (isToday && (h * 60 + m) < nowMinutes) continue;
+                og.label = g[0] + ' · ' + inGroup[0] + ' a ' + inGroup[inGroup.length - 1];
+                inGroup.forEach(function (v) {
                     const o = document.createElement('option');
-                    o.value = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-                    o.textContent = hhTimeLabel(h, m);
+                    o.value = v;
+                    o.textContent = v;
                     og.appendChild(o);
-                }
-                if (og.children.length) select.appendChild(og);
+                });
+                select.appendChild(og);
             });
             if (keep && select.querySelector('option[value="' + keep + '"]')) select.value = keep;
+            else if (keep) { document.getElementById('time_hour').value = ''; document.getElementById('time_minute').value = ''; hhUpdateSummary(); hhCheckAvailability(); }
         }
 
         function hhSyncTime() {
@@ -353,17 +376,19 @@
             });
         })();
         ['room_category_id','date','time-select','duration_minutes'].forEach(id => document.getElementById(id).addEventListener('change', () => { hhSyncTime(); hhUpdateSummary(); hhCheckCouponWindow(); hhCheckAvailability(); }));
+        hhBuildTimes();
         // Si el formulario vuelve con una hora ya elegida (por un error al enviar), se deja seleccionada.
         (function () {
             const oh = document.getElementById('time_hour').value;
-            hhBuildTimes();
             if (oh !== '') {
                 const v = String(parseInt(oh, 10)).padStart(2, '0') + ':' + String(parseInt(document.getElementById('time_minute').value || '0', 10)).padStart(2, '0');
                 const sel = document.getElementById('time-select');
                 if (sel.querySelector('option[value="' + v + '"]')) sel.value = v;
             }
         })();
-        document.getElementById('date').addEventListener('change', hhBuildTimes);
+        hhLoadTimes();
+        document.getElementById('date').addEventListener('change', hhLoadTimes);
+        document.getElementById('room_category_id').addEventListener('change', hhLoadTimes);
         hhUpdateDurations();
         hhUpdateSummary();
         hhCheckCouponWindow();
