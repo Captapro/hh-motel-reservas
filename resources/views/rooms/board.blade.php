@@ -295,6 +295,12 @@
         .pass-scan .ps-main { flex:1; font-size:15px; }
         .pass-scan .ps-main small { display:block; color:#7fd8b6; font-size:12.5px; margin-top:2px; }
         .pass-scan a { background:#ff7918; color:#111; text-decoration:none; font-weight:700; padding:10px 18px; border-radius:8px; font-size:14px; white-space:nowrap; }
+        .pass-scan.pay-alert { background:#12293a; border-color:#3a5a72; border-left-color:#6cb6ff; color:#dff1ff; }
+        .pass-scan.pay-alert .ps-main small { color:#9edaff; }
+        .pass-scan.pay-alert.review { background:#3a2a12; border-color:#7a5a1f; border-left-color:#e8a23f; color:#ffe6bd; }
+        .pass-scan.pay-alert.review .ps-main small { color:#ffd699; }
+        .pass-scan .pa-x { background:transparent; border:0; color:inherit; opacity:.7; cursor:pointer; font-size:16px; padding:6px; }
+        .pass-scan .pa-x:hover { opacity:1; }
         @keyframes passPulse { 0%,100% { box-shadow:0 0 0 0 rgba(45,212,160,.5); } 50% { box-shadow:0 0 0 8px rgba(45,212,160,0); } }
         /* Más lugar para las habitaciones: encabezado, métricas y avisos en poco alto. */
         .topline h1 { font-size:20px; }
@@ -684,6 +690,14 @@
             if (!box) return;
             const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
             let last = '';
+            // Los avisos de pago se pueden cerrar; se recuerda cuáles en esta pestaña.
+            const dismissed = () => { try { return JSON.parse(sessionStorage.getItem('hh-dismissed-alerts') || '[]'); } catch (e) { return []; } };
+            box.addEventListener('click', (e) => {
+                const x = e.target.closest('[data-dismiss]');
+                if (!x) return;
+                try { sessionStorage.setItem('hh-dismissed-alerts', JSON.stringify(dismissed().concat(x.dataset.dismiss))); } catch (err) { /* sin almacenamiento */ }
+                x.closest('.pass-scan').remove();
+            });
             async function poll() {
                 try {
                     const r = await fetch('{{ route('rooms.pass_scans') }}', { headers: { 'Accept': 'application/json' } });
@@ -692,7 +706,9 @@
                     const sig = JSON.stringify(list);
                     if (sig === last) return;
                     last = sig;
-                    box.innerHTML = list.map((p) => '<div class="pass-scan"><div class="ps-main"><b>📲 Pase escaneado — ' + esc(p.customer) + '</b><small>' + esc(p.room) + ' · ' + esc(p.code) + (p.balance > 0 ? ' · falta cobrar $' + Number(p.balance).toLocaleString('es-CL') : ' · pagado') + '</small></div><a href="' + esc(p.url) + '">' + (p.balance > 0 ? 'Cobrar y hacer check-in →' : 'Hacer check-in →') + '</a></div>').join('');
+                    box.innerHTML = list.filter((p) => !dismissed().includes(p.id)).map((p) => p.type === 'pago'
+                        ? '<div class="pass-scan pay-alert' + (p.review ? ' review' : '') + '"><div class="ps-main"><b>💳 Pago recibido — ' + esc(p.customer) + ' · $' + Number(p.amount).toLocaleString('es-CL') + '</b><small>' + esc(p.room) + ' · ' + esc(p.code) + (p.review ? ' · revisa esta reserva: pagó fuera de tiempo o de más' : ' · reserva confirmada') + '</small></div><a href="' + esc(p.url) + '">Ver reserva →</a><button type="button" class="pa-x" data-dismiss="' + esc(p.id) + '" aria-label="Cerrar aviso">✕</button></div>'
+                        : '<div class="pass-scan"><div class="ps-main"><b>📲 Pase escaneado — ' + esc(p.customer) + '</b><small>' + esc(p.room) + ' · ' + esc(p.code) + (p.balance > 0 ? ' · falta cobrar $' + Number(p.balance).toLocaleString('es-CL') : ' · pagado') + '</small></div><a href="' + esc(p.url) + '">' + (p.balance > 0 ? 'Cobrar y hacer check-in →' : 'Hacer check-in →') + '</a></div>').join('');
                 } catch (e) { /* sin red: se reintenta */ }
             }
             poll();

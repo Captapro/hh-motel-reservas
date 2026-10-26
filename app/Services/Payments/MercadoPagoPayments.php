@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Refund;
 use App\Services\Booking\PaymentService;
+use App\Support\PaymentAlerts;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -72,6 +73,7 @@ class MercadoPagoPayments
                 $locked->update(['notes' => trim(($locked->notes ? $locked->notes."\n" : '').$aviso)]);
             }
 
+            PaymentAlerts::record($payment->id, $locked->code, $amount, $wasClosed || $overpaid);
             AuditLog::record(null, 'pago.mercadopago', 'Payment', $payment->id, null, $payment->only(['booking_id', 'amount', 'external_id']) + ['revisar' => $wasClosed || $overpaid]);
 
             return $wasClosed || $overpaid ? 'registrado_revisar' : 'registrado';

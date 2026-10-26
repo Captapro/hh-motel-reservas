@@ -199,6 +199,7 @@ class BookingIntegrityTest extends TestCase
 
     public function test_mercado_pago_webhook_confirms_the_booking_once_and_rejects_bad_signatures(): void
     {
+        Cache::flush();
         config(['services.mercadopago.access_token' => 'TEST-token', 'services.mercadopago.webhook_secret' => 'sekret']);
         PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago', 'requires_external_id' => true]);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
@@ -219,6 +220,10 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(20000, $booking->paidAmount());
         $this->assertSame('CONFIRMADA', $booking->booking_status);
         $this->assertNull($booking->expires_at);
+
+        // El pago aparece en el banner de avisos del tablero.
+        $this->getJson(route('rooms.pass_scans'))->assertOk()
+            ->assertJsonFragment(['type' => 'pago', 'code' => $booking->code, 'amount' => 20000, 'review' => false]);
     }
 
     public function test_mercado_pago_payment_after_the_hold_expired_is_recorded_and_flagged(): void
@@ -236,6 +241,7 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(20000, $booking->paidAmount());
         $this->assertSame('EXPIRADA', $booking->booking_status);
         $this->assertStringContainsString('Pago de Mercado Pago recibido', (string) $booking->notes);
+        $this->getJson(route('rooms.pass_scans'))->assertJsonFragment(['type' => 'pago', 'review' => true]);
     }
 
     public function test_pay_now_opens_the_mercado_pago_checkout_for_the_full_balance(): void

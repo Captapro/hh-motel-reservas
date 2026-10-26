@@ -12,6 +12,7 @@ use App\Models\Staff;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Pricing\RateRuleResolver;
 use App\Support\PassScans;
+use App\Support\PaymentAlerts;
 use App\Support\TimeFormat;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -100,13 +101,36 @@ class RoomBoardController extends Controller
             ->sortByDesc(fn ($b) => $recent[$b->code])
             ->values();
 
-        return response()->json($bookings->map(fn ($b) => [
+        $passes = $bookings->map(fn ($b) => [
+            'type' => 'pase',
+            'id' => 'pase:'.$b->code,
             'code' => $b->code,
             'customer' => $b->customer->name,
             'room' => $b->room->name,
             'balance' => $b->balanceDue(),
             'url' => route('bookings.validate', ['code' => $b->code, 'ir' => 1]),
-        ])->all());
+        ])->all();
+
+        // Pagos en línea recibidos (Mercado Pago): van en el mismo banner.
+        $alerts = PaymentAlerts::recent();
+        $payments = Booking::with(['customer', 'room'])->whereIn('code', collect($alerts)->pluck('code')->unique()->all())->get()->keyBy('code');
+        $paid = collect($alerts)->map(function ($a, $paymentId) use ($payments) {
+            $b = $payments->get($a['code']);
+
+            return $b ? [
+                'type' => 'pago',
+                'id' => 'pago:'.$paymentId,
+                'code' => $b->code,
+                'customer' => $b->customer->name,
+                'room' => $b->room->name,
+                'amount' => $a['amount'],
+                'review' => $a['review'],
+                'at' => $a['at'],
+                'url' => route('reservations.show', $b->code),
+            ] : null;
+        })->filter()->sortByDesc('at')->values()->all();
+
+        return response()->json(array_merge($paid, $passes));
     }
 
     private function pendingBookings(): Collection
