@@ -31,18 +31,6 @@
         label { display:block; font-size: 12.5px; color:#c1c3c7; margin: 16px 0 6px; }
         input, select { width:100%; box-sizing:border-box; background:#202123; border:1px solid #62656b; color:#f4f5f7; padding:11px 12px; border-radius:8px; font-size:15px; min-height:46px; }
         input[type="date"], input[type="time"] { color-scheme: dark; }
-        .time-slots { display:grid; grid-template-columns:repeat(4, 1fr); gap:7px; }
-        .time-slots .slot-label { grid-column:1 / -1; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#8a8d93; margin:8px 0 0; }
-        .time-slots .slot-label:first-child { margin-top:0; }
-        .time-slots button { min-height:44px; padding:6px 2px; border-radius:9px; border:1px solid #4a4d53; background:#202123; color:#f4f5f7; font-size:14px; font-weight:600; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-        .time-slots button small { display:block; font-size:10px; font-weight:500; color:#9a9da3; margin-top:-1px; }
-        .time-slots button:hover:not(:disabled) { border-color:#ff7918; }
-        .time-slots button.active { background:#ff7918; border-color:#ff7918; color:#21170e; }
-        .time-slots button.active small { color:#4a2a10; }
-        .time-slots button:disabled { opacity:.32; cursor:not-allowed; }
-        .time-other { margin-top:10px; }
-        .time-other summary { cursor:pointer; font-size:12.5px; color:#9a9da3; padding:4px 0; }
-        .time-other[open] .time-parts { margin-top:8px; }
         .time-parts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
         input:focus, select:focus { outline:none; border-color:var(--hh-accent); box-shadow: 0 0 0 3px #ff791833; }
         .row2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
@@ -137,15 +125,7 @@
                 </div>
                 <div>
                     <label for="time">Hora</label>
-                    <div class="time-slots" id="time-slots" role="group" aria-label="Elige la hora de llegada"></div>
-                    <details class="time-other">
-                        <summary>¿Otra hora? (cada 15 minutos)</summary>
-                    <div class="time-parts" aria-label="Selecciona la hora">
-                        <select id="time-hour12" aria-label="Hora"><option value="">Hora</option>@for ($h = 1; $h <= 12; $h++)<option value="{{ $h }}">{{ $h }}</option>@endfor</select>
-                        <select id="time-minute" aria-label="Minutos"><option value="">Min</option>@foreach ([0,15,30,45] as $m)<option value="{{ $m }}">{{ sprintf('%02d', $m) }}</option>@endforeach</select>
-                        <select id="time-period" aria-label="AM o PM"><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></select>
-                    </div>
-                    </details>
+                    <select id="time-select" aria-label="Hora de llegada" required><option value="">Elige la hora</option></select>
                     <input type="hidden" id="time" value="">
                     <input type="hidden" name="time_hour" id="time_hour" value="{{ old('time_hour') }}">
                     <input type="hidden" name="time_minute" id="time_minute" value="{{ old('time_minute') }}">
@@ -232,68 +212,43 @@
             });
         }
 
-        // Horarios de un toque (cada 30 min). Las listas de abajo siguen siendo la fuente de verdad:
-        // el botón solo las rellena y avisa el cambio, así todo lo demás funciona igual que antes.
-        function hhSlotLabel(h, m) {
-            const period = h >= 12 ? 'PM' : 'AM';
+        // Una sola lista de horas (cada 15 minutos). Las de hoy que ya pasaron no se ofrecen.
+        function hhTimeLabel(h, m) {
             const h12 = h % 12 === 0 ? 12 : h % 12;
-            return { time: h12 + ':' + String(m).padStart(2, '0'), period };
+            return h12 + ':' + String(m).padStart(2, '0') + ' ' + (h >= 12 ? 'PM' : 'AM');
         }
-        function hhSelectSlot(h, m) {
-            const l = hhSlotLabel(h, m);
-            document.getElementById('time-hour12').value = String(l.time.split(':')[0]);
-            document.getElementById('time-minute').value = String(m);
-            document.getElementById('time-period').value = l.period;
-            document.getElementById('time-minute').dispatchEvent(new Event('change', { bubbles: true }));
-            hhPaintSlots();
-        }
-        function hhBuildSlots() {
-            const box = document.getElementById('time-slots');
-            if (!box) return;
-            const groups = [
-                ['Mañana y tarde', 10.5, 17.5], ['Noche', 18, 23.5], ['Madrugada', 0, 3],
-            ];
+        function hhBuildTimes() {
+            const select = document.getElementById('time-select');
+            if (!select) return;
+            const keep = select.value;
             const dateValue = document.getElementById('date').value;
             const now = new Date();
             const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
             const isToday = dateValue === todayIso;
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
-            box.innerHTML = '';
+            const groups = [['Mañana y tarde', 10.5, 17.75], ['Noche', 18, 23.75], ['Madrugada (00:00 a 03:00)', 0, 3]];
+            select.innerHTML = '<option value="">Elige la hora</option>';
             groups.forEach(function (g) {
-                const label = document.createElement('div');
-                label.className = 'slot-label';
-                label.textContent = g[0];
-                box.appendChild(label);
-                for (let t = g[1]; t <= g[2]; t += 0.5) {
-                    const h = Math.floor(t), m = (t - h) * 60;
-                    const l = hhSlotLabel(h, m);
-                    const b = document.createElement('button');
-                    b.type = 'button';
-                    b.dataset.h = h; b.dataset.m = m;
-                    b.innerHTML = l.time + '<small>' + l.period + '</small>';
-                    b.disabled = isToday && (h * 60 + m) < nowMinutes;
-                    b.addEventListener('click', function () { hhSelectSlot(h, m); });
-                    box.appendChild(b);
+                const og = document.createElement('optgroup');
+                og.label = g[0];
+                for (let t = g[1]; t <= g[2] + 0.001; t += 0.25) {
+                    const h = Math.floor(t + 0.001), m = Math.round((t - h) * 60);
+                    if (isToday && (h * 60 + m) < nowMinutes) continue;
+                    const o = document.createElement('option');
+                    o.value = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+                    o.textContent = hhTimeLabel(h, m);
+                    og.appendChild(o);
                 }
+                if (og.children.length) select.appendChild(og);
             });
-            hhPaintSlots();
-        }
-        function hhPaintSlots() {
-            const h = document.getElementById('time_hour').value;
-            const m = document.getElementById('time_minute').value;
-            document.querySelectorAll('#time-slots button').forEach(function (b) {
-                b.classList.toggle('active', h !== '' && String(b.dataset.h) === String(parseInt(h, 10)) && String(b.dataset.m) === String(parseInt(m || '0', 10)));
-            });
+            if (keep && select.querySelector('option[value="' + keep + '"]')) select.value = keep;
         }
 
         function hhSyncTime() {
-            const h12 = parseInt(document.getElementById('time-hour12').value || '0', 10);
-            const minute = parseInt(document.getElementById('time-minute').value || '0', 10);
-            const period = document.getElementById('time-period').value;
-            if (!h12 || !period) return;
-            let hour = h12 % 12;
-            if (period === 'PM') hour += 12;
-            document.getElementById('time').value = `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+            const value = document.getElementById('time-select').value;
+            if (!value) return;
+            const [hour, minute] = value.split(':').map(Number);
+            document.getElementById('time').value = value;
             document.getElementById('time_hour').value = hour;
             document.getElementById('time_minute').value = minute;
         }
@@ -398,20 +353,18 @@
                 if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Solicitar reserva'; }
             });
         })();
-        ['room_category_id','date','time-hour12','time-minute','time-period','duration_minutes'].forEach(id => document.getElementById(id).addEventListener('change', () => { hhSyncTime(); hhUpdateSummary(); hhCheckCouponWindow(); hhCheckAvailability(); }));
-        // Si el formulario vuelve con una hora ya elegida (por un error al enviar), se marca el botón.
+        ['room_category_id','date','time-select','duration_minutes'].forEach(id => document.getElementById(id).addEventListener('change', () => { hhSyncTime(); hhUpdateSummary(); hhCheckCouponWindow(); hhCheckAvailability(); }));
+        // Si el formulario vuelve con una hora ya elegida (por un error al enviar), se deja seleccionada.
         (function () {
             const oh = document.getElementById('time_hour').value;
+            hhBuildTimes();
             if (oh !== '') {
-                const h = parseInt(oh, 10), m = parseInt(document.getElementById('time_minute').value || '0', 10);
-                const l = hhSlotLabel(h, m);
-                document.getElementById('time-hour12').value = l.time.split(':')[0];
-                document.getElementById('time-minute').value = String(m);
-                document.getElementById('time-period').value = l.period;
+                const v = String(parseInt(oh, 10)).padStart(2, '0') + ':' + String(parseInt(document.getElementById('time_minute').value || '0', 10)).padStart(2, '0');
+                const sel = document.getElementById('time-select');
+                if (sel.querySelector('option[value="' + v + '"]')) sel.value = v;
             }
         })();
-        hhBuildSlots();
-        document.getElementById('date').addEventListener('change', hhBuildSlots);
+        document.getElementById('date').addEventListener('change', hhBuildTimes);
         hhUpdateDurations();
         hhUpdateSummary();
         hhCheckCouponWindow();
