@@ -274,6 +274,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::get('/combos/{combo}/editar', [ComboController::class, 'edit'])->name('combos.edit');
         Route::put('/combos/{combo}', [ComboController::class, 'update'])->name('combos.update');
         Route::delete('/combos/{combo}', [ComboController::class, 'destroy'])->name('combos.destroy');
+        Route::post('/combos/{combo}/toggle', [ComboController::class, 'toggle'])->name('combos.toggle');
         Route::post('/combos/{combo}/items', [ComboController::class, 'storeItem'])->name('combos.items.store');
         Route::delete('/combos/{combo}/items/{item}', [ComboController::class, 'destroyItem'])->name('combos.items.destroy');
     }); // fin role:administrador

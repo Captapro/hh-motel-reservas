@@ -167,4 +167,15 @@ class ComboChoiceTest extends TestCase
 
         $this->assertSame(8, $this->drinks['Coca-Cola']->fresh()->stock);
     }
+
+    public function test_admin_pauses_and_reactivates_a_combo_from_the_list(): void
+    {
+        $this->post(route('admin.combos.toggle', $this->combo))->assertRedirect(route('admin.combos.index'));
+        $this->assertFalse($this->combo->fresh()->is_active);
+        $this->post(route('admin.combos.toggle', $this->combo));
+        $this->assertTrue($this->combo->fresh()->is_active);
+
+        $host = User::factory()->create(['role' => 'recepcion']);
+        $this->actingAs($host)->post(route('admin.combos.toggle', $this->combo))->assertForbidden();
+    }
 }

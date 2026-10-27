@@ -126,6 +126,15 @@ class ComboController extends Controller
         return redirect()->route('admin.combos.edit', $combo)->with('status', 'Producto quitado del combo.');
     }
 
+    /** Pausar o activar desde la lista: un combo pausado no aparece en ninguna pantalla de venta ni en el catálogo. */
+    public function toggle(Combo $combo): RedirectResponse
+    {
+        $combo->update(['is_active' => ! $combo->is_active]);
+        AuditLog::record(auth()->id(), 'combo.toggle', 'Combo', $combo->id, null, ['is_active' => $combo->is_active]);
+
+        return redirect()->route('admin.combos.index')->with('status', $combo->name.($combo->is_active ? ' activado: ya se puede vender.' : ' pausado: no aparece en recepción ni en el catálogo.'));
+    }
+
     public function destroy(Combo $combo): RedirectResponse
     {
         if ($combo->bookingAddons()->exists()) {
