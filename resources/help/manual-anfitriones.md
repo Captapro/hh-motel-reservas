@@ -15,7 +15,7 @@ Los textos entre comillas son los nombres exactos de botones, pantallas y mensaj
 - Contadores: Ocupadas, En aseo, Disponibles, Por llegar, Fuera de servicio. Resumen del día: Playrooms vendidos hoy, Extras vendidos hoy, Venta Playrooms, Venta extras, Total del día (solo estadías de hoy pagadas completas).
 - Secciones:
   - **Ocupadas**: con check-in y sin check-out. Muestra "Libera en X" o en rojo "Pasó su horario hace X". Botones "+ Agregar consumo →", "Falta cobrar $X →" (si hay saldo) o "Finalizar / Check-out →" (sin saldo). "RESERVADA — SIN CHECK-IN" con "Falta check-in — marcar ahora" si falta el check-in. Estadía corta: "⏱ Estadía corta · sale al cierre, HH:MM".
-  - **Disponibles**: libres. Filtros por categoría, "Con reservas futuras" y "Ala norte" / "Ala sur" (es el mismo filtro de ala de arriba; apretarlo de nuevo vuelve a todas las alas). Botones "Ingresar →" (ingreso presencial con esa habitación) y "o reservar para más tarde".
+  - **Disponibles**: libres. Filtros por categoría y "Con reservas futuras". Botones "Ingresar →" (ingreso presencial con esa habitación) y "o reservar para más tarde".
   - **Por llegar**: libres ahora pero con una reserva próxima: "no las asignes a clientes sin reserva". Muestra "llega en X", "llegando ahora" o "atrasada X — sin check-in", y el botón "Marcar check-in".
   - **En aseo**: no vuelven a Disponibles hasta que recepción marque aseo listo (ver sección 8).
   - **Fuera de servicio**: en mantención o inactivas.
