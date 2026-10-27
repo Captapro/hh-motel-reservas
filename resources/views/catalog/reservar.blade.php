@@ -463,8 +463,16 @@
             let sending = false;
             form.addEventListener('submit', function (e) {
                 if (sending) { e.preventDefault(); return; }
+                // Si otra validación frenó el envío (ej. la hora), no se bloquea
+                // el botón: antes quedaba en "Enviando…" sin haber enviado nada.
+                if (e.defaultPrevented) return;
                 sending = true;
                 if (btn) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = 'Enviando…'; }
+                // Red de seguridad: si la página no avanzó, se puede volver a intentar.
+                setTimeout(function () {
+                    sending = false;
+                    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Solicitar reserva'; }
+                }, 20000);
             });
             // Al volver atrás desde la confirmación, el botón debe quedar usable otra vez.
             window.addEventListener('pageshow', function () {
