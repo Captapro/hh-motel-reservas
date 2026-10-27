@@ -79,10 +79,14 @@ class MercadoPagoClient
     }
 
     /** Devolución total del pago. */
-    public function refund(string $paymentId): array
+    /**
+     * Devuelve un pago completo o, con $amount, solo esa parte. La clave de
+     * idempotencia identifica cada devolución para que un reintento no la repita.
+     */
+    public function refund(string $paymentId, ?int $amount = null, ?string $idempotencyKey = null): array
     {
-        $response = $this->http()->withHeaders(['X-Idempotency-Key' => 'hh-refund-'.$paymentId])
-            ->post(self::BASE.'/v1/payments/'.urlencode($paymentId).'/refunds', []);
+        $response = $this->http()->withHeaders(['X-Idempotency-Key' => $idempotencyKey ?? 'hh-refund-'.$paymentId])
+            ->post(self::BASE.'/v1/payments/'.urlencode($paymentId).'/refunds', $amount !== null ? ['amount' => $amount] : []);
         if (! $response->successful()) {
             throw new RuntimeException('Mercado Pago no aceptó la devolución: '.($response->json('message') ?: 'HTTP '.$response->status()));
         }

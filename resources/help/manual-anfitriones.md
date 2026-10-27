@@ -145,7 +145,7 @@ Bloqueos:
 - No se puede cobrar más que el saldo: "El monto ($X) es mayor que el saldo pendiente ($Y)…". Si aparece, revisa si alguien ya registró un pago.
 - Si la pantalla demora, revisa "Pagos registrados" antes de repetir: el sistema evita duplicados del mismo formulario.
 - Mercado Pago no se registra a mano: se cobra con el link (sección 3) y se registra solo.
-- Devoluciones: solo el administrador ("Devolver este pago").
+- Devoluciones: solo el administrador ("Devolver este pago"), completas o parciales (se escribe el monto a devolver y el resto sigue como pagado). Los pagos en línea de Mercado Pago se devuelven solos; los demás medios se devuelven por fuera del sistema. No hay que registrar un egreso en Caja por una devolución: el sistema ya la descuenta.
 
 ## 8. Finalizar, aseo e inspecciones
 **Finalizar (check-out)**: "Finalizar / Check-out →" en la tarjeta o "Finalizar reserva →" en la ficha.

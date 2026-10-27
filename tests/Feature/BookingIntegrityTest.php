@@ -12,6 +12,7 @@ use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\LateArrivalSetting;
 use App\Models\OperationalSetting;
+use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\RateRule;
@@ -26,6 +27,7 @@ use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Integrations\GhlBookingSync;
+use App\Services\Payments\MercadoPagoPayments;
 use App\Support\GuestLine;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -324,6 +326,47 @@ class BookingIntegrityTest extends TestCase
 
         Http::assertSent(fn ($request) => str_ends_with($request->url(), '/v1/payments/555/refunds'));
         $this->assertSame('reembolsado', $payment->fresh()->status);
+    }
+
+    public function test_partial_refund_keeps_the_rest_as_paid_on_the_original_day(): void
+    {
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $payment = app(PaymentService::class)->register($booking, $method, 20000, null, null, auth()->id(), null, '123');
+        $paidAt = $payment->fresh()->created_at;
+
+        $this->post(route('payments.refund', ['code' => $booking->code, 'payment' => $payment]), ['reason' => 'x', 'amount' => 25000])->assertSessionHasErrors('amount');
+
+        $this->travel(2)->days();
+        $this->post(route('payments.refund', ['code' => $booking->code, 'payment' => $payment]), ['reason' => 'Se fue antes', 'amount' => 5000])->assertSessionHasNoErrors();
+
+        $this->assertSame('reembolsado', $payment->fresh()->status);
+        $this->assertDatabaseHas('refunds', ['payment_id' => $payment->id, 'amount' => 5000]);
+        $rest = Payment::where('booking_id', $booking->id)->where('status', 'aprobado')->sole();
+        $this->assertSame(15000, (int) $rest->amount);
+        $this->assertSame('123', $rest->receipt_number);
+        $this->assertTrue($paidAt->eq($rest->created_at), 'el resto queda en el día del pago original');
+        $this->assertSame(15000, $booking->fresh()->paidAmount());
+    }
+
+    public function test_partial_refund_of_an_online_payment_sends_the_amount_to_mercado_pago(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $method = PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $payment = app(PaymentService::class)->register($booking, $method, 20000, 'MP-777', null, auth()->id());
+        Http::fake(['api.mercadopago.com/v1/payments/777/refunds' => Http::response(['id' => 2, 'status' => 'approved'])]);
+
+        $this->post(route('payments.refund', ['code' => $booking->code, 'payment' => $payment]), ['reason' => 'Descuento olvidado', 'amount' => 4000])->assertSessionHasNoErrors();
+
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/v1/payments/777/refunds') && (int) $request['amount'] === 4000);
+        $rest = Payment::where('booking_id', $booking->id)->where('status', 'aprobado')->sole();
+        $this->assertSame(16000, (int) $rest->amount);
+        $this->assertStringStartsWith('MP-777-RESTO-', $rest->external_id);
+
+        // Si después Mercado Pago informa la devolución total, el resto también queda devuelto.
+        app(MercadoPagoPayments::class)->record(['id' => 777, 'external_reference' => $booking->code, 'status' => 'refunded']);
+        $this->assertSame('reembolsado', $rest->fresh()->status);
     }
 
     public function test_ghl_is_told_only_when_the_booking_is_confirmed_and_skips_walk_ins_and_missing_emails(): void

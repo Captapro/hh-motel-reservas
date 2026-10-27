@@ -35,9 +35,17 @@ class MercadoPagoPayments
         $externalId = 'MP-'.$mpId;
         $existing = Payment::where('external_id', $externalId)->first();
 
-        // Devuelto o contracargado desde el panel de Mercado Pago.
+        // Devuelto o contracargado desde el panel de Mercado Pago. Si antes
+        // hubo una devolución parcial, lo que quedaba vive en "MP-{id}-RESTO-…".
         if (in_array($status, ['refunded', 'charged_back'], true)) {
-            return $existing ? $this->markRefunded($existing, 'Devuelto desde Mercado Pago ('.$status.')') : 'ignorado';
+            if (! $existing) {
+                return 'ignorado';
+            }
+            $result = $this->markRefunded($existing, 'Devuelto desde Mercado Pago ('.$status.')');
+            Payment::where('external_id', 'like', $externalId.'-RESTO-%')->where('status', 'aprobado')->get()
+                ->each(fn (Payment $rest) => $this->markRefunded($rest, 'Devuelto desde Mercado Pago ('.$status.')'));
+
+            return $result;
         }
 
         if ($status !== 'approved' || $existing) {
@@ -80,6 +88,46 @@ class MercadoPagoPayments
             AuditLog::record(null, 'pago.mercadopago', 'Payment', $payment->id, null, $payment->only(['booking_id', 'amount', 'external_id']) + ['revisar' => $wasClosed || $overpaid]);
 
             return $wasClosed || $overpaid ? 'registrado_revisar' : 'registrado';
+        });
+    }
+
+    /**
+     * Devolución de una parte de un pago: el pago original queda como
+     * reembolsado y se crea otro aprobado por lo que el cliente sigue
+     * pagando, con el mismo medio, documentos y fecha del original. Así la
+     * caja, las ventas y los reportes siguen sumando solo pagos aprobados.
+     */
+    public function markPartiallyRefunded(Payment $payment, int $refundAmount, string $reason, ?int $userId = null): Payment
+    {
+        return DB::transaction(function () use ($payment, $refundAmount, $reason, $userId) {
+            $locked = Payment::whereKey($payment->id)->lockForUpdate()->first();
+            if ($locked->status !== 'aprobado' || $refundAmount <= 0 || $refundAmount >= $locked->amount) {
+                throw new \InvalidArgumentException('Monto de devolución parcial inválido.');
+            }
+
+            $locked->update(['status' => 'reembolsado']);
+            $refund = Refund::create(['payment_id' => $locked->id, 'amount' => $refundAmount, 'reason' => $reason, 'status' => 'procesado', 'processed_by' => $userId]);
+
+            $base = preg_replace('/-RESTO-\d+$/', '', (string) $locked->external_id);
+            $rest = Payment::create([
+                'booking_id' => $locked->booking_id,
+                'payment_method_id' => $locked->payment_method_id,
+                'amount' => $locked->amount - $refundAmount,
+                'status' => 'aprobado',
+                'external_id' => $locked->external_id ? $base.'-RESTO-'.$refund->id : null,
+                'voucher_number' => $locked->voucher_number,
+                'receipt_number' => $locked->receipt_number,
+                'raw_payload' => $locked->raw_payload,
+                'registered_by' => $locked->registered_by,
+                'notes' => trim('Resto tras devolver $'.number_format($refundAmount, 0, ',', '.').' del pago #'.$locked->id.'. '.(string) $locked->notes),
+            ]);
+            // Misma fecha que el original: la plata que se queda entró ese día.
+            $rest->forceFill(['created_at' => $locked->created_at])->saveQuietly();
+
+            $this->payments->recalculateStatus($locked->booking()->first());
+            AuditLog::record($userId, 'pago.devolver_parcial', 'Payment', $locked->id, ['status' => 'aprobado', 'amount' => $locked->amount], ['status' => 'reembolsado', 'devuelto' => $refundAmount, 'pago_resto' => $rest->id, 'motivo' => $reason]);
+
+            return $rest;
         });
     }
 
