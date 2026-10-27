@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Services\Analyst\AnalystLauncher;
 use App\Services\Analyst\ClaudeTransport;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,9 +17,9 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
- * Analista de ventas (IA): solo administrador y soporte. Cada pregunta se
- * guarda como AnalystRun y se responde en segundo plano; la página consulta
- * el estado hasta que está lista.
+ * Analista de ventas (IA): solo las personas autorizadas en Personal. Cada
+ * pregunta se guarda como AnalystRun y se responde en segundo plano; la
+ * página consulta el estado hasta que está lista.
  */
 class SalesAnalystController extends Controller
 {
@@ -29,9 +30,9 @@ class SalesAnalystController extends Controller
             $thread = (string) AnalystRun::where('user_id', $request->user()->id)->latest('id')->value('thread');
         }
 
-        $runs = $thread ? AnalystRun::where('thread', $thread)->orderBy('id')->get() : collect();
+        $runs = $thread ? $this->visible($request)->where('thread', $thread)->orderBy('id')->get() : collect();
 
-        $threads = AnalystRun::query()
+        $threads = $this->visible($request)
             ->selectRaw('thread, MIN(id) as first_id, MAX(created_at) as last_at, COUNT(*) as total')
             ->groupBy('thread')->orderByDesc('last_at')->take(15)->get()
             ->map(fn ($t) => [
@@ -58,6 +59,9 @@ class SalesAnalystController extends Controller
         ], [], ['question' => 'pregunta']);
 
         abort_unless($claude->configured(), 422, 'Falta configurar la clave de la API de Claude.');
+        // Nadie sigue la conversación de otra persona (salvo el administrador).
+        abort_if(AnalystRun::where('thread', $validated['thread'])->exists()
+            && ! $this->visible($request)->where('thread', $validated['thread'])->exists(), 403);
 
         // Una pregunta a la vez por conversación.
         $busy = AnalystRun::where('thread', $validated['thread'])->whereIn('status', ['pendiente', 'trabajando'])
@@ -89,7 +93,7 @@ class SalesAnalystController extends Controller
     public function destroy(Request $request, string $thread): RedirectResponse
     {
         abort_unless(Str::isUuid($thread), 404);
-        $deleted = AnalystRun::where('thread', $thread)->delete();
+        $deleted = $this->visible($request)->where('thread', $thread)->delete();
         AuditLog::record($request->user()->id, 'analista.borrar_conversacion', 'AnalystRun', $thread, ['preguntas' => $deleted], null);
 
         return redirect()->route('admin.analyst.index')->with('status', 'Conversación eliminada.');
@@ -103,14 +107,22 @@ class SalesAnalystController extends Controller
         return redirect()->route('admin.analyst.index')->with('status', 'Se eliminaron todas las conversaciones.');
     }
 
-    public function show(AnalystRun $run): JsonResponse
+    public function show(Request $request, AnalystRun $run): JsonResponse
     {
+        abort_unless($request->user()->isAdministrador() || $run->user_id === $request->user()->id, 403);
+
         // Si el proceso murió sin avisar, no dejar la página esperando para siempre.
         if (! $run->isFinished() && $run->updated_at->lt(now()->subMinutes(15))) {
             $run->update(['status' => 'error', 'error' => 'El análisis se interrumpió. Intenta de nuevo.']);
         }
 
         return response()->json($this->payload($run));
+    }
+
+    /** El administrador ve todas las conversaciones; los demás autorizados, solo las suyas. */
+    private function visible(Request $request): Builder
+    {
+        return AnalystRun::query()->when(! $request->user()->isAdministrador(), fn ($q) => $q->where('user_id', $request->user()->id));
     }
 
     private function payload(AnalystRun $run): array

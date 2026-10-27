@@ -33,17 +33,26 @@
                         @endif
                     </select>
                 </div>
+                <div style="flex:1 1 100%; display:flex; gap:16px; font-size:13px;">
+                    <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_help" value="1" style="width:auto;"> Puede usar Ayuda IA</label>
+                    <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_analyst" value="1" style="width:auto;"> Puede usar Analista IA</label>
+                </div>
                 <button class="btn" type="submit">+ Crear</button>
             </form>
 
             <table class="tbl-compact">
-                <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+                <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>IA</th><th>Estado</th><th></th></tr></thead>
                 <tbody>
                     @forelse ($accounts as $account)
                         <tr>
                             <td>{{ $account->name }}</td>
                             <td style="color:#aaa;">{{ $account->email }}</td>
                             <td>{{ ['recepcion' => 'Anfitrión', 'soporte' => 'Soporte (master)'][$account->role] ?? ucfirst($account->role) }}</td>
+                            <td style="white-space:nowrap;">
+                                @if ($account->canUseAi('ayuda'))<span class="pill" title="Puede usar Ayuda IA">Ayuda</span>@endif
+                                @if ($account->canUseAi('analista'))<span class="pill" title="Puede usar Analista IA">Analista</span>@endif
+                                @if (! $account->canUseAi('ayuda') && ! $account->canUseAi('analista'))<span style="color:#888;">—</span>@endif
+                            </td>
                             <td><span class="pill {{ $account->is_active ? '' : 'pill-bad' }}">{{ $account->is_active ? 'ACTIVA' : 'DESACTIVADA' }}</span></td>
                             <td style="text-align:right;">
                                 @if (auth()->user()?->isSoporte() || $account->role === 'recepcion' || $account->id === auth()->id())
@@ -76,6 +85,10 @@
                                                 </select>
                                             </div>
                                             <div><label>Nueva contraseña</label><input type="password" name="password" placeholder="Opcional" autocomplete="new-password"></div>
+                                            <div class="full" style="display:flex; gap:16px; font-size:13px;">
+                                                <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_help" value="1" style="width:auto;" @checked($account->can_use_help) @disabled($account->isSoporte())> Ayuda IA</label>
+                                                <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_analyst" value="1" style="width:auto;" @checked($account->can_use_analyst) @disabled($account->isSoporte())> Analista IA</label>
+                                            </div>
                                             <div class="full"><button class="btn" type="submit" style="padding:7px 14px; font-size:13px;">Guardar</button></div>
                                         </form>
                                         <div class="danger">
@@ -94,7 +107,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" style="color:#666;">Todavía no hay cuentas creadas.</td></tr>
+                        <tr><td colspan="6" style="color:#666;">Todavía no hay cuentas creadas.</td></tr>
                     @endforelse
                 </tbody>
             </table>

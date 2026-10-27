@@ -2,7 +2,7 @@
 <html lang="es" style="background:#111;color:#eee">
 <head>
     <meta charset="utf-8"><meta name="color-scheme" content="dark">
-    <meta http-equiv="refresh" content="30">
+    <noscript><meta http-equiv="refresh" content="30"></noscript>
     <title>Tablero de Playrooms — HH Motel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -55,7 +55,7 @@
         /* Temporizador de atención: recién llegada se ve neutra, a los 3
            minutos pasa a amarillo y a los 5 a rojo -- para que una reserva
            nueva nunca quede sin que alguien la mire. Se recalcula solo cada
-           30s (el <meta refresh> de la página), no hace falta JS. */
+           30s (la recarga automática de la página), no hace falta JS. */
         .pending-row.age-warn { background:#fffaf0; border-top-color:#f5d99a; }
         .pending-row.age-warn .pcode, .pending-row.age-warn .pinfo small { color:#a3690a; }
         .pending-row.age-urgent { background:#fdf0f0; border-top-color:#f0b8b8; }
@@ -771,5 +771,10 @@
             document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
         })();
     </script>
+<script>
+    // Se recarga solo cada 30 s, salvo mientras alguien usa el chat de Ayuda
+    // (window.hhHoldRefresh lo marca partials/help-widget): recargar lo cerraría.
+    setInterval(function () { if (!window.hhHoldRefresh) window.location.reload(); }, 30000);
+</script>
 </body>
 </html>

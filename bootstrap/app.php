@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureAiAccess;
 use App\Http\Middleware\EnsureMucamaSession;
 use App\Http\Middleware\EnsureSectionAccess;
 use App\Http\Middleware\EnsureUserHasRole;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'mucama' => EnsureMucamaSession::class,
             'section' => EnsureSectionAccess::class,
+            'ai' => EnsureAiAccess::class,
         ]);
 
         // Global (no solo en rutas 'auth'): así una cuenta desactivada a

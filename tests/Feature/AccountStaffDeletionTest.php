@@ -17,6 +17,7 @@ class AccountStaffDeletionTest extends TestCase
             '0001_01_01_000000_create_users_table.php',
             '2026_08_18_120001_add_role_to_users_table.php',
             '2026_10_23_210000_allow_soporte_role_on_users.php',
+            '2026_10_27_120000_add_ai_access_to_users_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',
             '2026_08_18_120002_create_room_categories_table.php',
             '2026_08_18_120003_create_rooms_table.php',

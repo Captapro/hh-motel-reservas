@@ -36,6 +36,7 @@ class SalesAnalystTest extends TestCase
             '0001_01_01_000000_create_users_table.php',
             '2026_08_18_120001_add_role_to_users_table.php',
             '2026_10_23_210000_allow_soporte_role_on_users.php',
+            '2026_10_27_120000_add_ai_access_to_users_table.php',
             '2026_08_18_120002_create_room_categories_table.php',
             '2026_09_21_160029_add_sales_tip_to_room_categories_table.php',
             '2026_10_04_130000_add_max_capacity_to_room_categories.php',
@@ -74,7 +75,7 @@ class SalesAnalystTest extends TestCase
             (require database_path('migrations/'.$migration))->up();
         }
 
-        $this->admin = User::factory()->create(['role' => 'administrador']);
+        $this->admin = User::factory()->create(['role' => 'administrador', 'can_use_analyst' => true]);
 
         $category = RoomCategory::create(['name' => 'PLUS', 'display_order' => 1]);
         $room = Room::create(['room_category_id' => $category->id, 'name' => 'PLUS 201', 'operational_status' => 'activa']);
@@ -118,13 +119,25 @@ class SalesAnalystTest extends TestCase
         $this->assertStringNotContainsString('HH-AN-1', $json);
     }
 
-    public function test_only_admin_and_support_can_open_it(): void
+    public function test_only_authorized_people_can_open_it(): void
     {
         $host = User::factory()->create(['role' => 'recepcion']);
         $this->actingAs($host)->get(route('admin.analyst.index'))->assertForbidden();
 
+        $adminWithout = User::factory()->create(['role' => 'administrador']);
+        $this->actingAs($adminWithout)->get(route('admin.analyst.index'))->assertForbidden();
+
         $support = User::factory()->create(['role' => 'soporte']);
         $this->actingAs($support)->get(route('admin.analyst.index'))->assertOk()->assertSee('Analista de ventas');
+
+        // Un anfitrión autorizado entra, pero solo ve sus conversaciones y no edita el contexto.
+        $authorizedHost = User::factory()->create(['role' => 'recepcion', 'can_use_analyst' => true]);
+        $other = (string) Str::uuid();
+        AnalystRun::create(['user_id' => $this->admin->id, 'thread' => $other, 'question' => 'Pregunta del admin', 'status' => 'listo', 'answer' => 'R']);
+        $this->actingAs($authorizedHost)->get(route('admin.analyst.index', ['conversacion' => $other]))
+            ->assertOk()->assertDontSee('Pregunta del admin')->assertDontSee('Contexto del negocio');
+        $this->actingAs($authorizedHost)->put(route('admin.analyst.context'), ['business_context' => 'x'])->assertForbidden();
+        $this->actingAs($authorizedHost)->getJson(route('admin.analyst.show', AnalystRun::first()))->assertForbidden();
     }
 
     public function test_without_api_key_the_page_warns_and_questions_are_rejected(): void
@@ -144,7 +157,7 @@ class SalesAnalystTest extends TestCase
         {
             public array $calls = [];
 
-            public function send(string $system, array $messages, array $tools): object
+            public function send(string $system, array $messages, array $tools, array $options = []): object
             {
                 $this->calls[] = $messages;
                 $usage = (object) ['inputTokens' => 100, 'outputTokens' => 50];
@@ -193,7 +206,7 @@ class SalesAnalystTest extends TestCase
         {
             public string $system = '';
 
-            public function send(string $system, array $messages, array $tools): object
+            public function send(string $system, array $messages, array $tools, array $options = []): object
             {
                 $this->system = $system;
 

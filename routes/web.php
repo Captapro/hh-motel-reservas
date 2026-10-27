@@ -39,6 +39,7 @@ use App\Http\Controllers\CustomerLoyaltyController;
 use App\Http\Controllers\DailyAseoController;
 use App\Http\Controllers\DailySalesController;
 use App\Http\Controllers\GuestReviewController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\ImageResizeController;
 use App\Http\Controllers\MercadoPagoController;
 use App\Http\Controllers\MonthlySalesController;
@@ -109,6 +110,9 @@ Route::get('/login', [LoginController::class, 'create'])->middleware('guest')->n
 Route::post('/login', [LoginController::class, 'store'])->middleware(['guest', 'throttle:8,1,login.store'])->name('login.store');
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
+// Asistente de ayuda (botón "Ayuda" de todas las pantallas del equipo).
+Route::post('/ayuda', [HelpController::class, 'ask'])->middleware(['auth', 'ai:ayuda', 'throttle:30,1,help.ask'])->name('help.ask');
+
 Route::middleware(['auth', 'section'])->group(function () {
 
     Route::get('/reservar', [ReservationController::class, 'create'])->name('reservations.create');
@@ -178,6 +182,17 @@ Route::middleware(['auth', 'section'])->group(function () {
 }); // fin del grupo auth
 
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+    // Analista IA: solo quienes estén autorizados en Personal. El contexto del
+    // negocio y borrar todo el historial quedan para el administrador.
+    Route::middleware('ai:analista')->group(function () {
+        Route::get('/analista', [SalesAnalystController::class, 'index'])->name('analyst.index');
+        Route::post('/analista', [SalesAnalystController::class, 'ask'])->middleware('throttle:20,1,admin.analyst.ask')->name('analyst.ask');
+        Route::put('/analista/contexto', [SalesAnalystController::class, 'saveContext'])->middleware('role:administrador')->name('analyst.context');
+        Route::get('/analista/{run}', [SalesAnalystController::class, 'show'])->name('analyst.show');
+        Route::delete('/analista/conversaciones', [SalesAnalystController::class, 'destroyAll'])->middleware('role:administrador')->name('analyst.destroy_all');
+        Route::delete('/analista/conversaciones/{thread}', [SalesAnalystController::class, 'destroy'])->name('analyst.destroy');
+    });
+
     // Configuración -- solo administrador. Clientes/Productos/Combos/Analytics
     // quedan fuera de este bloque porque son herramientas de uso diario que
     // recepción también necesita (ver riel izquierdo del tablero).
@@ -285,12 +300,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::put('/personal/{staff}', [StaffController::class, 'update'])->name('staff.update');
         Route::delete('/personal/{staff}', [StaffController::class, 'destroy'])->name('staff.destroy');
 
-        Route::get('/analista', [SalesAnalystController::class, 'index'])->name('analyst.index');
-        Route::post('/analista', [SalesAnalystController::class, 'ask'])->middleware('throttle:20,1,admin.analyst.ask')->name('analyst.ask');
-        Route::put('/analista/contexto', [SalesAnalystController::class, 'saveContext'])->name('analyst.context');
-        Route::get('/analista/{run}', [SalesAnalystController::class, 'show'])->name('analyst.show');
-        Route::delete('/analista/conversaciones', [SalesAnalystController::class, 'destroyAll'])->name('analyst.destroy_all');
-        Route::delete('/analista/conversaciones/{thread}', [SalesAnalystController::class, 'destroy'])->name('analyst.destroy');
+        Route::get('/asistente', [HelpController::class, 'index'])->name('help.index');
+        Route::put('/asistente/reglas', [HelpController::class, 'saveRules'])->name('help.rules');
+        Route::delete('/asistente/preguntas', [HelpController::class, 'destroyAll'])->name('help.destroy_all');
 
         Route::get('/accesos', [AccessController::class, 'index'])->middleware('role:soporte')->name('access.index');
         Route::put('/accesos', [AccessController::class, 'update'])->middleware('role:soporte')->name('access.update');

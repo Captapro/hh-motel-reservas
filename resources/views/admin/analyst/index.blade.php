@@ -48,6 +48,7 @@
         <div class="errors">Falta configurar la clave de la API de Claude (<code>ANTHROPIC_API_KEY</code>) en Render. Sin ella el analista no puede responder.</div>
     @endunless
 
+    @if (auth()->user()->isAdministrador())
     <details class="card an-context" @if (! $setting->business_context) open @endif>
         <summary><b>Contexto del negocio</b> <span class="an-meta">· objetivos, costos, competencia, fechas clave y reglas. El analista lo lee en cada pregunta.@if ($setting->business_context && $setting->updated_at) Actualizado {{ $setting->updated_at->format('d/m/Y H:i') }}@if ($setting->editor) por {{ $setting->editor->name }}@endif.@endif</span></summary>
         <form method="POST" action="{{ route('admin.analyst.context') }}">
@@ -59,6 +60,7 @@
             </div>
         </form>
     </details>
+    @endif
 
     <div class="an-grid">
         <div class="card an-threads">
@@ -77,7 +79,7 @@
             @empty
                 <p class="sub" style="margin:0">Todavía no hay conversaciones.</p>
             @endforelse
-            @if ($threads->count() > 1)
+            @if ($threads->count() > 1 && auth()->user()->isAdministrador())
                 <form method="POST" action="{{ route('admin.analyst.destroy_all') }}" onsubmit="return confirm('¿Eliminar todas las conversaciones? No se puede deshacer.')" style="margin-top:10px;">
                     @csrf @method('DELETE')
                     <button type="submit" class="an-del-all">Eliminar todas</button>

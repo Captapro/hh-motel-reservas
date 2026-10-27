@@ -120,6 +120,7 @@
             <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.staff.index') }}" class="{{ request()->routeIs('admin.staff.*') ? 'hh-active' : '' }}">Personal</a>
+                <a href="{{ route('admin.help.index') }}" class="{{ request()->routeIs('admin.help.*') ? 'hh-active' : '' }}">Asistente de ayuda</a>
                 @if (auth()->user()?->isSoporte())
                     <a href="{{ route('admin.access.index') }}" class="{{ request()->routeIs('admin.access.*') ? 'hh-active' : '' }}">Perfiles y accesos</a>
                 @endif
@@ -134,3 +135,4 @@
         </div>
     @endif
 </div>
+@include('partials.help-widget')

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'phone', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'role', 'phone', 'is_active', 'can_use_analyst', 'can_use_help'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -30,6 +30,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'can_use_analyst' => 'boolean',
+            'can_use_help' => 'boolean',
         ];
     }
 
@@ -43,6 +45,23 @@ class User extends Authenticatable
     public function isSoporte(): bool
     {
         return $this->role === 'soporte';
+    }
+
+    /**
+     * Herramientas de IA autorizadas persona por persona en Personal. El
+     * Master (soporte) siempre puede, para que nadie quede sin poder darlas.
+     */
+    public function canUseAi(string $tool): bool
+    {
+        if ($this->isSoporte()) {
+            return true;
+        }
+
+        return match ($tool) {
+            'analista' => (bool) $this->can_use_analyst,
+            'ayuda' => (bool) $this->can_use_help,
+            default => false,
+        };
     }
 
     /** Si este perfil puede entrar a la sección (el administrador siempre puede). */

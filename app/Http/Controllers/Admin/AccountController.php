@@ -47,6 +47,8 @@ class AccountController extends Controller
 
         $user = User::create([
             ...$validated,
+            'can_use_analyst' => $request->boolean('can_use_analyst'),
+            'can_use_help' => $request->boolean('can_use_help'),
             'is_active' => true,
             'password' => $password,
         ]);
@@ -71,8 +73,10 @@ class AccountController extends Controller
             'password' => ['nullable', 'string', 'min:8'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['can_use_analyst'] = $request->boolean('can_use_analyst');
+        $validated['can_use_help'] = $request->boolean('can_use_help');
 
-        $old = $user->only(['name', 'email', 'role', 'is_active']);
+        $old = $user->only(['name', 'email', 'role', 'is_active', 'can_use_analyst', 'can_use_help']);
         $newPassword = $validated['password'] ?? null;
         unset($validated['password']);
         $user->update($validated);
@@ -80,7 +84,7 @@ class AccountController extends Controller
             $user->update(['password' => $newPassword]);
         }
 
-        AuditLog::record(auth()->id(), 'cuenta.editar', 'User', $user->id, $old, $user->only(['name', 'email', 'role', 'is_active']));
+        AuditLog::record(auth()->id(), 'cuenta.editar', 'User', $user->id, $old, $user->only(['name', 'email', 'role', 'is_active', 'can_use_analyst', 'can_use_help']));
 
         return redirect()->route('admin.staff.index')->with('status', 'Cuenta actualizada.'.($newPassword ? ' Contraseña reseteada a: '.$newPassword : ''));
     }
