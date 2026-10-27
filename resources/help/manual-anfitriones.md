@@ -117,8 +117,9 @@ Bloqueos:
 
 **Aseo**:
 1. La mucama escanea el QR de la puerta, entra con su PIN y aprieta "Reportar aseo listo →".
-2. En el tablero aparece "✓ <mucama> reportó aseo listo a las HH:MM — falta tu confirmación".
-3. Revisa, elige "¿Quién hizo el aseo?" y aprieta "Marcar aseo listo — reactivar". Es la única forma de que vuelva a Disponibles.
+2. En el tablero aparece "✓ <mucama> reportó aseo listo a las HH:MM — falta tu confirmación". El PIN ya identifica quién hizo el aseo.
+3. Revisa la habitación y aprieta "Confirmar aseo de <mucama> — reactivar". No hay que elegir a nadie. Es la única forma de que vuelva a Disponibles.
+- Si ninguna mucama lo reportó con su PIN (por ejemplo, no escaneó el QR), la tarjeta pide elegir "¿Quién hizo el aseo?" y luego "Marcar aseo listo — reactivar".
 - Si no hay mucamas para elegir: "No hay mucamas activas cargadas en Personal" → avisa al administrador.
 - "Aseo del día" (Operaciones) muestra salidas, aseos cerrados y pendientes. "Dónde están las mucamas" muestra en qué habitación está cada una.
 

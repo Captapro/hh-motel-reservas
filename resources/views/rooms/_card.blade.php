@@ -32,15 +32,21 @@
             <div class="eta">Esperando aseo — no vuelve a disponibles hasta que recepción la marque</div>
         @endif
         @if (($cleaningStaff ?? collect())->isNotEmpty())
+            @php $reportedBy = $room->aseo_reported_at && $cleaningStaff->contains($room->aseo_reported_by) ? $room->aseo_reported_by : null; @endphp
             <form method="POST" action="{{ route('rooms.aseo_ready', $room) }}" class="aseo-ready-form">
                 @csrf
-                <select name="cleaned_by" class="aseo-cleaner-input" required>
-                    <option value="" @selected(!$room->aseo_reported_by) disabled>¿Quién hizo el aseo?</option>
-                    @foreach ($cleaningStaff as $name)
-                        <option value="{{ $name }}" @selected($room->aseo_reported_by === $name)>{{ $name }}</option>
-                    @endforeach
-                </select>
-                <button type="submit" class="aseo-ready-btn">Marcar aseo listo — reactivar</button>
+                @if ($reportedBy)
+                    {{-- La mucama ya se identificó con su PIN al reportar: solo se confirma. --}}
+                    <button type="submit" class="aseo-ready-btn">Confirmar aseo de {{ $reportedBy }} — reactivar</button>
+                @else
+                    <select name="cleaned_by" class="aseo-cleaner-input" required>
+                        <option value="" selected disabled>¿Quién hizo el aseo?</option>
+                        @foreach ($cleaningStaff as $name)
+                            <option value="{{ $name }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
+                    <button type="submit" class="aseo-ready-btn">Marcar aseo listo — reactivar</button>
+                @endif
             </form>
         @else
             <div class="eta aseo-help" style="color:#e88a9a;">No hay mucamas activas cargadas en <a href="{{ route('admin.staff.index') }}" style="color:#e88a9a;">Personal</a> — agrega al menos una para poder marcar el aseo.</div>

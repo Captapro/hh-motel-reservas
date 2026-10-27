@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Room;
@@ -244,5 +245,19 @@ class RoomAseoReactivationTest extends TestCase
         $this->assertNull($mucama->openShiftLog());
         $log = StaffShiftLog::where('staff_id', $mucama->id)->firstOrFail();
         $this->assertNotNull($log->ended_at);
+    }
+
+    public function test_reception_just_confirms_who_cleaned_when_the_maid_reported_with_her_pin(): void
+    {
+        $mucama = Staff::create(['name' => 'Ana Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
+        $this->withSession(['mucama_staff_id' => $mucama->id])->post("/qr/habitacion/{$this->room->id}/aseo");
+
+        // Sin elegir a nadie: el PIN ya dijo quién hizo el aseo.
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+        $this->post("/habitaciones/{$this->room->id}/aseo-listo")->assertSessionHasNoErrors();
+
+        $this->assertSame('activa', $this->room->fresh()->operational_status);
+        $log = AuditLog::where('action', 'habitacion.aseo_listo')->latest('id')->first();
+        $this->assertSame('Ana Mucama', $log->new_value['cleaned_by']);
     }
 }

@@ -301,6 +301,13 @@ class RoomBoardController extends Controller
     {
         $names = $this->cleaningStaffNames();
 
+        // Si la mucama ya reportó el aseo con su PIN, ella es quien lo hizo:
+        // recepción solo confirma. Elegir a mano queda para cuando nadie lo
+        // reportó o para corregir.
+        if (! $request->filled('cleaned_by') && $room->aseo_reported_by) {
+            $request->merge(['cleaned_by' => $room->aseo_reported_by]);
+        }
+
         $validated = $request->validate([
             'cleaned_by' => ['required', 'string', Rule::in($names)],
         ], [
