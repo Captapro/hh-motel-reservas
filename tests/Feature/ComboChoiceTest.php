@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\Booking\ConsumptionService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\PaysBookings;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,8 @@ use Tests\TestCase;
  */
 class ComboChoiceTest extends TestCase
 {
+    use PaysBookings;
+
     private Booking $booking;
 
     private Combo $combo;
@@ -148,5 +151,20 @@ class ComboChoiceTest extends TestCase
         $pap = Product::create(['name' => 'Pap', 'category' => 'Bebidas', 'price' => 2000, 'track_inventory' => true, 'stock' => 4, 'is_active' => true]);
         app(ConsumptionService::class)->addCombo($this->booking, $pack->fresh(), 1, null, [$item->id => [$pap->id => 2]]);
         $this->assertSame(2, $pap->fresh()->stock);
+    }
+
+    public function test_finalize_screen_offers_the_flavor_picker_and_saves_the_choice(): void
+    {
+        $this->payRoom($this->booking);
+        $this->get(route('bookings.finalize.show', $this->booking->code))
+            ->assertOk()->assertSee('data-choices', false)->assertSee('Sprite');
+
+        $this->post(route('bookings.finalize.store', $this->booking->code), [
+            'confirm_room_checked' => '1',
+            'combo_quantities' => [$this->combo->id => 1],
+            'combo_choices' => [$this->combo->id => [$this->choice->id => [$this->drinks['Coca-Cola']->id => 2]]],
+        ]);
+
+        $this->assertSame(8, $this->drinks['Coca-Cola']->fresh()->stock);
     }
 }
