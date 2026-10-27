@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\AnalystRun;
+use App\Services\Analyst\AnalystLauncher;
+use App\Services\Analyst\ClaudeTransport;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
+
+/**
+ * Analista de ventas (IA): solo administrador y soporte. Cada pregunta se
+ * guarda como AnalystRun y se responde en segundo plano; la página consulta
+ * el estado hasta que está lista.
+ */
+class SalesAnalystController extends Controller
+{
+    public function index(Request $request, ClaudeTransport $claude): View
+    {
+        $thread = (string) $request->query('conversacion', '');
+        if (! Str::isUuid($thread)) {
+            $thread = (string) AnalystRun::where('user_id', $request->user()->id)->latest('id')->value('thread');
+        }
+
+        $runs = $thread ? AnalystRun::where('thread', $thread)->orderBy('id')->get() : collect();
+
+        $threads = AnalystRun::query()
+            ->selectRaw('thread, MIN(id) as first_id, MAX(created_at) as last_at, COUNT(*) as total')
+            ->groupBy('thread')->orderByDesc('last_at')->take(15)->get()
+            ->map(fn ($t) => [
+                'thread' => $t->thread,
+                'title' => Str::limit((string) AnalystRun::whereKey($t->first_id)->value('question'), 60),
+                'last_at' => Carbon::parse($t->last_at)->timezone('America/Santiago'),
+                'total' => (int) $t->total,
+            ]);
+
+        return view('admin.analyst.index', [
+            'configured' => $claude->configured(),
+            'thread' => $thread ?: (string) Str::uuid(),
+            'runs' => $runs,
+            'threads' => $threads,
+        ]);
+    }
+
+    public function ask(Request $request, AnalystLauncher $launcher, ClaudeTransport $claude): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'question' => ['required', 'string', 'max:2000'],
+            'thread' => ['required', 'uuid'],
+        ], [], ['question' => 'pregunta']);
+
+        abort_unless($claude->configured(), 422, 'Falta configurar la clave de la API de Claude.');
+
+        // Una pregunta a la vez por conversación.
+        $busy = AnalystRun::where('thread', $validated['thread'])->whereIn('status', ['pendiente', 'trabajando'])
+            ->where('created_at', '>', now()->subMinutes(10))->exists();
+        abort_if($busy, 409, 'Espera a que termine la respuesta anterior.');
+
+        $run = AnalystRun::create([
+            'user_id' => $request->user()->id,
+            'thread' => $validated['thread'],
+            'question' => trim($validated['question']),
+        ]);
+        $launcher->launch($run);
+
+        return response()->json($this->payload($run->fresh()));
+    }
+
+    public function show(AnalystRun $run): JsonResponse
+    {
+        // Si el proceso murió sin avisar, no dejar la página esperando para siempre.
+        if (! $run->isFinished() && $run->updated_at->lt(now()->subMinutes(6))) {
+            $run->update(['status' => 'error', 'error' => 'El análisis se interrumpió. Intenta de nuevo.']);
+        }
+
+        return response()->json($this->payload($run));
+    }
+
+    private function payload(AnalystRun $run): array
+    {
+        return [
+            'id' => $run->id,
+            'status' => $run->status,
+            'steps' => $run->steps ?? [],
+            'answer_html' => $run->answer ? self::markdown($run->answer) : null,
+            'error' => $run->error,
+            'poll_url' => route('admin.analyst.show', $run),
+        ];
+    }
+
+    public static function markdown(string $text): string
+    {
+        return Str::markdown($text, ['html_input' => 'strip', 'allow_unsafe_links' => false]);
+    }
+}

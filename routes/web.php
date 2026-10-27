@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccessCodeController;
 use App\Http\Controllers\Admin\AccessController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AnalyticsController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RateRuleController;
 use App\Http\Controllers\Admin\RoomCategoryController;
 use App\Http\Controllers\Admin\RoomController as AdminRoomController;
+use App\Http\Controllers\Admin\SalesAnalystController;
 use App\Http\Controllers\Admin\ShiftController;
 use App\Http\Controllers\Admin\ShortStaySettingController;
 use App\Http\Controllers\Admin\StaffController;
@@ -39,7 +41,6 @@ use App\Http\Controllers\DailySalesController;
 use App\Http\Controllers\GuestReviewController;
 use App\Http\Controllers\ImageResizeController;
 use App\Http\Controllers\MercadoPagoController;
-use App\Http\Controllers\AccessCodeController;
 use App\Http\Controllers\MonthlySalesController;
 use App\Http\Controllers\MucamaActivityController;
 use App\Http\Controllers\MucamaAuthController;
@@ -283,6 +284,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('/personal', [StaffController::class, 'store'])->name('staff.store');
         Route::put('/personal/{staff}', [StaffController::class, 'update'])->name('staff.update');
         Route::delete('/personal/{staff}', [StaffController::class, 'destroy'])->name('staff.destroy');
+
+        Route::get('/analista', [SalesAnalystController::class, 'index'])->name('analyst.index');
+        Route::post('/analista', [SalesAnalystController::class, 'ask'])->middleware('throttle:20,1,admin.analyst.ask')->name('analyst.ask');
+        Route::get('/analista/{run}', [SalesAnalystController::class, 'show'])->name('analyst.show');
 
         Route::get('/accesos', [AccessController::class, 'index'])->middleware('role:soporte')->name('access.index');
         Route::put('/accesos', [AccessController::class, 'update'])->middleware('role:soporte')->name('access.update');

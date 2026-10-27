@@ -84,4 +84,10 @@ return [
         'widget_url' => env('HH_REVIEWS_WIDGET_URL', 'https://link.hhmotel.cl/reputation/widgets/review_widget/ksYYfSiY8nP4YFvkrJFJ'),
     ],
 
+    // Analista de ventas (IA). Sin ANTHROPIC_API_KEY la sección avisa que falta configurarla.
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY', ''),
+        'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+    ],
+
 ];
