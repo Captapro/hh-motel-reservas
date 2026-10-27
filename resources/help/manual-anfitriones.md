@@ -11,7 +11,7 @@ Los textos entre comillas son los nombres exactos de botones, pantallas y mensaj
 - Se recarga solo cada 30 segundos ("actualizar ahora" para forzarlo). No se recarga mientras el chat de Ayuda está abierto.
 - Herramientas: "Ver catálogo ↗", "Copiar link del catálogo", filtro "Todas las alas" / "Ala norte" / "Ala sur", botón de vista ("Vista compacta" / "Vista chips" / "Vista normal") y el QR "Validador de tickets" (escanéalo con el celular para abrir la cámara que lee los pases).
 - Avisos en vivo: "📲 Pase escaneado — <cliente>" con "Cobrar y hacer check-in →" o "Hacer check-in →"; "💳 Pago recibido — <cliente> · $monto" (pago por Mercado Pago) con "Ver reserva →".
-- "⚠ Pendientes de gestionar": reservas que aún no pagan (en línea o hechas con "+ Reserva"). Muestra "⏳ vence en…" o "Sin vencimiento", y "✓ Ya se le avisó" o "Sin contactar". Se pone amarilla a los 3 minutos y roja a los 5: hay que atenderlas. Clic para abrir la reserva.
+- "⚠ Pendientes de gestionar": reservas que todavía no tienen ningún pago. Detalle completo en la sección 1.1.
 - Contadores: Ocupadas, En aseo, Disponibles, Por llegar, Fuera de servicio. Resumen del día: Playrooms vendidos hoy, Extras vendidos hoy, Venta Playrooms, Venta extras, Total del día (solo estadías de hoy pagadas completas).
 - Secciones:
   - **Ocupadas**: con check-in y sin check-out. Muestra "Libera en X" o en rojo "Pasó su horario hace X". Botones "+ Agregar consumo →", "Falta cobrar $X →" (si hay saldo) o "Finalizar / Check-out →" (sin saldo). "RESERVADA — SIN CHECK-IN" con "Falta check-in — marcar ahora" si falta el check-in. Estadía corta: "⏱ Estadía corta · sale al cierre, HH:MM".
@@ -21,10 +21,49 @@ Los textos entre comillas son los nombres exactos de botones, pantallas y mensaj
   - **Fuera de servicio**: en mantención o inactivas.
 - En cada tarjeta: "N reservas →", "📋 Copiar link de ficha" y "Cambiar estado" (Activa, En mantención, Inactiva, Aseo; "Aseo" solo si está libre) con "Guardar". Badge "Mantención" si la última inspección tuvo una falla; badge "OFERTA" o "DESCUENTO X%" si hay oferta vigente.
 
+## 1.1 "⚠ Pendientes de gestionar"
+Recuadro arriba del tablero con las reservas que **todavía no tienen ningún pago**. Si no hay ninguna, no aparece. Hay que atenderlas: cobrar, mantenerlas o cancelarlas.
+
+Aparece en tres casos:
+1. **Reserva en línea esperando el pago**: el cliente reservó en el catálogo y tiene 10 minutos para pagar con Mercado Pago. Se ve con "⏳ vence en X min". Si no paga a tiempo, se libera sola y desaparece.
+2. **Reserva hecha en recepción con "+ Reserva" sin cobrar**: se ve con "Sin vencimiento". No se libera sola: espera a que el cliente pague o a que alguien la cancele.
+3. **Reserva en línea que recepción mantuvo** con "Pagará en recepción" o "Pago tardío": también "Sin vencimiento".
+
+Cómo leer cada fila:
+- **Código** (HH-AAAAMMDD-NNNNN) y **nombre del cliente**.
+- **Habitación · categoría · "llegó hace X"**: "llegó hace" es el tiempo desde que se **creó la reserva**, no desde que llegó el cliente.
+- **Fecha y hora** a la que está reservada ("hoy 23:00" o "27/10 01:45").
+- **"⏳ vence en X"** (retención en línea de 10 minutos) o **"Sin vencimiento"**.
+- **"Sin contactar"**: todavía no se le enviaron los datos de pago. Cambia a **"✓ Ya se le avisó"** al usar "Copiar texto", "Copiar datos de cuenta" o el link de Mercado Pago en la ficha.
+- **Color**: normal al principio, amarilla a los 3 minutos y roja a los 5. Rojo significa que nadie la ha atendido.
+- Clic en la fila (o la flecha →) abre la ficha de la reserva.
+
+Qué hacer:
+- Si el cliente va a pagar a distancia: en la ficha, envía los datos de pago o el link de Mercado Pago (sección 3).
+- Si es una reserva en línea con "⏳ vence en…" y el cliente avisa que pagará al llegar: "Pagará en recepción" (o "Pago tardío" si pagó fuera de plazo) para que no se libere.
+- Si el cliente llegó: "Registrar pago" y después el check-in. Sin la habitación pagada no hay check-in.
+- Si el cliente no viene: "Cancelar" en la ficha (la habitación queda libre).
+- Sale del recuadro sola con el primer pago (la reserva pasa a confirmada), o si se cancela o vence.
+
 ## 2. Crear una reserva o un ingreso presencial
-- **"+ Ingreso presencial"**: el cliente está en recepción; se registra, se cobra y se hace el check-in en un solo flujo. Entra ahora.
-- **"+ Reserva"**: para una hora más adelante. Queda en "Pendientes de gestionar" hasta que pague.
-- Desde una tarjeta: "Ingresar →" o "o reservar para más tarde" abren el formulario con la habitación elegida.
+
+**Diferencia entre los dos botones de la barra superior:**
+
+| | "+ Ingreso presencial" | "+ Reserva" |
+|---|---|---|
+| Cuándo | El cliente **está en recepción** y entra **ahora** | El cliente quiere una hora **más adelante** (llamó, escribió, o vendrá después) |
+| Fecha y hora | No se eligen: entra ahora | Se eligen fecha y hora |
+| Acompañantes | Se registran en el formulario | Se registran en el check-in, al llegar |
+| Productos y combos | Se ofrecen en el formulario (paso obligatorio) y aparece el aviso de upsells | Se ofrecen en el check-in |
+| Pago | Se cobra en el mismo flujo | Queda sin pago hasta que pague (a distancia o al llegar) |
+| Estado al crear | Confirmada | Pendiente de pago, en "⚠ Pendientes de gestionar" con "Sin vencimiento" |
+| Botón final | "Crear, cobrar y hacer check-in →" | "Crear reserva" |
+| Después | Registrar pago → check-in → la habitación queda Ocupada | Vuelve al tablero; la habitación aparece en "Por llegar" cuando se acerca la hora |
+
+Regla práctica: si el cliente está frente a ti y entra ya, usa "+ Ingreso presencial". Si no está o entra más tarde, usa "+ Reserva". No uses "+ Reserva" para alguien que entra ahora: quedaría como pendiente y tendrías que hacer el cobro y el check-in por separado.
+
+- Desde una tarjeta de Disponibles: "Ingresar →" abre el ingreso presencial con esa habitación, y "o reservar para más tarde" abre "+ Reserva" con esa habitación.
+- Cada pantalla tiene un atajo a la otra: "¿Es para más tarde? Hacer una reserva" y "¿El cliente está aquí? Ingreso presencial".
 
 Pasos:
 1. **La estadía**: elige "Habitación" (cada opción dice "Libre ahora" u "Ocupada, libera en X min"), "Fecha" y "Hora" (solo en Reserva), "Duración" (solo las que tienen precio en esa categoría) y "Personas". Horario de venta: lun a jue 10:30 a 03:00; vie 10:30 a dom 22:30 corrido. Fuera de eso el sistema no deja crear la reserva.
