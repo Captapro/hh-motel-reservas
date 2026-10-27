@@ -301,9 +301,10 @@
            texto secundario apagado, "Ingresar" como botón de contorno (antes
            eran 24 bloques naranjos iguales) y los atajos como íconos sin caja. */
         /* Mismo ancho de tarjeta en todas las secciones (Ocupadas, Disponibles,
-           En aseo, Fuera de servicio): las columnas no se estiran para llenar
-           un panel angosto. La altura sí cambia según las acciones de cada una. */
-        .compact .page-grid .main-col .grid, .compact .grid { grid-template-columns: repeat(auto-fill, 220px) !important; gap: 10px; }
+           En aseo, Fuera de servicio). hhSyncCompactWidth() calcula ese ancho
+           para que entren todas las columnas posibles en la columna principal
+           sin pasarse a "Por llegar"; la altura sí cambia según las acciones. */
+        .compact .page-grid .main-col .grid, .compact .grid { grid-template-columns: repeat(auto-fill, var(--hh-card-w, 210px)) !important; gap: 10px; }
         .compact .card, .compact .page-grid .main-col .card { border-top-color:#2a2a2a; border-right-color:#2a2a2a; border-bottom-color:#2a2a2a; border-left-width:3px; border-radius:10px; padding:10px 11px 8px 12px; gap:5px 6px; }
         .compact .card:hover { transform:none; box-shadow:0 4px 14px rgba(0,0,0,.35); border-top-color:#3a3a3a; border-right-color:#3a3a3a; border-bottom-color:#3a3a3a; }
         .compact .card-head b { font-size:14px; font-weight:650; letter-spacing:-.01em; }
@@ -636,8 +637,25 @@
             if (next !== 'normal') document.documentElement.classList.add(next);
             localStorage.setItem('hh-board-density', next);
             hhSetCompactLabel();
+            hhSyncCompactWidth();
         }
         hhSetCompactLabel();
+
+        // Vista compacta: cuántas tarjetas de al menos 200 px caben en el panel
+        // de Ocupadas (el más angosto de la columna principal) y qué ancho
+        // exacto llena esa fila; todas las secciones usan ese mismo ancho.
+        function hhSyncCompactWidth() {
+            const root = document.documentElement;
+            const box = document.querySelector('.section.ocupadas.panel-box');
+            if (!root.classList.contains('compact') || !box) { root.style.removeProperty('--hh-card-w'); return; }
+            const cs = getComputedStyle(box);
+            const inner = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            const gap = 10, min = 200;
+            const cols = Math.max(1, Math.floor((inner + gap) / (min + gap)));
+            root.style.setProperty('--hh-card-w', Math.floor((inner - gap * (cols - 1)) / cols) + 'px');
+        }
+        hhSyncCompactWidth();
+        window.addEventListener('resize', hhSyncCompactWidth);
 
         // Copiar el link de la ficha pública sin salir del tablero -- antes
         // el único camino era abrir la ficha en otra pestaña y copiarlo ahí,
