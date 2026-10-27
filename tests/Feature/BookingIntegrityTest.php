@@ -702,11 +702,24 @@ class BookingIntegrityTest extends TestCase
 
         $this->get(route('catalog.booked', $booking->pass_token))
             ->assertOk()->assertSee('data:image/png;base64', false)->assertSee('Descargar mi pase')
-            ->assertDontSee('Para asegurar tu reserva');
+            ->assertDontSee('O paga por transferencia');
 
         config(['services.hh_payment.bank_titular' => 'Titular de prueba', 'services.hh_payment.bank_account_number' => '000111', 'services.hh_payment.mercadopago_link' => 'https://mpago.test/pago']);
         $this->get(route('catalog.booked', $booking->pass_token))
-            ->assertSee('Para asegurar tu reserva')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('Pagar con Mercado Pago');
+            ->assertSee('O paga por transferencia')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('https://mpago.test/pago', false)->assertSee('ahora →', false);
+    }
+
+    public function test_public_page_puts_payment_first_and_hides_the_qr_while_the_online_hold_runs(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $booking = $this->booking();
+        $booking->update(['expires_at' => now()->addMinutes(10)]);
+
+        $html = $this->get(route('catalog.booked', $booking->pass_token))->assertOk()
+            ->assertSee('Falta un paso: paga tu reserva')->assertSee('hold-countdown', false)
+            ->assertDontSee('data:image/png;base64', false)->assertSee('aparecerán aquí apenas se confirme el pago')
+            ->getContent();
+        $this->assertLessThan(strpos($html, 'Código</span>'), strpos($html, 'pay-btn'), 'el botón de pago va antes del resumen');
     }
 
     public function test_extra_hour_is_blocked_when_the_rate_has_no_price(): void

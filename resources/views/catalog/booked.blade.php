@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Reserva confirmada — HH Motel</title>
+    <title>Mi reserva — HH Motel</title>
     @include('catalog._app-head')
     <style>
         :root {
@@ -47,33 +47,92 @@
         a.btn { display:block; background:var(--hh-accent); color:#21170e; text-decoration:none; padding: 13px; border-radius: 9px; font-weight:750; font-size:14.5px; }
         a.btn:hover { background:var(--hh-accent-hover); }
         a.back { display:block; margin-top:14px; color:#62656c; text-decoration:none; font-size:13px; }
+        .pay-hero { background:#fff; border:2px solid var(--hh-accent); border-radius:14px; padding:18px 18px 14px; margin-bottom:20px; box-shadow:0 6px 18px rgba(255,121,24,.15); }
+        .pay-timer { display:flex; flex-direction:column; align-items:center; gap:2px; margin-bottom:14px; color:#62656c; font-size:12.5px; }
+        .pay-timer b { font-size:34px; line-height:1.1; color:var(--hh-ink); font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+        .pay-timer b.urgent { color:#c0392b; }
+        a.btn.pay-btn { font-size:16px; padding:15px; border-radius:11px; }
+        .pay-hero small { display:block; margin-top:10px; color:#62656c; font-size:12.5px; }
+        .qr-pending { background:#fff; border:1px dashed #d7d7d2; border-radius:12px; padding:14px 16px; margin-bottom:20px; color:#62656c; font-size:13px; }
     </style>
 </head>
 <body>
     @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => 'Mi reserva'])
     <div class="wrap">
-        <div class="check">✓</div>
         @php
             $expired = $booking->booking_status === 'EXPIRADA';
             $confirmed = in_array($booking->booking_status, ['CONFIRMADA', 'CHECK_IN', 'FINALIZADA'], true);
             $holdOpen = $booking->booking_status === 'PENDIENTE_PAGO' && $booking->expires_at && $booking->expires_at->isFuture();
+            $hasBank = ! empty($pay['bank_titular']) && ! empty($pay['bank_account_number']);
+            $canPayOnline = $mpEnabled && in_array($booking->booking_status, ['PENDIENTE_PAGO', 'CONFIRMADA'], true) && $booking->balanceDue() > 0;
+            // Volvió de Mercado Pago pero el aviso todavía no llegó: se refresca solo unos segundos.
+            $waitingMp = request('mp') === 'ok' && $booking->booking_status === 'PENDIENTE_PAGO';
+            // Con la retención de 10 minutos corriendo, lo primero es pagar: el
+            // QR recién sirve cuando la reserva está confirmada (o la mantiene
+            // recepción para pagar al llegar).
+            $payFirst = ! $expired && ! $confirmed && $booking->balanceDue() > 0;
+            $showQr = ! $expired && ! $holdOpen && ! $waitingMp;
+            $amount = '$'.number_format($booking->balanceDue(), 0, ',', '.');
         @endphp
-        <h1>{{ $expired ? 'Reserva vencida' : ($confirmed ? '¡Reserva confirmada!' : '¡Reserva creada!') }}</h1>
-        <p class="sub">{{ $expired ? 'No recibimos el pago a tiempo y la habitación se liberó.' : 'Guarda el código — te lo vamos a pedir al llegar.' }}</p>
-        @if ($holdOpen)
-            <div class="next-steps" style="background:#3a2a12; border-color:#7a5a1f; color:#ffd699;">⏳ Tu habitación está retenida hasta las <b>{{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}</b> ({{ \App\Models\Booking::HOLD_MINUTES }} minutos). Realiza el pago antes de ese horario para confirmarla; si no, se libera.</div>
-        @elseif ($expired)
-            <style>.qr-box, .pay-box { display:none; }</style>
+
+        @if ($expired)
+            <div class="check" style="background:#3a1c1c; color:#f3b8b8;">✕</div>
+            <h1>Reserva vencida</h1>
+            <p class="sub">No recibimos el pago a tiempo y la habitación se liberó.</p>
             <div class="next-steps" style="background:#3a1c1c; border-color:#7a2d2d; color:#f3b8b8;">Puedes hacer una nueva reserva cuando quieras: <a href="{{ route('catalog.reserve') }}" style="color:#ffd699;">reservar de nuevo →</a></div>
+        @elseif ($confirmed)
+            <div class="check">✓</div>
+            <h1>¡Reserva confirmada!</h1>
+            <p class="sub">Muestra tu código QR en recepción al llegar.</p>
+        @else
+            <div class="check" style="background:#3a2a12; color:#ffd699;">⏳</div>
+            <h1>Falta un paso: paga tu reserva</h1>
+            <p class="sub">Tu habitación está apartada. Se confirma apenas se registre el pago.</p>
         @endif
 
         @if (session('warning'))
             <div class="next-steps" style="background:#3a2a12; border-color:#7a5a1f; color:#ffd699;">{{ session('warning') }}</div>
         @endif
 
+        @if ($waitingMp)
+            <div class="next-steps" style="background:#12293a; border-color:#243a4c; color:#9edaff;">⏳ Estamos confirmando tu pago con Mercado Pago. Esta página se actualiza sola.</div>
+            <meta http-equiv="refresh" content="4">
+        @elseif (request('mp') === 'fallo')
+            <div class="next-steps" style="background:#3a1c1c; border-color:#7a2d2d; color:#f3b8b8;">El pago no se completó. Puedes intentarlo de nuevo{{ $hasBank ? ' o pagar por transferencia' : '' }}.</div>
+        @endif
+
+        @if ($payFirst && ! $waitingMp)
+            {{-- Lo primero: pagar antes de que se libere la habitación. --}}
+            <div class="pay-hero">
+                @if ($holdOpen)
+                    <div class="pay-timer">
+                        <span>Se libera en</span>
+                        <b id="hold-countdown" data-expires="{{ $booking->expires_at->toIso8601String() }}">{{ \App\Models\Booking::HOLD_MINUTES }}:00</b>
+                        <span>hasta las {{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}</span>
+                    </div>
+                @endif
+                @if ($canPayOnline)
+                    <a class="btn pay-btn" href="{{ route('catalog.pay', $booking->pass_token) }}">Pagar {{ $amount }} ahora →</a>
+                    <small>Pago seguro en Mercado Pago. Apenas se aprueba, tu reserva queda confirmada y aparece tu código QR.</small>
+                @elseif (! empty($pay['mercadopago_link']))
+                    <a class="btn pay-btn" href="{{ $pay['mercadopago_link'] }}" target="_blank" rel="noopener">Pagar {{ $amount }} ahora →</a>
+                    <small>Pago seguro en Mercado Pago.</small>
+                @endif
+            </div>
+        @endif
+
+        @if ($confirmed && $showQr)
+            <div class="qr-box">
+                <img src="{{ $qrDataUri }}" alt="Código QR de la reserva {{ $booking->code }}">
+                <strong>Tu código QR</strong>
+                <small>Muéstralo en recepción al llegar. Código {{ $booking->code }}.</small><br>
+                <a class="pass" href="{{ $passUrl }}">Descargar mi pase (PDF) ↓</a>
+            </div>
+        @endif
+
         <div class="card">
             <div class="row"><span class="muted">Código</span><span class="code">{{ $booking->code }}</span></div>
-            <div class="row"><span class="muted">Estado</span><span class="status-badge">{{ $expired ? 'Vencida' : ($confirmed ? 'Confirmada' : 'Pendiente de pago') }}</span></div>
+            <div class="row"><span class="muted">Estado</span><span class="status-badge" @if ($confirmed) style="background:#1c3a2a; color:#6fd39a; border-color:#2f6b45;" @endif>{{ $expired ? 'Vencida' : ($confirmed ? 'Confirmada' : 'Pendiente de pago') }}</span></div>
             <div class="row"><span class="muted">Habitación</span><span>{{ $booking->room->name }} · {{ $booking->room->category->name }}</span></div>
             <div class="row"><span class="muted">Fecha</span><span>{{ $booking->starts_at->timezone('America/Santiago')->locale('es')->isoFormat('D [de] MMMM, HH:mm') }}</span></div>
             @if ($booking->short_stay)
@@ -90,49 +149,37 @@
             @if ($confirmed && $booking->balanceDue() <= 0)
                 <div class="row"><span class="muted">Total pagado</span><span>${{ number_format($booking->paidAmount(), 0, ',', '.') }}</span></div>
             @else
-                <div class="row"><span class="muted">Total a pagar</span><span>${{ number_format($booking->balanceDue(), 0, ',', '.') }}</span></div>
+                <div class="row"><span class="muted">Total a pagar</span><span>{{ $amount }}</span></div>
             @endif
         </div>
 
-        <div class="qr-box">
-            <img src="{{ $qrDataUri }}" alt="Código QR de la reserva {{ $booking->code }}">
-            <strong>Tu código QR</strong>
-            <small>Muéstralo en recepción al llegar. Código {{ $booking->code }}.</small><br>
-            <a class="pass" href="{{ $passUrl }}">Descargar mi pase (PDF) ↓</a>
-        </div>
-
-        @php
-            $hasBank = ! empty($pay['bank_titular']) && ! empty($pay['bank_account_number']);
-            $canPayOnline = $mpEnabled && in_array($booking->booking_status, ['PENDIENTE_PAGO', 'CONFIRMADA'], true) && $booking->balanceDue() > 0;
-            // Volvió de Mercado Pago pero el aviso todavía no llegó: se refresca solo unos segundos.
-            $waitingMp = request('mp') === 'ok' && $booking->booking_status === 'PENDIENTE_PAGO';
-        @endphp
-        @if ($waitingMp)
-            <div class="next-steps" style="background:#12293a; border-color:#243a4c; color:#9edaff;">⏳ Estamos confirmando tu pago con Mercado Pago. Esta página se actualiza sola.</div>
-            <meta http-equiv="refresh" content="4">
-        @elseif (request('mp') === 'fallo')
-            <div class="next-steps" style="background:#3a1c1c; border-color:#7a2d2d; color:#f3b8b8;">El pago no se completó. Puedes intentarlo de nuevo o pagar por transferencia.</div>
+        @if (! $expired && ! $confirmed && $showQr)
+            {{-- Mantenida por recepción para pagar al llegar: el QR sirve para identificarla. --}}
+            <div class="qr-box">
+                <img src="{{ $qrDataUri }}" alt="Código QR de la reserva {{ $booking->code }}">
+                <strong>Tu código QR</strong>
+                <small>Muéstralo en recepción al llegar. Código {{ $booking->code }}.</small><br>
+                <a class="pass" href="{{ $passUrl }}">Descargar mi pase (PDF) ↓</a>
+            </div>
+        @elseif (! $expired && ! $showQr)
+            <div class="qr-pending">🔒 Tu código QR y tu pase aparecerán aquí apenas se confirme el pago.</div>
         @endif
-        @if ($canPayOnline)
+
+        @if ($confirmed && $canPayOnline)
             <div class="pay-box">
-                <strong>Paga ahora y confirma tu reserva — ${{ number_format($booking->balanceDue(), 0, ',', '.') }}</strong>
+                <strong>Saldo pendiente — {{ $amount }}</strong>
                 <a class="mp" href="{{ route('catalog.pay', $booking->pass_token) }}">Pagar con Mercado Pago →</a>
-                <small>Pago seguro en Mercado Pago. Apenas se aprueba, tu reserva queda confirmada.</small>
+                <small>También puedes pagarlo al llegar al motel.</small>
             </div>
         @endif
-        @if (! $canPayOnline && ($hasBank || ! empty($pay['mercadopago_link'])))
+        @if (! $expired && ! $canPayOnline && $hasBank && $booking->balanceDue() > 0)
             <div class="pay-box">
-                <strong>Para asegurar tu reserva — ${{ number_format($booking->balanceDue(), 0, ',', '.') }}</strong>
-                @if ($hasBank)
-                    <div class="line"><span>Titular</span><span>{{ $pay['bank_titular'] }}</span></div>
-                    @if (! empty($pay['bank_rut']))<div class="line"><span>RUT</span><span>{{ $pay['bank_rut'] }}</span></div>@endif
-                    @if (! empty($pay['bank_name']))<div class="line"><span>Banco</span><span>{{ $pay['bank_name'] }}</span></div>@endif
-                    <div class="line"><span>{{ $pay['bank_account_type'] ?: 'Cuenta' }}</span><span>{{ $pay['bank_account_number'] }}</span></div>
-                    @if (! empty($pay['bank_email']))<div class="line"><span>Correo</span><span>{{ $pay['bank_email'] }}</span></div>@endif
-                @endif
-                @if (! empty($pay['mercadopago_link']))
-                    <a class="mp" href="{{ $pay['mercadopago_link'] }}" target="_blank" rel="noopener">Pagar con Mercado Pago →</a>
-                @endif
+                <strong>O paga por transferencia — {{ $amount }}</strong>
+                <div class="line"><span>Titular</span><span>{{ $pay['bank_titular'] }}</span></div>
+                @if (! empty($pay['bank_rut']))<div class="line"><span>RUT</span><span>{{ $pay['bank_rut'] }}</span></div>@endif
+                @if (! empty($pay['bank_name']))<div class="line"><span>Banco</span><span>{{ $pay['bank_name'] }}</span></div>@endif
+                <div class="line"><span>{{ $pay['bank_account_type'] ?: 'Cuenta' }}</span><span>{{ $pay['bank_account_number'] }}</span></div>
+                @if (! empty($pay['bank_email']))<div class="line"><span>Correo</span><span>{{ $pay['bank_email'] }}</span></div>@endif
                 <small>Envíanos el comprobante por WhatsApp indicando tu código {{ $booking->code }}.</small>
             </div>
         @endif
@@ -142,11 +189,11 @@
             <strong>¿Qué sigue ahora?</strong>
             <ul>
                 @if ($confirmed)
-                    <li>{{ $booking->balanceDue() > 0 ? 'Tu reserva está confirmada. Queda un saldo de $'.number_format($booking->balanceDue(), 0, ',', '.').' por pagar al llegar al motel.' : 'Tu pago está registrado y tu reserva está confirmada.' }}</li>
+                    <li>{{ $booking->balanceDue() > 0 ? 'Tu reserva está confirmada. Queda un saldo de '.$amount.' por pagar al llegar al motel.' : 'Tu pago está registrado y tu reserva está confirmada.' }}</li>
                     <li>Muestra el código QR o el código {{ $booking->code }} en recepción al llegar.</li>
                 @elseif ($holdOpen)
-                    <li>Paga antes de las {{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }} para confirmar tu reserva; si no, la habitación se libera.</li>
-                    <li>Apenas se registre tu pago, la reserva queda confirmada.</li>
+                    <li>Paga antes de las {{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}; si no, la habitación se libera.</li>
+                    <li>Apenas se registre tu pago, la reserva queda confirmada y aparece tu código QR.</li>
                 @else
                     <li>Esta reserva queda pendiente hasta que se registre tu pago.</li>
                 @endif
@@ -157,5 +204,22 @@
 
         <a class="back" href="{{ route('catalog.index') }}">← Volver al catálogo</a>
     </div>
+    @if ($holdOpen)
+        <script>
+        (function () {
+            const el = document.getElementById('hold-countdown');
+            if (!el) return;
+            const end = new Date(el.dataset.expires).getTime();
+            function tick() {
+                const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+                el.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+                el.classList.toggle('urgent', left <= 120);
+                if (left <= 0) { setTimeout(() => location.reload(), 1500); return; }
+                setTimeout(tick, 1000);
+            }
+            tick();
+        })();
+        </script>
+    @endif
 </body>
 </html>
