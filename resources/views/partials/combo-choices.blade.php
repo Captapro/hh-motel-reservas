@@ -13,8 +13,13 @@
     .cc-title { font-weight:700; margin-bottom:6px; }
     .cc-title small { font-weight:500; opacity:.75; }
     .cc-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:3px 0; }
-    .cc-row .cc-name { flex:1; min-width:0; }
-    .cc-row .cc-name small { opacity:.6; }
+    .cc-row .cc-name { flex:1; min-width:0; display:flex; flex-direction:column; line-height:1.25; }
+    .cc-row .cc-name span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+    .cc-row .cc-name small { opacity:.6; font-size:11px; }
+    /* Con el selector abierto, la tarjeta del combo ocupa dos columnas para
+       que los nombres de los sabores entren en una línea. */
+    .addon-combo:has(> .cc-box), .combo-card:has(> .cc-box) { grid-column: span 2; }
+    .cc-box .cc-options { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:2px 14px; }
     .cc-row .cc-step { display:inline-flex; align-items:center; gap:6px; }
     .cc-row .cc-step button { width:26px !important; height:26px; padding:0 !important; margin:0 !important; border-radius:6px; border:1px solid rgba(127,127,127,.45); background:transparent; color:inherit; font-size:15px; line-height:1; cursor:pointer; }
     .cc-row .cc-step button:disabled { opacity:.35; cursor:default; }
@@ -57,20 +62,26 @@
             title.className = 'cc-title';
             title.innerHTML = 'Elige ' + need + ' <small>' + (left > 0 ? '· faltan ' + left : '· listo ✓') + '</small>';
             box.appendChild(title);
+            const list = document.createElement('div');
+            list.className = 'cc-options';
+            box.appendChild(list);
             item.options.forEach(function (opt) {
                 const count = p[opt.id] || 0;
                 const row = document.createElement('div');
                 row.className = 'cc-row';
                 const stockLeft = opt.stock === null ? null : opt.stock - count;
                 row.innerHTML = '<span class="cc-name"></span><span class="cc-step"><button type="button" aria-label="Menos">−</button><b>' + count + '</b><button type="button" aria-label="Más">+</button></span>';
-                row.querySelector('.cc-name').textContent = opt.name;
-                if (opt.stock !== null) row.querySelector('.cc-name').insertAdjacentHTML('beforeend', ' <small>· ' + opt.stock + ' disp.</small>');
+                const nameEl = document.createElement('span');
+                nameEl.textContent = opt.name;
+                nameEl.title = opt.name;
+                row.querySelector('.cc-name').appendChild(nameEl);
+                if (opt.stock !== null) row.querySelector('.cc-name').insertAdjacentHTML('beforeend', '<small>' + (opt.stock > 0 ? opt.stock + ' disp.' : 'agotado') + '</small>');
                 const [minus, plus] = row.querySelectorAll('button');
                 minus.disabled = count <= 0;
                 plus.disabled = left <= 0 || (stockLeft !== null && stockLeft <= 0);
                 minus.addEventListener('click', function () { p[opt.id] = count - 1; render(input); });
                 plus.addEventListener('click', function () { p[opt.id] = count + 1; render(input); });
-                box.appendChild(row);
+                list.appendChild(row);
                 if (count > 0) {
                     const hidden = document.createElement('input');
                     hidden.type = 'hidden';
