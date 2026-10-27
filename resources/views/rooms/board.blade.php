@@ -122,6 +122,7 @@
         .cat-filter button.active { background:#fff; border-color:#202124; color:#202124; box-shadow:0 1px 3px #10111214; }
         .cat-hidden { display:none !important; }
         .cat-filter .upcoming-filter svg { width:14px; height:14px; flex:none; }
+        .cat-filter .cat-filter-sep { width:1px; align-self:stretch; background:#d1d3d8; margin:2px 4px; }
 
         .sidebar { position:sticky; top:20px; align-self:start; border:1px solid #dddfe1; border-radius:18px; background:#fff; padding:14px 14px 4px; }
         .sidebar .sidebar-title h2 { color:#8a5a00; }
@@ -543,6 +544,10 @@
                         @endforeach
                     @endif
                     <button type="button" class="upcoming-filter" id="upcoming-filter-btn" onclick="hhToggleUpcomingFilter()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.8 21H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M16 3v4M8 3v4M4 11h10"/><circle cx="18" cy="18" r="4"/><path d="M18 16.5V18l1 1"/></svg>Con reservas futuras</button>
+                    {{-- Mismo filtro de ala que el de arriba (sincronizados); aquí a mano junto a los demás filtros. --}}
+                    <span class="cat-filter-sep" aria-hidden="true"></span>
+                    <button type="button" class="wing-chip" data-wing-btn="norte" onclick="hhToggleWingChip('norte')">Ala norte</button>
+                    <button type="button" class="wing-chip" data-wing-btn="sur" onclick="hhToggleWingChip('sur')">Ala sur</button>
                 </div>
                 @if ($grouped['disponibles']->isEmpty())
                     <p class="section-empty">No hay habitaciones disponibles ahora mismo.</p>
@@ -744,6 +749,11 @@
             hhApplyWingFilter();
             hhApplyCategoryFilter();
         }
+        // Botones de ala junto a los filtros de Disponibles: apretar el que ya
+        // está activo vuelve a "Todas las alas".
+        function hhToggleWingChip(w) {
+            hhSetWing((localStorage.getItem('hh-board-wing') || 'todas') === w ? 'todas' : w);
+        }
         function hhApplyWingFilter() {
             const w = localStorage.getItem('hh-board-wing') || 'todas';
             document.querySelectorAll('[data-wing]').forEach(function (el) {
@@ -751,6 +761,7 @@
                 el.classList.toggle('wing-hidden', w !== 'todas' && el.dataset.wing !== w);
             });
             document.querySelectorAll('#wing-filter button').forEach(function (b) { b.classList.toggle('active', b.dataset.wing === w); });
+            document.querySelectorAll('.cat-filter .wing-chip').forEach(function (b) { b.classList.toggle('active', b.dataset.wingBtn === w); });
             ['ocupadas', 'aseo', 'fuera', 'disponibles'].forEach(function (name) {
                 const sec = document.querySelector('.section.' + name);
                 if (!sec) return;
