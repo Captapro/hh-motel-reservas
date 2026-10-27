@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnalystRun;
+use App\Models\AnalystSetting;
+use App\Models\AuditLog;
 use App\Services\Analyst\AnalystLauncher;
 use App\Services\Analyst\ClaudeTransport;
 use Carbon\Carbon;
@@ -44,6 +46,7 @@ class SalesAnalystController extends Controller
             'thread' => $thread ?: (string) Str::uuid(),
             'runs' => $runs,
             'threads' => $threads,
+            'setting' => AnalystSetting::current()->load('editor'),
         ]);
     }
 
@@ -58,7 +61,7 @@ class SalesAnalystController extends Controller
 
         // Una pregunta a la vez por conversación.
         $busy = AnalystRun::where('thread', $validated['thread'])->whereIn('status', ['pendiente', 'trabajando'])
-            ->where('created_at', '>', now()->subMinutes(10))->exists();
+            ->where('created_at', '>', now()->subMinutes(20))->exists();
         abort_if($busy, 409, 'Espera a que termine la respuesta anterior.');
 
         $run = AnalystRun::create([
@@ -71,10 +74,22 @@ class SalesAnalystController extends Controller
         return response()->json($this->payload($run->fresh()));
     }
 
+    /** Objetivos, costos, competencia y reglas que el analista lee en cada pregunta. */
+    public function saveContext(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['business_context' => ['nullable', 'string', 'max:8000']], [], ['business_context' => 'contexto del negocio']);
+        $setting = AnalystSetting::current();
+        $old = ['business_context' => $setting->business_context];
+        $setting->update(['business_context' => trim((string) $validated['business_context']), 'updated_by' => $request->user()->id]);
+        AuditLog::record($request->user()->id, 'analista.contexto', 'AnalystSetting', $setting->id, $old, ['business_context' => $setting->business_context]);
+
+        return back()->with('status', 'Contexto del negocio guardado. El analista lo usará desde la próxima pregunta.');
+    }
+
     public function show(AnalystRun $run): JsonResponse
     {
         // Si el proceso murió sin avisar, no dejar la página esperando para siempre.
-        if (! $run->isFinished() && $run->updated_at->lt(now()->subMinutes(6))) {
+        if (! $run->isFinished() && $run->updated_at->lt(now()->subMinutes(15))) {
             $run->update(['status' => 'error', 'error' => 'El análisis se interrumpió. Intenta de nuevo.']);
         }
 

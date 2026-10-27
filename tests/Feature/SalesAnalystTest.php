@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\AnalystRun;
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Models\RateRule;
 use App\Models\Room;
 use App\Models\RoomCategory;
 use App\Models\User;
@@ -67,6 +69,7 @@ class SalesAnalystTest extends TestCase
             '2026_08_18_120018_create_audit_logs_table.php',
             '2026_10_23_200000_create_access_permissions_table.php',
             '2026_10_27_090000_create_analyst_runs_table.php',
+            '2026_10_27_100000_create_analyst_settings_table.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -181,5 +184,39 @@ class SalesAnalystTest extends TestCase
 
         $this->actingAs($this->admin)->get(route('admin.analyst.index', ['conversacion' => $thread]))
             ->assertOk()->assertSee('¿Y el mes pasado?')->assertSee('Recomendación');
+    }
+
+    public function test_business_context_goes_into_the_prompt_and_price_changes_are_listed(): void
+    {
+        config(['services.anthropic.key' => 'test-key']);
+        $fake = new class extends ClaudeTransport
+        {
+            public string $system = '';
+
+            public function send(string $system, array $messages, array $tools): object
+            {
+                $this->system = $system;
+
+                return (object) ['stopReason' => 'end_turn', 'usage' => (object) [], 'content' => [(object) ['type' => 'text', 'text' => 'Listo.']]];
+            }
+        };
+        $this->app->instance(ClaudeTransport::class, $fake);
+
+        $this->actingAs($this->admin)->put(route('admin.analyst.context'), ['business_context' => 'Meta: subir tardes de semana. Competencia: Motel X PLUS 3 h $42.000'])
+            ->assertRedirect();
+        $this->actingAs($this->admin)->postJson(route('admin.analyst.ask'), ['question' => 'Hola', 'thread' => (string) Str::uuid()])->assertOk();
+        $this->assertStringContainsString('Competencia: Motel X PLUS 3 h $42.000', $fake->system);
+        $this->assertStringContainsString('revenue management', $fake->system);
+
+        $rule = RateRule::create(['name' => 'HOT', 'priority' => 2, 'is_active' => true]);
+        AuditLog::record($this->admin->id, 'tarifa.precio_editar', 'RateRulePrice', 7,
+            ['rate_rule_id' => $rule->id, 'room_category_id' => RoomCategory::first()->id, 'duration_minutes' => 180, 'price' => 45000],
+            ['rate_rule_id' => $rule->id, 'room_category_id' => RoomCategory::first()->id, 'duration_minutes' => 180, 'price' => 48000]);
+
+        $changes = app(SalesDataService::class)->priceChanges(now()->subDay(), now()->addDay());
+        $this->assertCount(1, $changes);
+        $this->assertSame('HOT', $changes[0]['tarifa']);
+        $this->assertSame('PLUS', $changes[0]['categoria']);
+        $this->assertSame(['antes' => 45000, 'despues' => 48000], $changes[0]['cambios']['price']);
     }
 }

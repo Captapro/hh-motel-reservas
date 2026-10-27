@@ -28,6 +28,7 @@
         .an-chips button { background:#fff; border:1px solid #e5e7eb; color:#374151; border-radius:20px; padding:7px 12px; font-size:13px; cursor:pointer; text-align:left; }
         .an-chips button:hover { border-color:#ff7918; }
         .an-meta { font-size:11.5px; color:#9ca3af; margin-top:4px; }
+        .an-context summary { cursor:pointer; font-size:14px; }
     </style>
 
     <div class="page-head">
@@ -41,6 +42,18 @@
     @unless ($configured)
         <div class="errors">Falta configurar la clave de la API de Claude (<code>ANTHROPIC_API_KEY</code>) en Render. Sin ella el analista no puede responder.</div>
     @endunless
+
+    <details class="card an-context" @if (! $setting->business_context) open @endif>
+        <summary><b>Contexto del negocio</b> <span class="an-meta">· objetivos, costos, competencia, fechas clave y reglas. El analista lo lee en cada pregunta.@if ($setting->business_context && $setting->updated_at) Actualizado {{ $setting->updated_at->format('d/m/Y H:i') }}@if ($setting->editor) por {{ $setting->editor->name }}@endif.@endif</span></summary>
+        <form method="POST" action="{{ route('admin.analyst.context') }}">
+            @csrf @method('PUT')
+            <textarea name="business_context" rows="16" maxlength="8000" style="margin-top:10px; font-family:ui-monospace, monospace; font-size:13px;">{{ old('business_context', $setting->business_context ?: \App\Models\AnalystSetting::TEMPLATE) }}</textarea>
+            <div class="row" style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
+                <span class="an-meta">Mientras más concreto (montos, precios de la competencia, metas), más precisas las recomendaciones. No escribas datos de clientes ni claves.</span>
+                <button class="btn" type="submit">Guardar contexto</button>
+            </div>
+        </form>
+    </details>
 
     <div class="an-grid">
         <div class="card an-threads">

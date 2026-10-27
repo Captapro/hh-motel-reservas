@@ -2,6 +2,7 @@
 
 namespace App\Services\Analyst;
 
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\CalendarOverride;
 use App\Models\Coupon;
@@ -162,7 +163,66 @@ class SalesDataService
                 'ocupacion_pct' => $totalHours ? (int) round(100 * ($occupiedByCategory[$cat] ?? 0) / ($totalHours * $count)) : null,
             ])->values()->all(),
             'ocupacion_pct_por_dia_y_hora' => $grid,
+            // Atajos para no recorrer la grilla: los tramos más llenos (demanda
+            // que probablemente se perdió) y los más vacíos (capacidad ociosa).
+            'tramos_mas_llenos' => $this->rankSlots($grid, true),
+            'tramos_mas_vacios' => $this->rankSlots($grid, false),
         ];
+    }
+
+    /**
+     * Cambios de precios y promociones hechos en el sistema en un rango, para
+     * comparar ventas antes y después de cada cambio.
+     */
+    public function priceChanges(Carbon $from, Carbon $to): array
+    {
+        $rules = RateRule::pluck('name', 'id');
+        $categories = RoomCategory::pluck('name', 'id');
+        $actions = ['tarifa.%', 'oferta.%', 'upsell.%', 'estadia_corta.%', 'cupon.%'];
+
+        return AuditLog::query()
+            ->where(fn ($q) => collect($actions)->each(fn ($a) => $q->orWhere('action', 'like', $a)))
+            ->whereBetween('created_at', [$from->copy(), $to->copy()])
+            ->orderBy('created_at')
+            ->take(300)
+            ->get()
+            ->map(function (AuditLog $log) use ($rules, $categories) {
+                $old = $log->old_value ?? [];
+                $new = $log->new_value ?? [];
+                $ref = $new ?: $old;
+                $changed = collect(array_unique(array_merge(array_keys($old), array_keys($new))))
+                    ->reject(fn ($k) => in_array($k, ['id', 'created_at', 'updated_at'], true))
+                    ->filter(fn ($k) => ($old[$k] ?? null) != ($new[$k] ?? null))
+                    ->mapWithKeys(fn ($k) => [$k => ['antes' => $old[$k] ?? null, 'despues' => $new[$k] ?? null]])
+                    ->all();
+
+                return array_filter([
+                    'fecha' => $log->created_at->copy()->timezone(self::TZ)->format('Y-m-d H:i'),
+                    'accion' => $log->action,
+                    'tarifa' => isset($ref['rate_rule_id']) ? ($rules[$ref['rate_rule_id']] ?? null) : ($log->entity_type === 'RateRule' ? ($ref['name'] ?? null) : null),
+                    'categoria' => isset($ref['room_category_id']) ? ($categories[$ref['room_category_id']] ?? null) : null,
+                    'duracion_min' => $ref['duration_minutes'] ?? null,
+                    'nombre' => $log->entity_type !== 'RateRule' ? ($ref['name'] ?? $ref['internal_name'] ?? $ref['code'] ?? null) : null,
+                    'cambios' => $changed,
+                ], fn ($v) => $v !== null && $v !== []);
+            })
+            ->values()
+            ->all();
+    }
+
+    private function rankSlots(array $grid, bool $fullest): array
+    {
+        $slots = [];
+        foreach ($grid as $day => $hours) {
+            foreach ($hours as $h => $pct) {
+                if ($pct !== null) {
+                    $slots[] = ['tramo' => $day.' '.$h.':00', 'ocupacion_pct' => $pct];
+                }
+            }
+        }
+        usort($slots, fn ($a, $b) => $fullest ? $b['ocupacion_pct'] <=> $a['ocupacion_pct'] : $a['ocupacion_pct'] <=> $b['ocupacion_pct']);
+
+        return array_slice($slots, 0, 12);
     }
 
     /** Cómo está configurado hoy el precio: tarifas, ofertas, upsells y estadía corta. */

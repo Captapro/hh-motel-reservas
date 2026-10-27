@@ -25,16 +25,16 @@ class ClaudeTransport
 
         return $client->beta->messages->create(
             model: (string) config('services.anthropic.model'),
-            maxTokens: 16000,
+            maxTokens: 32000,
             system: [['type' => 'text', 'text' => $system, 'cacheControl' => ['type' => 'ephemeral']]],
             messages: $messages,
             tools: $tools,
-            outputConfig: ['effort' => 'high'],
+            outputConfig: ['effort' => 'xhigh'],
             // Si el modelo principal declina una consulta, la API la reintenta
             // sola con el modelo de respaldo que corresponda.
             fallbacks: 'default',
             betas: ['server-side-fallback-2026-07-01'],
-            requestOptions: ['timeout' => 170],
+            requestOptions: ['timeout' => 400],
         );
     }
 }

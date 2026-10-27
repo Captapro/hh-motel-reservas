@@ -287,6 +287,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
         Route::get('/analista', [SalesAnalystController::class, 'index'])->name('analyst.index');
         Route::post('/analista', [SalesAnalystController::class, 'ask'])->middleware('throttle:20,1,admin.analyst.ask')->name('analyst.ask');
+        Route::put('/analista/contexto', [SalesAnalystController::class, 'saveContext'])->name('analyst.context');
         Route::get('/analista/{run}', [SalesAnalystController::class, 'show'])->name('analyst.show');
 
         Route::get('/accesos', [AccessController::class, 'index'])->middleware('role:soporte')->name('access.index');

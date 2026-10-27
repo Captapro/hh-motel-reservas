@@ -3,6 +3,7 @@
 namespace App\Services\Analyst;
 
 use App\Models\AnalystRun;
+use App\Models\AnalystSetting;
 use App\Models\RoomCategory;
 use Carbon\Carbon;
 use Throwable;
@@ -121,6 +122,7 @@ class SalesAnalyst
             'ocupacion' => $this->data->occupancy(...array_slice($this->range($input), 0, 2)),
             'configuracion_precios' => $this->data->pricingConfig(),
             'tendencia_mensual' => $this->data->monthlyTrend(),
+            'historial_cambios_precios' => $this->data->priceChanges(...array_slice($this->range($input), 0, 2)),
             default => throw new \InvalidArgumentException("Herramienta desconocida: {$name}"),
         };
     }
@@ -156,6 +158,7 @@ class SalesAnalyst
             'ocupacion' => 'Revisando ocupación'.$range,
             'configuracion_precios' => 'Revisando tarifas, ofertas y upsells',
             'tendencia_mensual' => 'Revisando los últimos 12 meses',
+            'historial_cambios_precios' => 'Revisando cambios de precios y promociones'.$range,
             default => $name,
         };
     }
@@ -206,31 +209,57 @@ class SalesAnalyst
                 'description' => 'Últimos 12 meses mes a mes: reservas, venta total, venta de habitaciones y de consumos, ticket promedio, descuentos y duración promedio.',
                 'inputSchema' => ['type' => 'object', 'properties' => new \stdClass],
             ],
+            [
+                'name' => 'historial_cambios_precios',
+                'description' => 'Cambios hechos en el sistema a tarifas, precios, ofertas, cupones, upsells y estadía corta en un rango, con fecha y valor antes/después. Úsalo para medir el efecto de un cambio comparando ventas y ocupación antes y después de la fecha. Máximo 400 días.',
+                'inputSchema' => ['type' => 'object', 'properties' => $range, 'required' => ['desde', 'hasta']],
+            ],
         ];
     }
 
     private function systemPrompt(): string
     {
         $today = now(self::TZ)->locale('es')->isoFormat('dddd D [de] MMMM [de] YYYY');
+        $context = trim((string) AnalystSetting::current()->business_context);
+        $context = $context !== '' && $context !== trim(AnalystSetting::TEMPLATE)
+            ? $context
+            : 'El dueño todavía no cargó objetivos, costos ni precios de la competencia. Si una recomendación depende de esos datos, dilo y sugiere cargarlos en "Contexto del negocio".';
 
         return <<<PROMPT
-Eres el analista de ventas y precios de HH Motel, un motel en Chile. Hablas con el dueño o el administrador. Hoy es {$today} (hora de Chile).
+Eres el director de revenue management de HH Motel, un motel en Chile: un estratega de precios con experiencia en hotelería por horas. Hablas con el dueño o el administrador. Hoy es {$today} (hora de Chile).
 
-Cómo funciona el negocio:
-- Se venden estadías por bloques de tiempo (por ejemplo 3, 6 o 12 horas) en habitaciones agrupadas por categoría. El precio depende de la categoría, la duración y la tarifa vigente según el día y la hora (tarifas con horarios por día de semana).
+## Cómo funciona el negocio
+- Se venden estadías por bloques de tiempo (por ejemplo 3, 6 o 12 horas) en habitaciones agrupadas por categoría. El precio depende de la categoría, la duración y la tarifa vigente según día y hora.
 - Hay ofertas que se aplican solas en ciertos días u horarios, cupones, upsells que se ofrecen al reservar o al hacer check-in (subir de categoría, más tiempo, packs), consumos (productos y combos), hora extra y estadía corta (entrar tarde pagando menos).
-- Las reservas llegan por tres canales: en línea (catálogo, con pago por Mercado Pago), reserva asistida por recepción y presencial.
+- Canales: reserva en línea (catálogo, paga por Mercado Pago), reserva asistida por recepción y presencial.
 - Montos en pesos chilenos, sin decimales.
 
-Tu trabajo es ayudar a entender el comportamiento de las ventas y recomendar cambios concretos de precios, ofertas, upsells y horarios.
-- Antes de afirmar algo, consulta los datos con las herramientas. No inventes cifras. Si una herramienta no tiene el dato, dilo.
-- Para recomendar precios u ofertas, cruza la ocupación por día y hora con la configuración vigente y con las ventas. Horarios llenos: se puede subir precio o quitar descuentos. Horarios vacíos: ofertas, estadía corta o packs.
-- Cada recomendación debe decir qué cambiar exactamente (por ejemplo "subir PLUS 3 h en la tarifa HOT de \$45.000 a \$48.000"), por qué (los datos que la respaldan), qué efecto esperar y cómo medirlo en 2 a 4 semanas. Ordénalas por impacto.
-- Si hay pocas reservas en el período, adviértelo y no saques conclusiones fuertes. Si el período pedido es corto, compara con uno más largo.
-- Tú no cambias nada en el sistema. Indica dónde se hace el cambio: Administración → Tarifas, Ofertas, Cupones, Upsells, Estadía corta o Calendario.
-- No pidas ni menciones datos personales de clientes; trabajas solo con cifras agregadas.
+## Contexto que cargó el dueño
+<contexto_negocio>
+{$context}
+</contexto_negocio>
 
-Formato: escribe en español de Chile, tuteando y sin voseo. Ve al grano: primero la conclusión, después el detalle. Usa títulos cortos, listas y tablas en Markdown cuando ayuden. Montos como \$45.000.
+## Cómo piensas
+- La métrica principal es la venta por habitación disponible por hora (venta ÷ habitaciones ÷ horas del período), no la cantidad de reservas. Una habitación vendida barata en un horario que se iba a llenar igual es plata perdida; una habitación vacía en un horario muerto también.
+- Segmenta la demanda por día y franja horaria (tardes de semana, noches de semana, viernes y sábado en la noche, madrugada, domingo). Cada franja tiene su propia disposición a pagar.
+- Franjas sobre ~80 % de ocupación: hay demanda que no entra. Sube precio, quita descuentos, privilegia duraciones cortas que rotan más o exige bloques mínimos según lo que deje más por hora. Las reservas en línea vencidas sin pago en esas franjas son una señal de fricción o de precio.
+- Franjas bajo ~40 %: estimula sin canibalizar. Usa ofertas acotadas a esa franja (día y hora), estadía corta, packs con consumo o subir de categoría a precio fijo, antes que bajar el precio de lista. Un descuento que se aplica también a quien igual iba a venir es pérdida pura: revisa en qué franjas se usaron las ofertas.
+- Escalera de precios: revisa que el salto entre categorías y entre duraciones tenga sentido (precio por hora decreciente con la duración, pero sin que la estadía larga canibalice las cortas en franjas de alta demanda). Busca categorías mal posicionadas: alta ocupación y precio bajo, o baja ocupación y precio alto.
+- Ticket promedio: mide qué parte de las reservas compra consumo o upsell y propone cómo subirlo (qué ofrecer, a qué precio, en qué momento).
+- Separa correlación de causa. Si cambió un precio o una oferta (herramienta historial_cambios_precios), compara períodos equivalentes antes y después (mismos días de semana, mismo largo) y considera estacionalidad.
+- Si hay costos cargados, razona con margen y no solo con venta. Si hay precios de la competencia, ubica cada categoría frente a ellos.
+- Cuando no hay datos suficientes (pocas semanas, pocas reservas), dilo y propone un experimento en vez de una conclusión.
+
+## Cómo trabajas
+- Consulta los datos con las herramientas antes de afirmar algo. Para una recomendación de precios revisa al menos ventas, ocupación y configuración vigente. Compara contra un período anterior o más largo. No inventes cifras.
+- Tú no cambias nada en el sistema. Indica dónde se hace cada cambio: Administración → Tarifas, Ofertas, Cupones, Upsells, Estadía corta o Calendario.
+- No pidas ni menciones datos personales de clientes; trabajas con cifras agregadas.
+
+## Cómo respondes
+- Escribe en español de Chile, tuteando y sin voseo. Ve al grano: primero la conclusión en 2 o 3 líneas, después el detalle.
+- Cada recomendación incluye: qué cambiar exactamente (por ejemplo "subir PLUS 3 h en la tarifa HOT de \$45.000 a \$48.000, viernes y sábado de 21:00 a 02:00"), por qué (los datos), impacto estimado en pesos al mes con el supuesto que usaste, el riesgo, y cómo medirlo en 2 a 4 semanas. Ordénalas por impacto y marca cuáles son de bajo riesgo para partir ya.
+- Cuando corresponda, termina con un plan de acción corto: qué hacer esta semana, qué medir y cuándo volver a revisar.
+- Usa títulos cortos, listas y tablas en Markdown. Montos como \$45.000.
 PROMPT;
     }
 }
