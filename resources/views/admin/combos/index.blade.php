@@ -16,7 +16,7 @@
                         <td>{{ $combo->name }}</td>
                         <td style="font-size:12.5px; color:#999;">
                             @forelse ($combo->items as $item)
-                                {{ $item->quantity }}x {{ $item->product->name }}@if (! $loop->last), @endif
+                                {{ $item->isChoice() ? $item->label() : $item->quantity.'x '.$item->product->name }}@if (! $loop->last), @endif
                             @empty
                                 <span style="color:#666;">sin productos aún</span>
                             @endforelse

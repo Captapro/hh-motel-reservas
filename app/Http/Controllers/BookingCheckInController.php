@@ -242,7 +242,7 @@ class BookingCheckInController extends Controller
         try {
             foreach ($validated['combo_quantities'] ?? [] as $comboId => $qty) {
                 if ((int) $qty > 0) {
-                    $consumption->addCombo($booking, Combo::findOrFail($comboId), (int) $qty, auth()->id());
+                    $consumption->addCombo($booking, Combo::findOrFail($comboId), (int) $qty, auth()->id(), (array) request()->input("combo_choices.$comboId", []));
                 }
             }
             foreach ($validated['quantities'] ?? [] as $productId => $qty) {
@@ -291,7 +291,7 @@ class BookingCheckInController extends Controller
                 app(BookingAllocationService::class)->upgrade($booking, $u, auth()->id());
             } elseif ($u->type === 'combo' && $u->combo) {
                 try {
-                    $consumption->addCombo($booking, $u->combo, 1, auth()->id());
+                    $consumption->addCombo($booking, $u->combo, 1, auth()->id(), (array) request()->input("upsell_combo_choices.{$u->combo->id}", []));
                 } catch (InsufficientStockException $e) {
                     // sin stock — se omite
                 }

@@ -47,7 +47,15 @@
                 <tbody>
                     @forelse ($items as $item)
                         <tr>
-                            <td>{{ $item->product->name }}</td>
+                            <td>
+                                @if ($item->isChoice() && $item->choice_category)
+                                    <b>A elegir de la categoría {{ $item->choice_category }}:</b> {{ $item->options()->pluck('name')->join(' / ') ?: 'sin productos activos' }}
+                                @elseif ($item->isChoice())
+                                    <b>A elegir:</b> {{ $item->options()->pluck('name')->join(' / ') }}
+                                @else
+                                    {{ $item->product->name }}
+                                @endif
+                            </td>
                             <td>{{ $item->quantity }}</td>
                             <td>
                                 <form class="inline" method="POST" action="{{ route('admin.combos.items.destroy', [$combo, $item]) }}" onsubmit="return confirm('¿Quitar este producto del combo?');">
@@ -83,6 +91,55 @@
                 </div>
                 <div class="actions" style="margin-top:16px;">
                     <button class="btn" type="submit">Agregar al combo</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <p class="sub" style="margin-bottom:4px;">Agregar una elección de toda una categoría (ej. "2 a elegir de Bebidas")</p>
+            <p class="sub" style="font-size:12px; margin-bottom:10px;">Entran todos los productos activos de la categoría, también los que agregues más adelante. Cada uno se descuenta de su propio stock.</p>
+            <form method="POST" action="{{ route('admin.combos.items.store', $combo) }}">
+                @csrf
+                <input type="hidden" name="kind" value="choice_category">
+                <div class="row2">
+                    <div>
+                        <label>Categoría</label>
+                        <select name="choice_category" required>
+                            @foreach ($categories as $category)
+                                <option value="{{ $category }}">{{ $category }} ({{ $products->where('category', $category)->pluck('name')->join(', ') }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>Cuántos se eligen por combo</label>
+                        <input type="number" name="quantity" min="1" max="20" value="2" required>
+                    </div>
+                </div>
+                <div class="actions" style="margin-top:16px;">
+                    <button class="btn" type="submit">Agregar elección por categoría</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <p class="sub" style="margin-bottom:4px;">O elegir solo entre algunos productos (ej. "2 a elegir entre Coca-Cola y Sprite")</p>
+            <p class="sub" style="font-size:12px; margin-bottom:10px;">Al vender, el anfitrión (o el cliente en el catálogo) elige cuáles. Cada uno se descuenta de su propio stock.</p>
+            <form method="POST" action="{{ route('admin.combos.items.store', $combo) }}">
+                @csrf
+                <input type="hidden" name="kind" value="choice">
+                <label>Cuántos se eligen por combo</label>
+                <input type="number" name="quantity" min="1" max="20" value="2" required style="max-width:160px;">
+                <label>Entre estos productos</label>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:6px 14px;">
+                    @foreach ($products as $product)
+                        <label style="display:flex; align-items:center; gap:8px; margin:0; font-size:13.5px;">
+                            <input type="checkbox" name="choice_product_ids[]" value="{{ $product->id }}" style="width:auto;" @checked(in_array($product->id, (array) old('choice_product_ids', [])))>
+                            {{ $product->name }}@if ($product->track_inventory) <span class="sub" style="margin:0;">· stock {{ $product->stock }}</span>@endif
+                        </label>
+                    @endforeach
+                </div>
+                <div class="actions" style="margin-top:16px;">
+                    <button class="btn" type="submit">Agregar elección</button>
                 </div>
             </form>
         </div>

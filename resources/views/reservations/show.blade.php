@@ -472,11 +472,11 @@
                                 @foreach ($combos as $combo)
                                     <div class="addon-combo {{ $combo->isOutOfStock() ? 'out' : '' }}">
                                         <div class="addon-combo-name">{{ $combo->name }}</div>
-                                        <div class="addon-combo-items">{{ $combo->description ?: $combo->items->map(fn ($i) => $i->quantity.' × '.($i->product->name ?? ''))->join(' · ') }}</div>
+                                        <div class="addon-combo-items">{{ $combo->description ?: $combo->itemsLabel() }}</div>
                                         <div class="addon-combo-price">${{ number_format($combo->price, 0, ',', '.') }}{!! $combo->isOutOfStock() ? ' <small>agotado</small>' : '' !!}</div>
                                         <div class="qty">
                                             <button type="button" class="q-minus" aria-label="Menos" @disabled($combo->isOutOfStock())>−</button>
-                                            <input type="number" name="combo_quantities[{{ $combo->id }}]" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" data-price="{{ $combo->price }}" @disabled($combo->isOutOfStock())>
+                                            <input type="number" name="combo_quantities[{{ $combo->id }}]" data-combo-id="{{ $combo->id }}" data-choices="{{ json_encode($combo->choicesSpec()) }}" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" data-price="{{ $combo->price }}" @disabled($combo->isOutOfStock())>
                                             <button type="button" class="q-plus" aria-label="Más" @disabled($combo->isOutOfStock())>+</button>
                                         </div>
                                     </div>
@@ -653,5 +653,6 @@
             refresh();
         })();
     </script>
+@include('partials.combo-choices')
 </body>
 </html>

@@ -42,7 +42,9 @@ class UpsellResolver
     private function evaluate(UpsellOffer $o, Room $room, int $durationMinutes, Carbon $startsAt, Carbon $endsAt, ?int $excludeBookingId): ?array
     {
         if ($o->type === 'combo') {
-            if (! $o->combo || ! $o->combo->is_active || $o->combo->isOutOfStock()) {
+            // Un pack con sabores a elegir no se ofrece como upsell de un toque:
+            // hay que elegir los sabores, así que se vende desde la lista de combos.
+            if (! $o->combo || ! $o->combo->is_active || $o->combo->isOutOfStock() || $o->combo->hasChoices()) {
                 return null;
             }
 

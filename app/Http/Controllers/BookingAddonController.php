@@ -112,13 +112,13 @@ class BookingAddonController extends Controller
                 if ($several) {
                     // Todo o nada: si un producto no tiene stock, no se agrega nada de este envío.
                     foreach ($comboQuantities as $comboId => $qty) {
-                        $consumption->addCombo($booking, Combo::findOrFail($comboId), $qty, auth()->id());
+                        $consumption->addCombo($booking, Combo::findOrFail($comboId), $qty, auth()->id(), (array) request()->input("combo_choices.$comboId", []));
                     }
                     foreach ($productQuantities as $productId => $qty) {
                         $consumption->addProduct($booking, Product::findOrFail($productId), $qty, auth()->id());
                     }
                 } elseif ($type === 'combo' && $id) {
-                    $consumption->addCombo($booking, Combo::findOrFail($id), $quantity, auth()->id());
+                    $consumption->addCombo($booking, Combo::findOrFail($id), $quantity, auth()->id(), (array) request()->input("combo_choices.$id", []));
                 } elseif ($type === 'product' && $id) {
                     $consumption->addProduct($booking, Product::findOrFail($id), $quantity, auth()->id());
                 } else {

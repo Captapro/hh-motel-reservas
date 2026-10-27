@@ -243,7 +243,7 @@ class PublicBookingController extends Controller
                     continue;
                 }
                 try {
-                    $consumption->addCombo($booking, $combos[$comboId], $quantity, null);
+                    $consumption->addCombo($booking, $combos[$comboId], $quantity, null, (array) request()->input("combo_choices.$comboId", []));
                 } catch (InsufficientStockException $e) {
                     $soldOut = true;
                 }

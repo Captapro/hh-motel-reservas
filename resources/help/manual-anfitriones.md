@@ -128,6 +128,7 @@ Bloqueos:
 ## 6. Consumo, extras y hora adicional
 - En la ficha, sección "Consumo / extras" (o "+ Agregar consumo →" en la tarjeta). Solo con check-in hecho.
 - "Agregar al consumo": productos y combos con −/+ y el botón "Agregar N ítems · $X". Si algo no tiene stock, no se agrega nada de ese envío ("<Producto>: N, pediste M.").
+- **Combos a elección** (por ejemplo "2 a elegir de Bebidas"): al sumar el combo aparece "Elige N" con los productos disponibles y su stock. Reparte las unidades según lo que pidió el cliente (por ejemplo 1 Coca-Cola y 1 Sprite); hasta que diga "listo ✓" el sistema no deja guardar. Cada producto se descuenta de su propio stock.
 - "+ Otro concepto que no está en la lista": descripción y monto (máximo $200.000).
 - Después de agregar, si queda saldo, te lleva a "Registrar pago".
 - **Hora adicional**: botón "⏱ Vender 1 hora adicional $X". Suma 1 hora a la salida y la carga como consumo. No se puede si pasa del cierre ("…pasa la hora de cierre") o si choca con la siguiente reserva ("…existe otra reserva después"). Si dice "Hora adicional sin precio", avisa al administrador. Una estadía corta no admite tiempo extra.

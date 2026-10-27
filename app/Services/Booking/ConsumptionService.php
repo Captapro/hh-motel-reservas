@@ -50,19 +50,44 @@ class ConsumptionService
         });
     }
 
-    public function addCombo(Booking $booking, Combo $combo, int $quantity, ?int $userId): BookingAddon
+    /**
+     * @param  array<int|string, array<int|string, int|string>>  $choices  para combos a
+     *                                                                     elección: [combo_item_id => [product_id => cantidad]] por el total vendido
+     *                                                                     (ej. 2 packs de "2 bebidas a elegir" = 4 bebidas repartidas entre sabores).
+     */
+    public function addCombo(Booking $booking, Combo $combo, int $quantity, ?int $userId, array $choices = []): BookingAddon
     {
-        return DB::transaction(function () use ($booking, $combo, $quantity, $userId) {
-            // Bloquear los productos componentes en un orden estable (por id)
-            // para evitar interbloqueos si dos combos comparten un producto.
-            $items = $combo->items()->with('product')->orderBy('product_id')->get();
+        return DB::transaction(function () use ($booking, $combo, $quantity, $userId, $choices) {
+            // Lo que se descuenta realmente: [product_id => unidades].
+            $needs = [];
+            $picked = [];
+            foreach ($combo->items()->with('product')->get() as $item) {
+                $total = $item->quantity * $quantity;
+                if (! $item->isChoice()) {
+                    $needs[$item->product_id] = ($needs[$item->product_id] ?? 0) + $total;
+
+                    continue;
+                }
+                $chosen = collect($choices[$item->id] ?? [])
+                    ->mapWithKeys(fn ($count, $productId) => [(int) $productId => (int) $count])
+                    ->filter(fn ($count) => $count > 0);
+                $allowed = collect($item->optionIds());
+                if ($chosen->sum() !== $total || $chosen->keys()->diff($allowed)->isNotEmpty()) {
+                    throw new InsufficientStockException("{$combo->name}: elige {$total} entre las opciones del combo.");
+                }
+                foreach ($chosen as $productId => $count) {
+                    $needs[$productId] = ($needs[$productId] ?? 0) + $count;
+                    $picked[$productId] = ($picked[$productId] ?? 0) + $count;
+                }
+            }
+
+            // Bloquear los productos en un orden estable (por id) para evitar
+            // interbloqueos si dos combos comparten un producto.
+            ksort($needs);
             $lockedProducts = [];
-
-            foreach ($items as $item) {
-                $locked = Product::lockForUpdate()->findOrFail($item->product_id);
-                $lockedProducts[$item->id] = $locked;
-
-                $needed = $item->quantity * $quantity;
+            foreach ($needs as $productId => $needed) {
+                $locked = Product::lockForUpdate()->findOrFail($productId);
+                $lockedProducts[$productId] = $locked;
                 if ($locked->track_inventory && $locked->stock < $needed) {
                     $available = match (true) {
                         $locked->stock <= 0 => 'no queda stock',
@@ -73,19 +98,24 @@ class ConsumptionService
                 }
             }
 
-            foreach ($items as $item) {
-                $locked = $lockedProducts[$item->id];
-                if ($locked->track_inventory) {
-                    $locked->decrement('stock', $item->quantity * $quantity);
+            foreach ($needs as $productId => $needed) {
+                if ($lockedProducts[$productId]->track_inventory) {
+                    $lockedProducts[$productId]->decrement('stock', $needed);
                 }
+            }
+
+            $description = $quantity > 1 ? "{$quantity} x {$combo->name}" : $combo->name;
+            if ($picked) {
+                $description .= ' ('.collect($picked)->map(fn ($count, $productId) => $count.' '.$lockedProducts[$productId]->name)->join(', ').')';
             }
 
             $addon = BookingAddon::create([
                 'booking_id' => $booking->id,
                 'combo_id' => $combo->id,
-                'description' => $quantity > 1 ? "{$quantity} x {$combo->name}" : $combo->name,
+                'description' => $description,
                 'quantity' => $quantity,
                 'amount' => $combo->price * $quantity,
+                'components' => collect($needs)->map(fn ($units, $productId) => ['product_id' => $productId, 'units' => $units])->values()->all(),
                 'added_by' => $userId,
             ]);
 

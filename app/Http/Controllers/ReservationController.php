@@ -288,11 +288,11 @@ class ReservationController extends Controller
 
         try {
             foreach ($upsellCombos as $combo) {
-                $consumption->addCombo($booking, $combo, 1, auth()->id());
+                $consumption->addCombo($booking, $combo, 1, auth()->id(), (array) request()->input("upsell_combo_choices.{$combo->id}", []));
             }
             foreach ($validated['combo_quantities'] ?? [] as $comboId => $qty) {
                 if ((int) $qty > 0) {
-                    $consumption->addCombo($booking, Combo::findOrFail($comboId), (int) $qty, auth()->id());
+                    $consumption->addCombo($booking, Combo::findOrFail($comboId), (int) $qty, auth()->id(), (array) request()->input("combo_choices.$comboId", []));
                 }
             }
             foreach ($validated['quantities'] ?? [] as $productId => $qty) {

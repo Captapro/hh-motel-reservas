@@ -185,8 +185,13 @@ class Booking extends Model
         foreach ($this->addons as $addon) {
             if ($addon->product_id) {
                 Product::where('id', $addon->product_id)->where('track_inventory', true)->increment('stock', (int) $addon->quantity);
+            } elseif ($addon->combo_id && $addon->components) {
+                // Lo que ese combo descontó de verdad (incluye los sabores elegidos).
+                foreach ($addon->components as $component) {
+                    Product::where('id', $component['product_id'])->where('track_inventory', true)->increment('stock', (int) $component['units']);
+                }
             } elseif ($addon->combo_id) {
-                foreach (ComboItem::where('combo_id', $addon->combo_id)->get() as $item) {
+                foreach (ComboItem::where('combo_id', $addon->combo_id)->whereNotNull('product_id')->get() as $item) {
                     Product::where('id', $item->product_id)->where('track_inventory', true)->increment('stock', (int) $item->quantity * (int) $addon->quantity);
                 }
             }

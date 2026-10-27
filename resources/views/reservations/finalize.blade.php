@@ -106,7 +106,7 @@
                                     · {{ $combo->isOutOfStock() ? 'agotado' : '' }}
                                 </div>
                             </div>
-                            <input type="number" name="combo_quantities[{{ $combo->id }}]" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" @disabled($combo->isOutOfStock())>
+                            <input type="number" name="combo_quantities[{{ $combo->id }}]" data-combo-id="{{ $combo->id }}" data-choices="{{ json_encode($combo->choicesSpec()) }}" value="0" min="0" max="{{ $combo->availableCount() !== null ? min(20, $combo->availableCount()) : 20 }}" @disabled($combo->isOutOfStock())>
                         </div>
                     @endforeach
                 </div>
@@ -138,5 +138,6 @@
     </form>
 
     </div>
+@include('partials.combo-choices')
 </body>
 </html>

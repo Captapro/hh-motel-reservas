@@ -111,6 +111,7 @@ class AccessCodeController extends Controller
             }
             if (count($parts) < 2 || trim($parts[1]) === '') {
                 $skipped[] = $line;
+
                 continue;
             }
             $label = trim($parts[0], " :#\t");

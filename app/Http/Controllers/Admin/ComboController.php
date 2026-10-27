@@ -29,6 +29,7 @@ class ComboController extends Controller
             'combo' => $combo,
             'items' => $combo->items()->with('product')->get(),
             'products' => Product::where('is_active', true)->orderBy('name')->get(),
+            'categories' => Product::where('is_active', true)->whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
         ]);
     }
 
@@ -66,6 +67,42 @@ class ComboController extends Controller
 
     public function storeItem(Request $request, Combo $combo): RedirectResponse
     {
+        // A elección: "N a elegir entre estos productos" (ej. sabores de bebida).
+        if ($request->input('kind') === 'choice_category') {
+            $validated = $request->validate([
+                'choice_category' => ['required', 'string', 'exists:products,category'],
+                'quantity' => ['required', 'integer', 'min:1', 'max:20'],
+            ], [], ['choice_category' => 'categoría']);
+
+            $item = ComboItem::create([
+                'combo_id' => $combo->id,
+                'product_id' => null,
+                'choice_category' => $validated['choice_category'],
+                'quantity' => $validated['quantity'],
+            ]);
+            AuditLog::record(auth()->id(), 'combo.item_agregar', 'ComboItem', $item->id, null, $item->toArray());
+
+            return redirect()->route('admin.combos.edit', $combo)->with('status', 'Elección por categoría agregada al combo.');
+        }
+
+        if ($request->input('kind') === 'choice') {
+            $validated = $request->validate([
+                'choice_product_ids' => ['required', 'array', 'min:2'],
+                'choice_product_ids.*' => ['integer', 'exists:products,id'],
+                'quantity' => ['required', 'integer', 'min:1', 'max:20'],
+            ], ['choice_product_ids.min' => 'Elige al menos 2 productos para que el cliente pueda elegir.'], ['choice_product_ids' => 'productos a elegir']);
+
+            $item = ComboItem::create([
+                'combo_id' => $combo->id,
+                'product_id' => null,
+                'choice_product_ids' => array_values(array_unique(array_map('intval', $validated['choice_product_ids']))),
+                'quantity' => $validated['quantity'],
+            ]);
+            AuditLog::record(auth()->id(), 'combo.item_agregar', 'ComboItem', $item->id, null, $item->toArray());
+
+            return redirect()->route('admin.combos.edit', $combo)->with('status', 'Elección agregada al combo.');
+        }
+
         $validated = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:20'],

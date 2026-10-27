@@ -70,7 +70,7 @@ class BookingFinalizeController extends Controller
                 // así reintentar no deja el primer ítem duplicado.
                 foreach ($validated['combo_quantities'] ?? [] as $comboId => $qty) {
                     if ((int) $qty > 0) {
-                        $consumption->addCombo($booking, Combo::findOrFail($comboId), (int) $qty, auth()->id());
+                        $consumption->addCombo($booking, Combo::findOrFail($comboId), (int) $qty, auth()->id(), (array) request()->input("combo_choices.$comboId", []));
                     }
                 }
                 foreach ($validated['quantities'] ?? [] as $productId => $qty) {
