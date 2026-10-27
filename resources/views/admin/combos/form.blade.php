@@ -32,6 +32,12 @@
                 <option value="0" @selected(!old('is_active', $combo->is_active ?? true))>Inactivo</option>
             </select>
 
+            <label style="display:flex; align-items:center; gap:8px; margin-top:14px;">
+                <input type="hidden" name="show_in_catalog" value="0">
+                <input type="checkbox" name="show_in_catalog" value="1" style="width:auto;" @checked(old('show_in_catalog', $combo->show_in_catalog))>
+                Mostrar en el catálogo para que el cliente lo agregue al reservar en línea
+            </label>
+
             <div class="actions" style="margin-top:20px;">
                 <button class="btn" type="submit">{{ $combo->exists ? 'Guardar' : 'Crear combo' }}</button>
                 <a class="link" href="{{ route('admin.combos.index') }}">Cancelar</a>

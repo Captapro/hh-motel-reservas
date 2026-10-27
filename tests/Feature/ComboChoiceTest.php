@@ -61,6 +61,8 @@ class ComboChoiceTest extends TestCase
             '2026_08_20_110002_add_combo_id_to_booking_addons_table.php',
             '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
             '2026_10_27_130000_add_choice_items_to_combos.php',
+            '2026_09_10_140000_create_upsell_offers_table.php',
+            '2026_10_27_140000_add_show_in_catalog_to_combos.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -177,5 +179,16 @@ class ComboChoiceTest extends TestCase
 
         $host = User::factory()->create(['role' => 'recepcion']);
         $this->actingAs($host)->post(route('admin.combos.toggle', $this->combo))->assertForbidden();
+    }
+
+    public function test_admin_shows_and_hides_a_combo_in_the_customer_catalog(): void
+    {
+        $this->assertFalse((bool) $this->combo->fresh()->show_in_catalog);
+        $this->post(route('admin.combos.catalog', $this->combo))->assertRedirect(route('admin.combos.index'));
+        $this->assertTrue($this->combo->fresh()->show_in_catalog);
+        $this->get(route('admin.combos.index'))->assertOk()->assertSee('En catálogo');
+
+        $this->post(route('admin.combos.catalog', $this->combo));
+        $this->assertFalse($this->combo->fresh()->show_in_catalog);
     }
 }

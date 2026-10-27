@@ -9,7 +9,7 @@
     </div>
     <div class="card">
         <table>
-            <thead><tr><th>Combo</th><th>Incluye</th><th>Precio</th><th>Stock</th><th>Estado</th>@if(auth()->user()->isAdministrador())<th></th>@endif</tr></thead>
+            <thead><tr><th>Combo</th><th>Incluye</th><th>Precio</th><th>Stock</th><th>Estado</th><th>Catálogo</th>@if(auth()->user()->isAdministrador())<th></th>@endif</tr></thead>
             <tbody>
                 @forelse ($combos as $combo)
                     <tr>
@@ -33,6 +33,16 @@
                             @endif
                         </td>
                         <td><span class="pill {{ $combo->is_active ? '' : 'pill-warn' }}">{{ $combo->is_active ? 'ACTIVO' : 'PAUSADO' }}</span></td>
+                        <td style="white-space:nowrap;">
+                            @if (auth()->user()->isAdministrador())
+                                <form method="POST" action="{{ route('admin.combos.catalog', $combo) }}" class="inline" title="{{ $combo->show_in_catalog ? 'Se ofrece al cliente al reservar en línea. Toca para ocultarlo.' : 'No se muestra en el catálogo. Toca para ofrecerlo en línea.' }}">
+                                    @csrf
+                                    <button type="submit" style="border-radius:20px; font-size:11px; font-weight:700; padding:4px 10px; cursor:pointer; {{ $combo->show_in_catalog ? 'background:#e7f8ef; border:1px solid #6fd39a; color:#137a4a;' : 'background:transparent; border:1px solid #c9ccd1; color:#7a7f87;' }}">{{ $combo->show_in_catalog ? '● En catálogo' : '○ Oculto' }}</button>
+                                </form>
+                            @else
+                                {{ $combo->show_in_catalog ? 'Sí' : 'No' }}
+                            @endif
+                        </td>
                         @if (auth()->user()->isAdministrador())
                             <td style="white-space:nowrap;">
                                 <form method="POST" action="{{ route('admin.combos.toggle', $combo) }}" class="inline" style="margin-right:10px;">

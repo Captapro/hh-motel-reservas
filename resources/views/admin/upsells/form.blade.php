@@ -56,7 +56,7 @@
                     <option value="{{ $combo->id }}" @selected(old('combo_id', $offer->combo_id) == $combo->id)>{{ $combo->name }} — ${{ number_format($combo->price, 0, ',', '.') }}</option>
                 @endforeach
             </select>
-            <div class="hint">El precio del pack es el del combo. No hace falta poner precio abajo.</div>
+            <div class="hint">El precio del pack es el del combo. No hace falta poner precio abajo. Este upsell lo ofrece recepción en el aviso rápido; para mostrar un combo en el catálogo del cliente, usa el botón "Catálogo" en Administración → Combos.</div>
         </div>
 
         <div class="t-block" data-for="category_upgrade time_extension">

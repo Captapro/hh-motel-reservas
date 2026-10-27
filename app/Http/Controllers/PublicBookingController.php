@@ -66,9 +66,10 @@ class PublicBookingController extends Controller
             ->groupBy('room_category_id')
             ->map(fn ($rows) => $rows->pluck('duration_minutes')->map(fn ($m) => (int) $m)->unique()->sort()->values());
 
-        $publicUpsells = UpsellOffer::active()->where('type', 'combo')->with(['combo.items.product'])
-            ->orderBy('display_order')->get()
-            ->filter(fn (UpsellOffer $upsell) => $upsell->combo?->is_active && ! $upsell->combo->isOutOfStock())
+        // Combos que el administrador marcó "En catálogo" (Administración → Combos).
+        $catalogCombos = Combo::with('items.product')->where('is_active', true)->where('show_in_catalog', true)
+            ->orderBy('display_order')->orderBy('name')->get()
+            ->reject(fn (Combo $combo) => $combo->isOutOfStock() || $combo->items->isEmpty())
             ->values();
         $categoryUpsells = UpsellOffer::active()->where('type', 'category_upgrade')
             ->with(['fromCategory', 'toCategory'])
@@ -81,7 +82,7 @@ class PublicBookingController extends Controller
             'selectedRoomId' => $selectedRoomId,
             'selectedCoupon' => $selectedCoupon,
             'durationsByCategory' => $durationsByCategory,
-            'publicUpsells' => $publicUpsells,
+            'catalogCombos' => $catalogCombos,
             'categoryUpsells' => $categoryUpsells,
             'couponConstraints' => $selectedCoupon ? [
                 'weekdays' => $selectedCoupon->allowedWeekdaysArray(),
@@ -233,7 +234,7 @@ class PublicBookingController extends Controller
             $comboQuantities = collect($validated['combo_quantities'] ?? [])
                 ->mapWithKeys(fn ($quantity, $id) => [(int) $id => (int) $quantity])
                 ->filter(fn ($quantity) => $quantity > 0);
-            $combos = Combo::with('items.product')->where('is_active', true)->whereIn('id', $comboQuantities->keys())->get()->keyBy('id');
+            $combos = Combo::with('items.product')->where('is_active', true)->where('show_in_catalog', true)->whereIn('id', $comboQuantities->keys())->get()->keyBy('id');
             foreach ($comboQuantities as $comboId => $quantity) {
                 if (! isset($combos[$comboId]) || $combos[$comboId]->isOutOfStock()) {
                     if (isset($combos[$comboId])) {

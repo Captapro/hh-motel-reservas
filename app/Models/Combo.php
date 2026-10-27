@@ -6,13 +6,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'description', 'price', 'display_order', 'is_active'])]
+#[Fillable(['name', 'description', 'price', 'display_order', 'is_active', 'show_in_catalog'])]
 class Combo extends Model
 {
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'show_in_catalog' => 'boolean',
         ];
     }
 

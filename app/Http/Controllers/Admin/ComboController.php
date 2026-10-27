@@ -55,8 +55,10 @@ class ComboController extends Controller
             'price' => ['required', 'integer', 'min:0'],
             'display_order' => ['required', 'integer'],
             'is_active' => ['sometimes', 'boolean'],
+            'show_in_catalog' => ['sometimes', 'boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['show_in_catalog'] = $request->boolean('show_in_catalog');
 
         $old = $combo->exists ? $combo->toArray() : null;
         $combo->fill($validated)->save();
@@ -133,6 +135,17 @@ class ComboController extends Controller
         AuditLog::record(auth()->id(), 'combo.toggle', 'Combo', $combo->id, null, ['is_active' => $combo->is_active]);
 
         return redirect()->route('admin.combos.index')->with('status', $combo->name.($combo->is_active ? ' activado: ya se puede vender.' : ' pausado: no aparece en recepción ni en el catálogo.'));
+    }
+
+    /** Mostrar u ocultar el combo en el catálogo del cliente (en recepción se sigue vendiendo igual). */
+    public function toggleCatalog(Combo $combo): RedirectResponse
+    {
+        $combo->update(['show_in_catalog' => ! $combo->show_in_catalog]);
+        AuditLog::record(auth()->id(), 'combo.catalogo', 'Combo', $combo->id, null, ['show_in_catalog' => $combo->show_in_catalog]);
+
+        return redirect()->route('admin.combos.index')->with('status', $combo->name.($combo->show_in_catalog
+            ? ' ahora se ofrece en el catálogo'.($combo->is_active ? '.' : ' (está pausado: actívalo para que se vea).')
+            : ' ya no aparece en el catálogo; recepción lo sigue vendiendo.'));
     }
 
     public function destroy(Combo $combo): RedirectResponse

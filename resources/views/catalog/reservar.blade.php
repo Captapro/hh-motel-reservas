@@ -170,16 +170,15 @@
                 <button type="button" data-d="1" aria-label="Una persona más">+</button>
             </div>
 
-            @if ($publicUpsells->isNotEmpty() || $categoryUpsells->isNotEmpty())
+            @if ($catalogCombos->isNotEmpty() || $categoryUpsells->isNotEmpty())
                 <section class="extras" aria-labelledby="extras-title">
                     <h2 id="extras-title">Aprovecha esta oportunidad exclusiva</h2>
                     <p>Extras y combos con precio preferencial al reservar online. Agrégalos ahora y disfruta más tu experiencia.</p>
                     <div class="extra-list">
-                        @foreach ($publicUpsells as $upsell)
-                            @php $combo = $upsell->combo; @endphp
+                        @foreach ($catalogCombos as $combo)
                             <label class="extra-item">
                                 <input type="checkbox" name="combo_quantities[{{ $combo->id }}]" data-combo-id="{{ $combo->id }}" data-choices="{{ json_encode($combo->choicesSpec()) }}" data-choices-public value="1" data-extra-price="{{ $combo->price }}" data-extra-toggle>
-                                <span class="extra-copy"><span class="extra-badge">OPORTUNIDAD ONLINE</span><span class="extra-name">{{ $upsell->name }}</span><span class="extra-detail">{{ $combo->description ?: ($combo->itemsLabel() ?: 'Combo especial') }}</span></span>
+                                <span class="extra-copy"><span class="extra-badge">OPORTUNIDAD ONLINE</span><span class="extra-name">{{ $combo->name }}</span><span class="extra-detail">{{ $combo->description ?: ($combo->itemsLabel() ?: 'Combo especial') }}</span></span>
                                 <span class="extra-price">+ ${{ number_format($combo->price, 0, ',', '.') }}</span>
                             </label>
                         @endforeach
