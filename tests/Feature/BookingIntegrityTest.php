@@ -33,10 +33,13 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Tests\Concerns\PaysBookings;
 use Tests\TestCase;
 
 class BookingIntegrityTest extends TestCase
 {
+    use PaysBookings;
+
     private Room $room;
 
     private Customer $customer;
@@ -903,7 +906,7 @@ class BookingIntegrityTest extends TestCase
         OperationalSetting::current()->update(['piso_3_norte_enabled' => false]);
         $this->assertFalse($allocator->upgrade($booking, $offer, auth()->id()));
         OperationalSetting::current()->update(['piso_3_norte_enabled' => true]);
-        $this->post('/reservas/'.$booking->code.'/checkin', ['accepted_upsells' => [$offer->id]])->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
+        $this->payRoom($booking)->post('/reservas/'.$booking->code.'/checkin', ['accepted_upsells' => [$offer->id]])->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
         $this->assertSame($target->id, $booking->fresh()->room_id);
         $this->assertSame(1000, $booking->addonsTotal());
     }
@@ -1087,19 +1090,19 @@ class BookingIntegrityTest extends TestCase
         $earlier = $this->booking(['guests_count' => 1]);
         $later = $this->booking(['starts_at' => Carbon::parse('2026-10-05 14:00'), 'guests_count' => 1]);
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
-        $this->post('/reservas/'.$later->code.'/checkin')->assertRedirect()->assertSessionHasErrors('booking');
+        $this->payRoom($later)->post('/reservas/'.$later->code.'/checkin')->assertRedirect()->assertSessionHasErrors('booking');
         $this->assertNull($later->fresh()->checked_in_at);
         $this->assertSame('PENDIENTE_PAGO', $later->fresh()->booking_status);
         $this->assertSame(0, $later->guests()->count());
         $this->travelTo(Carbon::parse('2026-10-05 12:00'));
-        $this->post('/reservas/'.$earlier->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
+        $this->payRoom($earlier)->post('/reservas/'.$earlier->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
     }
 
     public function test_allowed_early_checkin_protects_the_actual_occupancy_interval(): void
     {
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 14:00'), 'guests_count' => 1]);
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
-        $this->post('/reservas/'.$booking->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
+        $this->payRoom($booking)->post('/reservas/'.$booking->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
         $this->assertTrue($booking->fresh()->checked_in_at->eq(now()));
         $this->assertSame('14:00', $booking->fresh()->starts_at->format('H:i'));
         $this->assertSame(20000, $booking->fresh()->price_final);
@@ -1112,10 +1115,10 @@ class BookingIntegrityTest extends TestCase
         $this->booking(['starts_at' => Carbon::parse('2026-10-05 10:00'), 'guests_count' => 1]);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 14:00'), 'guests_count' => 1]);
         $this->travelTo(Carbon::parse('2026-10-05 11:29'));
-        $this->post('/reservas/'.$booking->code.'/checkin')->assertSessionHasErrors('booking');
+        $this->payRoom($booking)->post('/reservas/'.$booking->code.'/checkin')->assertSessionHasErrors('booking');
         $this->assertNull($booking->fresh()->checked_in_at);
         $this->travelTo(Carbon::parse('2026-10-05 11:30'));
-        $this->post('/reservas/'.$booking->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
+        $this->payRoom($booking)->post('/reservas/'.$booking->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
     }
 
     public function test_early_checkin_upgrade_rejects_intervening_booking_in_destination(): void
@@ -1129,7 +1132,7 @@ class BookingIntegrityTest extends TestCase
         $offer = UpsellOffer::create(['name' => 'Upgrade', 'type' => 'category_upgrade', 'is_active' => true,
             'from_room_category_id' => $this->room->room_category_id, 'to_room_category_id' => $category->id, 'price' => 1000]);
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
-        $this->post('/reservas/'.$booking->code.'/checkin', ['accepted_upsells' => [$offer->id]])
+        $this->payRoom($booking)->post('/reservas/'.$booking->code.'/checkin', ['accepted_upsells' => [$offer->id]])
             ->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
         $this->assertSame($this->room->id, $booking->fresh()->room_id);
         $this->assertSame(0, $booking->addonsTotal());
@@ -1151,9 +1154,7 @@ class BookingIntegrityTest extends TestCase
         }
         $b = $this->reserve('14:00');
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
-        $this->post('/reservas/'.$b->code.'/checkin')->assertRedirect()->assertSessionHasNoErrors();
-        $method = PaymentMethod::create(['code' => 'test', 'name' => 'Prueba']);
-        app(PaymentService::class)->register($b, $method, 20000, 'PAID', null, auth()->id());
+        $this->payRoom($b)->post('/reservas/'.$b->code.'/checkin')->assertRedirect()->assertSessionHasNoErrors();
         $this->travelTo(Carbon::parse('2026-10-05 12:00'));
         $this->post('/reservas/'.$b->code.'/finalizar', ['confirm_room_checked' => '1'])->assertRedirect()->assertSessionHasNoErrors();
         $b->refresh();
@@ -1168,11 +1169,11 @@ class BookingIntegrityTest extends TestCase
         $late = $this->reserve();
         $next = $this->reserve('14:00');
         $this->travelTo(Carbon::parse('2026-10-05 13:50'));
-        $this->post('/reservas/'.$late->code.'/checkin')->assertRedirect()->assertSessionHasErrors('booking');
+        $this->payRoom($late)->post('/reservas/'.$late->code.'/checkin')->assertRedirect()->assertSessionHasErrors('booking');
         $this->assertSame('PENDIENTE_PAGO', $late->fresh()->booking_status);
         $this->assertNull($late->fresh()->checked_in_at);
         $this->travelTo(Carbon::parse('2026-10-05 14:00'));
-        $this->post('/reservas/'.$next->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
+        $this->payRoom($next)->post('/reservas/'.$next->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
     }
 
     public function test_regression_upgrade_preserves_base_when_guest_count_changes(): void
@@ -1241,7 +1242,7 @@ class BookingIntegrityTest extends TestCase
         LateArrivalSetting::current()->update(['tolerance_minutes' => 120]);
         $booking = $this->reserve();
         $this->travelTo(Carbon::parse('2026-10-05 13:50'));
-        $this->post('/reservas/'.$booking->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
+        $this->payRoom($booking)->post('/reservas/'.$booking->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
         $this->assertSame('14:50', $booking->fresh()->ends_at->format('H:i'));
         $this->assertSame(20000, $booking->fresh()->price_final);
     }
@@ -1252,7 +1253,7 @@ class BookingIntegrityTest extends TestCase
         // terminaba 13:00 sale 13:15; llegando 13:50 su horario ya terminó.
         $booking = $this->reserve();
         $this->travelTo(Carbon::parse('2026-10-05 13:50'));
-        $this->post('/reservas/'.$booking->code.'/checkin')->assertSessionHasErrors('booking');
+        $this->payRoom($booking)->post('/reservas/'.$booking->code.'/checkin')->assertSessionHasErrors('booking');
         $this->assertNull($booking->fresh()->checked_in_at);
     }
 
@@ -1261,7 +1262,7 @@ class BookingIntegrityTest extends TestCase
         $booking = $this->reserve();
         RateRule::first()->windows()->update(['start_time' => '10:00:00', 'end_time' => '13:00:00', 'wraps_midnight' => false]);
         $this->travelTo(Carbon::parse('2026-10-05 13:50'));
-        $this->post('/reservas/'.$booking->code.'/checkin')->assertSessionHasErrors('booking');
+        $this->payRoom($booking)->post('/reservas/'.$booking->code.'/checkin')->assertSessionHasErrors('booking');
         $this->assertNull($booking->fresh()->checked_in_at);
         $this->assertSame(0, AuditLog::where('action', 'reserva.check_in')->count());
     }

@@ -140,6 +140,16 @@ class Booking extends Model
         return (int) $this->payments()->where('status', 'aprobado')->sum('amount');
     }
 
+    /**
+     * Lo que falta pagar de la habitación (sin consumos). Tiene que quedar en
+     * cero antes del check-in: una reserva activa se ocupa pagada. Los
+     * consumos y upsells que se sumen al entrar se cobran durante la estadía.
+     */
+    public function roomBalanceDue(): int
+    {
+        return max(0, (int) $this->price_final - $this->approvedPaidFast());
+    }
+
     /** Consumo/extras cargados durante la estadía — no altera el snapshot de precio de la habitación. */
     /**
      * Se puede eliminar (junto con sus pagos y consumos) solo si nunca

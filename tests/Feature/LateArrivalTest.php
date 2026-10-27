@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Booking\LateArrivalPolicy;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\PaysBookings;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,8 @@ use Tests\TestCase;
  */
 class LateArrivalTest extends TestCase
 {
+    use PaysBookings;
+
     private Room $room;
 
     private Customer $customer;
@@ -139,7 +142,7 @@ class LateArrivalTest extends TestCase
         $booking = $this->booking();
         $this->travelTo(Carbon::parse('2026-10-05 20:40'));
 
-        $this->post("/reservas/{$booking->code}/checkin", [])->assertSessionHasNoErrors();
+        $this->payRoom($booking)->post("/reservas/{$booking->code}/checkin", [])->assertSessionHasNoErrors();
 
         $this->assertSame('23:15', $booking->fresh()->ends_at->format('H:i'));
     }

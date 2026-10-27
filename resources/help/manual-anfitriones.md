@@ -47,6 +47,7 @@ Errores comunes:
 ## 3. Reservas en línea (catálogo) y cobro a distancia
 - Una reserva hecha por el cliente en el catálogo queda retenida 10 minutos esperando el pago. Si no paga, vence sola y se libera la habitación.
 - Aparece en "⚠ Pendientes de gestionar". En la ficha: "⏳ Retenida hasta las HH:MM" con los botones "Pagará en recepción" o "Pago tardío": cualquiera de los dos quita el vencimiento.
+- Una reserva en línea normalmente llega pagada. Si quedó mantenida sin pago ("Pagará en recepción" o "Pago tardío"), al llegar el cliente se cobra primero y después se hace el check-in.
 - Para enviarle cómo pagar (en la ficha, si hay saldo): "Copiar datos de cuenta", "Copiar texto" (mensaje completo con código, horario, monto y enlace al pase) y "Contactar por WhatsApp" (abre el chat; pegas el mensaje). Copiar marca "✓ Ya se le avisó".
 - Cobro por link: bloque "Cobrar por link (Mercado Pago)" con "Copiar mensaje" y "Enviar por WhatsApp". Cuando el cliente paga, la reserva se confirma sola y aparece "💳 Pago recibido" en el tablero. Si dice "revisa esta reserva: pagó fuera de tiempo o de más", avisa al administrador.
 - El correo de confirmación lo manda el sistema solo; los WhatsApp los envía el anfitrión a mano.
@@ -75,7 +76,7 @@ Pantalla "Check-in":
 - "Registro de acompañantes — obligatorio": nombre y apellido de cada persona extra (RUT opcional). Sin eso no deja avanzar ("Faltan N acompañante(s) por registrar…").
 - "Ofrecer productos y combos": ofrece y carga solo lo que el cliente acepta.
 - "Registrar check-in" (en ingreso presencial: "Confirmar ingreso"). Si no cargó nada aparece "🎁 El cliente llega sin nada cargado" con upsells: "Agregar lo elegido y registrar check-in" o "El cliente no quiere nada — check-in igual".
-- No hace falta estar pagado para el check-in; el saldo queda como "Falta cobrar" en la tarjeta.
+- **La habitación tiene que estar pagada antes del check-in.** Si falta pagar, el sistema te lleva primero a "Registrar pago" con el aviso "La habitación tiene que estar pagada antes del check-in. Falta cobrar $X." Después del pago sigue el check-in. Solo los consumos y upsells que se agreguen al entrar pueden quedar como "Falta cobrar" en la tarjeta y se cobran durante la estadía o antes de finalizar.
 
 **Atrasos**: tolerancia por defecto de 15 minutos (la define el administrador en Atrasos). Dentro de la tolerancia el cliente tiene su tiempo completo; pasada la tolerancia se descuenta del tiempo lo que exceda (o todo el atraso, según la regla configurada). La salida nunca pasa del cierre ni de la siguiente reserva. La pantalla lo avisa antes de confirmar: "Llega N min tarde — … sale a las HH:MM". Informa al cliente la hora de salida.
 
@@ -100,7 +101,7 @@ Bloqueos:
    - Efectivo o transferencia: "N° de boleta".
    - Débito o crédito: "N° de voucher".
    - Otro: al menos uno de los dos.
-4. "Registrar pago". Opcional: "+ Agregar una nota". También: "Saltar por ahora →" o "Cobrar después, ir al check-in →".
+4. "Registrar pago". Opcional: "+ Agregar una nota". Desde el tablero también aparece "Saltar por ahora →". Si vienes a hacer un check-in no hay forma de saltar el cobro: sin la habitación pagada no hay check-in ("Volver a la reserva" si el cliente no puede pagar).
 - Registra solo pagos comprobados (plata recibida o voucher aprobado).
 - No se puede cobrar más que el saldo: "El monto ($X) es mayor que el saldo pendiente ($Y)…". Si aparece, revisa si alguien ya registró un pago.
 - Si la pantalla demora, revisa "Pagos registrados" antes de repetir: el sistema evita duplicados del mismo formulario.

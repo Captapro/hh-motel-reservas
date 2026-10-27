@@ -9,6 +9,7 @@ use App\Models\RoomCategory;
 use App\Models\UpsellOffer;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\PaysBookings;
 use Tests\TestCase;
 
 /**
@@ -20,6 +21,8 @@ use Tests\TestCase;
  */
 class CheckInOccupancyTest extends TestCase
 {
+    use PaysBookings;
+
     private Room $room;
 
     private Customer $customer;
@@ -84,7 +87,7 @@ class CheckInOccupancyTest extends TestCase
         $this->makeBooking(['checked_in_at' => now()->subHour(), 'booking_status' => 'CHECK_IN']);
         $late = $this->makeBooking();
 
-        $response = $this->post("/reservas/{$late->code}/checkin", []);
+        $response = $this->payRoom($late)->post("/reservas/{$late->code}/checkin", []);
 
         $response->assertSessionHasErrors('booking');
         $this->assertNull($late->fresh()->checked_in_at);
@@ -101,7 +104,7 @@ class CheckInOccupancyTest extends TestCase
         ]);
         $next = $this->makeBooking();
 
-        $response = $this->post("/reservas/{$next->code}/checkin", []);
+        $response = $this->payRoom($next)->post("/reservas/{$next->code}/checkin", []);
 
         $response->assertRedirect(route('rooms.board'));
         $this->assertNotNull($next->fresh()->checked_in_at);
@@ -143,7 +146,7 @@ class CheckInOccupancyTest extends TestCase
 
         $booking = $this->makeBooking();
 
-        $response = $this->post("/reservas/{$booking->code}/checkin", [
+        $response = $this->payRoom($booking)->post("/reservas/{$booking->code}/checkin", [
             'accepted_upsells' => [$upgrade->id],
         ]);
 
@@ -152,5 +155,20 @@ class CheckInOccupancyTest extends TestCase
         // estaba ocupada de verdad, aunque su horario agendado ya hubiera
         // "terminado" en el papel.
         $this->assertSame($this->room->id, $booking->fresh()->room_id);
+    }
+
+    public function test_check_in_requires_the_room_to_be_paid_first(): void
+    {
+        // Una reserva activa se ocupa pagada: sin el pago de la habitación,
+        // el check-in manda primero a registrar el pago.
+        $booking = $this->makeBooking(['payment_status' => 'NO_PAGADA']);
+
+        $this->get(route('bookings.checkin.show', $booking->code))
+            ->assertRedirect(route('payments.create', ['code' => $booking->code, 'after' => 'pase']))
+            ->assertSessionHasErrors('booking');
+        $this->post("/reservas/{$booking->code}/checkin", [])->assertSessionHasErrors('booking');
+        $this->assertNull($booking->fresh()->checked_in_at);
+
+        $this->payRoom($booking)->get(route('bookings.checkin.show', $booking->code))->assertOk();
     }
 }

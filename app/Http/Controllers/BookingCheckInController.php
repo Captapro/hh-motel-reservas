@@ -62,12 +62,22 @@ class BookingCheckInController extends Controller
             ->with('status', 'Pase de '.$booking->customer->name.' — '.$booking->room->name.'. Completa el check-in.');
     }
 
+    /** Sin la habitación pagada no hay check-in: primero se registra el pago. */
+    private function toPaymentFirst(Booking $booking, int $due, string $after): RedirectResponse
+    {
+        return redirect()->route('payments.create', ['code' => $booking->code, 'after' => $after])
+            ->withErrors(['booking' => 'La habitación tiene que estar pagada antes del check-in. Falta cobrar $'.number_format($due, 0, ',', '.').'.']);
+    }
+
     public function show(string $code, UpsellResolver $upsells): View|RedirectResponse
     {
         $booking = Booking::with(['room.category', 'customer', 'addons', 'guests'])->where('code', $code)->firstOrFail();
 
         if ($booking->checked_in_at || in_array($booking->booking_status, self::TERMINAL, true)) {
             return redirect()->route('reservations.show', $booking->code);
+        }
+        if ($due = $booking->roomBalanceDue()) {
+            return $this->toPaymentFirst($booking, $due, request()->query('flujo') === 'ingreso' ? 'checkin' : 'pase');
         }
 
         $products = Product::where('is_active', true)->orderBy('display_order')->get();
@@ -125,6 +135,10 @@ class BookingCheckInController extends Controller
         // que ya quedó cancelada/vencida, no hay que dejarla pasar igual.
         if (in_array($booking->booking_status, self::TERMINAL, true)) {
             return redirect()->route('reservations.show', $booking->code);
+        }
+
+        if ($due = $booking->roomBalanceDue()) {
+            return $this->toPaymentFirst($booking, $due, $request->query('flujo') === 'ingreso' ? 'checkin' : 'pase');
         }
 
         // La reserva pudo haberse hecho con la pieza disponible, pero si
