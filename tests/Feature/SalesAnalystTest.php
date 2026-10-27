@@ -219,4 +219,22 @@ class SalesAnalystTest extends TestCase
         $this->assertSame('PLUS', $changes[0]['categoria']);
         $this->assertSame(['antes' => 45000, 'despues' => 48000], $changes[0]['cambios']['price']);
     }
+
+    public function test_admin_deletes_one_conversation_or_all(): void
+    {
+        $a = (string) Str::uuid();
+        $b = (string) Str::uuid();
+        foreach ([$a, $a, $b] as $thread) {
+            AnalystRun::create(['user_id' => $this->admin->id, 'thread' => $thread, 'question' => 'P', 'status' => 'listo', 'answer' => 'R']);
+        }
+
+        $host = User::factory()->create(['role' => 'recepcion']);
+        $this->actingAs($host)->delete(route('admin.analyst.destroy', $a))->assertForbidden();
+
+        $this->actingAs($this->admin)->delete(route('admin.analyst.destroy', $a))->assertRedirect(route('admin.analyst.index'));
+        $this->assertSame([$b], AnalystRun::pluck('thread')->all());
+
+        $this->actingAs($this->admin)->delete(route('admin.analyst.destroy_all'))->assertRedirect();
+        $this->assertSame(0, AnalystRun::count());
+    }
 }

@@ -8,6 +8,11 @@
         .an-threads a:hover { background:#f3f4f6; }
         .an-threads a.is-current { background:#fff3e8; }
         .an-threads small { display:block; color:#9ca3af; font-size:11.5px; margin-top:2px; }
+        .an-thread { display:flex; align-items:flex-start; gap:2px; }
+        .an-thread a { flex:1; min-width:0; }
+        .an-del { background:none; border:0; color:#9ca3af; cursor:pointer; font-size:13px; padding:8px 6px; border-radius:6px; }
+        .an-del:hover { color:#b3202f; background:#fdecee; }
+        .an-del-all { background:none; border:0; color:#b3202f; cursor:pointer; font-size:12.5px; padding:4px 10px; }
         .an-chat { display:flex; flex-direction:column; gap:14px; }
         .an-q { align-self:flex-end; max-width:80%; background:#ff7918; color:#fff; padding:10px 14px; border-radius:14px 14px 4px 14px; font-size:14px; white-space:pre-wrap; }
         .an-a { font-size:14.5px; line-height:1.6; }
@@ -59,13 +64,25 @@
         <div class="card an-threads">
             <h2>Conversaciones</h2>
             @forelse ($threads as $t)
-                <a href="{{ route('admin.analyst.index', ['conversacion' => $t['thread']]) }}" class="{{ $t['thread'] === $thread ? 'is-current' : '' }}">
-                    {{ $t['title'] }}
-                    <small>{{ $t['last_at']->format('d/m H:i') }} · {{ $t['total'] }} {{ $t['total'] === 1 ? 'pregunta' : 'preguntas' }}</small>
-                </a>
+                <div class="an-thread">
+                    <a href="{{ route('admin.analyst.index', ['conversacion' => $t['thread']]) }}" class="{{ $t['thread'] === $thread ? 'is-current' : '' }}">
+                        {{ $t['title'] }}
+                        <small>{{ $t['last_at']->format('d/m H:i') }} · {{ $t['total'] }} {{ $t['total'] === 1 ? 'pregunta' : 'preguntas' }}</small>
+                    </a>
+                    <form method="POST" action="{{ route('admin.analyst.destroy', $t['thread']) }}" onsubmit="return confirm('¿Eliminar esta conversación? No se puede deshacer.')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="an-del" title="Eliminar conversación" aria-label="Eliminar conversación">✕</button>
+                    </form>
+                </div>
             @empty
                 <p class="sub" style="margin:0">Todavía no hay conversaciones.</p>
             @endforelse
+            @if ($threads->count() > 1)
+                <form method="POST" action="{{ route('admin.analyst.destroy_all') }}" onsubmit="return confirm('¿Eliminar todas las conversaciones? No se puede deshacer.')" style="margin-top:10px;">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="an-del-all">Eliminar todas</button>
+                </form>
+            @endif
         </div>
 
         <div class="an-chat">

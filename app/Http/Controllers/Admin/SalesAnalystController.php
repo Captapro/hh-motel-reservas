@@ -86,6 +86,23 @@ class SalesAnalystController extends Controller
         return back()->with('status', 'Contexto del negocio guardado. El analista lo usará desde la próxima pregunta.');
     }
 
+    public function destroy(Request $request, string $thread): RedirectResponse
+    {
+        abort_unless(Str::isUuid($thread), 404);
+        $deleted = AnalystRun::where('thread', $thread)->delete();
+        AuditLog::record($request->user()->id, 'analista.borrar_conversacion', 'AnalystRun', $thread, ['preguntas' => $deleted], null);
+
+        return redirect()->route('admin.analyst.index')->with('status', 'Conversación eliminada.');
+    }
+
+    public function destroyAll(Request $request): RedirectResponse
+    {
+        $deleted = AnalystRun::query()->delete();
+        AuditLog::record($request->user()->id, 'analista.borrar_todo', 'AnalystRun', 0, ['preguntas' => $deleted], null);
+
+        return redirect()->route('admin.analyst.index')->with('status', 'Se eliminaron todas las conversaciones.');
+    }
+
     public function show(AnalystRun $run): JsonResponse
     {
         // Si el proceso murió sin avisar, no dejar la página esperando para siempre.
