@@ -1,6 +1,18 @@
 {{-- Botón "Ayuda" del equipo: chat con el asistente que explica cómo usar el sistema. Solo para quien esté autorizado en Personal. --}}
 @if (auth()->user()?->canUseAi('ayuda'))
 <style>
+    /* Algunas pantallas tienen estilos generales para todos los botones,
+       campos o íconos (ancho 100%, márgenes, mayúsculas). El botón y el chat
+       de Ayuda fijan sus propias medidas para verse igual en todas. */
+    #hh-help-btn, #hh-help-panel button, #hh-help-panel textarea {
+        width:auto !important; min-width:0 !important; max-width:none !important; height:auto; margin:0 !important;
+        box-sizing:border-box !important; text-transform:none !important; letter-spacing:normal !important; line-height:1.25 !important; flex:none;
+    }
+    #hh-help-btn { left:auto !important; top:auto !important; right:18px !important; bottom:18px !important; display:flex !important; }
+    #hh-help-btn svg { width:17px !important; height:17px !important; flex:none; }
+    #hh-help-panel .hh-help-tips button { width:100% !important; }
+    #hh-help-panel .hh-help-form textarea { flex:1 1 auto !important; width:auto !important; height:42px !important; }
+    #hh-help-panel .hh-help-form button { height:42px !important; }
     .hh-help-btn { position:fixed; right:18px; bottom:18px; z-index:900; background:#ff7918; color:#fff; border:0; border-radius:24px; padding:10px 16px; font:600 14px -apple-system, "Segoe UI", sans-serif; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; display:flex; align-items:center; gap:6px; }
     .hh-help-btn:hover { background:#e86a0e; }
     .hh-help-panel { position:fixed; right:18px; bottom:72px; z-index:901; width:380px; max-width:calc(100vw - 32px); height:560px; max-height:calc(100vh - 100px); background:#fff; color:#1f2937; border:1px solid #e5e7eb; border-radius:14px; box-shadow:0 18px 44px rgba(0,0,0,.3); display:flex; flex-direction:column; overflow:hidden; font-family:-apple-system, "Segoe UI", sans-serif; }
