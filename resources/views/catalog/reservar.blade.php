@@ -44,21 +44,24 @@
         .people-stepper button:disabled { opacity:.3; cursor:not-allowed; }
         .people-stepper input { text-align:center; font-size:24px; font-weight:800; min-height:54px; -moz-appearance:textfield; appearance:textfield; }
         .people-stepper input::-webkit-inner-spin-button, .people-stepper input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
-        .time-native { font-size:26px; font-weight:800; text-align:center; min-height:58px; letter-spacing:.04em; font-variant-numeric:tabular-nums; }
-        .time-native.bad { border-color:#e5747f; color:#f3b8b8; }
+        .tp-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(58px, 1fr)); gap:7px; }
+        .tp-mins { display:grid; grid-template-columns:repeat(4, 1fr); gap:7px; }
+        .tp-sub { font-size:11.5px; color:#8a8d93; margin:12px 0 6px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+        .tp button { min-height:46px; padding:0; border-radius:9px; border:1px solid #4a4d53; background:#202123; color:#f4f5f7; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+        .tp button small { font-size:11px; font-weight:600; opacity:.65; margin-left:1px; }
+        .tp button:hover:not(:disabled) { border-color:#ff9a4d; }
+        .tp button.on { background:var(--hh-accent); border-color:var(--hh-accent); color:#21170e; }
+        .tp button.on small { opacity:.8; }
+        .tp button:disabled { opacity:.28; cursor:not-allowed; }
+        .tp-group { grid-column:1 / -1; margin:4px 0 0; }
+        .tp-group:first-child { margin-top:0; }
+        .tp-empty { font-size:13px; color:#8a8d93; padding:10px 0; }
+        .tp.missing .tp-grid { outline:2px solid #e5747f; outline-offset:4px; border-radius:9px; }
         .time-range { font-size:12px; color:#8a8d93; margin-top:6px; min-height:16px; }
         .time-range.err { color:#f3b8b8; }
         .time-parts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
         input:focus, select:focus { outline:none; border-color:var(--hh-accent); box-shadow: 0 0 0 3px #ff791833; }
         .row2 { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:12px; }
-        /* Fecha + Hora compartiendo fila deja los 3 selectores de hora con
-           tan poco ancho en el celular que el texto ("AM/PM") se corta
-           ("AI") -- se apilan uno debajo del otro para que la hora tenga
-           todo el ancho de la tarjeta. Tiene que ir DESPUÉS de ".row2" acá
-           arriba -- misma especificidad, así que gana el que aparece último. */
-        @media (max-width: 640px) {
-            .row2-datetime { grid-template-columns: minmax(0,1fr); }
-        }
         .honey-field { position:absolute; left:-9999px; top:-9999px; }
         button.submit { position:sticky; bottom:calc(10px + var(--safe-b)); z-index:30; box-shadow:0 10px 28px rgba(0,0,0,.45); min-height:56px; width:100%; margin-top:26px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:15px; font-weight:750; cursor:pointer; }
         button.submit:hover { background:var(--hh-accent-hover); }
@@ -139,21 +142,23 @@
                 @endforeach
             </select>
 
-            <div class="row2 row2-datetime">
-                <div>
-                    <label for="date">Fecha</label>
-                    <input type="date" id="date" name="date" min="{{ now()->toDateString() }}" value="{{ old('date', now()->toDateString()) }}" required>
-                </div>
-                <div>
-                    <label for="time">Hora</label>
-                    <input type="time" id="time-select" class="time-native" step="900" required aria-label="Hora de llegada">
-                    <div class="time-range" id="time-range"></div>
-                    <input type="hidden" id="time-select" value="">
-                    <input type="hidden" id="time" value="">
-                    <input type="hidden" name="time_hour" id="time_hour" value="{{ old('time_hour') }}">
-                    <input type="hidden" name="time_minute" id="time_minute" value="{{ old('time_minute') }}">
+            <label for="date">Fecha</label>
+            <input type="date" id="date" name="date" min="{{ now()->toDateString() }}" value="{{ old('date', now()->toDateString()) }}" required>
+
+            {{-- Hora: botones con solo las horas disponibles (un toque elige la hora, otro ajusta los minutos). --}}
+            <label>Hora de llegada</label>
+            <div class="tp" id="time-picker">
+                <div class="tp-grid" id="tp-hours" role="group" aria-label="Hora"></div>
+                <div class="tp-mins-wrap" id="tp-mins-wrap" hidden>
+                    <div class="tp-sub">Minutos</div>
+                    <div class="tp-mins" id="tp-mins" role="group" aria-label="Minutos"></div>
                 </div>
             </div>
+            <div class="time-range" id="time-range"></div>
+            <input type="hidden" id="time-select" value="">
+            <input type="hidden" id="time" value="">
+            <input type="hidden" name="time_hour" id="time_hour" value="{{ old('time_hour') }}">
+            <input type="hidden" name="time_minute" id="time_minute" value="{{ old('time_minute') }}">
 
             <label for="duration_minutes">¿Cuánto tiempo quieres quedarte?</label>
             <select id="duration_minutes" name="duration_minutes" required></select>
@@ -253,17 +258,21 @@
             const date = document.getElementById('date').value;
             const category = document.getElementById('room_category_id').value;
             hhAllowedTimes = null;
+            hhTimesLoading = true;
+            hhBuildTimes();
             if (date && category) {
                 try {
                     const r = await fetch('{{ route('catalog.reserve.times') }}?' + new URLSearchParams({ date: date, room_category_id: category }), { headers: { 'Accept': 'application/json' } });
                     if (r.ok) hhAllowedTimes = (await r.json()).times;
                 } catch (e) { /* se usa la lista completa */ }
             }
+            hhTimesLoading = false;
             hhBuildTimes();
         }
-        // Hora con el selector nativo del teléfono (la rueda de iPhone/Android). Como el campo nativo no sabe
-        // cuál es el horario de atención, se avisa si la hora elegida queda fuera, y no se deja enviar.
+        // Selector de hora con botones: solo aparecen las horas del horario de atención de ese día
+        // (cada 15 minutos), así no se puede elegir una hora que después el sistema rechace.
         let hhTimeList = [];
+        let hhTimesLoading = false;
         const hhToMin = (v) => { const p = v.split(':').map(Number); return p[0] * 60 + p[1]; };
         const hhFromMin = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
         function hhTimeOk(value) {
@@ -292,26 +301,92 @@
             for (let t = 0; t < 24 * 60; t += 15) all.push(hhFromMin(t));
             hhTimeList = (hhAllowedTimes || all).filter((v) => dateValue !== todayIso || hhToMin(v) >= nowMinutes - 5);
             hhValidateTime(false);
+            hhRenderPicker();
         }
-        // Marca en rojo si la hora no está en el horario; limpia la hora del formulario para no enviarla.
+        // Elige una hora: actualiza el campo y avisa al resto del formulario (resumen, disponibilidad).
+        function hhSetTime(value) {
+            const input = document.getElementById('time-select');
+            input.value = value;
+            document.getElementById('time-picker').classList.remove('missing');
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            hhRenderPicker();
+        }
+        function hhRenderPicker() {
+            const hoursBox = document.getElementById('tp-hours');
+            const minsWrap = document.getElementById('tp-mins-wrap');
+            const minsBox = document.getElementById('tp-mins');
+            const value = document.getElementById('time-select').value;
+            hoursBox.innerHTML = '';
+            minsBox.innerHTML = '';
+            if (hhTimesLoading) {
+                hoursBox.innerHTML = '<div class="tp-empty">Cargando horarios…</div>';
+                minsWrap.hidden = true;
+                return;
+            }
+            if (!hhTimeList.length) {
+                hoursBox.innerHTML = '<div class="tp-empty">No quedan horarios para esta fecha. Prueba otro día.</div>';
+                minsWrap.hidden = true;
+                return;
+            }
+            const selHour = value ? value.slice(0, 2) : null;
+            const hours = [];
+            hhTimeList.forEach((v) => { const h = v.slice(0, 2); if (!hours.includes(h)) hours.push(h); });
+            // Las horas de madrugada (00 a 05) van con su propio subtítulo: son la madrugada de la fecha elegida.
+            const early = (h) => Number(h) < 6;
+            const mixed = hours.some(early) && hours.some((h) => !early(h));
+            let lastGroup = null;
+            hours.forEach((h) => {
+                const group = early(h) ? 'Madrugada' : 'Día y noche';
+                if (mixed && group !== lastGroup) {
+                    const t = document.createElement('div');
+                    t.className = 'tp-sub tp-group';
+                    t.textContent = group;
+                    hoursBox.appendChild(t);
+                    lastGroup = group;
+                }
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.innerHTML = h + '<small>h</small>';
+                b.setAttribute('aria-pressed', h === selHour ? 'true' : 'false');
+                if (h === selHour) b.classList.add('on');
+                // Un toque ya deja una hora válida: la primera del bloque (normalmente en punto).
+                b.addEventListener('click', () => {
+                    if (h === selHour) return;
+                    hhSetTime(hhTimeList.find((v) => v.slice(0, 2) === h));
+                });
+                hoursBox.appendChild(b);
+            });
+            minsWrap.hidden = !selHour;
+            if (!selHour) return;
+            ['00', '15', '30', '45'].forEach((m) => {
+                const v = selHour + ':' + m;
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = ':' + m;
+                b.disabled = !hhTimeList.includes(v);
+                b.setAttribute('aria-pressed', v === value ? 'true' : 'false');
+                if (v === value) b.classList.add('on');
+                b.addEventListener('click', () => { if (v !== value) hhSetTime(v); });
+                minsBox.appendChild(b);
+            });
+        }
+        // Si la hora elegida ya no está disponible (cambió la fecha o la categoría), se borra y se pide otra.
         function hhValidateTime(fromUser) {
             const input = document.getElementById('time-select');
             const range = document.getElementById('time-range');
-            const ok = hhTimeOk(input.value);
             range.classList.remove('err');
-            if (input.value && !ok) {
-                input.classList.add('bad');
-                range.classList.add('err');
-                range.textContent = 'Esa hora está fuera del horario de atención. ' + hhOpeningText();
+            if (input.value && !hhTimesLoading && !hhTimeOk(input.value)) {
+                input.value = '';
+                document.getElementById('time').value = '';
                 document.getElementById('time_hour').value = '';
                 document.getElementById('time_minute').value = '';
+                range.classList.add('err');
+                range.textContent = 'La hora que tenías no está disponible ese día. Elige otra.';
                 hhUpdateSummary(); hhCheckAvailability();
             } else {
-                input.classList.remove('bad');
-                range.textContent = hhOpeningText();
+                range.textContent = hhTimesLoading ? '' : hhOpeningText();
             }
         }
-        document.getElementById('time-select').addEventListener('change', function () { hhValidateTime(true); });
 
         function hhSyncTime() {
             const value = document.getElementById('time-select').value;
@@ -451,9 +526,11 @@
             if (!hhTimeOk(document.getElementById('time-select').value)) {
                 e.preventDefault();
                 const range = document.getElementById('time-range');
-                range.textContent = document.getElementById('time-select').value ? 'Esa hora está fuera del horario de atención. ' + hhOpeningText() : 'Elige la hora de llegada.';
+                range.textContent = 'Elige la hora de llegada.';
                 range.classList.add('err');
-                document.getElementById('time-select').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const picker = document.getElementById('time-picker');
+                picker.classList.add('missing');
+                picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });
         // Un solo envío: sin esto, un doble toque creaba dos reservas en dos habitaciones.
