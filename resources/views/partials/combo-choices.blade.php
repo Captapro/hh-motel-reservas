@@ -95,7 +95,9 @@
                 nameEl.textContent = opt.name;
                 nameEl.title = opt.name;
                 row.querySelector('.cc-name').appendChild(nameEl);
-                if (opt.stock !== null) row.querySelector('.cc-name').insertAdjacentHTML('beforeend', '<small>' + (opt.stock > 0 ? opt.stock + ' disp.' : 'agotado') + '</small>');
+                // En el catálogo el cliente no ve el inventario: solo si se agotó.
+                const isPublic = input.hasAttribute('data-choices-public');
+                if (opt.stock !== null && (!isPublic || opt.stock <= 0)) row.querySelector('.cc-name').insertAdjacentHTML('beforeend', '<small>' + (opt.stock > 0 ? opt.stock + ' disp.' : 'agotado') + '</small>');
                 const [minus, plus] = row.querySelectorAll('button');
                 minus.disabled = count <= 0;
                 plus.disabled = left <= 0 || (stockLeft !== null && stockLeft <= 0);

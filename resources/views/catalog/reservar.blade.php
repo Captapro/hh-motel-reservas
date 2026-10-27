@@ -178,8 +178,8 @@
                         @foreach ($publicUpsells as $upsell)
                             @php $combo = $upsell->combo; @endphp
                             <label class="extra-item">
-                                <input type="checkbox" name="combo_quantities[{{ $combo->id }}]" data-combo-id="{{ $combo->id }}" data-choices="{{ json_encode($combo->choicesSpec()) }}" value="1" data-extra-price="{{ $combo->price }}" data-extra-toggle>
-                                <span class="extra-copy"><span class="extra-badge">OPORTUNIDAD ONLINE</span><span class="extra-name">{{ $upsell->name }}</span><span class="extra-detail">{{ $combo->description ?: 'Combo especial' }}</span></span>
+                                <input type="checkbox" name="combo_quantities[{{ $combo->id }}]" data-combo-id="{{ $combo->id }}" data-choices="{{ json_encode($combo->choicesSpec()) }}" data-choices-public value="1" data-extra-price="{{ $combo->price }}" data-extra-toggle>
+                                <span class="extra-copy"><span class="extra-badge">OPORTUNIDAD ONLINE</span><span class="extra-name">{{ $upsell->name }}</span><span class="extra-detail">{{ $combo->description ?: ($combo->itemsLabel() ?: 'Combo especial') }}</span></span>
                                 <span class="extra-price">+ ${{ number_format($combo->price, 0, ',', '.') }}</span>
                             </label>
                         @endforeach
