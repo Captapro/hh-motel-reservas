@@ -6,7 +6,6 @@ use App\Exceptions\InsufficientStockException;
 use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Product;
-use App\Models\RateRule;
 use App\Models\Room;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\ConsumptionService;
@@ -57,8 +56,8 @@ class BookingAddonController extends Controller
         if (! $availability->isAvailable($booking->room, $booking->ends_at, $newEndsAt, $booking->id)) {
             return back()->withErrors(['booking' => 'No se puede vender la hora adicional porque existe otra reserva después.']);
         }
-        $rateName = strtoupper($booking->rate_rule_name_snapshot ?? 'HH');
-        $amount = (int) RateRule::where('name', $rateName)->value('extra_hour_price');
+        $rateName = $booking->extraHourRateRule()?->name ?? ($booking->rate_rule_name_snapshot ?: 'HH');
+        $amount = $booking->extraHourPrice();
         // Sin precio configurado en la tarifa, vender la hora la dejaba
         // cargada a $0 sin avisar -- mejor frenar y decir dónde se configura.
         if ($amount <= 0) {

@@ -12,7 +12,6 @@ use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\OperationalSetting;
 use App\Models\Product;
-use App\Models\RateRule;
 use App\Models\RateRulePrice;
 use App\Models\RateRuleWindow;
 use App\Models\Room;
@@ -570,7 +569,7 @@ class ReservationController extends Controller
         $products = Product::where('is_active', true)->orderBy('display_order')->get();
         $combos = Combo::with('items.product')->where('is_active', true)->orderBy('display_order')->get();
 
-        $extraHourPrice = (int) (RateRule::where('name', $booking->rate_rule_name_snapshot)->value('extra_hour_price') ?? 0);
+        $extraHourPrice = $booking->extraHourPrice();
 
         return view('reservations.show', ['booking' => $booking, 'products' => $products, 'combos' => $combos, 'extraHourPrice' => $extraHourPrice]);
     }

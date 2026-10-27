@@ -181,7 +181,7 @@ Route::middleware(['auth', 'section'])->group(function () {
 
 }); // fin del grupo auth
 
-Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(function () {
     // Analista IA: solo quienes estén autorizados en Personal. El contexto del
     // negocio y borrar todo el historial quedan para el administrador.
     Route::middleware('ai:analista')->group(function () {
@@ -284,7 +284,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/clientes/{customer}', [AdminCustomerController::class, 'show'])->name('customers.show');
     Route::put('/clientes/{customer}', [AdminCustomerController::class, 'update'])->name('customers.update');
     Route::delete('/clientes/{customer}', [AdminCustomerController::class, 'destroy'])->middleware('role:administrador')->name('customers.destroy');
-    Route::put('/clientes/{customer}/lista-negra', [AdminCustomerController::class, 'blacklist'])->name('customers.blacklist');
+    Route::put('/clientes/{customer}/lista-negra', [AdminCustomerController::class, 'blacklist'])->middleware('role:administrador')->name('customers.blacklist');
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/exportar', [AnalyticsController::class, 'export'])->name('analytics.export');

@@ -75,6 +75,27 @@ class Booking extends Model
         return $this->belongsTo(RateRule::class);
     }
 
+    /**
+     * Tarifa de la que sale el precio de la hora adicional: la que se aplicó
+     * (rate_rule_id) y, en reservas antiguas sin ese dato, la del nombre
+     * guardado sin importar mayúsculas. La ficha (precio que se muestra) y el
+     * cobro usan esta misma búsqueda, para que nunca difieran.
+     */
+    public function extraHourRateRule(): ?RateRule
+    {
+        if ($this->rate_rule_id && ($rule = RateRule::find($this->rate_rule_id))) {
+            return $rule;
+        }
+        $name = mb_strtoupper(trim((string) ($this->rate_rule_name_snapshot ?: 'HH')));
+
+        return RateRule::whereRaw('UPPER(name) = ?', [$name])->first();
+    }
+
+    public function extraHourPrice(): int
+    {
+        return (int) ($this->extraHourRateRule()?->extra_hour_price ?? 0);
+    }
+
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class);

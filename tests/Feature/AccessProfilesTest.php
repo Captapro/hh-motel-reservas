@@ -131,4 +131,20 @@ class AccessProfilesTest extends TestCase
         $this->actingAs($host)->put(route('admin.access.update'), ['access' => ['recepcion' => ['ventas' => 1]]])->assertForbidden();
         $this->assertFalse(AccessSections::allows('recepcion', 'ventas'));
     }
+
+    public function test_every_route_of_a_section_checks_the_profile_even_typing_the_url(): void
+    {
+        // Antes /admin/productos, /admin/analytics, /admin/opiniones, etc.
+        // solo se escondían del menú: escribiendo la dirección se entraba igual.
+        foreach (Route::getRoutes() as $route) {
+            $name = $route->getName();
+            if (! $name || str_contains($name, 'prueba') || ! AccessSections::forRoute($name)) {
+                continue;
+            }
+            $this->assertContains('section', $route->gatherMiddleware(), "{$name} no revisa el acceso del perfil");
+        }
+
+        $blacklist = Route::getRoutes()->getByName('admin.customers.blacklist');
+        $this->assertContains('role:administrador', $blacklist->gatherMiddleware(), 'Cambiar la lista negra es solo del administrador');
+    }
 }

@@ -48,12 +48,17 @@
         <strong>Lista negra</strong>
         <p class="sub" style="margin:5px 0 10px;">Estado actual: <b>{{ $customer->blacklist_status === 'none' ? 'Sin restricción' : strtoupper($customer->blacklist_status) }}</b></p>
         @if($customer->blacklist_reason)<p class="sub" style="margin:0 0 10px;">Motivo: {{ $customer->blacklist_reason }}</p>@endif
+        {{-- Bloquear o desbloquear a un cliente es decisión del administrador. --}}
+        @if (auth()->user()?->isAdministrador())
         <form method="POST" action="{{ route('admin.customers.blacklist', $customer) }}" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
             @csrf @method('PUT')
             <div><label>Estado</label><select name="blacklist_status"><option value="none" @selected($customer->blacklist_status === 'none')>Sin restricción</option><option value="warning" @selected($customer->blacklist_status === 'warning')>Advertencia</option><option value="blocked" @selected($customer->blacklist_status === 'blocked')>Bloqueado</option></select></div>
             <div style="flex:1;min-width:220px;"><label>Motivo</label><input name="blacklist_reason" value="{{ $customer->blacklist_reason }}" placeholder="Motivo interno"></div>
             <button class="btn" type="submit">Guardar estado</button>
         </form>
+        @else
+            <p class="sub" style="margin:0;">Solo el administrador puede cambiar este estado.</p>
+        @endif
     </div>
 
     <details style="margin-bottom:18px;">

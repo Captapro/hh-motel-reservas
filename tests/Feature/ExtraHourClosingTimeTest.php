@@ -115,4 +115,20 @@ class ExtraHourClosingTimeTest extends TestCase
         $this->assertTrue(Carbon::parse('2026-10-05 02:30')->eq($this->booking->fresh()->ends_at));
         $this->assertSame(1, $this->booking->fresh()->addons()->count());
     }
+
+    public function test_shown_and_charged_extra_hour_price_come_from_the_same_rate_even_with_mixed_case_name(): void
+    {
+        // Antes la ficha buscaba la tarifa por el nombre tal cual y el cobro
+        // en mayúsculas: con una tarifa "Hot" mostraba un precio y no cobraba.
+        $hot = RateRule::create(['name' => 'Hot', 'is_active' => true, 'extra_hour_price' => 15000]);
+        $this->booking->update(['ends_at' => Carbon::parse('2026-10-05 01:30'), 'rate_rule_name_snapshot' => 'Hot']);
+        $this->assertSame(15000, $this->booking->fresh()->extraHourPrice());
+
+        $this->post("/reservas/{$this->booking->code}/hora-adicional")->assertSessionDoesntHaveErrors();
+        $this->assertSame(15000, (int) $this->booking->fresh()->addons()->value('amount'));
+
+        // Con rate_rule_id guardado, manda esa tarifa aunque el nombre no calce.
+        $this->booking->update(['rate_rule_id' => $hot->id, 'rate_rule_name_snapshot' => 'otro nombre']);
+        $this->assertSame(15000, $this->booking->fresh()->extraHourPrice());
+    }
 }
