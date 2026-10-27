@@ -98,15 +98,15 @@
 
     @if ($status['upcoming_count'] > 0)
         <a class="bookings-btn has-bookings" href="{{ route('rooms.bookings', $room) }}" title="Reservas futuras de {{ $room->name }}">
-            <span class="lg">{{ $status['upcoming_count'] }} {{ Str::plural('reserva', $status['upcoming_count']) }} →</span><span class="sm">📅 {{ $status['upcoming_count'] }}</span>
+            <span class="lg">{{ $status['upcoming_count'] }} {{ Str::plural('reserva', $status['upcoming_count']) }} →</span><span class="sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span><span class="sm">{{ $status['upcoming_count'] }}</span>
         </a>
     @else
-        <a class="bookings-btn empty" href="{{ route('rooms.bookings', $room) }}" title="Sin reservas próximas: ver las reservas de {{ $room->name }}"><span class="lg">Sin reservas próximas</span><span class="sm">📅 0</span></a>
+        <a class="bookings-btn empty" href="{{ route('rooms.bookings', $room) }}" title="Sin reservas próximas: ver las reservas de {{ $room->name }}"><span class="lg">Sin reservas próximas</span><span class="sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span></a>
     @endif
-    <button type="button" class="copy-link-btn" data-room-link="{{ route('catalog.room', $room) }}" onclick="hhCopyRoomLink(this)" title="Copiar el link de la ficha de {{ $room->name }}"><span class="lg">📋 Copiar link de ficha</span><span class="sm">📋</span></button>
+    <button type="button" class="copy-link-btn" data-room-link="{{ route('catalog.room', $room) }}" onclick="hhCopyRoomLink(this)" title="Copiar el link de la ficha de {{ $room->name }}"><span class="lg">📋 Copiar link de ficha</span><span class="sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg></span></button>
 
     <details>
-        <summary title="Cambiar estado de {{ $room->name }}"><span class="lg">Cambiar estado</span><span class="sm">⚙</span></summary>
+        <summary title="Cambiar estado de {{ $room->name }}"><span class="lg">Cambiar estado</span><span class="sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span></summary>
         <form method="POST" action="{{ route('rooms.status', $room) }}" onsubmit="return this.operational_status.value !== '__aseo' || confirm('¿Mandar {{ $room->name }} a aseo? Queda fuera de disponibles hasta que la marques como activa.');">
             @csrf
             <select name="operational_status">

@@ -297,6 +297,29 @@
         .compact .card .lg { display:none; } .compact .card .sm { display:inline; }
         .compact .section { margin-bottom: 14px; }
 
+        /* Vista compacta, más limpia: tarjeta sobria, categoría con un punto,
+           texto secundario apagado, "Ingresar" como botón de contorno (antes
+           eran 24 bloques naranjos iguales) y los atajos como íconos sin caja. */
+        .compact .page-grid .main-col .grid, .compact .grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)) !important; gap: 10px; }
+        .compact .card, .compact .page-grid .main-col .card { border-top-color:#2a2a2a; border-right-color:#2a2a2a; border-bottom-color:#2a2a2a; border-left-width:3px; border-radius:10px; padding:10px 11px 8px 12px; gap:5px 6px; }
+        .compact .card:hover { transform:none; box-shadow:0 4px 14px rgba(0,0,0,.35); border-top-color:#3a3a3a; border-right-color:#3a3a3a; border-bottom-color:#3a3a3a; }
+        .compact .card-head b { font-size:14px; font-weight:650; letter-spacing:-.01em; }
+        .compact .card .pill { font-family:inherit; font-size:9.5px; font-weight:700; letter-spacing:.05em; padding:2px 7px; background:transparent !important; border:1px solid currentColor; opacity:.85; }
+        .compact .card .cat { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; opacity:.95; }
+        .compact .card .cat::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+        .compact .card .eta { font-size:11px; color:#8a8a8a; }
+        .compact .card .eta.overtime { color:#ff8a8a; }
+        .compact .card .code { font-size:9.5px; color:#6f6f6f; }
+        .compact .card a.reserve-btn { flex:1 1 0; background:transparent !important; border:1px solid rgba(255,121,24,.6) !important; color:#ffa565 !important; font-size:11.5px; font-weight:600; padding:5px 8px; border-radius:7px; transition:background .12s ease, color .12s ease; }
+        .compact .card a.reserve-btn:hover { background:#ff7918 !important; color:#21170e !important; border-color:#ff7918 !important; }
+        .compact .card a.consumo-btn { background:transparent; border-color:#2f4a5c; font-size:11px; padding:5px; }
+        .compact .card a.checkout-btn { font-size:11px; padding:5px; }
+        .compact .card .aseo-ready-btn { font-size:11px; padding:6px; }
+        .compact .card .bookings-btn, .compact .card .copy-link-btn, .compact .card summary { display:inline-flex; align-items:center; justify-content:center; gap:3px; min-width:26px; height:26px; padding:0 6px !important; background:transparent !important; border:1px solid transparent !important; border-radius:6px; color:#7d7d7d !important; font-size:11px; font-weight:600; box-shadow:none; }
+        .compact .card .bookings-btn:hover, .compact .card .copy-link-btn:hover, .compact .card summary:hover { background:#262626 !important; color:#e5e5e5 !important; }
+        .compact .card a.bookings-btn.has-bookings { color:#e8c76f !important; }
+        .compact .card details[open] summary { color:#ff9a4d !important; }
+        .compact .card .sm svg { width:14px; height:14px; display:block; }
         /* Vista chips — máxima densidad: solo categoría, número y estado.
            El resto (botones, código, detalle de estado) se oculta; la
            tarjeta entera pasa a ser clickeable hacia el detalle de la
