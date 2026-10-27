@@ -117,6 +117,12 @@
                 @elseif (! empty($pay['mercadopago_link']))
                     <a class="btn pay-btn" href="{{ $pay['mercadopago_link'] }}" target="_blank" rel="noopener">Pagar {{ $amount }} ahora →</a>
                     <small>Pago seguro en Mercado Pago.</small>
+                @elseif ($hasBank)
+                    <small style="margin-top:0;">Paga por transferencia con los datos de abajo y envíanos el comprobante por WhatsApp.</small>
+                @else
+                    {{-- Sin pago en línea configurado: que nunca quede el reloj corriendo sin cómo pagar. --}}
+                    <a class="btn pay-btn" href="https://wa.me/{{ \App\Http\Controllers\CatalogController::WHATSAPP_NUMBER }}?text={{ rawurlencode('Hola! Quiero pagar mi reserva '.$booking->code.' ('.$amount.').') }}" target="_blank" rel="noopener">Pagar por WhatsApp →</a>
+                    <small>Te respondemos al tiro con los datos para pagar. Indica tu código {{ $booking->code }}.</small>
                 @endif
             </div>
         @endif
