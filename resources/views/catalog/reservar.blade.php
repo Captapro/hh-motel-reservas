@@ -44,19 +44,17 @@
         .people-stepper button:disabled { opacity:.3; cursor:not-allowed; }
         .people-stepper input { text-align:center; font-size:24px; font-weight:800; min-height:54px; -moz-appearance:textfield; appearance:textfield; }
         .people-stepper input::-webkit-inner-spin-button, .people-stepper input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
-        .tp-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(58px, 1fr)); gap:7px; }
-        .tp-mins { display:grid; grid-template-columns:repeat(4, 1fr); gap:7px; }
-        .tp-sub { font-size:11.5px; color:#8a8d93; margin:12px 0 6px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
-        .tp button { min-height:46px; padding:0; border-radius:9px; border:1px solid #4a4d53; background:#202123; color:#f4f5f7; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
-        .tp button small { font-size:11px; font-weight:600; opacity:.65; margin-left:1px; }
-        .tp button:hover:not(:disabled) { border-color:#ff9a4d; }
-        .tp button.on { background:var(--hh-accent); border-color:var(--hh-accent); color:#21170e; }
-        .tp button.on small { opacity:.8; }
-        .tp button:disabled { opacity:.28; cursor:not-allowed; }
-        .tp-group { grid-column:1 / -1; margin:4px 0 0; }
-        .tp-group:first-child { margin-top:0; }
-        .tp-empty { font-size:13px; color:#8a8d93; padding:10px 0; }
-        .tp.missing .tp-grid { outline:2px solid #e5747f; outline-offset:4px; border-radius:9px; }
+        .tp { display:flex; align-items:center; justify-content:center; gap:10px; padding:12px; border:1px solid #4a4d53; border-radius:12px; background:#1b1c1e; }
+        .tp-col { display:grid; grid-template-rows:auto auto auto; gap:6px; width:96px; }
+        .tp-col button { min-height:46px; border-radius:10px; border:1px solid #4a4d53; background:#26272a; color:#f4f5f7; font-size:26px; font-weight:700; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; }
+        .tp-col button:active:not(:disabled) { background:#ff7918; border-color:#ff7918; color:#21170e; }
+        .tp-col button:disabled { opacity:.25; cursor:not-allowed; }
+        .tp-col output { display:flex; align-items:center; justify-content:center; min-height:62px; border-radius:10px; background:#202123; border:2px solid #62656b; font-size:34px; font-weight:800; font-variant-numeric:tabular-nums; color:#f4f5f7; }
+        .tp.set .tp-col output { border-color:var(--hh-accent); }
+        .tp-colon { font-size:34px; font-weight:800; color:#8a8d93; }
+        .tp-note { text-align:center; font-size:12.5px; color:#ff9a4d; font-weight:600; margin-top:6px; min-height:16px; }
+        .tp-empty { flex:1; text-align:center; font-size:13px; color:#8a8d93; padding:10px 0; }
+        .tp.missing { border-color:#e5747f; box-shadow:0 0 0 3px rgba(229,116,127,.2); }
         .time-range { font-size:12px; color:#8a8d93; margin-top:6px; min-height:16px; }
         .time-range.err { color:#f3b8b8; }
         .time-parts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
@@ -145,15 +143,22 @@
             <label for="date">Fecha</label>
             <input type="date" id="date" name="date" min="{{ now()->toDateString() }}" value="{{ old('date', now()->toDateString()) }}" required>
 
-            {{-- Hora: botones con solo las horas disponibles (un toque elige la hora, otro ajusta los minutos). --}}
+            {{-- Hora: hora y minutos con + / −, que solo recorren los horarios disponibles de ese día. --}}
             <label>Hora de llegada</label>
             <div class="tp" id="time-picker">
-                <div class="tp-grid" id="tp-hours" role="group" aria-label="Hora"></div>
-                <div class="tp-mins-wrap" id="tp-mins-wrap" hidden>
-                    <div class="tp-sub">Minutos</div>
-                    <div class="tp-mins" id="tp-mins" role="group" aria-label="Minutos"></div>
+                <div class="tp-col">
+                    <button type="button" data-tp="h" data-d="1" aria-label="Hora siguiente">+</button>
+                    <output id="tp-h" aria-label="Hora">--</output>
+                    <button type="button" data-tp="h" data-d="-1" aria-label="Hora anterior">−</button>
+                </div>
+                <div class="tp-colon">:</div>
+                <div class="tp-col">
+                    <button type="button" data-tp="m" data-d="1" aria-label="Más minutos">+</button>
+                    <output id="tp-m" aria-label="Minutos">--</output>
+                    <button type="button" data-tp="m" data-d="-1" aria-label="Menos minutos">−</button>
                 </div>
             </div>
+            <div class="tp-note" id="tp-note"></div>
             <div class="time-range" id="time-range"></div>
             <input type="hidden" id="time-select" value="">
             <input type="hidden" id="time" value="">
@@ -311,64 +316,55 @@
             input.dispatchEvent(new Event('change', { bubbles: true }));
             hhRenderPicker();
         }
-        function hhRenderPicker() {
-            const hoursBox = document.getElementById('tp-hours');
-            const minsWrap = document.getElementById('tp-mins-wrap');
-            const minsBox = document.getElementById('tp-mins');
+        // + / − de hora: salta a la hora disponible siguiente/anterior, con los mismos minutos si se puede.
+        // + / − de minutos: avanza de 15 en 15 por la lista (pasa a la hora siguiente al llegar a :45).
+        // El primer toque, sin hora elegida, pone la primera hora del día (no la madrugada) o la última con −.
+        function hhStepTime(part, d) {
+            if (!hhTimeList.length || hhTimesLoading) return;
             const value = document.getElementById('time-select').value;
-            hoursBox.innerHTML = '';
-            minsBox.innerHTML = '';
-            if (hhTimesLoading) {
-                hoursBox.innerHTML = '<div class="tp-empty">Cargando horarios…</div>';
-                minsWrap.hidden = true;
+            const i = hhTimeList.indexOf(value);
+            if (i < 0) { hhSetTime(d > 0 ? (hhTimeList.find((v) => Number(v.slice(0, 2)) >= 6) || hhTimeList[0]) : hhTimeList[hhTimeList.length - 1]); return; }
+            if (part === 'm') {
+                const next = hhTimeList[i + d];
+                if (next) hhSetTime(next);
                 return;
             }
-            if (!hhTimeList.length) {
-                hoursBox.innerHTML = '<div class="tp-empty">No quedan horarios para esta fecha. Prueba otro día.</div>';
-                minsWrap.hidden = true;
-                return;
-            }
-            const selHour = value ? value.slice(0, 2) : null;
             const hours = [];
             hhTimeList.forEach((v) => { const h = v.slice(0, 2); if (!hours.includes(h)) hours.push(h); });
-            // Las horas de madrugada (00 a 05) van con su propio subtítulo: son la madrugada de la fecha elegida.
-            const early = (h) => Number(h) < 6;
-            const mixed = hours.some(early) && hours.some((h) => !early(h));
-            let lastGroup = null;
-            hours.forEach((h) => {
-                const group = early(h) ? 'Madrugada' : 'Día y noche';
-                if (mixed && group !== lastGroup) {
-                    const t = document.createElement('div');
-                    t.className = 'tp-sub tp-group';
-                    t.textContent = group;
-                    hoursBox.appendChild(t);
-                    lastGroup = group;
-                }
-                const b = document.createElement('button');
-                b.type = 'button';
-                b.innerHTML = h + '<small>h</small>';
-                b.setAttribute('aria-pressed', h === selHour ? 'true' : 'false');
-                if (h === selHour) b.classList.add('on');
-                // Un toque ya deja una hora válida: la primera del bloque (normalmente en punto).
-                b.addEventListener('click', () => {
-                    if (h === selHour) return;
-                    hhSetTime(hhTimeList.find((v) => v.slice(0, 2) === h));
-                });
-                hoursBox.appendChild(b);
+            const h = hours[hours.indexOf(value.slice(0, 2)) + d];
+            if (!h) return;
+            const inHour = hhTimeList.filter((v) => v.slice(0, 2) === h);
+            const same = inHour.find((v) => v.slice(3) === value.slice(3));
+            // Sin los mismos minutos, el más cercano dentro de esa hora.
+            hhSetTime(same || inHour.reduce((a, b) => Math.abs(hhToMin(b) - hhToMin(value)) < Math.abs(hhToMin(a) - hhToMin(value)) ? b : a));
+        }
+        document.querySelectorAll('[data-tp]').forEach((b) => b.addEventListener('click', () => hhStepTime(b.dataset.tp, Number(b.dataset.d))));
+        function hhRenderPicker() {
+            const picker = document.getElementById('time-picker');
+            const value = document.getElementById('time-select').value;
+            const i = hhTimeList.indexOf(value);
+            const empty = hhTimesLoading || !hhTimeList.length;
+            let msg = picker.querySelector('.tp-empty');
+            if (empty) {
+                if (!msg) { msg = document.createElement('div'); msg.className = 'tp-empty'; picker.appendChild(msg); }
+                msg.textContent = hhTimesLoading ? 'Cargando horarios…' : 'No quedan horarios para esta fecha. Prueba otro día.';
+            } else if (msg) {
+                msg.remove();
+            }
+            picker.querySelectorAll('.tp-col, .tp-colon').forEach((el) => { el.hidden = empty; });
+            picker.classList.toggle('set', i >= 0);
+            document.getElementById('tp-h').textContent = i >= 0 ? value.slice(0, 2) : '--';
+            document.getElementById('tp-m').textContent = i >= 0 ? value.slice(3) : '--';
+            const first = hhTimeList[0], last = hhTimeList[hhTimeList.length - 1];
+            picker.querySelectorAll('[data-tp]').forEach((b) => {
+                const up = Number(b.dataset.d) > 0;
+                if (i < 0) { b.disabled = empty; return; }
+                b.disabled = b.dataset.tp === 'm'
+                    ? (up ? value === last : value === first)
+                    : (up ? value.slice(0, 2) === last.slice(0, 2) : value.slice(0, 2) === first.slice(0, 2));
             });
-            minsWrap.hidden = !selHour;
-            if (!selHour) return;
-            ['00', '15', '30', '45'].forEach((m) => {
-                const v = selHour + ':' + m;
-                const b = document.createElement('button');
-                b.type = 'button';
-                b.textContent = ':' + m;
-                b.disabled = !hhTimeList.includes(v);
-                b.setAttribute('aria-pressed', v === value ? 'true' : 'false');
-                if (v === value) b.classList.add('on');
-                b.addEventListener('click', () => { if (v !== value) hhSetTime(v); });
-                minsBox.appendChild(b);
-            });
+            // Las horas de 00 a 05 son la madrugada de la fecha elegida: se avisa para que no se confunda.
+            document.getElementById('tp-note').textContent = i >= 0 && Number(value.slice(0, 2)) < 6 ? 'De madrugada (después de la medianoche)' : '';
         }
         // Si la hora elegida ya no está disponible (cambió la fecha o la categoría), se borra y se pide otra.
         function hhValidateTime(fromUser) {
