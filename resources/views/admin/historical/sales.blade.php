@@ -26,17 +26,17 @@
             <p class="sub">No hay ventas cargadas en este mes.</p>
         @else
             <table class="table">
-                <thead><tr><th>Día</th><th>Estadías</th><th>Alojamiento</th><th>Hora extra</th><th>Packs y servicios</th><th>Extras</th><th>Pago fraccionado</th><th>Total</th><th>Efectivo</th><th>Tarjeta</th><th>Transferencia</th></tr></thead>
+                <thead><tr><th>Día</th><th>Estadías</th><th>Alojamiento</th><th>Hora extra</th><th>Persona adicional</th><th>Otros servicios</th><th>Extras</th><th>Pago fraccionado</th><th>Total</th><th>Efectivo</th><th>Tarjeta</th><th>Transferencia</th></tr></thead>
                 <tbody>
                 @foreach ($days as $d)
                     <tr @if ($d['date'] === $day) style="background:#2a2410;" @endif>
                         <td><a href="{{ route('admin.historical.sales', ['mes' => $month, 'dia' => $d['date']]) }}#detalle" style="color:#ff9a4d;">{{ \Carbon\Carbon::parse($d['date'])->format('d/m') }} · {{ $d['weekday'] }}</a></td>
-                        <td>{{ $d['stays'] }}</td><td>{{ $money($d['lodging']) }}</td><td>{{ $money($d['extra_hour']) }}</td><td>{{ $money($d['packs']) }}</td><td>{{ $money($d['extras']) }}</td><td>{{ $money($d['split']) }}</td>
+                        <td>{{ $d['stays'] }}</td><td>{{ $money($d['lodging']) }}</td><td>{{ $money($d['extra_hour']) }}</td><td>{{ $money($d['extra_person']) }}</td><td>{{ $money($d['services']) }}</td><td>{{ $money($d['extras']) }}</td><td>{{ $money($d['split']) }}</td>
                         <td><b>{{ $money($d['total']) }}</b></td><td>{{ $money($d['cash']) }}</td><td>{{ $money($d['card']) }}</td><td>{{ $money($d['transfer']) }}</td>
                     </tr>
                 @endforeach
                 <tr style="border-top:2px solid #555; font-weight:700;">
-                    <td>Total del mes</td><td>{{ $days->sum('stays') }}</td><td>{{ $money($days->sum('lodging')) }}</td><td>{{ $money($days->sum('extra_hour')) }}</td><td>{{ $money($days->sum('packs')) }}</td><td>{{ $money($days->sum('extras')) }}</td><td>{{ $money($days->sum('split')) }}</td>
+                    <td>Total del mes</td><td>{{ $days->sum('stays') }}</td><td>{{ $money($days->sum('lodging')) }}</td><td>{{ $money($days->sum('extra_hour')) }}</td><td>{{ $money($days->sum('extra_person')) }}</td><td>{{ $money($days->sum('services')) }}</td><td>{{ $money($days->sum('extras')) }}</td><td>{{ $money($days->sum('split')) }}</td>
                     <td>{{ $money($days->sum('total')) }}</td><td>{{ $money($days->sum('cash')) }}</td><td>{{ $money($days->sum('card')) }}</td><td>{{ $money($days->sum('transfer')) }}</td>
                 </tr>
                 </tbody>
@@ -71,7 +71,7 @@
                 @foreach ($detail as $s)
                     <tr>
                         <td>{{ $s->source_row }}</td>
-                        <td>{{ ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'packs' => 'Pack o servicio', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'][$s->concept()] ?? ucfirst(mb_strtolower($s->sale_type)) }}</td>
+                        <td>{{ ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro servicio', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'][$s->concept()] ?? ucfirst(mb_strtolower($s->sale_type)) }}</td>
                         <td>{{ $s->detail ?: ($s->category ?: '') }}@if ($s->discount_note)<br><span class="sub" style="font-size:12px;">{{ $s->discount_note }}</span>@endif</td>
                         <td>{{ $s->room_label }}{{ $s->category && $s->room_label ? ' · '.$s->category : '' }}</td>
                         <td>{{ $s->hours_paid ? $s->hours_paid.' h' : '' }}</td>

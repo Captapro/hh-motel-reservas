@@ -21,8 +21,8 @@ class HistoricalSale extends Model
 
     /**
      * En qué grupo cuenta la línea: la planilla mezcla en "extra core" la hora
-     * extra con packs y servicios (Goloso, lavandería…), y aparte van los
-     * extras (productos) y los pagos fraccionados.
+     * extra, la persona adicional ("Goloso") y otros servicios (lavandería…),
+     * y aparte van los extras (productos) y los pagos fraccionados.
      */
     public function concept(): string
     {
@@ -31,7 +31,8 @@ class HistoricalSale extends Model
             $this->sale_type === 'EXTRAS' => 'extras',
             $this->sale_type === 'PAGO FRACCIONADO' => 'fraccionado',
             $this->sale_type === 'EXTRA CORE' && str_contains(mb_strtoupper((string) $this->detail), 'HORA EXTRA') => 'hora_extra',
-            $this->sale_type === 'EXTRA CORE' => 'packs',
+            $this->sale_type === 'EXTRA CORE' && str_contains(mb_strtoupper((string) $this->detail), 'GOLOSO') => 'persona_adicional',
+            $this->sale_type === 'EXTRA CORE' => 'servicios',
             default => 'otros',
         };
     }

@@ -54,7 +54,8 @@ class HistoricalDataService
                 'stays' => $g->where('sale_type', 'ALOJAMIENTO')->count(),
                 'lodging' => $of($g, 'alojamiento'),
                 'extra_hour' => $of($g, 'hora_extra'),
-                'packs' => $of($g, 'packs'),
+                'extra_person' => $of($g, 'persona_adicional'),
+                'services' => $of($g, 'servicios'),
                 'extras' => $of($g, 'extras'),
                 'split' => $of($g, 'fraccionado'),
                 'total' => $money($g),
@@ -67,7 +68,7 @@ class HistoricalDataService
         return [
             'sources' => $lines->pluck('source')->unique()->values()->all(),
             'days' => $days,
-            'totals' => collect(['stays', 'lodging', 'extra_hour', 'packs', 'extras', 'split', 'total', 'cash', 'card', 'transfer'])->mapWithKeys(fn ($k) => [$k => $days->sum($k)])->all(),
+            'totals' => collect(['stays', 'lodging', 'extra_hour', 'extra_person', 'services', 'extras', 'split', 'total', 'cash', 'card', 'transfer'])->mapWithKeys(fn ($k) => [$k => $days->sum($k)])->all(),
         ];
     }
 
@@ -105,7 +106,8 @@ class HistoricalDataService
                 'estadias' => $stays->count(),
                 'venta_alojamiento' => $total($stays),
                 'venta_hora_extra' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'hora_extra')),
-                'venta_packs_y_servicios' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'packs')),
+                'venta_persona_adicional' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'persona_adicional')),
+                'venta_otros_servicios' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'servicios')),
                 'venta_pago_fraccionado' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'fraccionado')),
                 'venta_extras_productos' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'extras')),
                 'venta_total' => $total($lines),

@@ -72,9 +72,10 @@ class HistoricalSalesTest extends TestCase
 
         $this->assertSame(3, $summary['totales']['estadias']);
         $this->assertSame(36000 + 31000 + 50000, $summary['totales']['venta_alojamiento']);
-        // La hora extra va aparte de los packs y de los extras (productos).
+        // La hora extra va aparte de la persona adicional, otros servicios y los extras (productos).
         $this->assertSame(20000, $summary['totales']['venta_hora_extra']);
-        $this->assertSame(0, $summary['totales']['venta_packs_y_servicios']);
+        $this->assertSame(0, $summary['totales']['venta_persona_adicional']);
+        $this->assertSame(0, $summary['totales']['venta_otros_servicios']);
         $this->assertSame(2000, $summary['totales']['venta_extras_productos']);
         $this->assertSame(['desde' => '2026-10-01', 'hasta' => '2026-10-03'], $summary['cobertura_cargada']);
         $this->assertSame(1, $summary['descuentos']['estadias_con_descuento']);
@@ -88,5 +89,18 @@ class HistoricalSalesTest extends TestCase
         foreach (['Ana', 'Beto', 'Carla', 'Diego', '11111111', '22222222', 'P1234567'] as $secret) {
             $this->assertStringNotContainsString($secret, $json);
         }
+    }
+
+    public function test_each_line_counts_in_its_own_concept(): void
+    {
+        $concept = fn (string $type, ?string $detail = null) => (new HistoricalSale(['sale_type' => $type, 'detail' => $detail]))->concept();
+
+        $this->assertSame('alojamiento', $concept('ALOJAMIENTO'));
+        $this->assertSame('hora_extra', $concept('EXTRA CORE', 'HORA EXTRA'));
+        $this->assertSame('persona_adicional', $concept('EXTRA CORE', 'Goloso'));
+        $this->assertSame('servicios', $concept('EXTRA CORE', 'LAVANDERIA'));
+        $this->assertSame('servicios', $concept('EXTRA CORE'));
+        $this->assertSame('extras', $concept('EXTRAS', 'PRESERVATIVO'));
+        $this->assertSame('fraccionado', $concept('PAGO FRACCIONADO'));
     }
 }
