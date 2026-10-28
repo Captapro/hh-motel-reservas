@@ -27,8 +27,16 @@
         .hint-box { background:#1c2f1c; border:1px solid #2e5a2e; color:#8fe0ad; border-radius:9px; padding:12px 14px; font-size:12.5px; margin-bottom:22px; }
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:12px 14px; border-radius:8px; margin-bottom: 18px; font-size:14px; }
         .steps { display:flex; gap:8px; margin: 0 0 18px; font-size:11px; font-weight:700; color:#8a8d93; text-transform:uppercase; letter-spacing:.06em; }
-        .steps span { flex:1; padding:8px 6px; border-bottom:2px solid #d9dadd; text-align:center; }
-        .steps span:first-child { color:var(--hh-accent); border-color:var(--hh-accent); }
+        .steps button { flex:1; padding:8px 4px; border:0; border-bottom:2px solid #4a4d53; background:none; color:#8a8d93; font:inherit; text-transform:inherit; letter-spacing:inherit; text-align:center; cursor:default; }
+        .steps button.done { color:#c1c3c7; border-color:#8a8d93; cursor:pointer; }
+        .steps button.on { color:var(--hh-accent); border-color:var(--hh-accent); }
+        .step[hidden], [data-only-step][hidden] { display:none !important; }
+        .step-title { font-size:17px; font-weight:800; margin:4px 0 2px; color:#fff; }
+        .step-back { display:inline-block; margin-top:14px; background:none; border:0; padding:6px 0; color:#c1c3c7; font-size:13px; text-decoration:underline; cursor:pointer; }
+        .recap { display:flex; justify-content:space-between; align-items:center; gap:10px; background:#202123; border:1px solid #4a4d53; border-radius:9px; padding:10px 12px; font-size:13px; color:#e4e5e7; margin-bottom:6px; }
+        .recap button { flex:none; background:none; border:0; color:#ff9a4d; font-size:12.5px; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
+        .step-error { display:none; margin-top:12px; padding:10px 12px; border-radius:8px; background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; font-size:13px; }
+        .step-error.show { display:block; }
         label { display:block; font-size: 12.5px; color:#c1c3c7; margin: 16px 0 6px; }
         input, select { width:100%; box-sizing:border-box; background:#202123; border:1px solid #62656b; color:#f4f5f7; padding:11px 12px; border-radius:8px; font-size:15px; min-height:46px; }
         input[type="date"], input[type="time"] { color-scheme: dark; }
@@ -83,7 +91,7 @@
         .short-accept input { width:18px; height:18px; flex:none; }
         .avail-status .spin { width:11px; height:11px; border-radius:50%; border:2px solid currentColor; border-top-color:transparent; animation:hh-spin .7s linear infinite; flex:none; }
         @keyframes hh-spin { to { transform:rotate(360deg); } }
-        .extras { margin-top:22px; padding-top:4px; }
+        .extras { margin-top:14px; padding-top:4px; }
         .extras h2 { font-size:17px; margin:0 0 4px; }
         .extras p { color:#c1c3c7; font-size:12px; margin:0 0 12px; }
         .extra-list { display:grid; gap:9px; }
@@ -113,11 +121,25 @@
         @endif
 
         <div class="card">
-        <div class="steps" aria-label="Pasos de la reserva"><span>1. Estadía</span><span>2. Tus datos</span><span>3. Confirmación</span></div>
-        <div class="hint-box">Horario: lunes a jueves 10:30 a 03:00 · viernes a domingo 10:30 a 22:30 corrido.</div>
+        @php
+            $hasExtras = $catalogCombos->isNotEmpty() || $categoryUpsells->isNotEmpty();
+            $stepNames = $hasExtras ? ['Estadía', 'Extras', 'Tus datos'] : ['Estadía', 'Tus datos'];
+            // Si el formulario vuelve con errores, se abre el paso donde está el problema.
+            $dataFields = ['first_name', 'last_name', 'phone', 'email', 'birth_date'];
+            $startStep = 1;
+            if ($errors->any()) {
+                $startStep = collect($errors->keys())->every(fn ($k) => in_array($k, $dataFields, true)) ? count($stepNames) : 1;
+            }
+        @endphp
+        <div class="steps" id="steps" aria-label="Pasos de la reserva">
+            @foreach ($stepNames as $i => $stepName)
+                <button type="button" data-goto="{{ $i + 1 }}">{{ $i + 1 }}. {{ $stepName }}</button>
+            @endforeach
+        </div>
+        <div class="hint-box" data-only-step="1">Horario: lunes a jueves 10:30 a 03:00 · viernes a domingo 10:30 a 22:30 corrido.</div>
 
         @if ($selectedCoupon)
-            <div class="coupon-applied">
+            <div class="coupon-applied" data-only-step="1">
                 <span>🏷️ Cupón aplicado: <strong>{{ $selectedCoupon->internal_name }}</strong></span>
                 <a href="{{ route('catalog.reserve', request()->except('cupon')) }}">Quitar</a>
             </div>
@@ -133,6 +155,7 @@
                 <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
             </div>
 
+            <div class="step" data-step="1">
             <label for="room_category_id">Elige tu Playroom</label>
             <select id="room_category_id" name="room_category_id" required onchange="hhUpdateDurations()">
                 @foreach ($categories as $cat)
@@ -180,7 +203,13 @@
                 <button type="button" data-d="1" aria-label="Una persona más">+</button>
             </div>
 
-            @if ($catalogCombos->isNotEmpty() || $categoryUpsells->isNotEmpty())
+            <div class="step-error" id="step1-error" role="alert"></div>
+            <button class="submit" type="button" data-next>Continuar →</button>
+            </div>
+
+            @if ($hasExtras)
+                <div class="step" data-step="2" hidden>
+                <div class="recap"><span data-recap></span><button type="button" data-goto="1">Cambiar</button></div>
                 <section class="extras" aria-labelledby="extras-title">
                     <h2 id="extras-title">Aprovecha esta oportunidad exclusiva</h2>
                     <p>Extras y combos con precio preferencial al reservar online. Agrégalos ahora y disfruta más tu experiencia.</p>
@@ -202,8 +231,14 @@
                     </div>
                     <div class="extras-total" id="extras-total">Sin extras seleccionados</div>
                 </section>
+                <button class="submit" type="button" data-next>Continuar →</button>
+                <button type="button" class="step-back" data-goto="1">← Volver</button>
+                </div>
             @endif
 
+            <div class="step" data-step="{{ count($stepNames) }}" hidden>
+            <div class="recap"><span data-recap></span><button type="button" data-goto="1">Cambiar</button></div>
+            <div class="step-title">Tus datos</div>
             <div class="row2">
                 <div>
                     <label for="first_name">Nombre</label>
@@ -228,7 +263,9 @@
 
             <div class="summary" id="booking-summary" aria-live="polite"><strong>Resumen de tu reserva</strong><small>Selecciona Playroom, fecha, hora y duración para ver el detalle.</small></div>
             <button class="submit" type="submit">Solicitar reserva</button>
+            <button type="button" class="step-back" data-goto="{{ count($stepNames) - 1 }}">← Volver</button>
             <p class="legal">Al reservar aceptas presentar tu documento de identidad al llegar. HH se reserva el derecho de admisión.</p>
+            </div>
         </form>
         </div>
     </div>
@@ -532,7 +569,7 @@
         // Un solo envío: sin esto, un doble toque creaba dos reservas en dos habitaciones.
         (function () {
             const form = document.getElementById('reserve-form');
-            const btn = form.querySelector('button.submit');
+            const btn = form.querySelector('button[type="submit"]');
             let sending = false;
             form.addEventListener('submit', function (e) {
                 if (sending) { e.preventDefault(); return; }
@@ -572,6 +609,99 @@
         hhCheckAvailability();
         document.querySelectorAll('[data-extra-toggle]').forEach((input) => input.addEventListener('change', hhUpdateExtrasTotal));
         hhUpdateExtrasTotal();
+    </script>
+
+    <script>
+        // Reserva en pasos (estadía → extras → datos), todo en el mismo formulario: cambiar de paso
+        // solo muestra/oculta secciones. El botón "atrás" del teléfono vuelve al paso anterior.
+        (function () {
+            const form = document.getElementById('reserve-form');
+            const steps = Array.from(form.querySelectorAll('.step'));
+            const last = steps.length;
+            let current = 1;
+            const fmtDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' }); };
+
+            function recap() {
+                const cat = document.getElementById('room_category_id');
+                const dur = document.getElementById('duration_minutes');
+                const date = document.getElementById('date').value;
+                const time = document.getElementById('time-select').value;
+                const guests = document.getElementById('guests_count').value;
+                const text = [cat.selectedOptions[0]?.textContent, date ? fmtDate(date) : '', time, dur.selectedOptions[0]?.textContent, guests + (guests === '1' ? ' persona' : ' personas')].filter(Boolean).join(' · ');
+                form.querySelectorAll('[data-recap]').forEach((el) => { el.textContent = text; });
+            }
+
+            function show(n, push) {
+                current = Math.min(Math.max(1, n), last);
+                steps.forEach((st) => { st.hidden = Number(st.dataset.step) !== current; });
+                document.querySelectorAll('[data-only-step]').forEach((el) => { el.hidden = Number(el.dataset.onlyStep) !== current; });
+                document.querySelectorAll('#steps [data-goto]').forEach((b) => {
+                    const k = Number(b.dataset.goto);
+                    b.classList.toggle('on', k === current);
+                    b.classList.toggle('done', k < current);
+                });
+                recap();
+                if (push) history.pushState({ hhStep: current }, '');
+                document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            function fail(msg, el) {
+                const box = document.getElementById('step1-error');
+                box.textContent = msg;
+                box.classList.add('show');
+                (el || box).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+
+            // Antes de seguir, el paso 1 tiene que estar completo y con disponibilidad.
+            function validStep1() {
+                document.getElementById('step1-error').classList.remove('show');
+                if (!hhTimeOk(document.getElementById('time-select').value)) {
+                    const picker = document.getElementById('time-picker');
+                    const range = document.getElementById('time-range');
+                    picker.classList.add('missing');
+                    range.textContent = 'Elige la hora de llegada con los botones + / −.';
+                    range.classList.add('err');
+                    picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
+                }
+                for (const id of ['room_category_id', 'date', 'duration_minutes', 'guests_count']) {
+                    const el = document.getElementById(id);
+                    if (!el.checkValidity()) { el.reportValidity(); return false; }
+                }
+                const status = document.getElementById('avail-status');
+                if (status.classList.contains('no')) return fail('No hay disponibilidad para ese horario. Prueba otra fecha, hora o duración.', status);
+                if (status.classList.contains('checking')) return fail('Estamos revisando la disponibilidad, espera un segundo y vuelve a intentar.');
+                const accept = document.getElementById('short-accept');
+                if (!accept.hidden && !document.getElementById('short-accept-input').checked) return fail('Marca la casilla para aceptar la hora de salida.', accept);
+                return true;
+            }
+
+            // Los combos "a elección" tienen que quedar elegidos antes de pasar a los datos.
+            function validExtras() {
+                const pending = Array.from(steps[1]?.querySelectorAll('.cc-box') || []).filter((b) => !b.querySelector('.cc-toggle.cc-done'));
+                if (!pending.length) return true;
+                pending.forEach((b) => b.classList.add('cc-missing', 'cc-open'));
+                pending[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+
+            form.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', () => {
+                if (current === 1 && !validStep1()) return;
+                if (current === 2 && last === 3 && !validExtras()) return;
+                show(current + 1, true);
+            }));
+            document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => {
+                const k = Number(b.dataset.goto);
+                if (k < current) show(k, true);
+            }));
+            window.addEventListener('popstate', (e) => show(e.state?.hhStep || 1, false));
+            ['room_category_id', 'date', 'time-select', 'duration_minutes', 'guests_count'].forEach((id) => document.getElementById(id).addEventListener('change', () => document.getElementById('step1-error').classList.remove('show')));
+
+            history.replaceState({ hhStep: {{ $startStep }} }, '');
+            show({{ $startStep }}, false);
+            window.scrollTo(0, 0);
+        })();
     </script>
 @include('partials.combo-choices')
 </body>
