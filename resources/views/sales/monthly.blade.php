@@ -96,6 +96,31 @@
     </div>
 
 
+    @if ($planilla)
+        <div class="sec-label">Planilla de recepción (ventas anotadas antes del sistema)</div>
+        <p class="sec-note">Son ventas que recepción anotó a mano. <b>No están incluidas</b> en las cifras de arriba ni en la caja del sistema.@if ($totals['total'] > 0) Sistema + planilla este mes: <b>{{ $money($totals['total'] + $planilla['totals']['total']) }}</b>.@endif</p>
+        <div class="cards">
+            <div class="card"><div class="label">Venta de la planilla</div><div class="value">{{ $money($planilla['totals']['total']) }}</div></div>
+            <div class="card blue"><div class="label">Estadías</div><div class="value">{{ $planilla['totals']['stays'] }}</div></div>
+            <div class="card"><div class="label">Alojamiento</div><div class="value">{{ $money($planilla['totals']['lodging']) }}</div></div>
+            <div class="card"><div class="label">Extras y otros</div><div class="value">{{ $money($planilla['totals']['others']) }}</div></div>
+            <div class="card green"><div class="label">Ticket promedio</div><div class="value">{{ $money($planilla['totals']['stays'] ? (int) round($planilla['totals']['lodging'] / $planilla['totals']['stays']) : 0) }}</div></div>
+        </div>
+        <div class="table-wrap"><table>
+            <thead><tr><th>Fecha</th><th class="n">Estadías</th><th class="n">Alojamiento</th><th class="n">Extras y otros</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th></tr></thead>
+            <tbody>
+            @foreach ($planilla['days'] as $r)
+                <tr class="{{ $r['total'] === 0 ? 'zero' : '' }} {{ $r['date']->isWeekend() ? 'weekend' : '' }}">
+                    <td>@if (auth()->user()?->isSoporte() && $r['total'] > 0)<a href="{{ route('admin.historical.sales', ['mes' => $first->format('Y-m'), 'dia' => $r['date']->toDateString()]) }}#detalle">{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}</a>@else{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}@endif</td>
+                    <td class="n">{{ $r['stays'] }}</td><td class="n">{{ $money($r['lodging']) }}</td><td class="n">{{ $money($r['others']) }}</td>
+                    <td class="n"><b>{{ $money($r['total']) }}</b></td><td class="n">{{ $money($r['card']) }}</td><td class="n">{{ $money($r['cash']) }}</td><td class="n">{{ $money($r['transfer']) }}</td>
+                </tr>
+            @endforeach
+                <tr class="total"><td>Total planilla</td><td class="n">{{ $planilla['totals']['stays'] }}</td><td class="n">{{ $money($planilla['totals']['lodging']) }}</td><td class="n">{{ $money($planilla['totals']['others']) }}</td><td class="n">{{ $money($planilla['totals']['total']) }}</td><td class="n">{{ $money($planilla['totals']['card']) }}</td><td class="n">{{ $money($planilla['totals']['cash']) }}</td><td class="n">{{ $money($planilla['totals']['transfer']) }}</td></tr>
+            </tbody>
+        </table></div>
+    @endif
+
     <div class="sec-label" style="margin-top:22px;border-top:none;padding-top:0;">Historial por mes</div>
     <p class="sec-note">Todos los meses con ventas. Toca un mes para ver su registro diario completo.</p>
     <div class="table-wrap"><table>
@@ -103,14 +128,14 @@
         <tbody>
         @forelse ($history as $h)
             <tr class="{{ $h['month']->isSameMonth($first) ? 'cur-month' : '' }}">
-                <td><a href="{{ route('sales.monthly', $h['month']->format('Y-m')) }}" style="text-transform:capitalize;">{{ $h['month']->locale('es')->isoFormat('MMMM YYYY') }}</a></td>
+                <td><a href="{{ route('sales.monthly', $h['month']->format('Y-m')) }}" style="text-transform:capitalize;">{{ $h['month']->locale('es')->isoFormat('MMMM YYYY') }}</a>@if (($h['source'] ?? '') === 'planilla') <span class="miss" title="Ventas anotadas en la planilla de recepción, antes del sistema">planilla</span>@endif</td>
                 <td class="n">{{ $h['rooms'] }}</td><td class="n">{{ $money($h['lodging']) }}</td><td class="n">{{ $money($h['extras']) }}</td><td class="n"><b>{{ $money($h['total']) }}</b></td><td class="n">{{ $money($h['cash']) }}</td>
             </tr>
         @empty
             <tr class="zero"><td colspan="6">Todavía no hay ventas registradas.</td></tr>
         @endforelse
         @if ($history->count() > 1)
-            <tr class="total"><td>Total histórico</td><td class="n">{{ $history->sum('rooms') }}</td><td class="n">{{ $money($history->sum('lodging')) }}</td><td class="n">{{ $money($history->sum('extras')) }}</td><td class="n">{{ $money($history->sum('total')) }}</td><td class="n">{{ $money($history->sum('cash')) }}</td></tr>
+            <tr class="total"><td>Total histórico (sistema + planilla)</td><td class="n">{{ $history->sum('rooms') }}</td><td class="n">{{ $money($history->sum('lodging')) }}</td><td class="n">{{ $money($history->sum('extras')) }}</td><td class="n">{{ $money($history->sum('total')) }}</td><td class="n">{{ $money($history->sum('cash')) }}</td></tr>
         @endif
         </tbody>
     </table></div>

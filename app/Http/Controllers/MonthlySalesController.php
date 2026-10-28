@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Services\Analyst\HistoricalDataService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -89,6 +90,11 @@ class MonthlySalesController extends Controller
 
         $detail = $this->detailRows($bookings);
         $history = $this->monthHistory();
+        $historical = app(HistoricalDataService::class);
+        $planilla = $historical->month($first);
+        // El historial por mes incluye también los meses de la planilla (antes del sistema).
+        $history = $history->map(fn (array $h) => $h + ['source' => 'sistema'])->concat($historical->monthsForHistory())
+            ->sortBy([fn ($a, $b) => $b['month'] <=> $a['month'], fn ($a, $b) => strcmp($a['source'], $b['source'])])->values();
 
         if ($request->query('export') === 'csv') {
             return $this->csv($first, $daily, $totals, $groups);
@@ -147,6 +153,7 @@ class MonthlySalesController extends Controller
             'daily' => $daily, 'totals' => $totals, 'groups' => $groups,
             'byWeekday' => $byWeekday, 'byDuration' => $byDuration, 'byRoom' => $byRoom,
             'byMethod' => $byMethod, 'extras' => $extras, 'detail' => $detail, 'history' => $history,
+            'planilla' => $planilla,
             'missingCount' => $detail->where('missing', '!=', [])->count(),
             'avgTicket' => $totals['rooms'] ? (int) round($totals['total'] / $totals['rooms']) : 0,
             'cancelled' => Booking::whereBetween('starts_at', [$first->copy(), $last->copy()])->where('booking_status', 'CANCELADA')->count(),

@@ -30,6 +30,65 @@ class HistoricalDataService
         return $min ? ['desde' => Carbon::parse($min)->toDateString(), 'hasta' => Carbon::parse(HistoricalSale::max('sold_on'))->toDateString()] : null;
     }
 
+    /**
+     * Un mes de la planilla, día por día, para la pantalla de Ventas. Solo
+     * cifras (sin personas). Devuelve null si ese mes no tiene planilla.
+     */
+    public function month(Carbon $first): ?array
+    {
+        $first = $first->copy()->startOfMonth();
+        $last = $first->copy()->endOfMonth();
+        $lines = HistoricalSale::query()->whereBetween('sold_on', [$first->toDateString(), $last->toDateString()])->get();
+        if ($lines->isEmpty()) {
+            return null;
+        }
+
+        $money = fn (Collection $c) => (int) $c->sum(fn (HistoricalSale $s) => $s->total());
+        $byDay = $lines->groupBy(fn (HistoricalSale $s) => $s->sold_on->toDateString());
+        $days = collect();
+        for ($d = $first->copy(); $d->lte($last); $d->addDay()) {
+            $g = $byDay->get($d->toDateString(), collect());
+            $stays = $g->where('sale_type', 'ALOJAMIENTO');
+            $days->push([
+                'date' => $d->copy(),
+                'stays' => $stays->count(),
+                'lodging' => $money($stays),
+                'others' => $money($g->where('sale_type', '!=', 'ALOJAMIENTO')),
+                'total' => $money($g),
+                'cash' => $money($g->where('payment_method', 'efectivo')),
+                'card' => $money($g->where('payment_method', 'tarjeta')),
+                'transfer' => $money($g->where('payment_method', 'transferencia')),
+            ]);
+        }
+
+        return [
+            'sources' => $lines->pluck('source')->unique()->values()->all(),
+            'days' => $days,
+            'totals' => [
+                'stays' => $days->sum('stays'), 'lodging' => $days->sum('lodging'), 'others' => $days->sum('others'), 'total' => $days->sum('total'),
+                'cash' => $days->sum('cash'), 'card' => $days->sum('card'), 'transfer' => $days->sum('transfer'),
+            ],
+        ];
+    }
+
+    /** Todos los meses de la planilla, uno por fila, con la misma forma del historial de Ventas. */
+    public function monthsForHistory(): Collection
+    {
+        return HistoricalSale::query()->get(['sold_on', 'sale_type', 'amount_main', 'amount_extras'])
+            ->groupBy(fn (HistoricalSale $s) => $s->sold_on->format('Y-m'))
+            ->map(function (Collection $g, string $ym) {
+                $lodging = (int) $g->where('sale_type', 'ALOJAMIENTO')->sum(fn (HistoricalSale $s) => $s->total());
+                $others = (int) $g->where('sale_type', '!=', 'ALOJAMIENTO')->sum(fn (HistoricalSale $s) => $s->total());
+
+                return [
+                    'month' => Carbon::parse($ym.'-01', 'America/Santiago'),
+                    'rooms' => $g->where('sale_type', 'ALOJAMIENTO')->count(),
+                    'lodging' => $lodging, 'extras' => $others, 'total' => $lodging + $others, 'cash' => $lodging + $others,
+                    'source' => 'planilla',
+                ];
+            })->values();
+    }
+
     public function summary(Carbon $from, Carbon $to): array
     {
         $lines = HistoricalSale::query()
