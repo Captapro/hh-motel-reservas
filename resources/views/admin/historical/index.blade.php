@@ -75,7 +75,7 @@
     </div>
 
     @if ($months->isNotEmpty())
-        <div class="cols cols-2" style="margin-top:18px;">
+        <div style="margin-top:18px;">
             <div class="card">
                 <h2>Por mes</h2>
                 <table class="table">
@@ -87,21 +87,27 @@
                     </tbody>
                 </table>
             </div>
-            <div class="card">
-                <h2>Personas que más vuelven</h2>
-                <p style="margin:0 0 6px;"><a class="link" href="{{ route('admin.historical.customers') }}">Ver todos, con filtros por mes → Clientes que vuelven</a></p>
-                <p class="sub" style="font-size:12.5px;">Contadas por RUT válido, con 2 o más estadías. "Gastó" es lo pagado en las estadías donde figura como titular.</p>
+            <div class="card" style="margin-top:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                    <div>
+                        <h2>Personas que más vuelven</h2>
+                        <p class="sub" style="font-size:12.5px; margin:0;">Las 10 con más estadías en todo lo cargado, por RUT válido. «Gastó» es lo pagado en las estadías donde figura como titular.</p>
+                    </div>
+                    <a class="btn" href="{{ route('admin.historical.customers') }}">Ver todos, con filtros por mes →</a>
+                </div>
                 @if ($returning->isEmpty())
-                    <p class="sub">Todavía no hay personas con más de una estadía en lo cargado.</p>
+                    <p class="sub" style="margin-top:10px;">Todavía no hay personas con más de una estadía en lo cargado.</p>
                 @else
-                    <table class="table">
-                        <thead><tr><th>Persona</th><th>RUT</th><th>Veces</th><th>Gastó</th><th>Última</th></tr></thead>
-                        <tbody>
-                        @foreach ($returning as $p)
-                            <tr><td>{{ $p['name'] }}</td><td>{{ $p['document'] }}</td><td>{{ $p['visits'] }}</td><td>${{ number_format($p['spent'], 0, ',', '.') }}</td><td>{{ $p['last'] }}</td></tr>
-                        @endforeach
-                        </tbody>
-                    </table>
+                    <div class="table-wrap" style="margin-top:10px;">
+                        <table class="table">
+                            <thead><tr><th>Persona</th><th>RUT</th><th>Veces</th><th>Gastó</th><th>Última</th></tr></thead>
+                            <tbody>
+                            @foreach ($returning->take(10) as $p)
+                                <tr><td>{{ $p['name'] }}</td><td>{{ $p['document'] }}</td><td>{{ $p['visits'] }}</td><td>${{ number_format($p['spent'], 0, ',', '.') }}</td><td>{{ $p['last'] }}</td></tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 @endif
             </div>
         </div>
