@@ -76,7 +76,15 @@ class PublicBookingController extends Controller
             ->where('from_room_category_id', $selectedCategoryId)
             ->orderBy('display_order')->get();
 
+        // "Reservar de nuevo" (WhatsApp de rescate) trae fecha, hora y duración ya elegidas.
+        $prefill = [
+            'date' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->query('fecha')) && $request->query('fecha') >= now()->toDateString() ? $request->query('fecha') : null,
+            'time' => preg_match('/^([01]\d|2[0-3]):(00|15|30|45)$/', (string) $request->query('hora'), $m) ? ['hour' => (int) $m[1], 'minute' => (int) $m[2]] : null,
+            'duration' => $request->integer('duracion') ?: null,
+        ];
+
         return view('catalog.reservar', [
+            'prefill' => $prefill,
             'categories' => $categories,
             'selectedCategoryId' => $selectedCategoryId,
             'selectedRoomId' => $selectedRoomId,

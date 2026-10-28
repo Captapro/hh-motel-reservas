@@ -53,8 +53,12 @@ return [
         'private_token' => env('GHL_PRIVATE_TOKEN'),
         'location_id' => env('GHL_LOCATION_ID'),
         'custom_field_pago_id' => env('GHL_CUSTOM_FIELD_PAGO_ID'),
-        // Webhooks de entrada de los flujos que mandan los correos de reserva confirmada y pago recibido.
+        // Webhooks de entrada de los flujos de GHL: correo de reserva confirmada y,
+        // para rescatar reservas web sin pagar, el WhatsApp de pago por vencer y
+        // el de reserva liberada (GhlAbandonedBookings).
         'webhook_confirmada' => env('GHL_WEBHOOK_RESERVA_CONFIRMADA'),
+        'webhook_pago_pendiente' => env('GHL_WEBHOOK_PAGO_PENDIENTE'),
+        'webhook_reserva_vencida' => env('GHL_WEBHOOK_RESERVA_VENCIDA'),
     ],
 
     'hh_payment' => [

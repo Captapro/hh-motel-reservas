@@ -68,6 +68,7 @@
         .time-parts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
         input:focus, select:focus { outline:none; border-color:var(--hh-accent); box-shadow: 0 0 0 3px #ff791833; }
         .row2 { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:12px; }
+        .field-note { display:block; margin-top:6px; font-size:11.5px; color:#8a8d93; line-height:1.4; }
         .honey-field { position:absolute; left:-9999px; top:-9999px; }
         button.submit { position:sticky; bottom:calc(10px + var(--safe-b)); z-index:30; box-shadow:0 10px 28px rgba(0,0,0,.45); min-height:56px; width:100%; margin-top:26px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:15px; font-weight:750; cursor:pointer; }
         button.submit:hover { background:var(--hh-accent-hover); }
@@ -164,7 +165,7 @@
             </select>
 
             <label for="date">Fecha</label>
-            <input type="date" id="date" name="date" min="{{ now()->toDateString() }}" value="{{ old('date', now()->toDateString()) }}" required>
+            <input type="date" id="date" name="date" min="{{ now()->toDateString() }}" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}" required>
 
             {{-- Hora: hora y minutos con + / −, que solo recorren los horarios disponibles de ese día. --}}
             <label>Hora de llegada</label>
@@ -185,8 +186,8 @@
             <div class="time-range" id="time-range"></div>
             <input type="hidden" id="time-select" value="">
             <input type="hidden" id="time" value="">
-            <input type="hidden" name="time_hour" id="time_hour" value="{{ old('time_hour') }}">
-            <input type="hidden" name="time_minute" id="time_minute" value="{{ old('time_minute') }}">
+            <input type="hidden" name="time_hour" id="time_hour" value="{{ old('time_hour', $prefill['time']['hour'] ?? '') }}">
+            <input type="hidden" name="time_minute" id="time_minute" value="{{ old('time_minute', $prefill['time']['minute'] ?? '') }}">
 
             <label for="duration_minutes">¿Cuánto tiempo quieres quedarte?</label>
             <select id="duration_minutes" name="duration_minutes" required></select>
@@ -252,6 +253,7 @@
 
             <label for="phone">Teléfono / WhatsApp</label>
             <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" placeholder="+56 9 1234 5678" required>
+            <small class="field-note">Te escribiremos por WhatsApp para confirmar tu reserva y avisarte si queda algo pendiente.</small>
 
             <label for="email">Correo electrónico</label>
             <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="email" placeholder="tucorreo@ejemplo.com">
@@ -278,7 +280,7 @@
             const catId = document.getElementById('room_category_id').value;
             const select = document.getElementById('duration_minutes');
             const options = hhDurationsByCategory[catId] || [];
-            const prevValue = '{{ old('duration_minutes') }}';
+            const prevValue = '{{ old('duration_minutes', $prefill['duration'] ?? '') }}';
             select.innerHTML = '';
             options.forEach((min) => {
                 const opt = document.createElement('option');
