@@ -126,6 +126,12 @@
                 <a href="{{ route('admin.core_extras.index') }}" class="{{ request()->routeIs('admin.core_extras.*') ? 'hh-active' : '' }}">Extras core</a>
             </span>
             <span class="hh-subnav-group">
+                <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.customers.*') ? 'hh-active' : '' }}">Clientes</a>
+                @if (auth()->user()?->isSoporte())
+                    <a href="{{ route('admin.historical.customers') }}" class="{{ request()->routeIs('admin.historical.customers') ? 'hh-active' : '' }}">Clientes que vuelven</a>
+                @endif
+            </span>
+            <span class="hh-subnav-group">
                 <a href="{{ route('admin.staff.index') }}" class="{{ request()->routeIs('admin.staff.*') ? 'hh-active' : '' }}">Personal</a>
                 @if (auth()->user()?->isSoporte())
                     <a href="{{ route('admin.access.index') }}" class="{{ request()->routeIs('admin.access.*') ? 'hh-active' : '' }}">Perfiles y accesos</a>
@@ -135,9 +141,6 @@
             @if (auth()->user()?->isSoporte())
                 <span class="hh-subnav-group">
                     <a href="{{ route('admin.historical.index') }}" class="{{ request()->routeIs('admin.historical.*') && ! request()->routeIs('admin.historical.customers') ? 'hh-active' : '' }}">Ventas históricas</a>
-                    <a href="{{ route('admin.historical.customers') }}" class="{{ request()->routeIs('admin.historical.customers') ? 'hh-active' : '' }}">Clientes que vuelven</a>
-                </span>
-                <span class="hh-subnav-group">
                     <a href="{{ route('admin.ghl.index') }}" class="{{ request()->routeIs('admin.ghl.*') ? 'hh-active' : '' }}">Integración GHL</a>
                     <a href="{{ route('admin.cleanup.index') }}" class="{{ request()->routeIs('admin.cleanup.*') ? 'hh-active' : '' }}">Limpieza</a>
                 </span>

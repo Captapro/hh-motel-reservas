@@ -17,16 +17,16 @@
     $sectionOf = ['Tablero' => 'tablero', 'Calendario' => 'calendario', 'Clientes' => 'clientes', 'Productos' => 'productos', 'Caja' => 'caja',
         'Operaciones' => 'operaciones', 'Ventas' => 'ventas', 'Analytics' => 'analytics', 'Opiniones' => 'opiniones', 'Claves' => 'claves'];
     $navigation = array_values(array_filter($navigation, fn ($item) => ! isset($sectionOf[$item[2]]) || auth()->user()?->canAccess($sectionOf[$item[2]])));
-    // Productos, Combos y Extras core viven en el menú de Administración: al administrador no se le repite en el riel.
+    // Productos, Combos, Extras core y Clientes viven en el menú de Administración: al administrador no se le repite en el riel.
     // Recepción (sin ese menú) sigue viéndolo aquí para consultar el stock.
     if (auth()->user()?->isAdministrador()) {
-        $navigation = array_values(array_filter($navigation, fn ($item) => $item[2] !== 'Productos'));
+        $navigation = array_values(array_filter($navigation, fn ($item) => ! in_array($item[2], ['Productos', 'Clientes'], true)));
     }
     if (auth()->user()?->canUseAi('analista')) {
         $navigation[] = ['admin.analyst.index', 'admin.analyst.*', 'Analista IA', 'M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z'];
     }
     if (auth()->user()?->isAdministrador()) {
-        $navigation[] = ['admin.categories.index', 'admin.categories.*,admin.rooms.*,admin.furniture.*,admin.rates.*,admin.offers.*,admin.upsells.*,admin.coupons.*,admin.staff.*,admin.shifts.*,admin.help.*,admin.products.*,admin.combos.*,admin.core_extras.*,admin.historical.*,admin.access.*,admin.ghl.*,admin.cleanup.*', 'Administración', 'M12 3v3 M12 18v3 M3 12h3 M18 12h3 M6 6l2 2 M16 16l2 2 M6 18l2-2 M16 8l2-2 M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0'];
+        $navigation[] = ['admin.categories.index', 'admin.categories.*,admin.rooms.*,admin.furniture.*,admin.rates.*,admin.offers.*,admin.upsells.*,admin.coupons.*,admin.staff.*,admin.shifts.*,admin.help.*,admin.customers.*,admin.products.*,admin.combos.*,admin.core_extras.*,admin.historical.*,admin.access.*,admin.ghl.*,admin.cleanup.*', 'Administración', 'M12 3v3 M12 18v3 M3 12h3 M18 12h3 M6 6l2 2 M16 16l2 2 M6 18l2-2 M16 8l2-2 M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0'];
     }
 @endphp
 <aside class="hh-rail" aria-label="Navegación principal">
