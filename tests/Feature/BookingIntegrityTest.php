@@ -370,7 +370,7 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('reembolsado', $rest->fresh()->status);
     }
 
-    public function test_ghl_is_told_only_when_the_booking_is_confirmed_and_skips_walk_ins_and_missing_emails(): void
+    public function test_ghl_is_told_only_when_the_booking_is_confirmed_and_skips_walk_ins_but_not_clients_without_email(): void
     {
         config(['services.ghl.webhook_confirmada' => 'https://services.leadconnectorhq.com/hooks/confirmada']);
         Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
@@ -385,14 +385,18 @@ class BookingIntegrityTest extends TestCase
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/confirmada') && $r['codigo'] === $booking->code
             && $r['email'] === 'cliente@example.com' && $r['first_name'] === 'Camila' && $r['pagado'] === '$10.000' && $r['saldo'] === '$10.000' && $r['token'] === $booking->pass_token);
 
-        // Ingreso presencial y cliente sin correo: no se avisa.
+        // Ingreso presencial: no se avisa, el cliente está en recepción.
         Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
         $walkIn = $this->booking(['starts_at' => Carbon::parse('2026-11-09 12:00'), 'walk_in' => true, 'created_by' => auth()->id()]);
         app(PaymentService::class)->register($walkIn, $method, 20000, null, null, auth()->id(), null, '3');
+        Http::assertNothingSent();
+
+        // Cliente sin correo pero con teléfono: se avisa igual, para el WhatsApp.
         $this->customer->update(['email' => null]);
         $noEmail = $this->booking(['starts_at' => Carbon::parse('2026-11-16 12:00')]);
         app(PaymentService::class)->register($noEmail, $method, 20000, null, null, auth()->id(), null, '4');
-        Http::assertNothingSent();
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($r) => $r['codigo'] === $noEmail->code && $r['email'] === '' && $r['phone'] === '+56911111111');
     }
 
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void

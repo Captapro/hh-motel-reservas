@@ -10,7 +10,7 @@ use Throwable;
 
 /**
  * Avisa a GHL (por webhook de entrada) cuando una reserva queda confirmada, para
- * que su flujo mande el correo "Reserva confirmada" al cliente. Nunca lanza:
+ * que su flujo mande el correo y el WhatsApp "Reserva confirmada" al cliente. Nunca lanza:
  * un problema con GHL no puede romper el registro del pago.
  *
  *  - Solo se avisa la primera vez que un pago deja la reserva confirmada (ese
@@ -24,7 +24,9 @@ class GhlReservationNotifier
     {
         try {
             $booking->loadMissing(['customer', 'room.category']);
-            if ($booking->origin === 'presencial' || ! filled($booking->customer?->email)) {
+            // Sin correo ni teléfono no hay a quién avisar; con uno de los dos, el flujo
+            // de GHL manda el correo y/o el WhatsApp según lo que tenga el cliente.
+            if ($booking->origin === 'presencial' || (! filled($booking->customer?->email) && ! filled($booking->customer?->phone_e164))) {
                 return;
             }
 
