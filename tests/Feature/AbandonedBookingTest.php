@@ -119,7 +119,8 @@ class AbandonedBookingTest extends TestCase
         $this->assertStringContainsString('fecha=2026-10-01', $sent[0]['link_reservar']);
         $this->assertStringContainsString('hora=22%3A00', $sent[0]['link_reservar']);
         $this->assertStringContainsString('duracion=180', $sent[0]['link_reservar']);
-        $this->assertStringEndsWith('?'.$sent[0]['reservar_query'], $sent[0]['link_reservar']);
+        $this->assertStringStartsWith('?categoria=', $sent[0]['reservar_query']);
+        $this->assertStringEndsWith($sent[0]['reservar_query'], $sent[0]['link_reservar']);
 
         // El enlace abre el formulario con todo puesto.
         $this->get($sent[0]['link_reservar'])->assertOk()

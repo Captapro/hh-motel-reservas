@@ -104,11 +104,13 @@ class GhlAbandonedBookings
             ];
             // Los botones de las plantillas de WhatsApp solo dejan variable la
             // parte final del enlace: el token (pase) y la consulta (reservar).
+            // La consulta lleva su "?" porque el botón de la plantilla pega el
+            // valor justo detrás de /catalogo/reservar.
             $payload = $this->notifier->payload($booking) + [
                 'hora_limite' => $booking->expires_at?->timezone($tz)->format('H:i') ?? '',
                 'link_pago' => route('catalog.booked', ['token' => $booking->pass_token]),
                 'link_reservar' => route('catalog.reserve', $slot),
-                'reservar_query' => http_build_query($slot),
+                'reservar_query' => '?'.http_build_query($slot),
             ];
             $response = Http::timeout(6)->acceptJson()->post($url, $payload);
             if (! $response->successful()) {
