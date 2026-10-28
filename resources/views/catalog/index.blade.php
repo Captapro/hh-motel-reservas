@@ -90,9 +90,9 @@
         .pg-title span::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
         .pg-count { position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,.55); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 999px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); pointer-events: none; }
         .pg-offer { position: absolute; top: 14px; left: 14px; background: #ff7918; color: #21170e; font-size: 12px; font-weight: 800; padding: 6px 11px; border-radius: 999px; pointer-events: none; }
-        .pg-dots { position: absolute; left: 0; right: 0; bottom: 6px; display: flex; justify-content: center; gap: 5px; pointer-events: none; }
-        .pg-dots i { width: 6px; height: 6px; border-radius: 50%; background: #ffffff66; transition: all .18s ease; }
-        .pg-dots i.on { width: 16px; border-radius: 4px; background: #fff; }
+        .pg-dots { z-index: 2; position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; justify-content: center; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: rgba(0,0,0,.55); box-shadow: 0 1px 4px rgba(0,0,0,.35); pointer-events: none; }
+        .pg-dots i { width: 8px; height: 8px; border-radius: 50%; background: #ffffffa6; transition: all .18s ease; }
+        .pg-dots i.on { width: 20px; border-radius: 5px; background: #fff; }
 
         .pg-body { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
         .pg-price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }

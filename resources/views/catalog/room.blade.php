@@ -44,9 +44,9 @@
         .gallery img { width:100%; height:100%; object-fit:cover; display:block; }
         .gallery.empty { aspect-ratio: 4/3; display:flex; align-items:center; justify-content:center; color:#8a8c90; font-size:14px; }
         .g-count { position:absolute; top:14px; right:14px; background:rgba(0,0,0,.55); color:#fff; font-size:12px; font-weight:700; padding:5px 10px; border-radius:999px; pointer-events:none; }
-        .g-dots { position:absolute; left:0; right:0; bottom:10px; display:flex; justify-content:center; gap:5px; pointer-events:none; }
-        .g-dots i { width:6px; height:6px; border-radius:50%; background:#ffffff66; transition:all .18s ease; }
-        .g-dots i.on { width:16px; border-radius:4px; background:#fff; }
+        .g-dots { z-index:2; position:absolute; left:50%; bottom:10px; transform:translateX(-50%); display:flex; justify-content:center; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,.55); box-shadow:0 1px 4px rgba(0,0,0,.35); pointer-events:none; }
+        .g-dots i { width:8px; height:8px; border-radius:50%; background:#ffffffa6; transition:all .18s ease; }
+        .g-dots i.on { width:20px; border-radius:5px; background:#fff; }
 
         .room-body { padding: 20px 18px 22px; }
         h1 { font-size: 22px; margin: 0 0 4px; letter-spacing:-.02em; }
