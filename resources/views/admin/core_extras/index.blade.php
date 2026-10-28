@@ -51,7 +51,7 @@
                 <tbody>
                 @foreach ($found as $f)
                     <tr>
-                        <td>{{ $f['name'] !== '' ? $f['name'] : '(sin detalle)' }}</td>
+                        <td>{{ $f['name'] !== '' ? $f['name'] : '(sin detalle)' }}@if ($f['name'] === '')<br><span class="sub" style="font-size:12px;">En las planillas antiguas, un extra core sin detalle es un Goloso (persona adicional).</span>@endif</td>
                         <td>{{ $f['lines'] }}</td>
                         <td>{{ $money($f['total']) }}</td>
                         <td>
@@ -64,7 +64,7 @@
                                     <button class="btn" type="submit">Agregar al listado</button>
                                 </form>
                             @else
-                                <span class="sub">Sin nombre: no se puede agregar</span>
+                                <span class="sub">Cuenta como persona adicional</span>
                             @endif
                         </td>
                     </tr>

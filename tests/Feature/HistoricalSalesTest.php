@@ -99,7 +99,9 @@ class HistoricalSalesTest extends TestCase
         $this->assertSame('hora_extra', $concept('EXTRA CORE', 'HORA EXTRA'));
         $this->assertSame('persona_adicional', $concept('EXTRA CORE', 'Goloso'));
         $this->assertSame('servicios', $concept('EXTRA CORE', 'LAVANDERIA'));
-        $this->assertSame('servicios', $concept('EXTRA CORE'));
+        // Planillas antiguas: un extra core sin detalle es un Goloso (persona adicional).
+        $this->assertSame('persona_adicional', $concept('EXTRA CORE'));
+        $this->assertSame('persona_adicional', $concept('EXTRA CORE', 'Persona adicional'));
         $this->assertSame('extras', $concept('EXTRAS', 'PRESERVATIVO'));
         $this->assertSame('fraccionado', $concept('PAGO FRACCIONADO'));
     }

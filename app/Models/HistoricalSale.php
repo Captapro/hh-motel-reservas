@@ -31,10 +31,17 @@ class HistoricalSale extends Model
             $this->sale_type === 'EXTRAS' => 'extras',
             $this->sale_type === 'PAGO FRACCIONADO' => 'fraccionado',
             $this->sale_type === 'EXTRA CORE' && str_contains(mb_strtoupper((string) $this->detail), 'HORA EXTRA') => 'hora_extra',
-            $this->sale_type === 'EXTRA CORE' && str_contains(mb_strtoupper((string) $this->detail), 'GOLOSO') => 'persona_adicional',
+            // En las planillas antiguas "extra core" es el Goloso (persona adicional): una línea
+            // sin detalle cuenta como tal, salvo que diga otra cosa (lavandería, toalla…).
+            $this->sale_type === 'EXTRA CORE' && ($this->isBlankDetail() || str_contains(mb_strtoupper((string) $this->detail), 'GOLOSO') || str_contains(mb_strtoupper((string) $this->detail), 'PERSONA')) => 'persona_adicional',
             $this->sale_type === 'EXTRA CORE' => 'servicios',
             default => 'otros',
         };
+    }
+
+    private function isBlankDetail(): bool
+    {
+        return trim((string) $this->detail) === '';
     }
 
     /** Venta total de la línea (alojamiento/extras principales + extras). */
