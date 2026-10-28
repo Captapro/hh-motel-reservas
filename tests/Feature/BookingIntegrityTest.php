@@ -10,6 +10,8 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Coupon;
 use App\Models\Customer;
+use App\Models\HistoricalGuest;
+use App\Models\HistoricalSale;
 use App\Models\LateArrivalSetting;
 use App\Models\OperationalSetting;
 use App\Models\Payment;
@@ -31,6 +33,7 @@ use App\Services\Payments\MercadoPagoPayments;
 use App\Support\GuestLine;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -71,6 +74,7 @@ class BookingIntegrityTest extends TestCase
             '2026_10_26_220000_create_late_arrival_settings_table.php',
             '2026_10_28_120000_add_abandon_notices_to_bookings.php',
             '2026_10_28_130000_add_privacy_consent_to_customers.php',
+            '2026_10_28_140000_create_historical_sales_tables.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
@@ -703,6 +707,36 @@ class BookingIntegrityTest extends TestCase
         $active = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00'), 'customer' => Customer::create(['name' => 'Tercero', 'phone_e164' => '+56933333333'])]);
         $this->post(route('bookings.reactivate', $active->code), ['date' => '2026-11-02', 'time' => '18:00', 'hold_minutes' => 30])
             ->assertSessionHasErrors('reactivar');
+    }
+
+    public function test_historical_sales_upload_is_support_only_simulates_without_saving_and_can_be_removed(): void
+    {
+        $file = fn () => new UploadedFile(base_path('tests/fixtures/planilla_ventas_ejemplo.csv'), 'planilla.csv', 'text/csv', null, true);
+        $payload = fn (string $action) => ['archivo' => $file(), 'fuente' => 'planilla-2026-10', 'anio' => 2026, 'accion' => $action];
+
+        // Un administrador no entra: es solo de soporte.
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        $this->get(route('admin.historical.index'))->assertForbidden();
+        $this->post(route('admin.historical.store'), $payload('cargar'))->assertForbidden();
+
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+        $this->get(route('admin.historical.index'))->assertOk()->assertSee('Todavía no hay planillas cargadas');
+
+        // Simular muestra el resumen y no guarda nada.
+        $this->post(route('admin.historical.store'), $payload('simular'))->assertRedirect(route('admin.historical.index'));
+        $this->assertSame(0, HistoricalSale::count());
+        $this->get(route('admin.historical.index'))->assertSee('Simulación')->assertSee('Venta total');
+
+        // Cargar guarda; el nombre de la planilla tiene que ser simple.
+        $this->post(route('admin.historical.store'), ['fuente' => 'mala planilla!'] + $payload('cargar'))->assertSessionHasErrors('fuente');
+        $this->post(route('admin.historical.store'), $payload('cargar'))->assertRedirect(route('admin.historical.index'));
+        $this->assertSame(5, HistoricalSale::count());
+        $this->get(route('admin.historical.index'))->assertSee('planilla-2026-10');
+
+        // Quitarla borra sus ventas y a las personas ligadas.
+        $this->delete(route('admin.historical.destroy'), ['fuente' => 'planilla-2026-10'])->assertRedirect();
+        $this->assertSame(0, HistoricalSale::count());
+        $this->assertSame(0, HistoricalGuest::count());
     }
 
     public function test_payment_screen_offers_the_mercado_pago_link_to_send_by_whatsapp(): void

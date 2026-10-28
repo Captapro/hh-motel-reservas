@@ -129,6 +129,7 @@
             <span class="hh-subnav-group">
                 @if (auth()->user()?->isSoporte())
                     <a href="{{ route('admin.ghl.index') }}" class="{{ request()->routeIs('admin.ghl.*') ? 'hh-active' : '' }}">Integración GHL</a>
+                    <a href="{{ route('admin.historical.index') }}" class="{{ request()->routeIs('admin.historical.*') ? 'hh-active' : '' }}">Ventas históricas</a>
                     <a href="{{ route('admin.cleanup.index') }}" class="{{ request()->routeIs('admin.cleanup.*') ? 'hh-active' : '' }}">Limpieza</a>
                 @endif
             </span>

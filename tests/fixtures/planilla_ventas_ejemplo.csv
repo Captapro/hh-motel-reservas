@@ -1,0 +1,9 @@
+N°REGISTRO,,Fecha ,TIPO DE DOCUMENTO Voucher / Boleta / F.E. / Factura / N.C,N° VOUCHER,N° BOLETA,Documento repetido (voucher o boleta),Tipo de Venta (Alojamiento / Extras Core / Extras / Eventos),Detalle: ,Cantidad,Nombre,Rut o documento de identidad (sin puntos y con  guión si llevase),Nacionalidad,EDAD,Nº de personas,Habitación,Formato de tiempo elegido y pagado (en hrs). Según la habitación puede llegar a ser de: 1- 2-3 - 6 - 12 - 24 horas),Hora INGRESO,Hora SALIDA,Cantidad de horas XX:YY HRS,Tipo Habitación (S-Estandar-XL),Descuento,$ venta de extras,$ venta de Alojamiento + Extras core,Medio de Pago (efectivo / tarjeta / transferencia),Reserva,OBSERVACIONES:,,Turno,Recepcionista
+1,,1-octubre,Voucher,1,,,ALOJAMIENTO,,,Ana Prueba Uno,11111111-1,CHILE,30,2,201,3,10:00,13:05,3:05,PLUS,,,$36.000,TARJETA,,,,MAÑANA,
+2,,1-octubre,,,,,,,,Beto Prueba Dos,22222222-2,CHILE,32,,201,,,,,,,,,,,,,MAÑANA,
+3,,2 octubre,Boleta,,900,,ALOJAMIENTO,,,Ana Prueba Uno,11.111.111-1,CHILE,30,2,202,3,15:00,18:00,3:00,PLUS,Estudiantes $5000 OFF,,$31.000,EFECTIVO,R0001,,,TARDE,
+4,,2 octubre,,,,,,,,Carla Prueba Tres,12345678-0,PERÚ,28,,202,,,,,,,,,,,,,TARDE,
+5,,2-octubre,Voucher,2,,,EXTRAS,AGUA,1,,,,,,,,,,,,,$2.000,,TARJETA,,,,TARDE,
+6,,3-octubre,Voucher,3,,,EXTRA CORE,HORA EXTRA,1,,,,,,203,,,,,,,,$20.000,TARJETA,,,,NOCHE,
+7,,3-octubre,Voucher,4,,,,,,Diego Prueba Cuatro,P1234567,ARGENTINA,40,1,204,6,22:00,04:00,6:00,MAX,,,$50.000,TARJETA,,,,NOCHE,
+8,,,,,,,,,,,,,,,,,,,,,,,$12.342.625,,,,,,

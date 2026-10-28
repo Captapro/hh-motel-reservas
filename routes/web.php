@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\CustomerBehaviorController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\FurnitureController;
 use App\Http\Controllers\Admin\GhlTestController;
+use App\Http\Controllers\Admin\HistoricalImportController;
 use App\Http\Controllers\Admin\LateArrivalSettingController;
 use App\Http\Controllers\Admin\OfferController;
 use App\Http\Controllers\Admin\ProductController;
@@ -319,6 +320,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::post('/turnos', [ShiftController::class, 'store'])->name('shifts.store');
         Route::put('/turnos/{shift}', [ShiftController::class, 'update'])->name('shifts.update');
         Route::delete('/turnos/{shift}', [ShiftController::class, 'destroy'])->name('shifts.destroy');
+
+        Route::get('/historico', [HistoricalImportController::class, 'index'])->middleware('role:soporte')->name('historical.index');
+        Route::post('/historico', [HistoricalImportController::class, 'store'])->middleware('role:soporte')->name('historical.store');
+        Route::delete('/historico', [HistoricalImportController::class, 'destroy'])->middleware('role:soporte')->name('historical.destroy');
 
         Route::get('/limpieza', [CleanupController::class, 'index'])->middleware('role:soporte')->name('cleanup.index');
         Route::delete('/limpieza', [CleanupController::class, 'destroy'])->middleware('role:soporte')->name('cleanup.destroy');

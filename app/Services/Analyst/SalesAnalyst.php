@@ -22,7 +22,7 @@ class SalesAnalyst
     /** Preguntas anteriores de la misma conversación que se le recuerdan al modelo. */
     private const HISTORY = 6;
 
-    public function __construct(private SalesDataService $data, private ClaudeTransport $claude) {}
+    public function __construct(private SalesDataService $data, private ClaudeTransport $claude, private HistoricalDataService $historical) {}
 
     public function run(AnalystRun $run): void
     {
@@ -122,6 +122,7 @@ class SalesAnalyst
             'ocupacion' => $this->data->occupancy(...array_slice($this->range($input), 0, 2)),
             'configuracion_precios' => $this->data->pricingConfig(),
             'tendencia_mensual' => $this->data->monthlyTrend(),
+            'ventas_historicas' => $this->historical->summary(...array_slice($this->historicalRange($input), 0, 2)),
             'historial_cambios_precios' => $this->data->priceChanges(...array_slice($this->range($input), 0, 2)),
             default => throw new \InvalidArgumentException("Herramienta desconocida: {$name}"),
         };
@@ -149,6 +150,21 @@ class SalesAnalyst
         return [$from, $to, $categoryId];
     }
 
+    /** @return array{0: Carbon, 1: Carbon} */
+    private function historicalRange(array $input): array
+    {
+        $from = Carbon::parse((string) ($input['desde'] ?? ''), self::TZ)->startOfDay();
+        $to = Carbon::parse((string) ($input['hasta'] ?? ''), self::TZ)->endOfDay();
+        if ($to->lt($from)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+        if ($from->diffInDays($to) > 1100) {
+            throw new \InvalidArgumentException('El rango máximo de ventas históricas es de unos 3 años.');
+        }
+
+        return [$from, $to];
+    }
+
     private function stepLabel(string $name, array $input): string
     {
         $range = isset($input['desde'], $input['hasta']) ? ' ('.$input['desde'].' a '.$input['hasta'].(! empty($input['categoria']) ? ', '.$input['categoria'] : '').')' : '';
@@ -158,6 +174,7 @@ class SalesAnalyst
             'ocupacion' => 'Revisando ocupación'.$range,
             'configuracion_precios' => 'Revisando tarifas, ofertas y upsells',
             'tendencia_mensual' => 'Revisando los últimos 12 meses',
+            'ventas_historicas' => 'Revisando las ventas anteriores al sistema'.$range,
             'historial_cambios_precios' => 'Revisando cambios de precios y promociones'.$range,
             default => $name,
         };
@@ -210,6 +227,11 @@ class SalesAnalyst
                 'inputSchema' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
+                'name' => 'ventas_historicas',
+                'description' => 'Ventas de las planillas de recepción ANTERIORES al sistema (no están en resumen_ventas): estadías, venta por mes, categoría, horas pagadas, día de semana, hora de ingreso, turno, medio de pago, descuentos y cuántas personas distintas volvieron. La respuesta indica qué fechas hay cargadas (cobertura_cargada). Úsala para comparar contra años anteriores o medir fidelidad; no tiene estados de pago ni ocupación. Máximo ~3 años por consulta.',
+                'inputSchema' => ['type' => 'object', 'properties' => $range, 'required' => ['desde', 'hasta']],
+            ],
+            [
                 'name' => 'historial_cambios_precios',
                 'description' => 'Cambios hechos en el sistema a tarifas, precios, ofertas, cupones, upsells y estadía corta en un rango, con fecha y valor antes/después. Úsalo para medir el efecto de un cambio comparando ventas y ocupación antes y después de la fecha. Máximo 400 días.',
                 'inputSchema' => ['type' => 'object', 'properties' => $range, 'required' => ['desde', 'hasta']],
@@ -253,6 +275,7 @@ Eres el director de revenue management de HH Motel, un motel en Chile: un estrat
 ## Cómo trabajas
 - Consulta los datos con las herramientas antes de afirmar algo. Para una recomendación de precios revisa al menos ventas, ocupación y configuración vigente. Compara contra un período anterior o más largo. No inventes cifras.
 - Tú no cambias nada en el sistema. Indica dónde se hace cada cambio: Administración → Tarifas, Ofertas, Cupones, Upsells, Estadía corta o Calendario.
+- Hay ventas anteriores al sistema en la herramienta ventas_historicas (planillas de recepción, con su propia cobertura de fechas). Úsala para comparar con el mismo mes de años anteriores, siempre aclarando que son otra fuente: solo tiene lo que recepción anotaba y no incluye estados de pago ni ocupación.
 - No pidas ni menciones datos personales de clientes; trabajas con cifras agregadas.
 
 ## Cómo respondes
