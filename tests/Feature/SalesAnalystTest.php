@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\AnalystNote;
 use App\Models\AnalystRun;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\HistoricalSale;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\RateRule;
@@ -71,6 +73,8 @@ class SalesAnalystTest extends TestCase
             '2026_10_23_200000_create_access_permissions_table.php',
             '2026_10_27_090000_create_analyst_runs_table.php',
             '2026_10_27_100000_create_analyst_settings_table.php',
+            '2026_10_28_230000_create_analyst_notes_table.php',
+            '2026_10_28_140000_create_historical_sales_tables.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -135,7 +139,7 @@ class SalesAnalystTest extends TestCase
         $other = (string) Str::uuid();
         AnalystRun::create(['user_id' => $this->admin->id, 'thread' => $other, 'question' => 'Pregunta del admin', 'status' => 'listo', 'answer' => 'R']);
         $this->actingAs($authorizedHost)->get(route('admin.analyst.index', ['conversacion' => $other]))
-            ->assertOk()->assertDontSee('Pregunta del admin')->assertDontSee('Contexto del negocio');
+            ->assertOk()->assertDontSee('Pregunta del admin')->assertDontSee('Notas del negocio');
         $this->actingAs($authorizedHost)->put(route('admin.analyst.context'), ['business_context' => 'x'])->assertForbidden();
         $this->actingAs($authorizedHost)->getJson(route('admin.analyst.show', AnalystRun::first()))->assertForbidden();
     }
@@ -231,6 +235,66 @@ class SalesAnalystTest extends TestCase
         $this->assertSame('HOT', $changes[0]['tarifa']);
         $this->assertSame('PLUS', $changes[0]['categoria']);
         $this->assertSame(['antes' => 45000, 'despues' => 48000], $changes[0]['cambios']['price']);
+    }
+
+    public function test_prompt_tells_the_analyst_about_loaded_sheets_and_notes_are_saved_from_the_chat(): void
+    {
+        config(['services.anthropic.key' => 'test-key']);
+        HistoricalSale::create(['source' => 'planilla-2026-09', 'source_row' => 1, 'sold_on' => '2026-09-05', 'sale_type' => 'ALOJAMIENTO', 'amount_main' => 30000, 'amount_extras' => 0]);
+        HistoricalSale::create(['source' => 'planilla-2026-10', 'source_row' => 1, 'sold_on' => '2026-10-05', 'sale_type' => 'ALOJAMIENTO', 'amount_main' => 30000, 'amount_extras' => 0]);
+
+        $fake = new class extends ClaudeTransport
+        {
+            public string $system = '';
+
+            public array $toolNames = [];
+
+            private int $calls = 0;
+
+            public function send(string $system, array $messages, array $tools, array $options = []): object
+            {
+                $this->system = $system;
+                $this->toolNames = array_column($tools, 'name');
+                if ($this->calls++ === 0) {
+                    return (object) ['stopReason' => 'tool_use', 'usage' => (object) [], 'content' => [
+                        (object) ['type' => 'tool_use', 'id' => 't1', 'name' => 'guardar_nota', 'input' => ['nota' => 'El aseo cuesta $2.500 por Playroom usado.']],
+                        (object) ['type' => 'tool_use', 'id' => 't2', 'name' => 'fidelidad_clientes', 'input' => ['desde' => '2026-09-01', 'hasta' => '2026-10-31']],
+                    ]];
+                }
+
+                return (object) ['stopReason' => 'end_turn', 'usage' => (object) [], 'content' => [(object) ['type' => 'text', 'text' => 'Anoté: el aseo.']]];
+            }
+        };
+        $this->app->instance(ClaudeTransport::class, $fake);
+
+        $this->actingAs($this->admin)->postJson(route('admin.analyst.ask'), ['question' => 'El aseo cuesta $2.500 por Playroom usado. ¿Cómo vamos?', 'thread' => (string) Str::uuid()])->assertOk();
+
+        $this->assertContains('guardar_nota', $fake->toolNames);
+        $this->assertContains('fidelidad_clientes', $fake->toolNames);
+        $this->assertStringContainsString('desde 2026-09-05 hasta 2026-10-05 (2 meses)', $fake->system);
+        $this->assertStringContainsString('fuente principal', $fake->system);
+        $this->assertSame(['El aseo cuesta $2.500 por Playroom usado.'], AnalystNote::pluck('body')->all());
+        $this->assertSame('analista', AnalystNote::first()->source);
+
+        // La nota ya viaja en el siguiente prompt; y quien no es administrador no puede anotar.
+        $this->actingAs($this->admin)->postJson(route('admin.analyst.ask'), ['question' => 'Otra', 'thread' => (string) Str::uuid()])->assertOk();
+        $this->assertStringContainsString('El aseo cuesta $2.500 por Playroom usado.', $fake->system);
+    }
+
+    public function test_admin_manages_notes_and_others_cannot(): void
+    {
+        $host = User::factory()->create(['role' => 'recepcion']);
+        $this->actingAs($host)->post(route('admin.analyst.notes.store'), ['nota' => 'Meta de noviembre: $15 millones'])->assertForbidden();
+
+        $this->actingAs($this->admin)->post(route('admin.analyst.notes.store'), ['nota' => 'Meta de noviembre: $15 millones'])->assertRedirect();
+        $this->actingAs($this->admin)->post(route('admin.analyst.notes.store'), ['nota' => 'meta de noviembre: $15 millones'])->assertSessionHasErrors('nota'); // repetida
+        $note = AnalystNote::firstOrFail();
+        $this->assertSame('manual', $note->source);
+
+        $this->actingAs($this->admin)->get(route('admin.analyst.index'))->assertOk()->assertSee('Meta de noviembre');
+        $this->actingAs($host)->delete(route('admin.analyst.notes.destroy', $note))->assertForbidden();
+        $this->actingAs($this->admin)->delete(route('admin.analyst.notes.destroy', $note))->assertRedirect();
+        $this->assertSame(0, AnalystNote::count());
     }
 
     public function test_admin_deletes_one_conversation_or_all(): void

@@ -207,6 +207,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::get('/analista', [SalesAnalystController::class, 'index'])->name('analyst.index');
         Route::post('/analista', [SalesAnalystController::class, 'ask'])->middleware('throttle:20,1,admin.analyst.ask')->name('analyst.ask');
         Route::put('/analista/contexto', [SalesAnalystController::class, 'saveContext'])->middleware('role:administrador')->name('analyst.context');
+        Route::post('/analista/notas', [SalesAnalystController::class, 'addNote'])->middleware('role:administrador')->name('analyst.notes.store');
+        Route::delete('/analista/notas/{note}', [SalesAnalystController::class, 'destroyNote'])->middleware('role:administrador')->name('analyst.notes.destroy');
         Route::get('/analista/{run}', [SalesAnalystController::class, 'show'])->name('analyst.show');
         Route::delete('/analista/conversaciones', [SalesAnalystController::class, 'destroyAll'])->middleware('role:administrador')->name('analyst.destroy_all');
         Route::delete('/analista/conversaciones/{thread}', [SalesAnalystController::class, 'destroy'])->name('analyst.destroy');

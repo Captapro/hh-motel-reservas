@@ -49,16 +49,38 @@
     @endunless
 
     @if (auth()->user()->isAdministrador())
-    <details class="card an-context" @if (! $setting->business_context) open @endif>
-        <summary><b>Contexto del negocio</b> <span class="an-meta">· objetivos, costos, competencia, fechas clave y reglas. El analista lo lee en cada pregunta.@if ($setting->business_context && $setting->updated_at) Actualizado {{ $setting->updated_at->format('d/m/Y H:i') }}@if ($setting->editor) por {{ $setting->editor->name }}@endif.@endif</span></summary>
-        <form method="POST" action="{{ route('admin.analyst.context') }}">
-            @csrf @method('PUT')
-            <textarea name="business_context" rows="16" maxlength="8000" style="margin-top:10px; font-family:ui-monospace, monospace; font-size:13px;">{{ old('business_context', $setting->business_context ?: \App\Models\AnalystSetting::TEMPLATE) }}</textarea>
-            <div class="row" style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
-                <span class="an-meta">Mientras más concreto (montos, precios de la competencia, metas), más precisas las recomendaciones. No escribas datos de clientes ni claves.</span>
-                <button class="btn" type="submit">Guardar contexto</button>
-            </div>
+    @php $legacy = trim((string) $setting->business_context); $hasLegacy = $legacy !== '' && $legacy !== trim(\App\Models\AnalystSetting::TEMPLATE); @endphp
+    <details class="card an-context" @if ($notes->isEmpty() && ! $hasLegacy) open @endif>
+        <summary><b>Notas del negocio</b> <span class="an-meta">· datos cortos que el analista tiene presentes ({{ $notes->count() }}). No es obligatorio: sin notas igual responde con los datos del sistema.</span></summary>
+        <p class="an-meta" style="margin:10px 0 8px;">Escribe un dato por vez, como se lo dirías a una persona, o cuéntaselo en la conversación y él lo anota. Ej.: «el aseo cuesta $2.500 por Playroom», «la meta de noviembre es $15 millones», «Motel X cobra $42.000 por PLUS 3 h».</p>
+        <form method="POST" action="{{ route('admin.analyst.notes.store') }}" style="display:flex; gap:8px; flex-wrap:wrap;">
+            @csrf
+            <input name="nota" value="{{ old('nota') }}" maxlength="{{ \App\Models\AnalystNote::MAX_LENGTH }}" placeholder="Escribe un dato del negocio…" style="flex:1 1 320px;" required>
+            <button class="btn" type="submit">Agregar nota</button>
         </form>
+        @if ($notes->isNotEmpty())
+            <ul style="list-style:none; margin:12px 0 0; padding:0;">
+                @foreach ($notes as $note)
+                    <li style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; padding:7px 0; border-top:1px solid #333;">
+                        <span>{{ $note->body }} @if ($note->source === 'analista')<span class="an-meta">· anotada por el analista</span>@endif</span>
+                        <form method="POST" action="{{ route('admin.analyst.notes.destroy', $note) }}" onsubmit="return confirm('¿Borrar esta nota?')">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="an-del" title="Borrar nota" aria-label="Borrar nota">✕</button>
+                        </form>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+        @if ($hasLegacy)
+            <details style="margin-top:14px;">
+                <summary class="an-meta">Contexto anterior (texto largo que ya tenías escrito; sigue activo)</summary>
+                <form method="POST" action="{{ route('admin.analyst.context') }}">
+                    @csrf @method('PUT')
+                    <textarea name="business_context" rows="10" maxlength="8000" style="margin-top:8px; font-family:ui-monospace, monospace; font-size:13px;">{{ old('business_context', $setting->business_context) }}</textarea>
+                    <div style="margin-top:8px;"><button class="btn" type="submit">Guardar contexto</button></div>
+                </form>
+            </details>
+        @endif
     </details>
     @endif
 

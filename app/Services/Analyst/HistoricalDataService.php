@@ -4,6 +4,7 @@ namespace App\Services\Analyst;
 
 use App\Models\HistoricalGuest;
 use App\Models\HistoricalSale;
+use App\Services\Historical\HistoricalCustomerAnalysis;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -156,6 +157,33 @@ class HistoricalDataService
             'porcentaje_que_volvio' => $inPeriod->count() ? round($returned->count() * 100 / $inPeriod->count(), 1) : 0.0,
             'estadias_por_persona_promedio' => $inPeriod->count() ? round($inPeriod->avg(fn ($doc) => $byPerson[$doc] ?? 1), 2) : 0.0,
             'distribucion_estadias_por_persona' => $inPeriod->groupBy(fn ($doc) => min(5, $byPerson[$doc] ?? 1))->map->count()->sortKeys()->mapWithKeys(fn ($n, $k) => [($k >= 5 ? '5 o más' : $k.($k === 1 ? ' vez' : ' veces')) => $n])->all(),
+        ];
+    }
+
+    /**
+     * Cuánto vuelve la gente en un período de las planillas, solo como cifras (sin nombres ni RUT).
+     * «Volvieron» = 2 o más estadías dentro del período; «ya habían venido» = con estadías antes del período.
+     */
+    public function loyalty(Carbon $from, Carbon $to): array
+    {
+        $people = app(HistoricalCustomerAnalysis::class)->people($from, $to);
+        $months = max(1, (int) $from->copy()->startOfMonth()->diffInMonths($to->copy()->startOfMonth()) + 1);
+        $count = $people->count();
+        $returned = $people->where('visits', '>=', 2);
+
+        return [
+            'nota' => 'Personas por RUT válido (titulares y acompañantes), solo estadías de alojamiento de las planillas. Con pocos meses cargados, "primera vez" está sobreestimado porque no se conoce lo anterior.',
+            'periodo' => $from->toDateString().' a '.$to->toDateString(),
+            'meses_del_periodo' => $months,
+            'personas_distintas' => $count,
+            'volvieron_en_el_periodo' => $returned->count(),
+            'porcentaje_que_volvio' => $count ? round($returned->count() * 100 / $count, 1) : 0.0,
+            'ya_habian_venido_antes_del_periodo' => $people->where('before', '>', 0)->count(),
+            'primera_vez_en_lo_cargado' => $people->where('before', 0)->count(),
+            'visitas_por_persona_por_mes' => $count ? round($people->avg('visits') / $months, 2) : 0.0,
+            'visitas_por_persona_por_mes_entre_los_que_volvieron' => $returned->isEmpty() ? 0.0 : round($returned->avg('visits') / $months, 2),
+            'distribucion_visitas_por_persona' => $people->groupBy(fn (array $p) => min(5, $p['visits']))->map->count()->sortKeys()
+                ->mapWithKeys(fn ($n, $k) => [($k >= 5 ? '5 o más' : $k.($k === 1 ? ' vez' : ' veces')) => $n])->all(),
         ];
     }
 

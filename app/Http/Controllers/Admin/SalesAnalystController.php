@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AnalystNote;
 use App\Models\AnalystRun;
 use App\Models\AnalystSetting;
 use App\Models\AuditLog;
@@ -48,6 +49,7 @@ class SalesAnalystController extends Controller
             'runs' => $runs,
             'threads' => $threads,
             'setting' => AnalystSetting::current()->load('editor'),
+            'notes' => $request->user()->isAdministrador() ? AnalystNote::orderBy('id')->get() : collect(),
         ]);
     }
 
@@ -78,7 +80,38 @@ class SalesAnalystController extends Controller
         return response()->json($this->payload($run->fresh()));
     }
 
-    /** Objetivos, costos, competencia y reglas que el analista lee en cada pregunta. */
+    /** Agrega un dato corto del negocio a las notas que lee el analista. */
+    public function addNote(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['nota' => ['required', 'string', 'min:5', 'max:'.AnalystNote::MAX_LENGTH]], [
+            'nota.required' => 'Escribe el dato que quieres anotar.',
+            'nota.min' => 'La nota es muy corta.',
+            'nota.max' => 'La nota es muy larga (máximo '.AnalystNote::MAX_LENGTH.' caracteres): divídela en dos.',
+        ]);
+        $body = trim((string) preg_replace('/\s+/u', ' ', $validated['nota']));
+
+        if (AnalystNote::count() >= AnalystNote::MAX_NOTES) {
+            return back()->withInput()->withErrors(['nota' => 'Ya hay '.AnalystNote::MAX_NOTES.' notas: borra alguna antes de agregar otra.']);
+        }
+        if (AnalystNote::pluck('body')->contains(fn (string $n) => mb_strtolower($n) === mb_strtolower($body))) {
+            return back()->withInput()->withErrors(['nota' => 'Esa nota ya está.']);
+        }
+
+        $note = AnalystNote::create(['body' => $body, 'source' => 'manual', 'created_by' => $request->user()->id]);
+        AuditLog::record($request->user()->id, 'analista.nota', 'AnalystNote', $note->id, null, ['body' => $body, 'origen' => 'manual']);
+
+        return back()->with('status', 'Nota agregada. El analista la usará desde la próxima pregunta.');
+    }
+
+    public function destroyNote(Request $request, AnalystNote $note): RedirectResponse
+    {
+        AuditLog::record($request->user()->id, 'analista.nota_borrar', 'AnalystNote', $note->id, ['body' => $note->body], null);
+        $note->delete();
+
+        return back()->with('status', 'Nota borrada.');
+    }
+
+    /** Contexto antiguo (texto libre): solo para quien ya lo había escrito. */
     public function saveContext(Request $request): RedirectResponse
     {
         $validated = $request->validate(['business_context' => ['nullable', 'string', 'max:8000']], [], ['business_context' => 'contexto del negocio']);
