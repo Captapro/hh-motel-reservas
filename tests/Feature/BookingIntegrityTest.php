@@ -730,9 +730,15 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(0, HistoricalSale::count());
         $this->get(route('admin.historical.index'))->assertSee('Revisión (no se guardó nada)')->assertSee('Venta total');
 
-        // Cargar guarda; el nombre de la planilla tiene que ser simple.
-        $this->post(route('admin.historical.store'), ['fuente' => 'mala planilla!'] + $payload('cargar'))->assertSessionHasErrors('fuente');
-        $this->post(route('admin.historical.store'), $payload('cargar'))->assertRedirect(route('admin.historical.index'));
+        // Un Excel no sirve (tiene que ser CSV) y un archivo sin ventas tampoco.
+        $excel = new UploadedFile(base_path('tests/fixtures/planilla_ventas_ejemplo.csv'), 'planilla.xlsx', 'application/octet-stream', null, true);
+        $this->post(route('admin.historical.store'), ['archivo' => $excel] + $payload('cargar'))->assertSessionHasErrors('archivo');
+        $empty = UploadedFile::fake()->createWithContent('vacio.csv', "A,B\n1,2\n");
+        $this->post(route('admin.historical.store'), ['archivo' => $empty] + $payload('simular'))->assertSessionHasErrors('archivo');
+        $this->assertSame(0, HistoricalSale::count());
+
+        // Cargar guarda; el nombre se arregla solo ("Planilla 2026 10" queda "planilla-2026-10").
+        $this->post(route('admin.historical.store'), ['fuente' => 'Planilla 2026 10'] + $payload('cargar'))->assertRedirect(route('admin.historical.index'));
         $this->assertSame(5, HistoricalSale::count());
         $this->get(route('admin.historical.index'))->assertSee('planilla-2026-10');
 

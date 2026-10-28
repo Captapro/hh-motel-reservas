@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -125,30 +126,48 @@ class HistoricalImportController extends Controller
     public function store(Request $request, HistoricalSalesImporter $importer): RedirectResponse
     {
         $data = $request->validate([
-            'archivo' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
-            'fuente' => ['required', 'string', 'max:60', 'regex:/^[A-Za-z0-9_\-]+$/'],
+            'archivo' => ['required', 'file', 'max:10240'],
+            'fuente' => ['required', 'string', 'max:60'],
             'anio' => ['required', 'integer', 'min:2015', 'max:2100'],
             'accion' => ['required', 'in:simular,cargar'],
         ], [
-            'fuente.regex' => 'El nombre de la planilla solo puede llevar letras, números, guiones y guion bajo (por ejemplo planilla-2026-10).',
-            'archivo.mimes' => 'El archivo tiene que ser un CSV: en Google Sheets, Archivo → Descargar → Valores separados por comas (.csv).',
+            'archivo.required' => 'Elige el archivo CSV de la planilla.',
+            'archivo.max' => 'El archivo pesa más de 10 MB: revisa que sea una sola pestaña del mes.',
+            'archivo.uploaded' => 'El archivo no se pudo subir: vuelve a elegirlo e inténtalo otra vez.',
+            'fuente.required' => 'Escribe un nombre para la planilla, por ejemplo planilla-2026-10.',
         ]);
+
+        // El nombre se deja en minúsculas y con guiones (así «Planilla 2026 10» queda «planilla-2026-10»).
+        $source = Str::slug($data['fuente']);
+        if ($source === '') {
+            return back()->withInput($request->except('archivo'))->withErrors(['fuente' => 'Escribe un nombre con letras o números, por ejemplo planilla-2026-10.']);
+        }
+
+        $file = $request->file('archivo');
+        $extension = strtolower((string) $file->getClientOriginalExtension());
+        if (in_array($extension, ['xlsx', 'xls', 'ods', 'pdf', 'zip'], true)) {
+            return back()->withInput($request->except('archivo'))->withErrors(['archivo' => "Ese archivo es .{$extension}. En Google Sheets abre la pestaña del mes y descárgala como CSV: Archivo → Descargar → Valores separados por comas (.csv)."]);
+        }
 
         $dry = $data['accion'] === 'simular';
 
         try {
-            $summary = $importer->import($request->file('archivo')->getRealPath(), $data['fuente'], (int) $data['anio'], $dry);
+            $summary = $importer->import($file->getRealPath(), $source, (int) $data['anio'], $dry);
         } catch (\Throwable $e) {
             return back()->withInput($request->except('archivo'))->withErrors(['archivo' => 'No se pudo leer la planilla: '.$e->getMessage()]);
         }
 
+        if ($summary['lineas'] === 0) {
+            return back()->withInput($request->except('archivo'))->withErrors(['archivo' => 'No encontré ventas en ese archivo. Revisa que sea la pestaña de ventas del mes (la que tiene "Fecha", "Tipo de Venta" y los montos) descargada como CSV.']);
+        }
+
         if (! $dry) {
-            AuditLog::record(auth()->id(), 'historico.cargar', 'HistoricalSale', $data['fuente'], null, ['fuente' => $data['fuente'], 'lineas' => $summary['lineas'], 'huespedes' => $summary['huespedes']]);
+            AuditLog::record(auth()->id(), 'historico.cargar', 'HistoricalSale', $source, null, ['fuente' => $source, 'lineas' => $summary['lineas'], 'huespedes' => $summary['huespedes']]);
         }
 
         return redirect()->route('admin.historical.index')
             ->with('status', $dry ? 'Revisión lista: todavía NO se guardó nada. Si los totales cuadran, vuelve a elegir el archivo y presiona «2 · Guardar planilla».' : 'Planilla guardada.')
-            ->with('historical_summary', ['dry' => $dry, 'source' => $data['fuente']] + $summary);
+            ->with('historical_summary', ['dry' => $dry, 'source' => $source] + $summary);
     }
 
     /** Quita una planilla entera (por si se cargó con el año o el archivo equivocado). */
