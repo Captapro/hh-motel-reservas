@@ -37,7 +37,9 @@ class HistoricalCustomersController extends Controller
         $role = $request->query('rol') === 'titular' ? 'titular' : 'todos';
         $search = trim((string) $request->query('q', ''));
 
-        $everyone = $analysis->people($from, $to);
+        $months = (int) $from->diffInMonths($to->copy()->startOfMonth()) + 1;
+        $everyone = $analysis->people($from, $to)->map(fn (array $p) => $p + ['per_month' => round($p['visits'] / $months, 2)]);
+        $returnedOnes = $everyone->where('visits', '>=', 2);
 
         // Cifras del período sobre todas las personas, antes de filtrar la lista.
         $stats = [
@@ -45,6 +47,11 @@ class HistoricalCustomersController extends Controller
             'returned' => $everyone->where('visits', '>=', 2)->count(),
             'came_before' => $everyone->where('before', '>', 0)->count(),
             'first_time' => $everyone->where('before', 0)->count(),
+            'months' => $months,
+            'visits_total' => (int) $everyone->sum('visits'),
+            'per_month_all' => $everyone->isEmpty() ? 0 : round($everyone->avg('visits') / $months, 2),
+            'per_month_returned' => $returnedOnes->isEmpty() ? 0 : round($returnedOnes->avg('visits') / $months, 2),
+            'stays_per_month' => round($everyone->sum('visits') / $months, 1),
         ];
 
         $rows = $everyone

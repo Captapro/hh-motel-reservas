@@ -55,17 +55,18 @@
             </form>
         </div>
 
-        <div class="cols cols-4" style="margin-top:14px;">
+        <div class="cols" style="margin-top:14px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));">
             <div class="card"><h3>Personas en el período</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['people'] }}</p><p class="sub" style="margin:0;">distintas, por RUT válido</p></div>
             <div class="card"><h3>Volvieron dentro del período</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['returned'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['returned'], $stats['people']) }}% · 2 o más estadías en estos meses</p></div>
             <div class="card"><h3>Ya habían venido antes</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['came_before'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['came_before'], $stats['people']) }}% · tienen estadías antes del período</p></div>
+            <div class="card"><h3>Visitas por mes</h3><p style="font-size:26px; margin:4px 0;">{{ str_replace('.', ',', $stats['per_month_all']) }}</p><p class="sub" style="margin:0;">por persona, en promedio · los que volvieron: <b>{{ str_replace('.', ',', $stats['per_month_returned']) }}</b> · período de {{ $stats['months'] }} {{ $stats['months'] === 1 ? 'mes' : 'meses' }}</p></div>
             <div class="card"><h3>Primera vez en lo cargado</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['first_time'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['first_time'], $stats['people']) }}% · sin estadías antes</p></div>
         </div>
 
         <div class="card" style="margin-top:14px;">
             <h2>{{ $total }} {{ $total === 1 ? 'persona' : 'personas' }} · {{ $monthName($fromMonth) }}{{ $fromMonth !== $toMonth ? ' a '.$monthName($toMonth) : '' }}</h2>
             <p class="sub" style="font-size:12.5px;">
-                <b>Visitas</b>: estadías de alojamiento en el período (titular o acompañante). <b>Gastó</b>: alojamiento de las estadías en que fue <b>titular</b> (no incluye hora extra ni extras aparte; si siempre fue acompañante sale $0).
+                <b>Visitas</b>: estadías de alojamiento en el período (titular o acompañante). <b>Visitas por mes</b>: visitas ÷ meses del período elegido (con {{ $stats['months'] }} {{ $stats['months'] === 1 ? 'mes' : 'meses' }}). <b>Gastó</b>: alojamiento de las estadías en que fue <b>titular</b> (no incluye hora extra ni extras aparte; si siempre fue acompañante sale $0).
                 <b>Antes del período</b>: estadías anteriores al primer mes elegido («—» si el período empieza en el primer mes cargado, porque antes no hay planillas). <b>En todo lo cargado</b>: todas sus estadías en las planillas. Con pocos meses cargados, no tener visitas antes no significa que sea cliente nuevo.
             </p>
             @if ($rows->isEmpty())
@@ -73,13 +74,14 @@
             @else
                 <div class="table-wrap">
                     <table class="table">
-                        <thead><tr><th>Persona</th><th>RUT</th><th>Visitas</th><th>Titular / acomp.</th><th>Gastó</th><th>Meses en que vino</th><th>Primera</th><th>Última</th><th>Antes del período</th><th>En todo lo cargado</th></tr></thead>
+                        <thead><tr><th>Persona</th><th>RUT</th><th>Visitas</th><th>Visitas por mes</th><th>Titular / acomp.</th><th>Gastó</th><th>Meses en que vino</th><th>Primera</th><th>Última</th><th>Antes del período</th><th>En todo lo cargado</th></tr></thead>
                         <tbody>
                         @foreach ($rows as $p)
                             <tr>
                                 <td>{{ $p['name'] }}</td>
                                 <td>{{ $p['document'] }}</td>
                                 <td><b>{{ $p['visits'] }}</b></td>
+                                <td>{{ str_replace('.', ',', $p['per_month']) }}</td>
                                 <td>{{ $p['as_holder'] }} / {{ $p['as_companion'] }}</td>
                                 <td>{{ $money($p['spent']) }}</td>
                                 <td style="text-transform:capitalize;">{{ collect($p['months'])->map(fn ($m) => $monthName($m))->implode(', ') }}</td>
