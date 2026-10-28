@@ -464,11 +464,6 @@
                         @else
                             <span class="ptag sent">Sin vencimiento</span>
                         @endif
-                        @if ($booking->payment_instructions_sent_at)
-                            <span class="ptag sent">✓ Ya se le avisó</span>
-                        @else
-                            <span class="ptag unsent">Sin contactar</span>
-                        @endif
                     </span>
                     <span class="arrow">→</span>
                 </a>

@@ -34,7 +34,6 @@ Cómo leer cada fila:
 - **Playroom · categoría · "llegó hace X"**: "llegó hace" es el tiempo desde que se **creó la reserva**, no desde que llegó el cliente.
 - **Fecha y hora** a la que está reservada ("hoy 23:00" o "27/10 01:45").
 - **"⏳ vence en X"** (retención en línea de 10 minutos) o **"Sin vencimiento"**.
-- **"Sin contactar"**: todavía no se le enviaron los datos de pago. Cambia a **"✓ Ya se le avisó"** al usar "Copiar texto", "Copiar datos de cuenta" o el link de Mercado Pago en la ficha.
 - **Color**: normal al principio, amarilla a los 3 minutos y roja a los 5. Rojo significa que nadie la ha atendido.
 - Clic en la fila (o la flecha →) abre la ficha de la reserva.
 
@@ -87,7 +86,7 @@ Errores comunes:
 - Una reserva hecha por el cliente en el catálogo queda retenida 10 minutos esperando el pago. Si no paga, vence sola y se libera el Playroom.
 - Aparece en "⚠ Pendientes de gestionar". En la ficha: "⏳ Retenida hasta las HH:MM" con los botones "Pagará en recepción" o "Pago tardío": cualquiera de los dos quita el vencimiento.
 - Una reserva en línea normalmente llega pagada. Si quedó mantenida sin pago ("Pagará en recepción" o "Pago tardío"), al llegar el cliente se cobra primero y después se hace el check-in.
-- Para enviarle cómo pagar (en la ficha, si hay saldo): "Copiar datos de cuenta", "Copiar texto" (mensaje completo con código, horario, monto y enlace al pase) y "Contactar por WhatsApp" (abre el chat; pegas el mensaje). Copiar marca "✓ Ya se le avisó".
+- Para enviarle cómo pagar (en la ficha, si hay saldo): "Copiar datos de cuenta", "Copiar texto" (mensaje completo con código, horario, monto y enlace al pase) y "Contactar por WhatsApp" (abre el chat; pegas el mensaje).
 - Cobro por link: bloque "Cobrar por link (Mercado Pago)" con "Copiar mensaje" y "Enviar por WhatsApp". Cuando el cliente paga, la reserva se confirma sola y aparece "💳 Pago recibido" en el tablero. Si dice "revisa esta reserva: pagó fuera de tiempo o de más", avisa al administrador.
 - El correo de confirmación lo manda el sistema solo; los WhatsApp los envía el anfitrión a mano.
 
