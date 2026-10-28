@@ -65,6 +65,7 @@ class PublicBookingValidationTest extends TestCase
             '2026_09_17_002913_add_floor_toggles_to_operational_settings.php',
             '2026_09_21_135116_split_floor_toggles_by_wing_in_operational_settings.php',
             '2026_09_28_120000_add_pass_token_to_bookings_table.php',
+            '2026_10_28_130000_add_privacy_consent_to_customers.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -93,6 +94,7 @@ class PublicBookingValidationTest extends TestCase
             'last_name' => 'Público',
             'phone' => '+56922222222',
             'email' => 'cliente@ejemplo.cl',
+            'accept_privacy' => 1,
         ], $overrides);
     }
 
@@ -270,5 +272,33 @@ class PublicBookingValidationTest extends TestCase
         $response = $this->post('/catalogo/reservar', $this->bookingPayload());
 
         $response->assertRedirect(route('catalog.pay', Booking::firstOrFail()->pass_token));
+    }
+
+    public function test_booking_requires_the_privacy_notice_and_records_consent_separately_from_promotions(): void
+    {
+        // Sin aceptar el aviso de privacidad no se reserva.
+        $this->post('/catalogo/reservar', $this->bookingPayload(['accept_privacy' => null]))->assertSessionHasErrors('accept_privacy');
+        $this->assertSame(0, Booking::count());
+
+        // Acepta el aviso pero no las promociones: queda constancia solo de lo primero.
+        $this->post('/catalogo/reservar', $this->bookingPayload())->assertSessionHasNoErrors();
+        $customer = Customer::where('phone_e164', '+56922222222')->firstOrFail();
+        $this->assertNotNull($customer->privacy_accepted_at);
+        $this->assertFalse($customer->marketing_opt_in);
+        $this->assertNull($customer->marketing_opt_in_at);
+
+        // Después acepta las promociones: se enciende con fecha, y no se apaga por no marcarlo la próxima vez.
+        $this->post('/catalogo/reservar', $this->bookingPayload(['marketing_opt_in' => 1, 'date' => '2026-10-12']))->assertSessionHasNoErrors();
+        $this->assertTrue($customer->fresh()->marketing_opt_in);
+        $this->assertNotNull($customer->fresh()->marketing_opt_in_at);
+        $this->post('/catalogo/reservar', $this->bookingPayload(['date' => '2026-10-19']))->assertSessionHasNoErrors();
+        $this->assertTrue($customer->fresh()->marketing_opt_in);
+    }
+
+    public function test_privacy_notice_page_and_form_checkboxes_are_available(): void
+    {
+        $this->get(route('catalog.privacy'))->assertOk()->assertSee('Aviso de privacidad')->assertSee('Tus derechos');
+        $this->get(route('catalog.reserve', ['categoria' => $this->category->id]))->assertOk()
+            ->assertSee('name="accept_privacy"', false)->assertSee('name="marketing_opt_in"', false)->assertSee(route('catalog.privacy'), false);
     }
 }

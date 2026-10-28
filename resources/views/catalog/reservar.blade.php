@@ -76,6 +76,11 @@
         .summary strong { display:block; font-size:15px; margin-bottom:3px; }
         .summary small { color:#62656c; }
         .legal { font-size:11.5px; color:#8a8d93; margin-top:14px; text-align:center; }
+        .consent { margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+        .consent-row { display:flex; gap:10px; align-items:flex-start; font-size:13px; line-height:1.4; color:#d6d8dc; font-weight:400; margin:0; cursor:pointer; }
+        .consent-row input { width:20px; height:20px; min-width:20px; margin:1px 0 0; accent-color:var(--hh-accent, #ff7918); flex:none; }
+        .consent-row a { color:#ffb27a; text-decoration:underline; }
+        .consent-error { color:#ff8a8a; font-size:12.5px; font-weight:600; }
         .coupon-applied { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#12202b; border:1px solid #2e5a72; color:#9edaff; border-radius:9px; padding:11px 14px; font-size:12.5px; margin-bottom:22px; }
         .coupon-applied a { color:#9edaff; text-decoration:underline; flex:none; font-size:12px; }
         .coupon-warning { display:none; background:#3a2a12; border:1px solid #7a5a1f; color:#ffd699; border-radius:9px; padding:11px 14px; font-size:12.5px; margin-top:10px; }
@@ -262,6 +267,18 @@
                 <label for="birth_date">Fecha de nacimiento <span style="color:#9edaff; font-weight:400;">— para aplicar el cupón ({{ $selectedCoupon->min_age }}+ años)</span></label>
                 <input type="date" id="birth_date" name="birth_date" value="{{ old('birth_date') }}" max="{{ now()->toDateString() }}" required>
             @endif
+
+            <div class="consent">
+                <label class="consent-row">
+                    <input type="checkbox" name="accept_privacy" value="1" required @checked(old('accept_privacy'))>
+                    <span>Acepto que HH Motel use mis datos para gestionar mi reserva, según el <a href="{{ route('catalog.privacy') }}" target="_blank" rel="noopener">aviso de privacidad</a>.</span>
+                </label>
+                @error('accept_privacy')<div class="consent-error">{{ $message }}</div>@enderror
+                <label class="consent-row">
+                    <input type="checkbox" name="marketing_opt_in" value="1" @checked(old('marketing_opt_in'))>
+                    <span>Quiero recibir ofertas y novedades de HH Motel por WhatsApp o correo (opcional).</span>
+                </label>
+            </div>
 
             <div class="summary" id="booking-summary" aria-live="polite"><strong>Resumen de tu reserva</strong><small>Selecciona Playroom, fecha, hora y duración para ver el detalle.</small></div>
             <button class="submit" type="submit">Solicitar reserva</button>

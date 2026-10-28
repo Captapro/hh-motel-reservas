@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
     'nationality', 'birth_date', 'ghl_contact_id', 'ghl_synced_at',
     'has_loyalty_card', 'loyalty_card_number', 'loyalty_card_added_at',
     'blacklist_status', 'blacklist_reason', 'blacklisted_at',
+    'privacy_accepted_at', 'marketing_opt_in', 'marketing_opt_in_at',
 ])]
 class Customer extends Model
 {
@@ -27,6 +28,9 @@ class Customer extends Model
             'has_loyalty_card' => 'boolean',
             'loyalty_card_added_at' => 'datetime',
             'blacklisted_at' => 'datetime',
+            'privacy_accepted_at' => 'datetime',
+            'marketing_opt_in' => 'boolean',
+            'marketing_opt_in_at' => 'datetime',
         ];
     }
 

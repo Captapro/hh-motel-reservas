@@ -70,6 +70,7 @@ class BookingIntegrityTest extends TestCase
             '2026_10_26_210000_create_short_stay_settings_table.php',
             '2026_10_26_220000_create_late_arrival_settings_table.php',
             '2026_10_28_120000_add_abandon_notices_to_bookings.php',
+            '2026_10_28_130000_add_privacy_consent_to_customers.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
@@ -1345,12 +1346,12 @@ class BookingIntegrityTest extends TestCase
         $other->prices()->create(['room_category_id' => Room::first()->room_category_id, 'duration_minutes' => 180, 'price' => 40000]);
         $data = ['room_category_id' => Room::first()->room_category_id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 0, 'duration_minutes' => 180];
         $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query($data))->assertOk()->assertJsonPath('available', false);
-        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl'])
+        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl', 'accept_privacy' => 1])
             ->assertRedirect()->assertSessionHasErrors('duration_minutes');
         $this->assertSame(0, Booking::count());
         RateRule::where('is_active', true)->first()->prices()->create(['room_category_id' => Room::first()->room_category_id, 'duration_minutes' => 180, 'price' => 40000]);
         $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query($data))->assertOk()->assertJsonPath('available', true);
-        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl'])
+        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl', 'accept_privacy' => 1])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(1, Booking::count());
     }

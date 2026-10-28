@@ -131,9 +131,15 @@ class PublicBookingController extends Controller
             'accepted_upsells' => ['nullable', 'array'],
             'accepted_upsells.*' => ['integer', 'exists:upsell_offers,id'],
             'short_stay_accept' => ['nullable', 'boolean'],
+            // Ley de datos personales: aceptar el aviso es obligatorio para reservar;
+            // recibir promociones es un permiso aparte y opcional.
+            'accept_privacy' => ['accepted'],
+            'marketing_opt_in' => ['nullable', 'boolean'],
             // Campo trampa para bots -- invisible para una persona real
             // (oculto por CSS), un bot que autocompleta todo lo llena.
             'website' => ['prohibited'],
+        ], [
+            'accept_privacy.accepted' => 'Para reservar tienes que aceptar el aviso de privacidad.',
         ]);
 
         // Un solo envío a la vez por persona y horario: el segundo espera y ve la reserva ya creada.
@@ -192,6 +198,13 @@ class PublicBookingController extends Controller
             if ($customer->blacklist_status === 'blocked') {
                 return back()->withInput()->withErrors(['phone' => 'No es posible solicitar la reserva con los datos ingresados.']);
             }
+            // Constancia del consentimiento: aceptó el aviso ahora, y el permiso de
+            // promociones solo se enciende si lo marcó (no se apaga por no marcarlo).
+            $consent = ['privacy_accepted_at' => now()];
+            if (! empty($validated['marketing_opt_in']) && ! $customer->marketing_opt_in) {
+                $consent += ['marketing_opt_in' => true, 'marketing_opt_in_at' => now()];
+            }
+            $customer->update($consent);
             // Cliente ya existía pero le faltaba la fecha de nacimiento (ej.
             // para el cupón de Expertos en Vida) -- se completa ahora.
             if (! empty($validated['birth_date']) && ! $customer->birth_date) {
