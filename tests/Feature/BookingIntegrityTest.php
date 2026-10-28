@@ -728,7 +728,7 @@ class BookingIntegrityTest extends TestCase
         // Simular muestra el resumen y no guarda nada.
         $this->post(route('admin.historical.store'), $payload('simular'))->assertRedirect(route('admin.historical.index'));
         $this->assertSame(0, HistoricalSale::count());
-        $this->get(route('admin.historical.index'))->assertSee('Simulación')->assertSee('Venta total');
+        $this->get(route('admin.historical.index'))->assertSee('Revisión (no se guardó nada)')->assertSee('Venta total');
 
         // Cargar guarda; el nombre de la planilla tiene que ser simple.
         $this->post(route('admin.historical.store'), ['fuente' => 'mala planilla!'] + $payload('cargar'))->assertSessionHasErrors('fuente');

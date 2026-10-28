@@ -147,7 +147,7 @@ class HistoricalImportController extends Controller
         }
 
         return redirect()->route('admin.historical.index')
-            ->with('status', $dry ? 'Simulación lista: no se guardó nada.' : 'Planilla cargada.')
+            ->with('status', $dry ? 'Revisión lista: todavía NO se guardó nada. Si los totales cuadran, vuelve a elegir el archivo y presiona «2 · Guardar planilla».' : 'Planilla guardada.')
             ->with('historical_summary', ['dry' => $dry, 'source' => $data['fuente']] + $summary);
     }
 

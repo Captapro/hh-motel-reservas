@@ -15,7 +15,7 @@
     @php $summary = session('historical_summary'); @endphp
     @if ($summary)
         <div class="card" style="border-color:{{ $summary['dry'] ? '#6b5a1e' : '#2e6e45' }};">
-            <h2>{{ $summary['dry'] ? 'Simulación' : 'Cargada' }} · {{ $summary['source'] }}</h2>
+            <h2>{{ $summary['dry'] ? 'Revisión (no se guardó nada)' : 'Planilla guardada' }} · {{ $summary['source'] }}</h2>
             <p class="sub">Período {{ $summary['desde'] }} a {{ $summary['hasta'] }} · {{ $summary['lineas'] }} líneas de venta · {{ $summary['huespedes'] }} personas · {{ $summary['filas_ignoradas'] }} filas ignoradas (resúmenes y blancos) · {{ $summary['tipo_inferido'] }} sin tipo de venta tomadas como alojamiento</p>
             <table class="table">
                 <thead><tr><th>Tipo</th><th>Líneas</th><th>Principal</th><th>Extras</th></tr></thead>
@@ -31,7 +31,7 @@
     @endif
 
     <div class="cols cols-2">
-        <form method="POST" action="{{ route('admin.historical.store') }}" enctype="multipart/form-data" class="card">
+        <form method="POST" action="{{ route('admin.historical.store') }}" enctype="multipart/form-data" class="card" onkeydown="if (event.key === 'Enter' && event.target.tagName !== 'BUTTON') { event.preventDefault(); }">
             @csrf
             <h2>Cargar una planilla</h2>
             <p class="sub">En Google Sheets: abre la pestaña del mes → Archivo → Descargar → <b>Valores separados por comas (.csv)</b>. El archivo no se guarda en el sistema.</p>
@@ -43,9 +43,10 @@
             <label>Año de las fechas</label>
             <input type="number" name="anio" value="{{ old('anio', now()->year) }}" min="2015" max="2100" required>
             <p class="sub" style="font-size:12px;">La planilla trae "1-octubre" sin año: aquí se lo ponemos.</p>
-            <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
-                <button class="btn" type="submit" name="accion" value="simular" style="background:#3a3a3a;">Simular (no guarda)</button>
-                <button class="btn" type="submit" name="accion" value="cargar" onclick="return confirm('¿Cargar esta planilla en las ventas históricas?');">Cargar</button>
+            <p class="sub" style="margin-top:14px; font-size:12.5px;"><b>Paso 1:</b> «Revisar (no guarda)» muestra el resumen para comprobar los totales. <b>Paso 2:</b> «Guardar planilla» la carga de verdad. Para guardar tienes que volver a elegir el archivo.</p>
+            <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
+                <button class="btn" type="submit" name="accion" value="simular" style="background:#3a3a3a;">1 · Revisar (no guarda)</button>
+                <button class="btn" type="submit" name="accion" value="cargar" onclick="return confirm('¿Guardar esta planilla en las ventas históricas?');">2 · Guardar planilla</button>
             </div>
         </form>
 
