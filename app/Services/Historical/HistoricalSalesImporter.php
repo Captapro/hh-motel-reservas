@@ -348,7 +348,19 @@ class HistoricalSalesImporter
         }
         sort($dates);
 
+        // Fechas que caen fuera del mes principal de la planilla (típico error: «06/06» en vez de «06/07»).
+        $monthOf = fn (array $line) => $line['sold_on']->format('Y-m');
+        $perMonth = collect($lines)->countBy($monthOf);
+        $mainMonth = $perMonth->isEmpty() ? null : $perMonth->sortDesc()->keys()->first();
+        $stray = collect($lines)->filter(fn (array $line) => $monthOf($line) !== $mainMonth);
+
         return [
+            'fuera_de_mes' => [
+                'mes' => $mainMonth,
+                'lineas' => $stray->count(),
+                'monto' => (int) $stray->sum(fn (array $line) => $line['amount_main'] + $line['amount_extras']),
+                'dias' => $stray->map(fn (array $line) => $line['sold_on']->format('d/m/Y'))->unique()->sort()->take(10)->values()->all(),
+            ],
             'lineas' => count($lines),
             'por_tipo' => $byType,
             'venta_principal' => array_sum(array_column($byType, 'principal')),

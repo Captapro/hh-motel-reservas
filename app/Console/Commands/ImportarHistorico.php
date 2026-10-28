@@ -28,6 +28,10 @@ class ImportarHistorico extends Command
         $this->info(($dry ? 'SIMULACIÓN — no se guardó nada. ' : 'Cargado. ')."Planilla: {$source}");
         $this->line("Líneas de venta: {$summary['lineas']}  ·  Huéspedes: {$summary['huespedes']}  ·  Filas ignoradas: {$summary['filas_ignoradas']}  ·  Sin tipo de venta, tomadas como alojamiento: {$summary['tipo_inferido']}");
         $this->line("Período: {$summary['desde']} a {$summary['hasta']}");
+        if ($summary['fuera_de_mes']['lineas'] > 0) {
+            $out = $summary['fuera_de_mes'];
+            $this->warn("ATENCIÓN: {$out['lineas']} líneas (\${$out['monto']}) tienen fecha fuera de {$out['mes']}: ".implode(', ', $out['dias']).'. Revisa que no sea un error de fecha.');
+        }
         $this->table(['Tipo', 'Líneas', 'Principal $', 'Extras $'], collect($summary['por_tipo'])->map(fn ($v, $k) => [$k, $v['lineas'], number_format($v['principal'], 0, ',', '.'), number_format($v['extras'], 0, ',', '.')])->values()->all());
         $this->line('Venta total: $'.number_format($summary['venta_principal'] + $summary['venta_extras'], 0, ',', '.').' (principal $'.number_format($summary['venta_principal'], 0, ',', '.').' + extras $'.number_format($summary['venta_extras'], 0, ',', '.').')');
         $this->line('Documentos: '.collect($summary['documentos'])->map(fn ($n, $k) => "{$k}={$n}")->implode('  '));

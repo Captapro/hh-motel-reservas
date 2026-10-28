@@ -17,6 +17,11 @@
         <div class="card" style="border-color:{{ $summary['dry'] ? '#6b5a1e' : '#2e6e45' }};">
             <h2>{{ $summary['dry'] ? 'Revisión (no se guardó nada)' : 'Planilla guardada' }} · {{ $summary['source'] }}</h2>
             <p class="sub">Período {{ $summary['desde'] }} a {{ $summary['hasta'] }} · {{ $summary['lineas'] }} líneas de venta · {{ $summary['huespedes'] }} personas · {{ $summary['filas_ignoradas'] }} filas ignoradas (resúmenes y blancos) · {{ $summary['tipo_inferido'] }} sin tipo de venta tomadas como alojamiento</p>
+            @if (($summary['fuera_de_mes']['lineas'] ?? 0) > 0)
+                <div style="border:1px solid #6b5a1e; background:#3a331c; color:#e8c76f; border-radius:8px; padding:10px 12px; margin:10px 0; font-size:13.5px;">
+                    <b>Revisa las fechas:</b> {{ $summary['fuera_de_mes']['lineas'] }} líneas ({{ '$'.number_format($summary['fuera_de_mes']['monto'], 0, ',', '.') }}) tienen fecha fuera de {{ \Carbon\Carbon::parse($summary['fuera_de_mes']['mes'].'-01')->locale('es')->isoFormat('MMMM YYYY') }}: {{ implode(', ', $summary['fuera_de_mes']['dias']) }}. Si es un error de digitación en la planilla (por ejemplo 06/06 en vez de 06/07), corrígelo y vuelve a cargar.
+                </div>
+            @endif
             <table class="table">
                 <thead><tr><th>Tipo</th><th>Líneas</th><th>Principal</th><th>Extras</th></tr></thead>
                 <tbody>

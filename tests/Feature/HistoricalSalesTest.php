@@ -162,6 +162,28 @@ class HistoricalSalesTest extends TestCase
         $this->assertSame('2026-08-19', $summary['desde']);
     }
 
+    public function test_dates_outside_the_main_month_are_flagged(): void
+    {
+        $summary = app(HistoricalSalesImporter::class)->import($this->file, 'planilla-2026-10', 2026, true);
+        $this->assertSame(0, $summary['fuera_de_mes']['lineas']);
+        $this->assertSame('2026-10', $summary['fuera_de_mes']['mes']);
+
+        $header = (string) strtok((string) file_get_contents($this->file), "\n");
+        $rows = [
+            '1,,5-octubre,Voucher,1,,,ALOJAMIENTO,,,Ana,11111111-1,CHILE,30,2,201,3,10:00,13:05,3:05,PLUS,,,$30.000,TARJETA,,,,MAÑANA,',
+            '2,,6-octubre,Voucher,2,,,ALOJAMIENTO,,,Beto,22222222-2,CHILE,30,2,202,3,10:00,13:05,3:05,PLUS,,,$30.000,TARJETA,,,,MAÑANA,',
+            '3,,6-junio,Voucher,3,,,ALOJAMIENTO,,,Eva,33333333-3,CHILE,30,2,203,3,10:00,13:05,3:05,PLUS,,,$20.000,TARJETA,,,,MAÑANA,',
+        ];
+        $path = tempnam(sys_get_temp_dir(), 'planilla');
+        file_put_contents($path, $header."\n".implode("\n", $rows)."\n");
+        $summary = app(HistoricalSalesImporter::class)->import($path, 'planilla-prueba', 2026, true);
+        unlink($path);
+
+        $this->assertSame(1, $summary['fuera_de_mes']['lineas']);
+        $this->assertSame(20000, $summary['fuera_de_mes']['monto']);
+        $this->assertSame(['06/06/2026'], $summary['fuera_de_mes']['dias']);
+    }
+
     public function test_each_line_counts_in_its_own_concept(): void
     {
         $concept = fn (string $type, ?string $detail = null) => (new HistoricalSale(['sale_type' => $type, 'detail' => $detail]))->concept();
