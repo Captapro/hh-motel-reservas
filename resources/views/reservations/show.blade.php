@@ -238,7 +238,7 @@
                     <label style="display:block;font-size:12px;color:#bbb;margin-bottom:4px;">Retener por</label>
                     <select name="hold_minutes">
                         @foreach ([15 => '15 minutos', 30 => '30 minutos', 60 => '1 hora'] as $min => $label)
-                            <option value="{{ $min }}" @selected((int) old('hold_minutes', 30) === $min)>{{ $label }}</option>
+                            <option value="{{ $min }}" @selected((int) old('hold_minutes', 15) === $min)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
