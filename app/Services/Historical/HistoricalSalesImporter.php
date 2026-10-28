@@ -259,13 +259,32 @@ class HistoricalSalesImporter
             return checkdate((int) $m[2], (int) $m[1], $year) ? Carbon::create($year, (int) $m[2], (int) $m[1])->startOfDay() : null;
         }
         if (preg_match('/^(\d{1,2})[\s\-]*(?:de\s+)?([a-záéíóú]+)(?:[\s\-]*(?:de\s+)?(\d{4}))?$/u', $raw, $m)) {
-            $month = self::MONTHS[$m[2]] ?? null;
+            $month = $this->monthNumber($m[2]);
             $year = isset($m[3]) && $m[3] !== '' ? (int) $m[3] : $defaultYear;
 
             return $month && checkdate($month, (int) $m[1], $year) ? Carbon::create($year, $month, (int) $m[1])->startOfDay() : null;
         }
 
         return null;
+    }
+
+    /** Mes por nombre; tolera una falta de ortografía («agoisto» = agosto) si hay un solo mes parecido. */
+    private function monthNumber(string $name): ?int
+    {
+        if (isset(self::MONTHS[$name])) {
+            return self::MONTHS[$name];
+        }
+        if (mb_strlen($name) < 4) {
+            return null;
+        }
+        $close = collect(self::MONTHS)->map(fn (int $n, string $month) => levenshtein($name, $month))->filter(fn (int $d) => $d <= 2);
+        if ($close->isEmpty()) {
+            return null;
+        }
+        $best = $close->min();
+        $matches = $close->filter(fn (int $d) => $d === $best)->keys()->map(fn (string $m) => self::MONTHS[$m])->unique();
+
+        return $matches->count() === 1 ? $matches->first() : null;
     }
 
     private function money(string $raw): int

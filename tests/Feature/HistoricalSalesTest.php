@@ -148,6 +148,20 @@ class HistoricalSalesTest extends TestCase
         $this->assertCount(0, $analysis->people(Carbon::parse('2026-11-01'), Carbon::parse('2026-11-30')));
     }
 
+    public function test_a_misspelled_month_in_the_date_is_still_read(): void
+    {
+        $header = (string) strtok((string) file_get_contents($this->file), "\n");
+        $row = '1,,19-agoisto,Voucher,9,,,ALOJAMIENTO,,,Ana Prueba Uno,11111111-1,CHILE,30,2,201,3,10:00,13:05,3:05,PLUS,,,$36.000,TARJETA,,,,MAÑANA,';
+        $path = tempnam(sys_get_temp_dir(), 'planilla');
+        file_put_contents($path, $header."\n".$row."\n");
+
+        $summary = app(HistoricalSalesImporter::class)->import($path, 'planilla-prueba', 2026, true);
+        unlink($path);
+
+        $this->assertSame(1, $summary['lineas']);
+        $this->assertSame('2026-08-19', $summary['desde']);
+    }
+
     public function test_each_line_counts_in_its_own_concept(): void
     {
         $concept = fn (string $type, ?string $detail = null) => (new HistoricalSale(['sale_type' => $type, 'detail' => $detail]))->concept();
