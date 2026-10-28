@@ -25,7 +25,7 @@
     .hh-subnav a { color:#888; text-decoration:none; font-size:12.5px; padding:5px 10px; border-radius:6px; }
     .hh-subnav a.hh-active, .hh-subnav a:hover { background:#222; color:#eee; }
     .hh-subnav-group { display:flex; align-items:center; gap:4px; }
-    .hh-subnav-sep { width:1px; height:16px; background:#2e2e2e; margin:0 8px; flex:none; }
+    .hh-subnav-group + .hh-subnav-group { border-left:1px solid #2e2e2e; padding-left:12px; margin-left:8px; }
     /* Antes era "a.hh-danger", pero el botón de Salir es un <button>, no un
        <a> -- ese selector nunca calzaba, así que heredaba el --hh-ink casi
        negro que hh-theme.css fuerza en el body (pensado para fondo claro),
@@ -111,7 +111,6 @@
                 <a href="{{ route('admin.rooms.index') }}" class="{{ request()->routeIs('admin.rooms.*') ? 'hh-active' : '' }}">Playrooms</a>
                 <a href="{{ route('admin.furniture.index') }}" class="{{ request()->routeIs('admin.furniture.*') ? 'hh-active' : '' }}">Mobiliario</a>
             </span>
-            <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.rates.index') }}" class="{{ request()->routeIs('admin.rates.*') ? 'hh-active' : '' }}">Tarifas</a>
                 <a href="{{ route('admin.offers.index') }}" class="{{ request()->routeIs('admin.offers.*') ? 'hh-active' : '' }}">Ofertas</a>
@@ -120,29 +119,28 @@
                 <a href="{{ route('admin.short_stay.edit') }}" class="{{ request()->routeIs('admin.short_stay.*') ? 'hh-active' : '' }}">Estadía corta</a>
                 <a href="{{ route('admin.late_arrival.edit') }}" class="{{ request()->routeIs('admin.late_arrival.*') ? 'hh-active' : '' }}">Atrasos</a>
             </span>
-            <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'hh-active' : '' }}">Productos</a>
                 <a href="{{ route('admin.combos.index') }}" class="{{ request()->routeIs('admin.combos.*') ? 'hh-active' : '' }}">Combos</a>
                 <a href="{{ route('admin.core_extras.index') }}" class="{{ request()->routeIs('admin.core_extras.*') ? 'hh-active' : '' }}">Extras core</a>
             </span>
-            <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.staff.index') }}" class="{{ request()->routeIs('admin.staff.*') ? 'hh-active' : '' }}">Personal</a>
-                <a href="{{ route('admin.help.index') }}" class="{{ request()->routeIs('admin.help.*') ? 'hh-active' : '' }}">Asistente de ayuda</a>
                 @if (auth()->user()?->isSoporte())
                     <a href="{{ route('admin.access.index') }}" class="{{ request()->routeIs('admin.access.*') ? 'hh-active' : '' }}">Perfiles y accesos</a>
                 @endif
+                <a href="{{ route('admin.help.index') }}" class="{{ request()->routeIs('admin.help.*') ? 'hh-active' : '' }}">Asistente de ayuda</a>
             </span>
-            <span class="hh-subnav-sep"></span>
-            <span class="hh-subnav-group">
-                @if (auth()->user()?->isSoporte())
-                    <a href="{{ route('admin.ghl.index') }}" class="{{ request()->routeIs('admin.ghl.*') ? 'hh-active' : '' }}">Integración GHL</a>
+            @if (auth()->user()?->isSoporte())
+                <span class="hh-subnav-group">
                     <a href="{{ route('admin.historical.index') }}" class="{{ request()->routeIs('admin.historical.*') && ! request()->routeIs('admin.historical.customers') ? 'hh-active' : '' }}">Ventas históricas</a>
                     <a href="{{ route('admin.historical.customers') }}" class="{{ request()->routeIs('admin.historical.customers') ? 'hh-active' : '' }}">Clientes que vuelven</a>
+                </span>
+                <span class="hh-subnav-group">
+                    <a href="{{ route('admin.ghl.index') }}" class="{{ request()->routeIs('admin.ghl.*') ? 'hh-active' : '' }}">Integración GHL</a>
                     <a href="{{ route('admin.cleanup.index') }}" class="{{ request()->routeIs('admin.cleanup.*') ? 'hh-active' : '' }}">Limpieza</a>
-                @endif
-            </span>
+                </span>
+            @endif
         </div>
     @endif
 </div>

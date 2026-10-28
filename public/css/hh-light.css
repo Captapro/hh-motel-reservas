@@ -241,5 +241,6 @@ details.pop > summary.btn:not(.secondary) { color: #fff !important; }
 [style*="color:#f3b8b8"], [style*="color:#c1c3c7"] { color: #6b7280 !important; }
 [style*="color:#f3b8b8"] { color: #b91c1c !important; }
 .hh-subnav-sep { background: #d1d5db !important; }
+.hh-subnav-group + .hh-subnav-group { border-left-color: #d1d5db !important; }
 input, select, textarea, button { color-scheme: light !important; }
 input[type=checkbox], input[type=radio] { accent-color: #ff7918; }
