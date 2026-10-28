@@ -426,6 +426,68 @@ class BookingService
         }
     }
 
+    /**
+     * Reabre una reserva vencida sin pago: vuelve a quedar pendiente con una
+     * retención nueva, en el mismo Playroom. Si se pide otra hora, se reprograma
+     * (y se recalcula el precio) igual que al modificar una reserva. Falla si el
+     * horario ya pasó o si alguien más tomó el Playroom mientras tanto.
+     */
+    public function reactivate(Booking $booking, Carbon $startsAt, int $holdMinutes, ?int $userId = null): Booking
+    {
+        try {
+            return DB::transaction(function () use ($booking, $startsAt, $holdMinutes, $userId) {
+                Room::whereKey($booking->room_id)->lockForUpdate()->get();
+                $booking = Booking::whereKey($booking->id)->lockForUpdate()->firstOrFail();
+                $room = Room::with('category')->findOrFail($booking->room_id);
+
+                if ($booking->booking_status !== 'EXPIRADA') {
+                    throw new RoomNotAvailableException('Solo se pueden reactivar reservas vencidas.');
+                }
+                if ($startsAt->lt(now()->subMinutes(5))) {
+                    throw new RoomNotAvailableException('Ese horario ya pasó: elige una hora que todavía no haya empezado.');
+                }
+                if (! $room->isOperational()) {
+                    throw new RoomNotAvailableException("El Playroom {$room->name} no está operativa ahora mismo.");
+                }
+                $this->assertRoomEnabled($room);
+
+                $length = (int) $booking->starts_at->diffInMinutes($booking->ends_at);
+                $endsAt = $startsAt->copy()->addMinutes($length);
+                if (! $this->availabilityChecker->isAvailable($room, $startsAt, $endsAt, $booking->id)) {
+                    throw new RoomNotAvailableException("El Playroom {$room->name} ya no está disponible en ese horario. Prueba con otra hora.");
+                }
+
+                $old = $booking->toArray();
+                $changed = ! $startsAt->eq($booking->starts_at);
+                $booking->update([
+                    'booking_status' => 'PENDIENTE_PAGO',
+                    'expires_at' => now()->addMinutes($holdMinutes),
+                    'payment_reminder_sent_at' => null,
+                    'notes' => trim(($booking->notes ? $booking->notes."\n" : '').'Reactivada por recepción'.($changed ? ' con nueva hora.' : '.')),
+                ]);
+                if ($changed) {
+                    $booking = $this->rescheduleLocked($booking->fresh(), [
+                        'room' => $room,
+                        'starts_at' => $startsAt,
+                        'duration_minutes' => (int) $booking->duration_minutes,
+                        'guests_count' => (int) $booking->guests_count,
+                        'updated_by' => $userId,
+                    ]);
+                }
+                $this->paymentService->recalculateStatus($booking->fresh());
+
+                AuditLog::record($userId, 'reserva.reactivar', 'Booking', $booking->id, $old, $booking->fresh()->toArray());
+
+                return $booking->fresh();
+            }, 3);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23P01' || str_contains($e->getMessage(), 'bookings_no_overlap')) {
+                throw new RoomNotAvailableException('El Playroom acaba de ser reservado por otra persona en ese horario.');
+            }
+            throw $e;
+        }
+    }
+
     private function assertCapacity(Room $room, int $guests): void
     {
         $max = (int) $room->category->max_capacity;

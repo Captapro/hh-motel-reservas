@@ -32,6 +32,7 @@ use App\Http\Controllers\BookingFinalizeController;
 use App\Http\Controllers\BookingHoldController;
 use App\Http\Controllers\BookingPassController;
 use App\Http\Controllers\BookingPaymentInstructionsController;
+use App\Http\Controllers\BookingReactivateController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\CatalogController;
@@ -173,6 +174,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/reservas/{code}/checkin', [BookingCheckInController::class, 'store'])->name('bookings.checkin');
     Route::post('/reservas/{code}/cancelar', [BookingCancelController::class, 'store'])->name('bookings.cancel');
     Route::post('/reservas/{code}/mantener', [BookingHoldController::class, 'store'])->name('bookings.hold');
+    Route::post('/reservas/{code}/reactivar', [BookingReactivateController::class, 'store'])->name('bookings.reactivate');
     Route::delete('/reservas/{code}', [BookingDeleteController::class, 'destroy'])->middleware('role:soporte')->name('bookings.destroy');
     Route::post('/reservas/{code}/fidelizacion', [CustomerLoyaltyController::class, 'store'])->name('customers.loyalty');
     Route::post('/reservas/{code}/instrucciones-pago', [BookingPaymentInstructionsController::class, 'store'])->name('bookings.payment_instructions');

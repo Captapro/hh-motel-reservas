@@ -216,6 +216,37 @@
         @endif
     @endif
 
+    @if ($booking->booking_status === 'EXPIRADA' && ! $booking->checked_in_at)
+        @php $tzS = 'America/Santiago'; @endphp
+        <div class="card reactivate-box" style="margin-bottom:14px;border:1px solid #6b5a1e;background:#2a2410;">
+            <strong style="color:#e8c76f;">Reserva vencida: ¿el cliente quiere pagarla ahora?</strong>
+            <p style="margin:6px 0 12px;font-size:13px;color:#cdbb82;">Reactívala con los mismos datos, sin crearla de nuevo. Puedes dejar la misma hora o cambiarla; si cambia, el precio se recalcula. Después aparece el link de pago para enviárselo al cliente.</p>
+            @error('reactivar')
+                <div style="background:#3a1c1c;border:1px solid #7a2d2d;color:#f3b8b8;padding:8px 12px;border-radius:8px;margin-bottom:10px;font-size:13px;">{{ $message }}</div>
+            @enderror
+            <form method="POST" action="{{ route('bookings.reactivate', $booking->code) }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+                @csrf
+                <div>
+                    <label style="display:block;font-size:12px;color:#bbb;margin-bottom:4px;">Fecha</label>
+                    <input type="date" name="date" value="{{ old('date', $booking->starts_at->timezone($tzS)->toDateString()) }}" min="{{ now($tzS)->toDateString() }}" required>
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;color:#bbb;margin-bottom:4px;">Hora de entrada</label>
+                    <input type="time" name="time" step="900" value="{{ old('time', $booking->starts_at->timezone($tzS)->format('H:i')) }}" required>
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;color:#bbb;margin-bottom:4px;">Retener por</label>
+                    <select name="hold_minutes">
+                        @foreach ([15 => '15 minutos', 30 => '30 minutos', 60 => '1 hora'] as $min => $label)
+                            <option value="{{ $min }}" @selected((int) old('hold_minutes', 30) === $min)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="submit" style="background:#ff7918;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:700;cursor:pointer;">Reactivar reserva</button>
+            </form>
+        </div>
+    @endif
+
     @php
         $hhPayment = config('services.hh_payment');
         // Sin esto configurado (HH_BANK_* / HH_MERCADOPAGO_LINK en .env), el

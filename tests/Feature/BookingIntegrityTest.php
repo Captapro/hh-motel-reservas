@@ -69,6 +69,7 @@ class BookingIntegrityTest extends TestCase
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
             '2026_10_26_210000_create_short_stay_settings_table.php',
             '2026_10_26_220000_create_late_arrival_settings_table.php',
+            '2026_10_28_120000_add_abandon_notices_to_bookings.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
@@ -639,6 +640,64 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(0, $totals['rooms']);
         $this->assertSame(20000, (int) $totals['cash_total']);
         $this->getJson(route('rooms.pass_scans'))->assertJsonFragment(['type' => 'pago', 'review' => true]);
+    }
+
+    public function test_expired_booking_can_be_reactivated_with_same_or_new_time_and_offers_the_pay_link(): void
+    {
+        Cache::flush();
+        foreach (['2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $this->travelTo(Carbon::parse('2026-11-02 11:00'));
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 14:00'), 'origin' => 'catalogo']);
+        $booking->update(['booking_status' => 'EXPIRADA', 'expires_at' => now()->subMinutes(5)]);
+
+        // La ficha ofrece reactivar, con la hora actual de la reserva.
+        $this->get(route('reservations.show', $booking->code))->assertOk()
+            ->assertSee('Reactivar reserva')->assertSee('value="14:00"', false);
+
+        // Misma hora: vuelve a quedar pendiente con retención nueva y ofrece el link de pago.
+        $this->post(route('bookings.reactivate', $booking->code), ['date' => '2026-11-02', 'time' => '14:00', 'hold_minutes' => 30])
+            ->assertRedirect(route('reservations.show', $booking->code));
+        $fresh = $booking->fresh();
+        $this->assertSame('PENDIENTE_PAGO', $fresh->booking_status);
+        $this->assertEquals(now()->addMinutes(30)->toDateTimeString(), $fresh->expires_at->toDateTimeString());
+        $this->get(route('reservations.show', $booking->code))->assertSee(route('catalog.pay', $booking->pass_token), false);
+
+        // Vence otra vez y esta vez se reactiva con otra hora: se reprograma.
+        $fresh->update(['booking_status' => 'EXPIRADA', 'expires_at' => now()->subMinute()]);
+        $this->post(route('bookings.reactivate', $booking->code), ['date' => '2026-11-02', 'time' => '16:00', 'hold_minutes' => 15])
+            ->assertRedirect(route('reservations.show', $booking->code));
+        $moved = $booking->fresh();
+        $this->assertSame('PENDIENTE_PAGO', $moved->booking_status);
+        $this->assertSame('16:00', $moved->starts_at->format('H:i'));
+        $this->assertSame('17:00', $moved->ends_at->format('H:i'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.reactivar', 'entity_id' => $booking->id]);
+    }
+
+    public function test_reactivation_is_refused_when_the_slot_was_taken_or_the_time_already_passed(): void
+    {
+        Cache::flush();
+        $this->travelTo(Carbon::parse('2026-11-02 11:00'));
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 14:00'), 'origin' => 'catalogo']);
+        $booking->update(['booking_status' => 'EXPIRADA', 'expires_at' => now()->subMinutes(5)]);
+
+        // Otro cliente tomó el horario mientras tanto.
+        $this->booking(['starts_at' => Carbon::parse('2026-11-02 14:00'), 'customer' => Customer::create(['name' => 'Otro', 'phone_e164' => '+56922222222'])]);
+        $this->post(route('bookings.reactivate', $booking->code), ['date' => '2026-11-02', 'time' => '14:00', 'hold_minutes' => 30])
+            ->assertSessionHasErrors('reactivar');
+        $this->assertSame('EXPIRADA', $booking->fresh()->booking_status);
+
+        // Un horario que ya pasó tampoco sirve.
+        $this->post(route('bookings.reactivate', $booking->code), ['date' => '2026-11-02', 'time' => '09:00', 'hold_minutes' => 30])
+            ->assertSessionHasErrors('reactivar');
+        $this->assertSame('EXPIRADA', $booking->fresh()->booking_status);
+
+        // Una reserva activa no se "reactiva".
+        $active = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00'), 'customer' => Customer::create(['name' => 'Tercero', 'phone_e164' => '+56933333333'])]);
+        $this->post(route('bookings.reactivate', $active->code), ['date' => '2026-11-02', 'time' => '18:00', 'hold_minutes' => 30])
+            ->assertSessionHasErrors('reactivar');
     }
 
     public function test_payment_screen_offers_the_mercado_pago_link_to_send_by_whatsapp(): void
