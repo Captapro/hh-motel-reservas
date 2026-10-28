@@ -66,14 +66,14 @@
             <h2>{{ $total }} {{ $total === 1 ? 'persona' : 'personas' }} · {{ $monthName($fromMonth) }}{{ $fromMonth !== $toMonth ? ' a '.$monthName($toMonth) : '' }}</h2>
             <p class="sub" style="font-size:12.5px;">
                 <b>Visitas</b>: estadías de alojamiento en el período (titular o acompañante). <b>Gastó</b>: alojamiento de las estadías en que fue <b>titular</b> (no incluye hora extra ni extras aparte; si siempre fue acompañante sale $0).
-                <b>Antes</b>: estadías anteriores al período. Con pocos meses cargados, «antes 0» no significa que sea cliente nuevo.
+                <b>Antes del período</b>: estadías anteriores al primer mes elegido («—» si el período empieza en el primer mes cargado, porque antes no hay planillas). <b>En todo lo cargado</b>: todas sus estadías en las planillas. Con pocos meses cargados, no tener visitas antes no significa que sea cliente nuevo.
             </p>
             @if ($rows->isEmpty())
                 <p class="sub">Nadie cumple con esos filtros. Prueba con «1 o más» visitas o un período más largo.</p>
             @else
                 <div class="table-wrap">
                     <table class="table">
-                        <thead><tr><th>Persona</th><th>RUT</th><th>Visitas</th><th>Titular / acomp.</th><th>Gastó</th><th>Meses en que vino</th><th>Primera</th><th>Última</th><th>Antes</th></tr></thead>
+                        <thead><tr><th>Persona</th><th>RUT</th><th>Visitas</th><th>Titular / acomp.</th><th>Gastó</th><th>Meses en que vino</th><th>Primera</th><th>Última</th><th>Antes del período</th><th>En todo lo cargado</th></tr></thead>
                         <tbody>
                         @foreach ($rows as $p)
                             <tr>
@@ -85,7 +85,8 @@
                                 <td style="text-transform:capitalize;">{{ collect($p['months'])->map(fn ($m) => $monthName($m))->implode(', ') }}</td>
                                 <td>{{ $p['first']->format('d/m/Y') }}</td>
                                 <td>{{ $p['last']->format('d/m/Y') }}</td>
-                                <td>{{ $p['before'] }}</td>
+                                <td>{{ $fromMonth === $loaded['first'] ? '—' : $p['before'] }}</td>
+                                <td>{{ $p['total'] }}</td>
                             </tr>
                         @endforeach
                         </tbody>
