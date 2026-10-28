@@ -61,6 +61,27 @@
         @endif
     </div>
 
+    @if (auth()->user()->isAdministrador())
+        <div class="card" style="margin-bottom:18px;">
+            <h2>En las planillas históricas</h2>
+            @if ($historical)
+                <p class="sub" style="margin:0 0 8px;">Estadías anteriores al sistema que calzan con el RUT {{ $customer->rut }}. Se suman a lo que ves abajo, que es solo lo registrado en el sistema.</p>
+                <div class="client-stats" style="display:flex; gap:22px; flex-wrap:wrap;">
+                    <div><span style="display:block;color:#888;font-size:12px;">Estadías</span><b>{{ $historical['visits'] }}</b></div>
+                    <div><span style="display:block;color:#888;font-size:12px;">Como titular / acompañante</span><b>{{ $historical['as_holder'] }} / {{ $historical['as_companion'] }}</b></div>
+                    <div><span style="display:block;color:#888;font-size:12px;">Gastó como titular</span><b>${{ number_format($historical['spent'], 0, ',', '.') }}</b></div>
+                    <div><span style="display:block;color:#888;font-size:12px;">Primera / última</span><b>{{ $historical['first']->format('d/m/Y') }} / {{ $historical['last']->format('d/m/Y') }}</b></div>
+                    <div><span style="display:block;color:#888;font-size:12px;">Meses en que vino</span><b style="text-transform:capitalize;">{{ collect($historical['months'])->map(fn ($m) => \Carbon\Carbon::parse($m.'-01')->locale('es')->isoFormat('MMM YY'))->implode(', ') }}</b></div>
+                </div>
+                <p class="sub" style="margin:10px 0 0;">Gastó = solo el alojamiento de las estadías en que fue titular (sin hora extra ni extras aparte).</p>
+            @elseif (filled($customer->rut))
+                <p class="sub" style="margin:0;">No aparece en las planillas cargadas con el RUT {{ $customer->rut }}.</p>
+            @else
+                <p class="sub" style="margin:0;">Este cliente no tiene RUT cargado, así que no se puede cruzar con las planillas (ellas no traen teléfono). Agrégalo en «Editar datos del cliente» y se cruza solo.</p>
+            @endif
+        </div>
+    @endif
+
     <details style="margin-bottom:18px;">
         <summary class="link" style="cursor:pointer;">Editar datos del cliente</summary>
         <div class="card" style="margin-top:10px;">

@@ -74,7 +74,7 @@
             @else
                 <div class="table-wrap">
                     <table class="table">
-                        <thead><tr><th>Persona</th><th>RUT</th><th>Visitas</th><th>Visitas por mes</th><th>Titular / acomp.</th><th>Gastó</th><th>Meses en que vino</th><th>Primera</th><th>Última</th><th>Antes del período</th><th>En todo lo cargado</th></tr></thead>
+                        <thead><tr><th>Persona</th><th>RUT</th><th>Visitas</th><th>Visitas por mes</th><th>Titular / acomp.</th><th>Gastó</th><th>Meses en que vino</th><th>Primera</th><th>Última</th><th>Antes del período</th><th>En todo lo cargado</th><th>En el sistema</th></tr></thead>
                         <tbody>
                         @foreach ($rows as $p)
                             <tr>
@@ -89,6 +89,7 @@
                                 <td>{{ $p['last']->format('d/m/Y') }}</td>
                                 <td>{{ $fromMonth === $loaded['first'] ? '—' : $p['before'] }}</td>
                                 <td>{{ $p['total'] }}</td>
+                                <td>@if (isset($systemCustomers[$p['document']]))<a class="link" href="{{ route('admin.customers.show', $systemCustomers[$p['document']]) }}">Ver cliente</a>@else<span style="color:#888;">—</span>@endif</td>
                             </tr>
                         @endforeach
                         </tbody>

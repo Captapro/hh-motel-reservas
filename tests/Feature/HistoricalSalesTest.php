@@ -199,6 +199,19 @@ class HistoricalSalesTest extends TestCase
         $this->assertSame(25000, $summary['venta_principal']);
     }
 
+    public function test_a_customer_rut_is_crossed_with_the_sheets_in_any_format(): void
+    {
+        app(HistoricalSalesImporter::class)->import($this->file, 'planilla-2026-10', 2026);
+        $analysis = app(HistoricalCustomerAnalysis::class);
+
+        // Ana (11111111-1) tiene 2 estadías; el RUT del cliente puede venir con puntos o sin guion.
+        $found = $analysis->forDocuments(['11.111.111-1', '111111111', null, '99999999-9']);
+        $this->assertCount(1, $found);
+        $this->assertSame(2, $found['11111111-1']['visits']);
+        $this->assertSame(['2026-10'], $found['11111111-1']['months']);
+        $this->assertCount(0, $analysis->forDocuments([]));
+    }
+
     public function test_each_line_counts_in_its_own_concept(): void
     {
         $concept = fn (string $type, ?string $detail = null) => (new HistoricalSale(['sale_type' => $type, 'detail' => $detail]))->concept();

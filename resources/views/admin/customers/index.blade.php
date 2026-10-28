@@ -83,7 +83,7 @@
 
     <div class="card">
         <table>
-            <thead><tr><th>Cliente</th><th>Teléfono</th><th>Segmento</th><th>Estadías</th><th>Última visita</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>Teléfono</th><th>Segmento</th><th>Estadías</th>@if (auth()->user()->isAdministrador())<th title="Estadías de las planillas históricas que calzan por RUT">En planillas</th>@endif<th>Última visita</th></tr></thead>
             <tbody>
                 @forelse ($customers as $customer)
                     <tr>
@@ -91,10 +91,14 @@
                         <td>{{ $customer->phone_e164 }}</td>
                         <td><span class="pill pill-{{ $customer->computed_segment['type'] }}">{{ $customer->computed_segment['stars'] ? str_repeat('⭐', $customer->computed_segment['stars']).' ' : '' }}{{ strtoupper($customer->computed_segment['label']) }}</span><small style="display:block;color:#999;margin-top:3px;">{{ $customer->computed_segment['window_visits'] }} visitas{{ $customer->computed_segment['window_days'] ? ' / '.$customer->computed_segment['window_days'].' días' : '' }}</small></td>
                         <td>{{ $customer->computed_segment['total_stays'] }}</td>
+                        @if (auth()->user()->isAdministrador())
+                            @php $past = $historical[\App\Support\Rut::normalize((string) $customer->rut)] ?? null; @endphp
+                            <td>@if ($past)<b>{{ $past['visits'] }}</b> <span style="color:#888;font-size:12px;">(hasta {{ $past['last']->format('d/m/Y') }})</span>@else<span style="color:#666;">{{ filled($customer->rut) ? '0' : 'sin RUT' }}</span>@endif</td>
+                        @endif
                         <td>{{ $customer->computed_segment['last_visit_at']?->timezone('America/Santiago')->format('d/m/Y') ?? '—' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" style="color:#666;">Sin clientes que coincidan.</td></tr>
+                    <tr><td colspan="7" style="color:#666;">Sin clientes que coincidan.</td></tr>
                 @endforelse
             </tbody>
         </table>

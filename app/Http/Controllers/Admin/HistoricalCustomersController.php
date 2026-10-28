@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Services\Historical\HistoricalCustomerAnalysis;
+use App\Support\Rut;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -87,6 +89,8 @@ class HistoricalCustomersController extends Controller
             'stats' => $stats,
             'total' => $rows->count(),
             'rows' => $rows->take(self::LIMIT)->values(),
+            'systemCustomers' => Customer::whereNotNull('rut')->where('rut', '!=', '')->get(['id', 'rut'])
+                ->mapWithKeys(fn (Customer $c) => [Rut::normalize($c->rut) => $c->id]),
             'limit' => self::LIMIT,
             'monthName' => $monthName,
             'chips' => [

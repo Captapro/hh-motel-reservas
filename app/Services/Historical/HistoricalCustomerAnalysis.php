@@ -3,6 +3,7 @@
 namespace App\Services\Historical;
 
 use App\Models\HistoricalGuest;
+use App\Support\Rut;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -55,11 +56,42 @@ class HistoricalCustomerAnalysis
         })->filter()->values();
     }
 
+    /**
+     * Lo que dicen las planillas de cada RUT dado (por ejemplo el de un cliente del sistema).
+     * Solo trae a quienes figuran; la llave es el RUT normalizado («12345678-9»).
+     *
+     * @param  iterable<string|null>  $ruts
+     * @return Collection<string, array<string, mixed>>
+     */
+    public function forDocuments(iterable $ruts): Collection
+    {
+        $wanted = collect($ruts)->map(fn ($r) => Rut::normalize((string) $r))->filter()->unique()->values();
+        if ($wanted->isEmpty()) {
+            return collect();
+        }
+
+        return $this->visits($wanted->all())->groupBy('doc')->map(function (Collection $g) {
+            $holder = $g->where('holder', true);
+
+            return [
+                'visits' => $g->count(),
+                'as_holder' => $holder->count(),
+                'as_companion' => $g->count() - $holder->count(),
+                'spent' => (int) $holder->sum('amount'),
+                'first' => $g->min('day'),
+                'last' => $g->max('day'),
+                'months' => $g->map(fn (array $v) => $v['day']->format('Y-m'))->unique()->sort()->values()->all(),
+                'name' => $g->sortBy('day')->last()['name'],
+            ];
+        });
+    }
+
     /** Estadías de alojamiento con RUT válido: una por persona y estadía (si figura dos veces, vale como titular). */
-    private function visits(): Collection
+    private function visits(?array $documents = null): Collection
     {
         return HistoricalGuest::query()
             ->where('document_kind', 'rut')
+            ->when($documents !== null, fn ($q) => $q->whereIn('historical_guests.document', $documents))
             ->join('historical_sales', 'historical_sales.id', '=', 'historical_guests.historical_sale_id')
             ->where('historical_sales.sale_type', 'ALOJAMIENTO')
             ->orderBy('historical_sales.sold_on')

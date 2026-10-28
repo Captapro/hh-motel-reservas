@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\CustomerSegmentRule;
+use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Integrations\GhlClient;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -47,7 +48,12 @@ class CustomerController extends Controller
             $customers = $customers->filter(fn (Customer $c) => $c->computed_segment['type'] === $segmentFilter)->values();
         }
 
-        return view('admin.customers.index', ['customers' => $customers, 'query' => $query, 'segmentFilter' => $segmentFilter, 'segmentRules' => CustomerSegmentRule::orderBy('display_order')->get()]);
+        // Cruce con las planillas históricas por RUT (solo administrador): solo aplica a clientes con RUT cargado.
+        $historical = $request->user()->isAdministrador()
+            ? app(HistoricalCustomerAnalysis::class)->forDocuments($customers->pluck('rut'))
+            : collect();
+
+        return view('admin.customers.index', ['historical' => $historical, 'customers' => $customers, 'query' => $query, 'segmentFilter' => $segmentFilter, 'segmentRules' => CustomerSegmentRule::orderBy('display_order')->get()]);
     }
 
     public function updateRules(Request $request): RedirectResponse
@@ -146,7 +152,7 @@ class CustomerController extends Controller
         return back()->with('status', "Lista negra procesada: {$count} clientes encontrados.");
     }
 
-    public function show(Customer $customer): View
+    public function show(Request $request, Customer $customer): View
     {
         $now = now();
 
@@ -167,6 +173,9 @@ class CustomerController extends Controller
             'customer' => $customer,
             'segment' => $customer->segment(),
             'monthlyVisits' => $customer->monthlyVisits(),
+            'historical' => $request->user()->isAdministrador() && filled($customer->rut)
+                ? app(HistoricalCustomerAnalysis::class)->forDocuments([$customer->rut])->first()
+                : null,
             'upcoming' => $upcoming,
             'past' => $past,
             'now' => $now,
