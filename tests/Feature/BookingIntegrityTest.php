@@ -733,6 +733,10 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(5, HistoricalSale::count());
         $this->get(route('admin.historical.index'))->assertSee('planilla-2026-10');
 
+        // Detalle por día: el mes día a día, y al elegir un día cada una de sus ventas.
+        $this->get(route('admin.historical.sales', ['mes' => '2026-10']))->assertOk()->assertSee('02/10')->assertSee('Total del mes')->assertSee('$139.000');
+        $this->get(route('admin.historical.sales', ['mes' => '2026-10', 'dia' => '2026-10-02']))->assertOk()->assertSee('Ventas del')->assertSee('R0001')->assertSee('Boleta 900')->assertSee('Estudiantes $5000 OFF');
+
         // Quitarla borra sus ventas y a las personas ligadas.
         $this->delete(route('admin.historical.destroy'), ['fuente' => 'planilla-2026-10'])->assertRedirect();
         $this->assertSame(0, HistoricalSale::count());

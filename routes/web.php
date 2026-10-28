@@ -322,6 +322,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::delete('/turnos/{shift}', [ShiftController::class, 'destroy'])->name('shifts.destroy');
 
         Route::get('/historico', [HistoricalImportController::class, 'index'])->middleware('role:soporte')->name('historical.index');
+        Route::get('/historico/ventas', [HistoricalImportController::class, 'sales'])->middleware('role:soporte')->name('historical.sales');
         Route::post('/historico', [HistoricalImportController::class, 'store'])->middleware('role:soporte')->name('historical.store');
         Route::delete('/historico', [HistoricalImportController::class, 'destroy'])->middleware('role:soporte')->name('historical.destroy');
 

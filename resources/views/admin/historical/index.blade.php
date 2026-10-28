@@ -76,7 +76,7 @@
                     <thead><tr><th>Mes</th><th>Estadías</th><th>Venta total</th></tr></thead>
                     <tbody>
                     @foreach ($months as $m)
-                        <tr><td>{{ \Carbon\Carbon::parse($m['month'].'-01')->locale('es')->isoFormat('MMMM YYYY') }}</td><td>{{ $m['stays'] }}</td><td>${{ number_format($m['total'], 0, ',', '.') }}</td></tr>
+                        <tr><td><a href="{{ route('admin.historical.sales', ['mes' => $m['month']]) }}" style="color:#ff9a4d;">{{ \Carbon\Carbon::parse($m['month'].'-01')->locale('es')->isoFormat('MMMM YYYY') }} → ver por día</a></td><td>{{ $m['stays'] }}</td><td>${{ number_format($m['total'], 0, ',', '.') }}</td></tr>
                     @endforeach
                     </tbody>
                 </table>

@@ -33,6 +33,55 @@ class HistoricalImportController extends Controller
         ]);
     }
 
+    /** Detalle de lo cargado: un mes día por día y, al elegir un día, cada una de sus ventas. */
+    public function sales(Request $request): View
+    {
+        $available = HistoricalSale::query()->get(['sold_on'])->map(fn (HistoricalSale $s) => $s->sold_on->format('Y-m'))->unique()->sort()->values();
+        $month = (string) $request->query('mes', $available->last() ?? now()->format('Y-m'));
+        if (! preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $month = (string) ($available->last() ?? now()->format('Y-m'));
+        }
+        $from = Carbon::parse($month.'-01')->startOfMonth();
+        $lines = HistoricalSale::query()->whereBetween('sold_on', [$from->toDateString(), $from->copy()->endOfMonth()->toDateString()])->get();
+
+        $days = $lines->groupBy(fn (HistoricalSale $s) => $s->sold_on->toDateString())->map(function (Collection $g, string $date) {
+            $stays = $g->where('sale_type', 'ALOJAMIENTO');
+
+            return [
+                'date' => $date,
+                'weekday' => Carbon::parse($date)->locale('es')->isoFormat('dddd'),
+                'stays' => $stays->count(),
+                'lodging' => (int) $stays->sum(fn (HistoricalSale $s) => $s->total()),
+                'others' => (int) $g->where('sale_type', '!=', 'ALOJAMIENTO')->sum(fn (HistoricalSale $s) => $s->total()),
+                'total' => (int) $g->sum(fn (HistoricalSale $s) => $s->total()),
+                'cash' => (int) $g->where('payment_method', 'efectivo')->sum(fn (HistoricalSale $s) => $s->total()),
+                'card' => (int) $g->where('payment_method', 'tarjeta')->sum(fn (HistoricalSale $s) => $s->total()),
+                'transfer' => (int) $g->where('payment_method', 'transferencia')->sum(fn (HistoricalSale $s) => $s->total()),
+            ];
+        })->sortKeys()->values();
+
+        $day = (string) $request->query('dia', '');
+        $detail = preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)
+            ? $lines->filter(fn (HistoricalSale $s) => $s->sold_on->toDateString() === $day)->sortBy(['starts_time', 'source_row'])->values()->load('guests')
+            : collect();
+
+        return view('admin.historical.sales', [
+            'available' => $available,
+            'month' => $month,
+            'days' => $days,
+            'day' => $detail->isNotEmpty() ? $day : null,
+            'detail' => $detail,
+            'byCategory' => $this->breakdown($lines->where('sale_type', 'ALOJAMIENTO'), fn (HistoricalSale $s) => $s->category ?: 'Sin dato'),
+            'byPayment' => $this->breakdown($lines, fn (HistoricalSale $s) => $s->payment_method ?: 'sin dato'),
+            'byShift' => $this->breakdown($lines->where('sale_type', 'ALOJAMIENTO'), fn (HistoricalSale $s) => $s->shift ?: 'Sin dato'),
+        ]);
+    }
+
+    private function breakdown(Collection $rows, callable $key): Collection
+    {
+        return $rows->groupBy($key)->map(fn (Collection $g, string $k) => ['label' => $k, 'count' => $g->count(), 'total' => (int) $g->sum(fn (HistoricalSale $s) => $s->total())])->sortByDesc('total')->values();
+    }
+
     /** Estadías y venta por mes de lo cargado. */
     private function months(): Collection
     {
