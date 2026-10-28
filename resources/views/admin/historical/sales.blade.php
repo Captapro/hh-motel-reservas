@@ -29,7 +29,7 @@
                 <thead><tr><th>Día</th><th>Estadías</th><th>Alojamiento</th><th>Hora extra</th><th>Persona adicional</th><th>Otros servicios</th><th>Extras</th><th>Pago fraccionado</th><th>Total</th><th>Efectivo</th><th>Tarjeta</th><th>Transferencia</th></tr></thead>
                 <tbody>
                 @foreach ($days as $d)
-                    <tr @if ($d['date'] === $day) style="background:#2a2410;" @endif>
+                    <tr @if ($d['date'] === $day) style="background:#fff0d9;" @endif>
                         <td><a href="{{ route('admin.historical.sales', ['mes' => $month, 'dia' => $d['date']]) }}#detalle" style="color:#ff9a4d;">{{ \Carbon\Carbon::parse($d['date'])->format('d/m') }} · {{ $d['weekday'] }}</a></td>
                         <td>{{ $d['stays'] }}</td><td>{{ $money($d['lodging']) }}</td><td>{{ $money($d['extra_hour']) }}</td><td>{{ $money($d['extra_person']) }}</td><td>{{ $money($d['services']) }}</td><td>{{ $money($d['extras']) }}</td><td>{{ $money($d['split']) }}</td>
                         <td><b>{{ $money($d['total']) }}</b></td><td>{{ $money($d['cash']) }}</td><td>{{ $money($d['card']) }}</td><td>{{ $money($d['transfer']) }}</td>
