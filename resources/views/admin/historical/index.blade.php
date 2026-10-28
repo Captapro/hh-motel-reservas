@@ -84,6 +84,7 @@
             </div>
             <div class="card">
                 <h2>Personas que más vuelven</h2>
+                <p style="margin:0 0 6px;"><a class="link" href="{{ route('admin.historical.customers') }}">Ver todos, con filtros por mes → Clientes que vuelven</a></p>
                 <p class="sub" style="font-size:12.5px;">Contadas por RUT válido, con 2 o más estadías. "Gastó" es lo pagado en las estadías donde figura como titular.</p>
                 @if ($returning->isEmpty())
                     <p class="sub">Todavía no hay personas con más de una estadía en lo cargado.</p>

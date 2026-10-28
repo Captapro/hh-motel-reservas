@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\HistoricalGuest;
 use App\Models\HistoricalSale;
 use App\Services\Analyst\HistoricalDataService;
+use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Historical\HistoricalSalesImporter;
 use Carbon\Carbon;
 use Tests\TestCase;
@@ -126,6 +127,25 @@ class HistoricalSalesTest extends TestCase
 
         $this->assertSame(['EXTRA CORE' => 1], collect($summary['por_tipo'])->map->lineas->all());
         $this->assertSame(17500, $summary['venta_principal']);
+    }
+
+    public function test_returning_people_can_be_filtered_by_period(): void
+    {
+        $analysis = app(HistoricalCustomerAnalysis::class);
+        $this->assertNull($analysis->loadedMonths());
+
+        app(HistoricalSalesImporter::class)->import($this->file, 'planilla-2026-10', 2026);
+        $this->assertSame(['first' => '2026-10', 'last' => '2026-10', 'all' => ['2026-10']], $analysis->loadedMonths());
+
+        $people = $analysis->people(Carbon::parse('2026-10-01'), Carbon::parse('2026-10-31'))->keyBy('document');
+        $this->assertCount(2, $people);
+        $this->assertSame(2, $people->max('visits'));
+        $this->assertSame(0, $people->sum('before'));
+        $this->assertSame(['2026-10'], $people->first()['months']);
+
+        // Un período sin planillas no trae a nadie; uno posterior ve las estadías de octubre como «antes».
+        $this->assertCount(0, $analysis->people(Carbon::parse('2026-09-01'), Carbon::parse('2026-09-30')));
+        $this->assertCount(0, $analysis->people(Carbon::parse('2026-11-01'), Carbon::parse('2026-11-30')));
     }
 
     public function test_each_line_counts_in_its_own_concept(): void
