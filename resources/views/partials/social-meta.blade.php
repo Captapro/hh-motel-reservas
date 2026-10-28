@@ -1,6 +1,6 @@
 @php
     $shareTitle = $shareTitle ?? 'HH Motel — Playrooms Santiago';
-    $shareDescription = $shareDescription ?? 'Reserva tu playroom en HH Motel Santiago: elige tu habitación, horario y duración, y confirma en línea.';
+    $shareDescription = $shareDescription ?? 'Reserva tu playroom en HH Motel Santiago: elige tu Playroom, horario y duración, y confirma en línea.';
     $shareImage = $shareImage ?? asset('images/og-hh-motel.png');
 @endphp
 <meta name="description" content="{{ $shareDescription }}">

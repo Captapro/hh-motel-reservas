@@ -106,7 +106,7 @@ class CatalogController extends Controller
         return view('catalog.index', [
             'categories' => $categories,
             'coupons' => $coupons,
-            'whatsappUrl' => 'https://wa.me/'.self::WHATSAPP_NUMBER.'?text='.rawurlencode('Hola! Quiero reservar una habitación en HH.'),
+            'whatsappUrl' => 'https://wa.me/'.self::WHATSAPP_NUMBER.'?text='.rawurlencode('Hola! Quiero reservar un Playroom en HH.'),
         ]);
     }
 

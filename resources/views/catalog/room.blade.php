@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{{ $room->name }} — HH Motel</title>
-    @include('partials.social-meta', ['shareTitle' => $room->name.' — HH Motel Santiago', 'shareDescription' => 'Conoce la habitación '.$room->name.' de HH Motel Santiago y reserva en línea.', 'shareImage' => $photos->isNotEmpty() ? url($photos->first()) : null])
+    @include('partials.social-meta', ['shareTitle' => $room->name.' — HH Motel Santiago', 'shareDescription' => 'Conoce el Playroom '.$room->name.' de HH Motel Santiago y reserva en línea.', 'shareImage' => $photos->isNotEmpty() ? url($photos->first()) : null])
     @include('catalog._app-head')
     <style>
         :root {
@@ -127,7 +127,7 @@
                             <span class="new">${{ number_format($offer['offerPrice'], 0, ',', '.') }}</span>
                             @if ($offer['savePct'] > 0)<span class="save">-{{ $offer['savePct'] }}%</span>@endif
                         </div>
-                        <small>{{ $offer['name'] }}{{ $offer['durationLabel'] ? ' · '.$offer['durationLabel'] : '' }} — precio ya reflejado al reservar esta habitación.</small>
+                        <small>{{ $offer['name'] }}{{ $offer['durationLabel'] ? ' · '.$offer['durationLabel'] : '' }} — precio ya reflejado al reservar este Playroom.</small>
                     </div>
                 @endif
 
@@ -148,7 +148,7 @@
                 @endif
 
                 @if ($equipment->isNotEmpty())
-                    <div class="equip-label">Equipamiento de esta habitación</div>
+                    <div class="equip-label">Equipamiento de este Playroom</div>
                     <div class="features equip-features">
                         @foreach ($equipment as $item)
                             <span>{{ $item->icon }} {{ $item->name }}</span>

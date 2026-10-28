@@ -44,7 +44,7 @@
 
         <div class="card">
             <div class="row"><span>Cliente</span><b>{{ $booking->customer->name }}</b></div>
-            <div class="row"><span>Habitación</span><b>{{ $booking->room->name }}</b></div>
+            <div class="row"><span>Playroom</span><b>{{ $booking->room->name }}</b></div>
             <div class="row"><span>Horario</span><b>{{ $booking->starts_at->timezone($tz)->format('d/m H:i') }} — {{ $booking->ends_at->timezone($tz)->format('H:i') }}</b></div>
             <div class="row"><span>Personas</span><b>{{ $booking->guests_count }}</b></div>
             @if ($valid)

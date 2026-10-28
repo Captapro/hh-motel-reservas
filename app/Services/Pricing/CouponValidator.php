@@ -46,7 +46,7 @@ class CouponValidator
         }
 
         if (! $coupon->appliesToRoom($room)) {
-            throw new InvalidCouponException('Este cupón no aplica a esta habitación.');
+            throw new InvalidCouponException('Este cupón no aplica a este Playroom.');
         }
 
         if ($coupon->min_amount && $priceOriginal < $coupon->min_amount) {

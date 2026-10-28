@@ -81,7 +81,7 @@ class BookingService
         }
 
         if (! $room->isOperational()) {
-            throw new RoomNotAvailableException("La habitación {$room->name} no está operativa ahora mismo.");
+            throw new RoomNotAvailableException("El Playroom {$room->name} no está operativa ahora mismo.");
         }
 
         $this->assertRoomEnabled($room);
@@ -112,7 +112,7 @@ class BookingService
         Booking::releaseExpired();
 
         if (! $this->availabilityChecker->isAvailable($room, $startsAt, $endsAt)) {
-            throw new RoomNotAvailableException("La habitación {$room->name} ya no está disponible en ese horario.");
+            throw new RoomNotAvailableException("El Playroom {$room->name} ya no está disponible en ese horario.");
         }
 
         $pricing = $short
@@ -218,7 +218,7 @@ class BookingService
             } catch (QueryException $e) {
                 // SQLSTATE 23P01 = exclusion_violation (choque con bookings_no_overlap)
                 if ($e->getCode() === '23P01' || str_contains($e->getMessage(), 'bookings_no_overlap')) {
-                    throw new RoomNotAvailableException("La habitación {$room->name} acaba de ser reservada por otra persona en ese horario.");
+                    throw new RoomNotAvailableException("El Playroom {$room->name} acaba de ser reservada por otra persona en ese horario.");
                 }
                 // SQLSTATE 23505 = unique_violation -- dos reservas leyeron el
                 // mismo contador de código en el mismo instante.
@@ -306,7 +306,7 @@ class BookingService
         }
 
         if (! $room->isOperational()) {
-            throw new RoomNotAvailableException("La habitación {$room->name} no está operativa ahora mismo.");
+            throw new RoomNotAvailableException("El Playroom {$room->name} no está operativa ahora mismo.");
         }
 
         $this->assertRoomEnabled($room);
@@ -315,11 +315,11 @@ class BookingService
         $occupancyStartsAt = $booking->checked_in_at && $booking->checked_in_at->lt($startsAt)
             ? $booking->checked_in_at : $startsAt;
         if (! $this->availabilityChecker->isAvailable($room, $occupancyStartsAt, $endsAt, $booking->id)) {
-            throw new RoomNotAvailableException("La habitación {$room->name} no está disponible en ese horario.");
+            throw new RoomNotAvailableException("El Playroom {$room->name} no está disponible en ese horario.");
         }
 
         if ($booking->checked_in_at && $this->availabilityChecker->hasGuestInside($room, $booking->id)) {
-            throw new RoomNotAvailableException('La habitación destino todavía tiene un huésped sin check-out.');
+            throw new RoomNotAvailableException('El Playroom destino todavía tiene un huésped sin check-out.');
         }
 
         // Al cambiar solo personas conservamos la base contratada, incluso
@@ -420,7 +420,7 @@ class BookingService
             });
         } catch (QueryException $e) {
             if ($e->getCode() === '23P01' || str_contains($e->getMessage(), 'bookings_no_overlap')) {
-                throw new RoomNotAvailableException("La habitación {$room->name} acaba de ser reservada por otra persona en ese horario.");
+                throw new RoomNotAvailableException("El Playroom {$room->name} acaba de ser reservada por otra persona en ese horario.");
             }
             throw $e;
         }
@@ -430,17 +430,17 @@ class BookingService
     {
         $max = (int) $room->category->max_capacity;
         if ($max > 0 && $guests > $max) {
-            throw new RoomNotAvailableException("La habitación {$room->name} admite como máximo {$max} personas (se pidieron {$guests}).");
+            throw new RoomNotAvailableException("El Playroom {$room->name} admite como máximo {$max} personas (se pidieron {$guests}).");
         }
     }
 
     private function assertRoomEnabled(Room $room): void
     {
         if (! $room->category->is_active) {
-            throw new RoomNotAvailableException('La categoría de esta habitación está deshabilitada.');
+            throw new RoomNotAvailableException('La categoría de este Playroom está deshabilitada.');
         }
         if (! $room->isFloorWingEnabled(OperationalSetting::current())) {
-            throw new RoomNotAvailableException('El piso o ala de esta habitación está deshabilitado.');
+            throw new RoomNotAvailableException('El piso o ala de este Playroom está deshabilitado.');
         }
     }
 }

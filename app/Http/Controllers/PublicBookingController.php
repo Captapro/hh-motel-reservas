@@ -168,7 +168,7 @@ class PublicBookingController extends Controller
             $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules, $short);
 
             if (! $room) {
-                return back()->withInput()->withErrors(['duration_minutes' => 'No hay habitaciones libres de ese tipo para ese horario — prueba otra fecha, hora o duración.']);
+                return back()->withInput()->withErrors(['duration_minutes' => 'No hay Playrooms libres de ese tipo para ese horario — prueba otra fecha, hora o duración.']);
             }
 
             $phone = Phone::toE164($validated['phone']);

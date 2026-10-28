@@ -1,7 +1,7 @@
 @php
     $tabOn = $tabOn ?? 'home';
     $tabHasOffers = $tabHasOffers ?? false;
-    $tabWa = 'https://wa.me/'.\App\Http\Controllers\CatalogController::WHATSAPP_NUMBER.'?text='.rawurlencode('Hola! Quiero reservar una habitación en HH.');
+    $tabWa = 'https://wa.me/'.\App\Http\Controllers\CatalogController::WHATSAPP_NUMBER.'?text='.rawurlencode('Hola! Quiero reservar un Playroom en HH.');
 @endphp
 <nav class="tab-bar" aria-label="Navegación">
     <div class="tab-bar-in">

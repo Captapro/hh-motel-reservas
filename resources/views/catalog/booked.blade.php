@@ -78,7 +78,7 @@
         @if ($expired)
             <div class="check" style="background:#3a1c1c; color:#f3b8b8;">✕</div>
             <h1>Reserva vencida</h1>
-            <p class="sub">No recibimos el pago a tiempo y la habitación se liberó.</p>
+            <p class="sub">No recibimos el pago a tiempo y el Playroom se liberó.</p>
             <div class="next-steps" style="background:#3a1c1c; border-color:#7a2d2d; color:#f3b8b8;">Puedes hacer una nueva reserva cuando quieras: <a href="{{ route('catalog.reserve') }}" style="color:#ffd699;">reservar de nuevo →</a></div>
         @elseif ($confirmed)
             <div class="check">✓</div>
@@ -87,7 +87,7 @@
         @else
             <div class="check" style="background:#3a2a12; color:#ffd699;">⏳</div>
             <h1>Falta un paso: paga tu reserva</h1>
-            <p class="sub">Tu habitación está apartada. Se confirma apenas se registre el pago.</p>
+            <p class="sub">Tu Playroom está apartado. Se confirma apenas se registre el pago.</p>
         @endif
 
         @if (session('warning'))
@@ -102,7 +102,7 @@
         @endif
 
         @if ($payFirst && ! $waitingMp)
-            {{-- Lo primero: pagar antes de que se libere la habitación. --}}
+            {{-- Lo primero: pagar antes de que se libere el Playroom. --}}
             <div class="pay-hero">
                 @if ($holdOpen)
                     <div class="pay-timer">
@@ -139,7 +139,7 @@
         <div class="card">
             <div class="row"><span class="muted">Código</span><span class="code">{{ $booking->code }}</span></div>
             <div class="row"><span class="muted">Estado</span><span class="status-badge" @if ($confirmed) style="background:#1c3a2a; color:#6fd39a; border-color:#2f6b45;" @endif>{{ $expired ? 'Vencida' : ($confirmed ? 'Confirmada' : 'Pendiente de pago') }}</span></div>
-            <div class="row"><span class="muted">Habitación</span><span>{{ $booking->room->name }} · {{ $booking->room->category->name }}</span></div>
+            <div class="row"><span class="muted">Playroom</span><span>{{ $booking->room->name }} · {{ $booking->room->category->name }}</span></div>
             <div class="row"><span class="muted">Fecha</span><span>{{ $booking->starts_at->timezone('America/Santiago')->locale('es')->isoFormat('D [de] MMMM, HH:mm') }}</span></div>
             @if ($booking->short_stay)
                 <div class="row"><span class="muted">Salida</span><span>{{ $booking->ends_at->timezone('America/Santiago')->format('H:i') }} (hora de cierre · estadía corta)</span></div>
@@ -198,7 +198,7 @@
                     <li>{{ $booking->balanceDue() > 0 ? 'Tu reserva está confirmada. Queda un saldo de '.$amount.' por pagar al llegar al motel.' : 'Tu pago está registrado y tu reserva está confirmada.' }}</li>
                     <li>Muestra el código QR o el código {{ $booking->code }} en recepción al llegar.</li>
                 @elseif ($holdOpen)
-                    <li>Paga antes de las {{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}; si no, la habitación se libera.</li>
+                    <li>Paga antes de las {{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}; si no, el Playroom se libera.</li>
                     <li>Apenas se registre tu pago, la reserva queda confirmada y aparece tu código QR.</li>
                 @else
                     <li>Esta reserva queda pendiente hasta que se registre tu pago.</li>

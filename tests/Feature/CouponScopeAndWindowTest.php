@@ -106,7 +106,7 @@ class CouponScopeAndWindowTest extends TestCase
         // La otra habitación de la MISMA categoría no -- el alcance es por
         // habitación puntual, no por categoría.
         $this->expectException(InvalidCouponException::class);
-        $this->expectExceptionMessage('no aplica a esta habitación');
+        $this->expectExceptionMessage('no aplica a este Playroom');
         $validator->validate($offer, $this->roomB, $now, 60, null, 20000);
     }
 }
