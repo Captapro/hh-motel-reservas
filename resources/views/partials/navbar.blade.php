@@ -101,7 +101,7 @@
             @endif
         @endauth
     </div>
-    @if (request()->routeIs('admin.*') && auth()->user()?->isAdministrador())
+    @if (request()->routeIs('admin.*') && ! request()->routeIs('admin.analytics.*') && auth()->user()?->isAdministrador())
         {{-- Solo configuraciones generales acá, agrupadas por tema. Clientes,
              Analytics y Personal/Turnos ya tienen su propio ícono en el riel
              izquierdo -- repetirlos acá era puro ruido. --}}
