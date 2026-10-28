@@ -67,4 +67,36 @@
             <p class="sub" style="font-size:12px;">Los nombres y RUT solo los ve soporte. El Analista de IA nunca los recibe: solo cuántas personas distintas hay y cuántas volvieron.</p>
         </div>
     </div>
+
+    @if ($months->isNotEmpty())
+        <div class="cols cols-2" style="margin-top:18px;">
+            <div class="card">
+                <h2>Por mes</h2>
+                <table class="table">
+                    <thead><tr><th>Mes</th><th>Estadías</th><th>Venta total</th></tr></thead>
+                    <tbody>
+                    @foreach ($months as $m)
+                        <tr><td>{{ \Carbon\Carbon::parse($m['month'].'-01')->locale('es')->isoFormat('MMMM YYYY') }}</td><td>{{ $m['stays'] }}</td><td>${{ number_format($m['total'], 0, ',', '.') }}</td></tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div class="card">
+                <h2>Personas que más vuelven</h2>
+                <p class="sub" style="font-size:12.5px;">Contadas por RUT válido, con 2 o más estadías. "Gastó" es lo pagado en las estadías donde figura como titular.</p>
+                @if ($returning->isEmpty())
+                    <p class="sub">Todavía no hay personas con más de una estadía en lo cargado.</p>
+                @else
+                    <table class="table">
+                        <thead><tr><th>Persona</th><th>RUT</th><th>Veces</th><th>Gastó</th><th>Última</th></tr></thead>
+                        <tbody>
+                        @foreach ($returning as $p)
+                            <tr><td>{{ $p['name'] }}</td><td>{{ $p['document'] }}</td><td>{{ $p['visits'] }}</td><td>${{ number_format($p['spent'], 0, ',', '.') }}</td><td>{{ $p['last'] }}</td></tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+    @endif
 @endsection
