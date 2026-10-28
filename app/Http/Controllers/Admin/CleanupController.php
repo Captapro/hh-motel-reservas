@@ -27,8 +27,8 @@ class CleanupController extends Controller
         'ventas' => ['Reservas, pagos y ventas', 'Todas las reservas con sus pagos, consumos y acompañantes: salen de Ventas, del Resumen mensual y de la Caja del día. El stock de lo consumido vuelve al inventario. Con fecha, solo las reservas que empiezan antes de ese día.'],
         'caja' => ['Movimientos manuales de caja', 'Los ingresos y egresos que se anotaron a mano en Caja.'],
         'clientes' => ['Clientes sin ninguna reserva', 'Contactos que no tienen reservas (por ejemplo, después de borrar las reservas de prueba). No borra clientes con historial.'],
-        'aseo' => ['Aseo y rondas de mucamas', 'Aseos reportados y confirmados, visitas por QR, rondas de turno y cambios de estado de habitaciones. Es lo que alimenta Operaciones → Aseo del día y la actividad de mucamas.'],
-        'inspecciones' => ['Inspecciones y mantención', 'Las revisiones de habitación y los avisos de mantención pendientes.'],
+        'aseo' => ['Aseo y rondas de mucamas', 'Aseos reportados y confirmados, visitas por QR, rondas de turno y cambios de estado de Playrooms. Es lo que alimenta Operaciones → Aseo del día y la actividad de mucamas.'],
+        'inspecciones' => ['Inspecciones y mantención', 'Las revisiones de Playroom y los avisos de mantención pendientes.'],
         'turnos' => ['Entradas y salidas del personal', 'El registro de horas (cada inicio y cierre de sesión), usado para el cálculo de horas.'],
         'auditoria' => ['Todo el registro de auditoría', 'Todas las acciones registradas (reservas, pagos, cambios de ajustes). Quita la trazabilidad de lo hecho hasta hoy; úsalo solo si estás empezando de cero.'],
     ];

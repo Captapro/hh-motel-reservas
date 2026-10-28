@@ -112,7 +112,7 @@
                                                                     @endforeach
                                                                 </div>
                                                             @else
-                                                                <div style="margin-top:4px;color:#888;">Sin habitaciones asignadas</div>
+                                                                <div style="margin-top:4px;color:#888;">Sin Playrooms asignados</div>
                                                             @endif
                                                         </div>
                                                         <form method="POST" action="{{ route('admin.furniture.items.update', $item) }}" class="pop-grid">
@@ -138,7 +138,7 @@
                                                                     <button class="danger-btn" type="submit">Eliminar elemento</button>
                                                                 </form>
                                                             @else
-                                                                <small style="color:#888;">Está asignado a una habitación y no se puede eliminar.</small>
+                                                                <small style="color:#888;">Está asignado a un Playroom y no se puede eliminar.</small>
                                                             @endif
                                                         </div>
                                                     </div>
@@ -175,7 +175,7 @@
                 @endforeach
             </div>
         @else
-            <p class="sub" style="margin-top:10px;">Todavía no hay mobiliario asignado a habitaciones.</p>
+            <p class="sub" style="margin-top:10px;">Todavía no hay mobiliario asignado a Playrooms.</p>
         @endif
     </details>
 @endsection

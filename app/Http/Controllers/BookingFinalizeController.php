@@ -41,8 +41,8 @@ class BookingFinalizeController extends Controller
             'combo_quantities' => ['nullable', 'array'],
             'combo_quantities.*' => ['nullable', 'integer', 'min:0', 'max:20'],
         ], [
-            'confirm_room_checked.required' => 'Tienes que confirmar que revisaste la habitación antes de cerrar la reserva.',
-            'confirm_room_checked.accepted' => 'Tienes que confirmar que revisaste la habitación antes de cerrar la reserva.',
+            'confirm_room_checked.required' => 'Tienes que confirmar que revisaste el Playroom antes de cerrar la reserva.',
+            'confirm_room_checked.accepted' => 'Tienes que confirmar que revisaste el Playroom antes de cerrar la reserva.',
         ]);
 
         try {
@@ -90,7 +90,7 @@ class BookingFinalizeController extends Controller
                 }
 
                 $checkedOutAt = $booking->checked_out_at ?? now();
-                // Si el huésped se va antes de la hora reservada, la habitación tiene
+                // Si el huésped se va antes de la hora reservada, el Playroom tiene
                 // que quedar libre desde ese momento real — no desde la hora original
                 // — para que el chequeo de disponibilidad y la restricción de la base
                 // de datos dejen de bloquear ese tramo ya desocupado.
@@ -111,7 +111,7 @@ class BookingFinalizeController extends Controller
                 ]);
                 AuditLog::record(auth()->id(), 'reserva.finalizar', 'Booking', $booking->id, $old, $booking->fresh()->only(['booking_status', 'consumption_offered_at', 'checked_out_at', 'starts_at', 'ends_at']));
 
-                // La habitación queda "en aseo" (fuera de disponibles) hasta que
+                // El Playroom queda "en aseo" (fuera de disponibles) hasta que
                 // recepción la reactive a mano — sin cronómetro: a veces no hay
                 // mucama y la pieza queda sin hacer hasta el otro día.
                 $room = $booking->room;

@@ -21,7 +21,7 @@
 
 <div class="sd-sec">Estadía</div>
 <dl class="sd-dl">
-    <dt>Habitación</dt><dd>{{ $booking->room->name }} · {{ $booking->room->category->name }}</dd>
+    <dt>Playroom</dt><dd>{{ $booking->room->name }} · {{ $booking->room->category->name }}</dd>
     <dt>Fecha</dt><dd>{{ $booking->starts_at->timezone($tz)->locale('es')->isoFormat('ddd D [de] MMM YYYY') }}</dd>
     <dt>Horario</dt><dd>{{ $booking->starts_at->timezone($tz)->format('H:i') }} — {{ $booking->ends_at->timezone($tz)->format('H:i') }} ({{ $dur }})</dd>
     <dt>Origen</dt><dd>{{ $booking->originLabel() }}</dd>
@@ -53,7 +53,7 @@
     <dt>Precio base</dt><dd>{{ $money($booking->price_original) }}</dd>
     @if ($booking->extra_guests_fee > 0)<dt>Personas extra</dt><dd>{{ $money($booking->extra_guests_fee) }}</dd>@endif
     @if ($booking->discount_amount > 0)<dt>Descuento{{ $booking->coupon_code_snapshot ? ' ('.$booking->coupon_code_snapshot.')' : '' }}</dt><dd>− {{ $money($booking->discount_amount) }}</dd>@endif
-    <dt>Habitación</dt><dd><b>{{ $money($booking->price_final) }}</b></dd>
+    <dt>Playroom</dt><dd><b>{{ $money($booking->price_final) }}</b></dd>
 </dl>
 
 <div class="sd-sec">Consumos</div>

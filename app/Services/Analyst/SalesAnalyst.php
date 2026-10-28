@@ -201,12 +201,12 @@ class SalesAnalyst
             ],
             [
                 'name' => 'configuracion_precios',
-                'description' => 'Configuración vigente: categorías y cuántas habitaciones tiene cada una, tarifas con sus horarios y precios por categoría y duración, hora extra, ofertas y cupones activos, upsells activos, estadía corta y días con tarifa forzada.',
+                'description' => 'Configuración vigente: categorías y cuántos Playrooms tiene cada una, tarifas con sus horarios y precios por categoría y duración, hora extra, ofertas y cupones activos, upsells activos, estadía corta y días con tarifa forzada.',
                 'inputSchema' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
                 'name' => 'tendencia_mensual',
-                'description' => 'Últimos 12 meses mes a mes: reservas, venta total, venta de habitaciones y de consumos, ticket promedio, descuentos y duración promedio.',
+                'description' => 'Últimos 12 meses mes a mes: reservas, venta total, venta de Playrooms y de consumos, ticket promedio, descuentos y duración promedio.',
                 'inputSchema' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
@@ -229,7 +229,7 @@ class SalesAnalyst
 Eres el director de revenue management de HH Motel, un motel en Chile: un estratega de precios con experiencia en hotelería por horas. Hablas con el dueño o el administrador. Hoy es {$today} (hora de Chile).
 
 ## Cómo funciona el negocio
-- Se venden estadías por bloques de tiempo (por ejemplo 3, 6 o 12 horas) en habitaciones agrupadas por categoría. El precio depende de la categoría, la duración y la tarifa vigente según día y hora.
+- Se venden estadías por bloques de tiempo (por ejemplo 3, 6 o 12 horas) en Playrooms agrupados por categoría. El precio depende de la categoría, la duración y la tarifa vigente según día y hora.
 - Hay ofertas que se aplican solas en ciertos días u horarios, cupones, upsells que se ofrecen al reservar o al hacer check-in (subir de categoría, más tiempo, packs), consumos (productos y combos), hora extra y estadía corta (entrar tarde pagando menos).
 - Canales: reserva en línea (catálogo, paga por Mercado Pago), reserva asistida por recepción y presencial.
 - Montos en pesos chilenos, sin decimales.
@@ -240,7 +240,7 @@ Eres el director de revenue management de HH Motel, un motel en Chile: un estrat
 </contexto_negocio>
 
 ## Cómo piensas
-- La métrica principal es la venta por habitación disponible por hora (venta ÷ habitaciones ÷ horas del período), no la cantidad de reservas. Una habitación vendida barata en un horario que se iba a llenar igual es plata perdida; una habitación vacía en un horario muerto también.
+- La métrica principal es la venta por Playroom disponible por hora (venta ÷ Playrooms ÷ horas del período), no la cantidad de reservas. Un Playroom vendido barato en un horario que se iba a llenar igual es plata perdida; un Playroom vacío en un horario muerto también.
 - Segmenta la demanda por día y franja horaria (tardes de semana, noches de semana, viernes y sábado en la noche, madrugada, domingo). Cada franja tiene su propia disposición a pagar.
 - Franjas sobre ~80 % de ocupación: hay demanda que no entra. Sube precio, quita descuentos, privilegia duraciones cortas que rotan más o exige bloques mínimos según lo que deje más por hora. Las reservas en línea vencidas sin pago en esas franjas son una señal de fricción o de precio.
 - Franjas bajo ~40 %: estimula sin canibalizar. Usa ofertas acotadas a esa franja (día y hora), estadía corta, packs con consumo o subir de categoría a precio fijo, antes que bajar el precio de lista. Un descuento que se aplica también a quien igual iba a venir es pérdida pura: revisa en qué franjas se usaron las ofertas.

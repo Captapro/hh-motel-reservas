@@ -218,7 +218,7 @@ class BookingService
             } catch (QueryException $e) {
                 // SQLSTATE 23P01 = exclusion_violation (choque con bookings_no_overlap)
                 if ($e->getCode() === '23P01' || str_contains($e->getMessage(), 'bookings_no_overlap')) {
-                    throw new RoomNotAvailableException("El Playroom {$room->name} acaba de ser reservada por otra persona en ese horario.");
+                    throw new RoomNotAvailableException("El Playroom {$room->name} acaba de ser reservado por otra persona en ese horario.");
                 }
                 // SQLSTATE 23505 = unique_violation -- dos reservas leyeron el
                 // mismo contador de código en el mismo instante.
@@ -420,7 +420,7 @@ class BookingService
             });
         } catch (QueryException $e) {
             if ($e->getCode() === '23P01' || str_contains($e->getMessage(), 'bookings_no_overlap')) {
-                throw new RoomNotAvailableException("El Playroom {$room->name} acaba de ser reservada por otra persona en ese horario.");
+                throw new RoomNotAvailableException("El Playroom {$room->name} acaba de ser reservado por otra persona en ese horario.");
             }
             throw $e;
         }

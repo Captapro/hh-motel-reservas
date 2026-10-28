@@ -63,7 +63,7 @@
         </div>
     @endif
 
-    <div class="warn">El cliente se retira — no olvides revisar todas las instalaciones de la habitación antes de cerrar.</div>
+    <div class="warn">El cliente se retira — no olvides revisar todas las instalaciones del Playroom antes de cerrar.</div>
 
     <form method="POST" action="{{ route('bookings.finalize.store', $booking->code) }}">
         @csrf
@@ -81,7 +81,7 @@
 
         <label class="confirm">
             <input type="checkbox" name="confirm_room_checked" value="1" required>
-            <span><strong>Confirmación necesaria</strong>Confirmo que revisé la habitación, sus instalaciones, artículos y estado general, y está todo OK.</span>
+            <span><strong>Confirmación necesaria</strong>Confirmo que revisé el Playroom, sus instalaciones, artículos y estado general, y está todo OK.</span>
         </label>
 
                 <button type="submit" class="save">Confirmar y finalizar reserva</button>

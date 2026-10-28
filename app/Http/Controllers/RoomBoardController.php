@@ -169,7 +169,7 @@ class RoomBoardController extends Controller
     }
 
     /**
-     * Para cada habitación, la mejor oferta vigente ahora (mayor % o el
+     * Para cada Playroom, la mejor oferta vigente ahora (mayor % o el
      * precio fijo más bajo). Sale al tablero como badge "OFERTA".
      *
      * @return array<int, array{label: string, tag: string}>
@@ -208,7 +208,7 @@ class RoomBoardController extends Controller
     /**
      * Resumen de todas las reservas activas del tablero — las que están
      * ocupando ahora y las que vienen más adelante, cruzando todas las
-     * habitaciones — para no tener que entrar habitación por habitación a
+     * Playrooms — para no tener que entrar Playroom por Playroom a
      * buscarlas.
      */
     public function upcoming(): View
@@ -256,7 +256,7 @@ class RoomBoardController extends Controller
 
     /**
      * "__aseo" es una opción del mismo <select> de estado — manda la
-     * habitación a aseo (operational_status = 'aseo'), que queda fija hasta
+     * Playroom a aseo (operational_status = 'aseo'), que queda fija hasta
      * que recepción la reactive a mano, igual que mantención o inactiva.
      */
     public function updateStatus(Request $request, Room $room): RedirectResponse
@@ -266,7 +266,7 @@ class RoomBoardController extends Controller
         }
 
         if ($room->operational_status === 'aseo' && $request->input('operational_status') === 'activa') {
-            return back()->withErrors(['room' => 'La habitación debe marcarse como “aseo listo” antes de volver a activa.']);
+            return back()->withErrors(['room' => 'El Playroom debe marcarse como “aseo listo” antes de volver a activa.']);
         }
 
         $validated = $request->validate([
@@ -284,7 +284,7 @@ class RoomBoardController extends Controller
 
     /**
      * "Marcar aseo listo" — la mucama terminó y recepción reactiva la
-     * habitación. Único camino de vuelta a disponibles después de un
+     * Playroom. Único camino de vuelta a disponibles después de un
      * check-out (o de un envío a aseo manual).
      */
     /**

@@ -52,7 +52,7 @@
         </a>
     @empty
         <div class="hh-history-empty">
-            <h2>Esta habitación no tiene reservas próximas</h2>
+            <h2>Este Playroom no tiene reservas próximas</h2>
             <p>Puedes ingresar una reserva y consultar aquí su horario y estado.</p>
             <a class="btn" href="{{ route('reservations.create', ['room_id' => $room->id]) }}">+ Reservar {{ $room->name }}</a>
         </div>
@@ -72,7 +72,7 @@
     @endif
     </div>
     <script>
-        // Copia el link público de la ficha de esta habitación, para pegarlo en WhatsApp.
+        // Copia el link público de la ficha de este Playroom, para pegarlo en WhatsApp.
         (function () {
             const btn = document.getElementById('copy-room-link');
             if (!btn) return;

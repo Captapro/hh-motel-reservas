@@ -294,7 +294,7 @@
             <div class="panel step-panel" data-step="1">
                 <div class="form-col-head"><span class="step-num">1</span>La estadía<span class="step-tag"></span></div>
 
-                <label>Habitación</label>
+                <label>Playroom</label>
                 @php $roomCats = $rooms->pluck('category')->unique('id')->sortBy('display_order')->values(); @endphp
                 @if ($roomCats->count() > 1)
                     <div class="cat-quick" id="room-cat-quick">
@@ -305,7 +305,7 @@
                     </div>
                 @endif
                 <select name="room_id" id="room-select" required>
-                    <option value="" @selected(! $selectedRoomId) disabled>— Elige una habitación —</option>
+                    <option value="" @selected(! $selectedRoomId) disabled>— Elige un Playroom —</option>
                     @foreach ($rooms as $room)
                         @php
                             $occ = $room->current_status['occupancy'];
@@ -323,9 +323,9 @@
                 </select>
                 <div class="hint">
                     @if ($walkInMode)
-                        Así está cada habitación en este momento.
+                        Así está cada Playroom en este momento.
                     @else
-                        Así está cada habitación <strong>ahora</strong>. Si la reserva es para otra fecha u hora, una habitación ocupada ahora puede estar libre para entonces.
+                        Así está cada Playroom <strong>ahora</strong>. Si la reserva es para otra fecha u hora, un Playroom ocupado ahora puede estar libre para entonces.
                     @endif
                 </div>
 
@@ -932,7 +932,7 @@
             box.hidden = false;
             if (!room || !date || h === '' || m === '' || !dur) {
                 box.className = 'price-box';
-                box.innerHTML = '<div class="p-wait">Elige habitación, fecha, hora y duración para ver el precio.</div>';
+                box.innerHTML = '<div class="p-wait">Elige Playroom, fecha, hora y duración para ver el precio.</div>';
                 return;
             }
             const params = new URLSearchParams({ room_id: room, date: date, time_hour: h, time_minute: m, duration_minutes: dur });
@@ -965,7 +965,7 @@
                 const finalPrice = applied ? applied.price_final : d.price_original;
                 const hasDiscount = !!applied;
 
-                let rows = '<div class="p-sum"><span>Precio habitación</span><span>' + fmt(d.price_original) + '</span></div>';
+                let rows = '<div class="p-sum"><span>Precio Playroom</span><span>' + fmt(d.price_original) + '</span></div>';
                 if (applied) {
                     const tag = applied.kind === 'offer' ? 'Oferta: ' + applied.label : (applied.kind === 'short_stay' ? applied.label : 'Código: ' + applied.label);
                     rows += '<div class="p-sum disc"><span>' + tag + '</span><span>−' + fmt(applied.discount).slice(1) + '</span></div>';
@@ -973,7 +973,7 @@
                 rows += '<div class="p-sum total"><span>Total a pagar</span><span class="' + (hasDiscount ? 'offer' : '') + '">' + fmt(finalPrice) + '</span></div>';
                 let note = '';
                 if (d.code_blocked) {
-                    note = '<div class="p-note">El código no aplica — ' + (d.short_stay ? 'la estadía corta ya tiene precio especial.' : 'esta habitación ya está en oferta.') + '</div>';
+                    note = '<div class="p-note">El código no aplica — ' + (d.short_stay ? 'la estadía corta ya tiene precio especial.' : 'este Playroom ya está en oferta.') + '</div>';
                 } else if (d.code_error) {
                     note = '<div class="p-note err">Código: ' + d.code_error + '</div>';
                 }
@@ -1009,7 +1009,7 @@
         }
 
         // Muestra solo las duraciones que tienen precio en la categoría de la
-        // habitación elegida (GO 1-2 h, LITE 3 h, PLUS/MAX 3-6-12 h).
+        // Playroom elegido (GO 1-2 h, LITE 3 h, PLUS/MAX 3-6-12 h).
         const HH_CAT_DURATIONS = @json($categoryDurations);
         function hhSyncDurations(catOverride) {
             const roomSel = document.getElementById('room-select');
@@ -1127,7 +1127,7 @@
         });
         hhQuotePrice();
 
-        // Filtro rápido de habitación por categoría — reconstruye el <select>
+        // Filtro rápido de Playroom por categoría — reconstruye el <select>
         // con solo las opciones de la categoría elegida, así no hay que buscar
         // en un listado de 25+. Se recuerda la última elección.
         (function () {
@@ -1136,7 +1136,7 @@
             if (!sel || !bar) return;
 
             // La primera opción (value vacío) es el placeholder "— Elige una
-            // habitación —" y siempre queda arriba de todo.
+            // Playroom —" y siempre queda arriba de todo.
             const roomOptions = Array.from(sel.options)
                 .filter(o => o.value !== '')
                 .map(o => ({ value: o.value, text: o.textContent.trim(), cat: o.dataset.cat }));
@@ -1144,7 +1144,7 @@
 
             window.hhFilterRooms = function (cat) {
                 const keep = sel.value;
-                sel.innerHTML = '<option value="" disabled>— Elige una habitación —</option>';
+                sel.innerHTML = '<option value="" disabled>— Elige un Playroom —</option>';
                 roomOptions
                     .filter(o => cat === 'todas' || o.cat === cat)
                     .forEach(o => {
@@ -1157,11 +1157,11 @@
                 sel.value = Array.from(sel.options).some(o => o.value === keep) ? keep : '';
                 bar.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
                 try { localStorage.setItem('hh-reserva-cat', cat); } catch (e) {}
-                // Si quedó una habitación puntual elegida, su categoría manda;
-                // si no (recién se filtró por chip, sin elegir habitación
+                // Si quedó un Playroom puntual elegido, su categoría manda;
+                // si no (recién se filtró por chip, sin elegir Playroom
                 // todavía), la duración igual tiene que respetar el chip —
                 // si no, "GO" seguía dejando elegir 6h o 12h hasta recién
-                // elegir la habitación puntual.
+                // elegir el Playroom puntual.
                 hhSyncDurations(sel.value ? undefined : (cat === 'todas' ? null : cat));
                 hhQuotePrice();
             };
@@ -1173,7 +1173,7 @@
                 const saved = localStorage.getItem('hh-reserva-cat');
                 if (saved && bar.querySelector('button[data-cat="' + saved + '"]')) start = saved;
             } catch (e) {}
-            // Si venís desde "Reservar →" de una habitación puntual, arranca en su categoría.
+            // Si venís desde "Reservar →" de un Playroom puntual, arranca en su categoría.
             if (selectedCat && bar.querySelector('button[data-cat="' + selectedCat + '"]')) start = selectedCat;
             hhFilterRooms(start);
         })();

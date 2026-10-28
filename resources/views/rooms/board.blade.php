@@ -24,7 +24,7 @@
 
         /* Reservas nuevas en PENDIENTE_PAGO -- lo primero que hay que ver al
            entrar o al recibir el turno, por eso va arriba de todo el
-           tablero, no mezclado con las secciones de habitaciones. */
+           tablero, no mezclado con las secciones de Playrooms. */
         {{-- El resto del tablero se ve claro en la práctica: partials.navbar
              inyecta public/css/hh-theme.css, que pisa (con !important) los
              colores oscuros que este archivo define más abajo. Ese stylesheet
@@ -254,7 +254,7 @@
         .copy-link-btn { display:block; width:100%; box-sizing:border-box; text-align:center; margin-top:8px; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; background:#1c2f3a; border:1px solid #3a5a72; color:#7fbcdc; }
         .copy-link-btn:hover { border-color:#7fbcdc; background:#213847; }
 
-        /* Vista compacta — para cuando hay muchas habitaciones y hay que ver más de un vistazo. */
+        /* Vista compacta — para cuando hay muchos Playrooms y hay que ver más de un vistazo. */
         .compact-toggle { background:#1c1c1c; border:1px solid #333; color:#ccc; border-radius:7px; padding:8px 13px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
         .compact-toggle:hover { border-color:#ff7918; color:#ff7918; }
         .compact .grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }
@@ -327,7 +327,7 @@
         /* Vista chips — máxima densidad: solo categoría, número y estado.
            El resto (botones, código, detalle de estado) se oculta; la
            tarjeta entera pasa a ser clickeable hacia el detalle de la
-           habitación (ver hhBindChipClicks). */
+           Playroom (ver hhBindChipClicks). */
         .chips .grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
         .chips .section { margin-bottom: 18px; }
         .chips .card { padding: 9px 10px; cursor: pointer; }
@@ -348,7 +348,7 @@
         .chips .aseo-ready-btn { font-size:10px; padding:4px; }
         .chips .eta.aseo-help { font-size:10px; }
         .chips .proxima-card { padding: 8px 10px; margin-bottom: 8px; }
-        /* Atajos de la vista chips (habitaciones ocupadas): historial y consumo rápido. */
+        /* Atajos de la vista chips (Playrooms ocupados): historial y consumo rápido. */
         .chip-actions { display:none; flex-wrap:wrap; gap:5px; margin-top:7px; }
         .chips .chip-actions { display:flex; }
         .chip-actions a { flex:1 1 auto; text-align:center; text-decoration:none; background:#262626; border:1px solid #3a3a3a; color:#ddd; border-radius:6px; padding:5px 4px; font-size:10.5px; font-weight:600; white-space:nowrap; }
@@ -369,7 +369,7 @@
         .pass-scan .pa-x { background:transparent; border:0; color:inherit; opacity:.7; cursor:pointer; font-size:16px; padding:6px; }
         .pass-scan .pa-x:hover { opacity:1; }
         @keyframes passPulse { 0%,100% { box-shadow:0 0 0 0 rgba(45,212,160,.5); } 50% { box-shadow:0 0 0 8px rgba(45,212,160,0); } }
-        /* Más lugar para las habitaciones: encabezado, métricas y avisos en poco alto. */
+        /* Más lugar para los Playrooms: encabezado, métricas y avisos en poco alto. */
         .topline h1 { font-size:20px; }
         .topline .sub { margin:2px 0 0; font-size:12px; }
         .topline-toolbar { align-items:center; }
@@ -514,10 +514,10 @@
 
     <div class="page-grid">
         <div class="main-col">
-            {{-- Siempre ocupa su lugar (aunque no haya ocupadas), igual que "Por llegar", para que nada se corra al ocuparse una habitación. --}}
+            {{-- Siempre ocupa su lugar (aunque no haya ocupadas), igual que "Por llegar", para que nada se corra al ocuparse un Playroom. --}}
             <div class="section ocupadas panel-box">
                 <div class="section-head"><h2>Ocupadas</h2><span class="count" id="ocupadas-count">{{ $grouped['ocupadas']->count() }}</span></div>
-                <div class="sidebar-empty panel-empty" id="ocupadas-empty" @if ($grouped['ocupadas']->isNotEmpty()) hidden @endif>Ninguna habitación ocupada ahora.</div>
+                <div class="sidebar-empty panel-empty" id="ocupadas-empty" @if ($grouped['ocupadas']->isNotEmpty()) hidden @endif>Ningun Playroom ocupado ahora.</div>
                 @if ($grouped['ocupadas']->isNotEmpty())
                     <div class="grid">
                         @foreach ($grouped['ocupadas'] as $entry)
@@ -545,14 +545,14 @@
                     <button type="button" class="upcoming-filter" id="upcoming-filter-btn" onclick="hhToggleUpcomingFilter()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.8 21H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M16 3v4M8 3v4M4 11h10"/><circle cx="18" cy="18" r="4"/><path d="M18 16.5V18l1 1"/></svg>Con reservas futuras</button>
                 </div>
                 @if ($grouped['disponibles']->isEmpty())
-                    <p class="section-empty">No hay habitaciones disponibles ahora mismo.</p>
+                    <p class="section-empty">No hay Playrooms disponibles ahora mismo.</p>
                 @else
                     <div class="grid" id="disponibles-grid" data-total="{{ $grouped['disponibles']->count() }}">
                         @foreach ($grouped['disponibles'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
                         @endforeach
                     </div>
-                    <p class="section-empty cat-hidden" id="disponibles-none">Ninguna habitación disponible en esa categoría ahora mismo.</p>
+                    <p class="section-empty cat-hidden" id="disponibles-none">Ningún Playroom disponible en esa categoría ahora mismo.</p>
                 @endif
             </div>
 
@@ -561,9 +561,9 @@
             <div class="panel-row">
             <div class="section aseo panel-box">
                 <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span></div>
-                <div class="sidebar-empty panel-empty" @if ($grouped['en_aseo']->isNotEmpty()) hidden @endif>Ninguna habitación en aseo ahora.</div>
+                <div class="sidebar-empty panel-empty" @if ($grouped['en_aseo']->isNotEmpty()) hidden @endif>Ningún Playroom en aseo ahora.</div>
                 @if ($grouped['en_aseo']->isNotEmpty())
-                    <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada una.</p>
+                    <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada uno.</p>
                     <div class="grid">
                         @foreach ($grouped['en_aseo'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
@@ -574,7 +574,7 @@
 
             <div class="section fuera panel-box">
                 <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span></div>
-                <div class="sidebar-empty panel-empty" @if ($grouped['fuera_de_servicio']->isNotEmpty()) hidden @endif>Ninguna habitación fuera de servicio.</div>
+                <div class="sidebar-empty panel-empty" @if ($grouped['fuera_de_servicio']->isNotEmpty()) hidden @endif>Ningún Playroom fuera de servicio.</div>
                 @if ($grouped['fuera_de_servicio']->isNotEmpty())
                     <div class="grid">
                         @foreach ($grouped['fuera_de_servicio'] as $entry)
@@ -586,7 +586,7 @@
             </div>
         </div>
 
-        {{-- La columna "Por llegar" siempre ocupa su lugar: así las habitaciones no se corren cuando aparece o desaparece una reserva. --}}
+        {{-- La columna "Por llegar" siempre ocupa su lugar: así los Playrooms no se corren cuando aparece o desaparece una reserva. --}}
         <div class="sidebar {{ $grouped['proximas']->isEmpty() ? 'is-empty' : '' }}">
             <div class="sidebar-title"><h2>Por llegar</h2><span class="count">{{ $grouped['proximas']->count() }}</span></div>
             <p class="sidebar-hint">Libres ahora, con una reserva próxima: no las asignes a clientes sin reserva.</p>
@@ -685,7 +685,7 @@
         }
 
         // Vista chips: la tarjeta entera es clickeable hacia el detalle de
-        // la habitación (sus botones quedan ocultos por CSS en ese modo).
+        // el Playroom (sus botones quedan ocultos por CSS en ese modo).
         document.querySelectorAll('.grid .card[data-href]').forEach(function (card) {
             card.addEventListener('click', function (event) {
                 if (event.target.closest('a, button, input, select, form')) return;

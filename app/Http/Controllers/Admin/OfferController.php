@@ -13,7 +13,7 @@ use Illuminate\View\View;
 
 /**
  * Ofertas programadas = cupones con auto_apply. No tienen código: se aplican
- * solas cuando el cliente elige una habitación en oferta dentro de la
+ * solas cuando el cliente elige un Playroom en oferta dentro de la
  * vigencia. Backend compartido con Cupones, UI aparte porque el flujo mental
  * es distinto ("estas piezas en oferta esta semana").
  */
@@ -87,7 +87,7 @@ class OfferController extends Controller
         }
 
         if (empty($validated['room_ids']) && empty($validated['category_ids'])) {
-            return back()->withInput()->withErrors(['room_ids' => 'Elige al menos una habitación o una categoría para la oferta.']);
+            return back()->withInput()->withErrors(['room_ids' => 'Elige al menos un Playroom o una categoría para la oferta.']);
         }
 
         $old = $offer->exists ? $offer->toArray() : null;

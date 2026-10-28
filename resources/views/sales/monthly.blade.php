@@ -88,7 +88,7 @@
 
     <div class="cards" style="margin-top:14px;">
         <div class="card"><div class="label">Venta total del mes</div><div class="value">{{ $money($totals['total']) }}</div></div>
-        <div class="card blue"><div class="label">Habitaciones vendidas</div><div class="value">{{ $totals['rooms'] }}</div></div>
+        <div class="card blue"><div class="label">Playrooms vendidos</div><div class="value">{{ $totals['rooms'] }}</div></div>
         <div class="card gold"><div class="label">Precio promedio por hab.</div><div class="value">{{ $money($avgTicket) }}</div></div>
         <div class="card green"><div class="label">Cobrado en caja</div><div class="value">{{ $money($totals['cash_total']) }}</div></div>
         <div class="card"><div class="label">Extras vendidos</div><div class="value">{{ $money($totals['extras']) }}</div></div>
@@ -176,9 +176,9 @@
 
     <div class="grid2">
         <div>
-            <div class="sec-label">Por habitación</div>
+            <div class="sec-label">Por Playroom</div>
             <div class="table-wrap"><table>
-                <thead><tr><th>Habitación</th><th class="n">Veces</th><th class="n">Valor total</th><th class="n">% ventas</th><th class="n">Prom.</th></tr></thead>
+                <thead><tr><th>Playroom</th><th class="n">Veces</th><th class="n">Valor total</th><th class="n">% ventas</th><th class="n">Prom.</th></tr></thead>
                 <tbody>
                 @forelse ($byRoom as $r)
                     <tr><td>{{ $r['name'] }}</td><td class="n">{{ $r['times'] }}</td><td class="n">{{ $money($r['amount']) }}</td><td class="n">{{ $pct($r['pct']) }}</td><td class="n">{{ $money($r['avg']) }}</td></tr>
@@ -204,7 +204,7 @@
     </div>
 
     <div class="sec-label">Detalle de ventas</div>
-    <p class="sec-note">Una fila por habitación vendida y una por cada extra, en el orden de tu Excel. <b>Toca una fila</b> para ver el detalle completo de la venta; el código de la reserva te lleva a completar lo que falte (documento, RUT, nacionalidad).</p>
+    <p class="sec-note">Una fila por Playroom vendido y una por cada extra, en el orden de tu Excel. <b>Toca una fila</b> para ver el detalle completo de la venta; el código de la reserva te lleva a completar lo que falte (documento, RUT, nacionalidad).</p>
     <div class="filter">
         <label><input type="checkbox" id="only-missing"> Mostrar solo reservas con datos faltantes ({{ $missingCount }})</label>
         <a class="lnk" href="{{ route('sales.monthly', ['month' => $first->format('Y-m'), 'export' => 'detalle']) }}">Exportar detalle a Excel (CSV)</a>

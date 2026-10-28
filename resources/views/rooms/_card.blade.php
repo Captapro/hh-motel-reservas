@@ -29,7 +29,7 @@
         @if ($room->aseo_reported_at)
             <div class="eta" style="color:#34d399;">✓ {{ $room->aseo_reported_by }} reportó aseo listo a las {{ $room->aseo_reported_at->timezone('America/Santiago')->format('H:i') }} — falta tu confirmación</div>
         @else
-            <div class="eta">Esperando aseo — no vuelve a disponibles hasta que recepción la marque</div>
+            <div class="eta">Esperando aseo — no vuelve a disponibles hasta que recepción lo marque</div>
         @endif
         @if (($cleaningStaff ?? collect())->isNotEmpty())
             @php $reportedBy = $room->aseo_reported_at && $cleaningStaff->contains($room->aseo_reported_by) ? $room->aseo_reported_by : null; @endphp

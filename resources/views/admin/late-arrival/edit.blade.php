@@ -8,7 +8,7 @@
     </style>
 
     <h1>Atrasos al check-in</h1>
-    <p class="sub">Qué pasa con el tiempo de la estadía cuando el cliente llega después de la hora reservada. Recepción ve el resultado en la pantalla de check-in antes de confirmarlo. La salida nunca se corre más allá del cierre ni encima de la siguiente reserva de la habitación.</p>
+    <p class="sub">Qué pasa con el tiempo de la estadía cuando el cliente llega después de la hora reservada. Recepción ve el resultado en la pantalla de check-in antes de confirmarlo. La salida nunca se corre más allá del cierre ni encima de la siguiente reserva del Playroom.</p>
 
     <form method="POST" action="{{ route('admin.late_arrival.update') }}">
         @csrf

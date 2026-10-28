@@ -85,7 +85,7 @@
 
     <div class="linen-panel">
         <div class="topline2">
-            <h3>Carga de ropa de cama por habitación</h3>
+            <h3>Carga de ropa de cama por Playroom</h3>
             <span class="total">{{ $linenTotal }} {{ Str::plural('juego', $linenTotal) }}</span>
         </div>
         <div class="linen-chips">

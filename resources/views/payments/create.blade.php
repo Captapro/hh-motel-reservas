@@ -86,7 +86,7 @@
     <div class="card hh-payment-summary">
         <h2>Resumen de la reserva</h2>
         <div class="row"><span>Cliente</span><span>{{ $booking->customer->name }}</span></div>
-        <div class="row"><span>Habitación</span><span>{{ $booking->room->name }} · {{ $booking->room->category->name }}</span></div>
+        <div class="row"><span>Playroom</span><span>{{ $booking->room->name }} · {{ $booking->room->category->name }}</span></div>
         <div class="row"><span>Horario</span><span>{{ $booking->starts_at->timezone($tz)->format('d/m H:i') }} — {{ $booking->ends_at->timezone($tz)->format('H:i') }}</span></div>
         <div class="row"><span>Precio final</span><span>${{ number_format($booking->price_final, 0, ',', '.') }}</span></div>
         @if ($consumos > 0)
@@ -159,7 +159,7 @@
             @if ($after === 'board')
                 <a class="skip-inline" href="{{ route('reservations.show', $booking->code) }}">Saltar por ahora →</a>
             @elseif (in_array($after, ['pase', 'checkin'], true))
-                {{-- Sin la habitación pagada no hay check-in: no se ofrece saltar el cobro. --}}
+                {{-- Sin el Playroom pagado no hay check-in: no se ofrece saltar el cobro. --}}
                 <a class="skip-inline" href="{{ route('reservations.show', $booking->code) }}">Volver a la reserva</a>
             @endif
         </div>

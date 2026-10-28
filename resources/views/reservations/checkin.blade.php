@@ -154,7 +154,7 @@
         @if ($express)
             <div class="card express-sum">
                 <div class="cat-label" style="margin-top:0;">Ingreso presencial</div>
-                <div class="existing-row"><span>Habitación</span><b>{{ $booking->room->name }}</b></div>
+                <div class="existing-row"><span>Playroom</span><b>{{ $booking->room->name }}</b></div>
                 <div class="existing-row"><span>Horario</span><b>{{ $booking->starts_at->timezone('America/Santiago')->format('H:i') }} — {{ $booking->ends_at->timezone('America/Santiago')->format('H:i') }}</b></div>
                 <div class="existing-row"><span>Personas</span><b>{{ $booking->guests_count }}</b></div>
                 @if ($guestsReady && $booking->guests->isNotEmpty())
@@ -171,7 +171,7 @@
             <p>
                 Esta reserva es para <b>{{ $booking->guests_count }}</b> {{ Str::plural('persona', $booking->guests_count) }}.
                 @if ($requiredGuests > 0)
-                    El titular ya está identificado — falta el nombre y apellido de {{ $requiredGuests }} {{ Str::plural('acompañante', $requiredGuests) }} para poder habilitar la habitación.
+                    El titular ya está identificado — falta el nombre y apellido de {{ $requiredGuests }} {{ Str::plural('acompañante', $requiredGuests) }} para poder habilitar el Playroom.
                 @else
                     La reserva es para 1 persona — no hace falta registrar acompañantes.
                 @endif

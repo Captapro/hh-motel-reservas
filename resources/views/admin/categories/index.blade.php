@@ -41,7 +41,7 @@
                 @endforeach
             </div>
         </div>
-        <p class="sub" style="margin:14px 0 0;">Apagar un piso/ala solo saca sus habitaciones libres de "Disponibles" en el tablero — lo que ya está ocupado, por llegar, en aseo o fuera de servicio no se toca.</p>
+        <p class="sub" style="margin:14px 0 0;">Apagar un piso/ala solo saca sus Playrooms libres de "Disponibles" en el tablero — lo que ya está ocupado, por llegar, en aseo o fuera de servicio no se toca.</p>
     </div>
 
     <div class="card">

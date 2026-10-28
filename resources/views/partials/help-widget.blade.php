@@ -65,7 +65,7 @@
     const token = @json(csrf_token());
     const page = @json(trim(request()->route()?->getName() ?? request()->path()));
     const KEY = 'hh-help-chat';
-    const tips = ['¿Cómo hago el check-in de un cliente con reserva?', '¿Cómo cobro una hora extra?', '¿Cómo registro un pago con tarjeta?', '¿Cómo finalizo una estadía y paso la habitación a aseo?'];
+    const tips = ['¿Cómo hago el check-in de un cliente con reserva?', '¿Cómo cobro una hora extra?', '¿Cómo registro un pago con tarjeta?', '¿Cómo finalizo una estadía y paso el Playroom a aseo?'];
     let history = [];
     try { history = JSON.parse(sessionStorage.getItem(KEY) || '[]'); } catch (e) { history = []; }
 

@@ -47,7 +47,7 @@
         .dur-quick button.dur-60.active { background:#4ecdc4; } .dur-quick button.dur-120.active { background:#5b9dd9; }
         .dur-quick button.dur-180.active { background:#b088e8; } .dur-quick button.dur-360.active { background:#f2994a; }
         .dur-quick button.dur-720.active { background:#ff7918; }
-        /* Dos columnas en pantalla ancha: habitación y duración | fecha, hora y personas */
+        /* Dos columnas en pantalla ancha: Playroom y duración | fecha, hora y personas */
         .page-inner { max-width: 1100px; }
         .edit-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items:start; }
         .edit-col > label:first-child { margin-top:0; }
@@ -83,7 +83,7 @@
 
         <div class="edit-grid">
             <div class="edit-col">
-        <label>Habitación</label>
+        <label>Playroom</label>
         @php $roomCats = $rooms->pluck('category')->unique('id')->sortBy('display_order')->values(); @endphp
         @if ($roomCats->count() > 1)
             <div class="cat-quick" id="room-cat-quick">
@@ -109,7 +109,7 @@
                 </option>
             @endforeach
         </select>
-        <div class="hint">Así está cada habitación <strong>ahora</strong>. Si la reserva es para otra fecha u hora, una habitación ocupada ahora puede estar libre para entonces.</div>
+        <div class="hint">Así está cada Playroom <strong>ahora</strong>. Si la reserva es para otra fecha u hora, un Playroom ocupado ahora puede estar libre para entonces.</div>
 
         <label>Duración <span class="hint" style="margin:0;">— según la categoría</span></label>
         @php
@@ -208,7 +208,7 @@
             if (allowed.length > 0 && !allowed.includes(current)) hhSetDuration(allowed[0]);
         }
 
-        // Filtro rápido de habitación por categoría.
+        // Filtro rápido de Playroom por categoría.
         (function () {
             const sel = document.getElementById('room-select');
             const bar = document.getElementById('room-cat-quick');
@@ -238,7 +238,7 @@
 
             sel.addEventListener('change', hhSyncDurations);
 
-            // Arranca en la categoría de la habitación actual de la reserva.
+            // Arranca en la categoría del Playroom actual de la reserva.
             hhFilterRooms(selectedCat && bar.querySelector('button[data-cat="' + selectedCat + '"]') ? selectedCat : 'todas');
         })();
     </script>

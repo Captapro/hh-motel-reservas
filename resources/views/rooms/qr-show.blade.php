@@ -84,9 +84,9 @@
                         <p class="info" style="margin-top:0;">Conectada como <strong>{{ $mucama->name }}</strong></p>
                         <button class="submit" type="submit">Reportar aseo listo →</button>
                     </form>
-                    <p class="info">Recepción confirma después de este aviso -- la habitación no vuelve a disponible sola.</p>
+                    <p class="info">Recepción confirma después de este aviso -- el Playroom no vuelve a disponible solo.</p>
                 @else
-                    <p class="info">Inicia sesión con tu PIN para poder reportar el aseo de esta habitación.</p>
+                    <p class="info">Inicia sesión con tu PIN para poder reportar el aseo de este Playroom.</p>
                     <a class="submit" style="display:block; text-align:center; text-decoration:none;" href="{{ route('mucamas.login', ['next' => route('rooms.qr.show', $room)]) }}">Iniciar sesión →</a>
                 @endif
             @elseif ($room->operational_status === 'activa' && $nextBooking)
@@ -95,20 +95,20 @@
                         ✓ Confirmada por <strong>{{ $nextBooking->room_checked_by }}</strong> a las {{ $nextBooking->room_checked_at->timezone('America/Santiago')->format('H:i') }}, para la reserva de las {{ $nextBooking->starts_at->timezone('America/Santiago')->format('H:i') }}.
                     </div>
                 @elseif ($mucama)
-                    <p class="info" style="margin-top:0;">Hay una reserva a las <strong>{{ $nextBooking->starts_at->timezone('America/Santiago')->format('H:i') }}</strong> -- ¿revisaste que la habitación esté en condiciones?</p>
+                    <p class="info" style="margin-top:0;">Hay una reserva a las <strong>{{ $nextBooking->starts_at->timezone('America/Santiago')->format('H:i') }}</strong> -- ¿revisaste que el Playroom esté en condiciones?</p>
                     <form method="POST" action="{{ route('rooms.qr.confirm_ready', $room) }}">
                         @csrf
                         <p class="info">Conectada como <strong>{{ $mucama->name }}</strong></p>
                         <button class="submit" type="submit">Confirmar que está en condiciones →</button>
                     </form>
                 @else
-                    <p class="info">Hay una reserva a las <strong>{{ $nextBooking->starts_at->timezone('America/Santiago')->format('H:i') }}</strong> -- inicia sesión con tu PIN para confirmar que la habitación está en condiciones.</p>
+                    <p class="info">Hay una reserva a las <strong>{{ $nextBooking->starts_at->timezone('America/Santiago')->format('H:i') }}</strong> -- inicia sesión con tu PIN para confirmar que el Playroom está en condiciones.</p>
                     <a class="submit" style="display:block; text-align:center; text-decoration:none;" href="{{ route('mucamas.login', ['next' => route('rooms.qr.show', $room)]) }}">Iniciar sesión →</a>
                 @endif
             @elseif ($room->operational_status === 'activa' && $occupancy === 'ocupada')
                 <div class="occupied-box">🔵 Ocupada ahora mismo -- no se puede inspeccionar con el huésped adentro.</div>
             @else
-                <p class="info">Esta habitación no está esperando aseo ni tiene una próxima reserva por confirmar ahora mismo.</p>
+                <p class="info">Este Playroom no está esperando aseo ni tiene una próxima reserva por confirmar ahora mismo.</p>
             @endif
 
             @if ($mucama)

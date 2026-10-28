@@ -54,11 +54,11 @@
         $backRoute = request('ronda')
             ? route('shift_round.index')
             : (request('qr') ? route('rooms.qr.show', $room) : route('rooms.board'));
-        $backLabel = request('ronda') ? 'Volver a la ronda' : (request('qr') ? 'Volver a la habitación' : 'Volver al tablero');
+        $backLabel = request('ronda') ? 'Volver a la ronda' : (request('qr') ? 'Volver al Playroom' : 'Volver al tablero');
     @endphp
     <a class="back-btn" href="{{ $backRoute }}">← {{ $backLabel }}</a>
     <h1>Inspeccionar Playroom {{ $room->name }}</h1>
-    <p class="sub">Categoría {{ $room->category->name }} · completa la pauta real de habitación y mobiliario antes de liberarla.</p>
+    <p class="sub">Categoría {{ $room->category->name }} · completa la pauta real de Playroom y mobiliario antes de liberarlo.</p>
 
     @if ($errors->any())
         <div class="errors">
@@ -93,7 +93,7 @@
             <div class="field"><label class="field-label">Fecha</label><input class="date-readonly" type="text" value="{{ now()->timezone('America/Santiago')->format('d/m/Y') }}" readonly></div>
         </div>
 
-        <div class="section-title">Revisión de la habitación</div>
+        <div class="section-title">Revisión del Playroom</div>
 
         <div class="checklist">
             @foreach (\App\Models\RoomInspection::ITEMS as $key => $label)
@@ -119,7 +119,7 @@
                 @endforeach
             </div>
         @else
-            <div class="last-panel" style="color:#aaa">No hay mobiliario asignado a esta habitación. Puedes configurarlo desde Administración → Habitaciones.</div>
+            <div class="last-panel" style="color:#aaa">No hay mobiliario asignado a este Playroom. Puedes configurarlo desde Administración → Playrooms.</div>
         @endif
 
         <div class="field"><label class="field-label">Desperfectos encontrados</label><textarea name="defects" placeholder="Ej.: espejo quebrado, luz sin funcionar, mobiliario dañado...">{{ old('defects') }}</textarea></div>

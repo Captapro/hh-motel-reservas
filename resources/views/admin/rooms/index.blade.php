@@ -6,7 +6,7 @@
         <div class="actions">
             <button type="button" class="btn secondary" onclick="navigator.clipboard.writeText('{{ route('catalog.index') }}'); this.textContent='¡Copiado!'; setTimeout(() => this.textContent='Copiar link del catálogo', 1500);">Copiar link del catálogo</button>
             <a class="btn secondary" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
-            <a class="btn secondary" href="{{ route('admin.rooms.qr_sheet') }}">QR de habitaciones →</a>
+            <a class="btn secondary" href="{{ route('admin.rooms.qr_sheet') }}">QR de Playrooms →</a>
             <a class="btn" href="{{ route('admin.rooms.create') }}">+ Nuevo Playroom</a>
         </div>
     </div>

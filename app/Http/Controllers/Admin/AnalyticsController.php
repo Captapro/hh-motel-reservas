@@ -78,7 +78,7 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Una fila por reserva, con todas las dimensiones sueltas (habitación,
+     * Una fila por reserva, con todas las dimensiones sueltas (Playroom,
      * categoría, ala, cliente, fecha, precios, pago) para que se pueda armar
      * tablas dinámicas y cruces en Excel/Sheets -- no intentamos adivinar
      * qué cruce quiere ver el usuario, le damos el detalle crudo.
@@ -102,9 +102,9 @@ class AnalyticsController extends Controller
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // BOM -- sin esto Excel rompe las tildes/ñ
             fputcsv($out, [
-                'Código', 'Fecha', 'Hora', 'Día semana', 'Habitación', 'Categoría', 'Ala',
+                'Código', 'Fecha', 'Hora', 'Día semana', 'Playroom', 'Categoría', 'Ala',
                 'Duración (min)', 'Cliente', 'Teléfono', 'Tarifa aplicada',
-                'Precio original', 'Descuento', 'Precio final habitación', 'Extras',
+                'Precio original', 'Descuento', 'Precio final Playroom', 'Extras',
                 'Total', 'Métodos de pago', 'Estado reserva', 'Estado pago',
             ]);
             foreach ($bookings as $b) {

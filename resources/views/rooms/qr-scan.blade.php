@@ -27,7 +27,7 @@
     @include('partials.navbar')
     <div class="page-inner">
         <a class="back-btn" href="{{ route('shift_round.index') }}">← Volver a la ronda</a>
-        <h1>Escanear QR de la habitación</h1>
+        <h1>Escanear QR del Playroom</h1>
         <p class="sub">Apunta la cámara al código QR pegado en la puerta de la Playroom.</p>
 
         <div id="errors-box"></div>
@@ -88,11 +88,11 @@
                     return;
                 }
 
-                // Solo seguimos el link si es un QR de habitación de ESTE sistema --
+                // Solo seguimos el link si es un QR de Playroom de ESTE sistema --
                 // nunca se navega a un dominio o ruta distinta, aunque el QR físico
                 // esté dañado o alguien pegue uno que no corresponde.
                 if (url.origin !== allowedOrigin || !/^\/qr\/habitacion\/\d+$/.test(url.pathname)) {
-                    statusLine.textContent = 'Ese QR no es de una habitación de HH Motel -- prueba con otro.';
+                    statusLine.textContent = 'Ese QR no es de un Playroom de HH Motel -- prueba con otro.';
                     scanning = true;
                     rafId = requestAnimationFrame(tick);
                     return;
@@ -108,7 +108,7 @@
                     },
                 }).then(function (r) {
                     if (!r.ok) throw new Error('confirm-scan failed');
-                    statusLine.textContent = '¡Listo! Abriendo la habitación…';
+                    statusLine.textContent = '¡Listo! Abriendo el Playroom…';
                     const finalUrl = new URL(url.pathname, allowedOrigin);
                     @if (request('ronda'))
                         finalUrl.searchParams.set('ronda', '1');

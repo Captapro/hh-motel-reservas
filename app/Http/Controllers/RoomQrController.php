@@ -15,7 +15,7 @@ use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 /**
- * Páginas detrás del QR pegado en la puerta de cada habitación y del QR
+ * Páginas detrás del QR pegado en la puerta de cada Playroom y del QR
  * general de mucamas. show()/image() son públicas (solo muestran estado, no
  * hay nada sensible ni que romper); reportAseo() y mucamaPanel() exigen
  * sesión de mucama (middleware 'mucama', ver EnsureMucamaSession) -- antes
@@ -30,10 +30,10 @@ class RoomQrController extends Controller
         $mucama = $mucamaId ? Staff::activeMucamas()->find($mucamaId) : null;
 
         // "Dónde anda cada mucama ahora" para recepción -- se actualiza con
-        // cada visita a un QR de habitación, no solo al reportar aseo listo,
+        // cada visita a un QR de Playroom, no solo al reportar aseo listo,
         // así se ve también cuando recién llegó a mirar una pieza. La ruta
         // del día (AuditLog) solo agrega una entrada cuando CAMBIA de
-        // habitación -- si refresca la misma página varias veces no infla
+        // Playroom -- si refresca la misma página varias veces no infla
         // la ruta con la misma parada repetida.
         if ($mucama) {
             if ($mucama->last_qr_room_id !== $room->id) {
@@ -56,7 +56,7 @@ class RoomQrController extends Controller
     }
 
     /**
-     * Cuando el anfitrión llega a una habitación de la ronda y la encuentra
+     * Cuando el anfitrión llega a un Playroom de la ronda y lo encuentra
      * ocupada -- no se puede inspeccionar con el huésped adentro. Deja
      * registro de que se pasó a verla (quién y cuándo) sin crear una
      * inspección real, y sigue la ronda -- la pieza queda pendiente para
@@ -77,11 +77,11 @@ class RoomQrController extends Controller
 
     /**
      * Llamado por JS desde la cámara de escaneo (rooms/qr-scan.blade.php)
-     * justo antes de navegar a la habitación decodificada -- deja una marca
-     * en la sesión de que ESTE dispositivo escaneó ESTA habitación hace
+     * justo antes de navegar al Playroom decodificado -- deja una marca
+     * en la sesión de que ESTE dispositivo escaneó ESTA Playroom hace
      * poco. RoomInspectionController::create() la exige cuando llega con
      * ?qr=1, así "Hacer inspección completa" no se puede alcanzar solo
-     * tipeando o guardando el link de la habitación -- hay que haber
+     * tipeando o guardando el link del Playroom -- hay que haber
      * pasado por la cámara de verdad.
      */
     public function confirmScan(Request $request, Room $room): JsonResponse
@@ -92,20 +92,20 @@ class RoomQrController extends Controller
     }
 
     /**
-     * Confirma que la habitación quedó revisada/en condiciones ANTES de que
+     * Confirma que el Playroom quedó revisado/en condiciones ANTES de que
      * llegue el próximo huésped -- distinto de "aseo listo" (que es sobre la
      * limpieza en sí): esto es un último vistazo justo antes de la llegada.
      */
     public function confirmRoomReady(Request $request, Room $room, RoomBoardService $board): RedirectResponse
     {
         if ($room->operational_status !== 'activa') {
-            return back()->withErrors(['pin' => 'Esta habitación pasó a '.$room->operational_status.' -- no se puede confirmar como lista todavía.']);
+            return back()->withErrors(['pin' => 'Este Playroom pasó a '.$room->operational_status.' -- no se puede confirmar como lista todavía.']);
         }
 
         $next = $board->statusFor($room)['next_booking'];
 
         if (! $next) {
-            return back()->withErrors(['pin' => 'Esta habitación ya no tiene una próxima reserva para confirmar.']);
+            return back()->withErrors(['pin' => 'Este Playroom ya no tiene una próxima reserva para confirmar.']);
         }
 
         /** @var Staff $mucama */
@@ -162,7 +162,7 @@ class RoomQrController extends Controller
     public function reportAseo(Request $request, Room $room): RedirectResponse
     {
         if ($room->operational_status !== 'aseo') {
-            return back()->withErrors(['pin' => 'Esta habitación ya no está esperando aseo -- puede que alguien ya la haya confirmado.']);
+            return back()->withErrors(['pin' => 'Este Playroom ya no está esperando aseo -- puede que alguien ya lo haya confirmado.']);
         }
         if ($room->aseo_reported_at) {
             return back()->with('status', 'Ya estaba reportada -- recepción todavía tiene que confirmarla.');
@@ -182,7 +182,7 @@ class RoomQrController extends Controller
     }
 
     /**
-     * Panel general de mucamas -- QR único, no por habitación. Solo lo
+     * Panel general de mucamas -- QR único, no por Playroom. Solo lo
      * operativo del día: qué falta hacer y qué viene, nada de cliente ni
      * de dinero.
      */

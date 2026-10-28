@@ -29,7 +29,7 @@ class RoomController extends Controller
 
     /**
      * Hoja imprimible con el QR de cada Playroom -- para no tener que entrar
-     * habitación por habitación a buscarlo en el formulario de edición.
+     * Playroom por Playroom a buscarlo en el formulario de edición.
      */
     public function qrSheet(): View
     {
@@ -134,6 +134,6 @@ class RoomController extends Controller
             AuditLog::record(auth()->id(), $old ? 'habitacion.editar' : 'habitacion.crear', 'Room', $room->id, $old, $room->load('furniture')->toArray());
         });
 
-        return redirect()->route('admin.rooms.index')->with('status', 'Habitación guardada.');
+        return redirect()->route('admin.rooms.index')->with('status', 'Playroom guardado.');
     }
 }

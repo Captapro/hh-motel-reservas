@@ -193,7 +193,7 @@
                     @csrf
                     <label style="display:block; font-size:12px; color:#bbb; margin-bottom:6px;">Motivo (opcional)</label>
                     <input type="text" name="reason" placeholder="Cliente no llegó, error de carga, cambio de planes...">
-                    <p style="font-size:11.5px; color:#c47a7a; margin:8px 0 0;">La habitación queda libre de inmediato al confirmar.</p>
+                    <p style="font-size:11.5px; color:#c47a7a; margin:8px 0 0;">El Playroom queda libre de inmediato al confirmar.</p>
                     <button type="submit">Confirmar cancelación</button>
                 </form>
             </details>
@@ -204,7 +204,7 @@
     @if ($booking->booking_status === 'PENDIENTE_PAGO')
         @if ($booking->expires_at)
             <div class="hold-box">
-                <span>⏳ Retenida hasta las <b>{{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}</b> ({{ $booking->expires_at->isFuture() ? 'vence '.$booking->expires_at->diffForHumans() : 'vencida' }}). Si no se registra el pago, se libera la habitación.</span>
+                <span>⏳ Retenida hasta las <b>{{ $booking->expires_at->timezone('America/Santiago')->format('H:i') }}</b> ({{ $booking->expires_at->isFuture() ? 'vence '.$booking->expires_at->diffForHumans() : 'vencida' }}). Si no se registra el pago, se libera el Playroom.</span>
                 <form method="POST" action="{{ route('bookings.hold', $booking->code) }}">
                     @csrf
                     <button type="submit" name="reason" value="recepcion">Pagará en recepción</button>
@@ -212,7 +212,7 @@
                 </form>
             </div>
         @else
-            <div class="hold-box free">✓ Reserva mantenida sin vencimiento: la habitación queda tomada hasta que se registre el pago o se cancele.</div>
+            <div class="hold-box free">✓ Reserva mantenida sin vencimiento: el Playroom queda tomado hasta que se registre el pago o se cancele.</div>
         @endif
     @endif
 
@@ -295,7 +295,7 @@
         {{-- ===== Columna izquierda: la estadía ===== --}}
         <div class="col">
             <div class="card">
-                <div class="row"><span class="muted">Habitación</span><span>{{ $booking->room->name }} ({{ $booking->room->category->name }})</span></div>
+                <div class="row"><span class="muted">Playroom</span><span>{{ $booking->room->name }} ({{ $booking->room->category->name }})</span></div>
                 @if ($booking->room->photos || $booking->room->videos)
                     <div class="room-media">
                         @foreach (($booking->room->photos ?? []) as $url)
@@ -365,7 +365,7 @@
                 @if ($booking->coupon_code_snapshot)
                     <div class="row"><span class="muted">Promoción ({{ $booking->coupon_code_snapshot }})</span><span>-${{ number_format($booking->discount_amount, 0, ',', '.') }}</span></div>
                 @endif
-                <div class="row total"><span>Precio final (habitación)</span><span>${{ number_format($booking->price_final, 0, ',', '.') }}</span></div>
+                <div class="row total"><span>Precio final (Playroom)</span><span>${{ number_format($booking->price_final, 0, ',', '.') }}</span></div>
                 @if ($booking->addonsTotal() > 0)
                     <div class="row"><span class="muted">Consumo</span><span>${{ number_format($booking->addonsTotal(), 0, ',', '.') }}</span></div>
                 @endif
@@ -548,11 +548,11 @@
         <div class="card" style="margin-top:22px;border:1px solid #5a2327;background:#1d1315;">
             <strong>Eliminar reserva</strong>
             @if ($hadStay)
-                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva ya tuvo check-in{{ $booking->booking_status === 'FINALIZADA' ? ' y está finalizada' : '' }}. Solo soporte puede borrarla. Hazlo únicamente si es una <b>prueba o un error de carga</b>: se borra{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos ($'.number_format($booking->paidAmount(), 0, ',', '.').')' : '' }}{{ $booking->addons->isNotEmpty() ? ' y sus consumos' : '' }}, <b>descuenta sus montos de la caja y de las ventas</b>, devuelve al inventario lo consumido y <b>no se puede deshacer</b>. Queda registrada en auditoría. La habitación no cambia de estado.</p>
+                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva ya tuvo check-in{{ $booking->booking_status === 'FINALIZADA' ? ' y está finalizada' : '' }}. Solo soporte puede borrarla. Hazlo únicamente si es una <b>prueba o un error de carga</b>: se borra{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos ($'.number_format($booking->paidAmount(), 0, ',', '.').')' : '' }}{{ $booking->addons->isNotEmpty() ? ' y sus consumos' : '' }}, <b>descuenta sus montos de la caja y de las ventas</b>, devuelve al inventario lo consumido y <b>no se puede deshacer</b>. Queda registrada en auditoría. El Playroom no cambia de estado.</p>
             @elseif ($closed)
                 <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva no llegó a ocurrir ({{ $booking->booking_status }}). Si es un <b>dato de prueba</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}. Esto descuenta sus montos de la caja y de las ventas, y <b>no se puede deshacer</b>. Queda registrada en auditoría.</p>
             @else
-                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva sigue vigente ({{ $booking->booking_status }}) y todavía no tuvo check-in. Si fue una <b>prueba o un error</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}: libera la habitación y descuenta sus montos de la caja y de las ventas. Si el cliente solo canceló, mejor usa <b>Cancelar</b> para conservar el registro. <b>No se puede deshacer.</b></p>
+                <p style="margin:6px 0 12px;font-size:13px;color:#bbb;">Esta reserva sigue vigente ({{ $booking->booking_status }}) y todavía no tuvo check-in. Si fue una <b>prueba o un error</b>, puedes borrarla{{ $booking->payments->isNotEmpty() ? ' junto con sus pagos' : '' }}: libera el Playroom y descuenta sus montos de la caja y de las ventas. Si el cliente solo canceló, mejor usa <b>Cancelar</b> para conservar el registro. <b>No se puede deshacer.</b></p>
             @endif
             <form method="POST" action="{{ route('bookings.destroy', $booking->code) }}" onsubmit="return confirm('¿Eliminar la reserva {{ $booking->code }}? No se puede deshacer.');">
                 @csrf @method('DELETE')

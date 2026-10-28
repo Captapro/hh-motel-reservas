@@ -119,7 +119,7 @@ class MonthlySalesController extends Controller
             return ['minutes' => (int) $minutes, 'times' => $rows->count(), 'hours' => $hours, 'amount' => $amount, 'avg_room' => (int) round($amount / max(1, $rows->count())), 'per_hour' => $hours ? (int) round($amount / $hours) : 0];
         })->sortBy('minutes')->values();
 
-        // ===== Por habitación =====
+        // ===== Por Playroom =====
         $lodgingTotal = max(1, $totals['lodging']);
         $byRoom = $bookings->groupBy(fn (Booking $b) => $b->room->name)->map(function (Collection $rows, $name) use ($lodgingTotal) {
             $amount = $rows->sum('price_final');
@@ -155,7 +155,7 @@ class MonthlySalesController extends Controller
 
     /**
      * Todos los meses con ventas, del más reciente al más antiguo: venta por
-     * estadía, habitaciones y lo cobrado ese mes. Es el "historial completo"
+     * estadía, Playrooms y lo cobrado ese mes. Es el "historial completo"
      * que se ve al abrir Ventas.
      */
     private function monthHistory(): Collection
@@ -193,7 +193,7 @@ class MonthlySalesController extends Controller
     }
 
     /**
-     * Una fila por habitación vendida y una por cada extra, en el mismo orden
+     * Una fila por Playroom vendido y una por cada extra, en el mismo orden
      * del "Detalle de Ventas" del Excel. 'missing' lista lo que falta
      * completar (documento, RUT, nacionalidad) para destacarlo.
      */
@@ -264,7 +264,7 @@ class MonthlySalesController extends Controller
         return response()->streamDownload(function () use ($detail) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['N° REGISTRO', 'Fecha', 'Tipo de documento', 'N° voucher', 'N° boleta', 'Tipo de venta', 'Detalle', 'Cantidad', 'Nombre', 'RUT o documento', 'Nacionalidad', 'Edad', 'Habitación', 'Categoría', 'Personas', 'Hora entrada', 'Hora salida', 'Duración (h)', 'Tarifa', 'Precio', 'Descuento', 'Medio de pago', 'Turno', 'Registrado por', 'Código reserva', 'Estado', 'Origen', 'Datos faltantes']);
+            fputcsv($out, ['N° REGISTRO', 'Fecha', 'Tipo de documento', 'N° voucher', 'N° boleta', 'Tipo de venta', 'Detalle', 'Cantidad', 'Nombre', 'RUT o documento', 'Nacionalidad', 'Edad', 'Playroom', 'Categoría', 'Personas', 'Hora entrada', 'Hora salida', 'Duración (h)', 'Tarifa', 'Precio', 'Descuento', 'Medio de pago', 'Turno', 'Registrado por', 'Código reserva', 'Estado', 'Origen', 'Datos faltantes']);
             foreach ($detail as $r) {
                 fputcsv($out, [$r['n'], $r['date']->format('d/m/Y'), $r['doc_type'], $r['voucher'], $r['receipt'], $r['kind'], $r['detail'], $r['qty'], $r['name'], $r['doc_id'], $r['nationality'], $r['age'], $r['room'], $r['category'], $r['guests'], $r['in']->format('H:i'), $r['out']->format('H:i'), round($r['minutes'] / 60, 2), $r['tariff'], $r['price'], $r['discount'], $r['method'], $r['shift'], $r['by'], $r['code'], $r['status'], $r['origin'], implode(', ', $r['missing'])]);
             }
@@ -279,7 +279,7 @@ class MonthlySalesController extends Controller
         return response()->streamDownload(function () use ($daily, $totals, $groups) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['Fecha', 'Habitaciones vendidas', 'Alojamiento', 'Extras', 'Venta total', 'Cobrado '.$groups[0], 'Cobrado '.$groups[1], 'Cobrado '.$groups[2], 'Cobrado '.$groups[3], 'Cobrado total']);
+            fputcsv($out, ['Fecha', 'Playrooms vendidos', 'Alojamiento', 'Extras', 'Venta total', 'Cobrado '.$groups[0], 'Cobrado '.$groups[1], 'Cobrado '.$groups[2], 'Cobrado '.$groups[3], 'Cobrado total']);
             foreach ($daily as $r) {
                 fputcsv($out, [$r['date']->format('d/m/Y'), $r['rooms'], $r['lodging'], $r['extras'], $r['total'], $r['cash']['Tarjeta'], $r['cash']['Efectivo'], $r['cash']['Transferencia'], $r['cash']['Otro'], $r['cash_total']]);
             }

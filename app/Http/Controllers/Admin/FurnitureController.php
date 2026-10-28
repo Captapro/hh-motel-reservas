@@ -70,7 +70,7 @@ class FurnitureController extends Controller
             AuditLog::record(auth()->id(), 'mobiliario.elemento_guardar', 'FurnitureItem', $item->id, $old, $item->toArray());
         });
 
-        return redirect()->route('admin.furniture.index')->with('status', 'Elemento guardado. Ya puedes asignarlo a las habitaciones.');
+        return redirect()->route('admin.furniture.index')->with('status', 'Elemento guardado. Ya puedes asignarlo a los Playrooms.');
     }
 
     public function destroyCategory(FurnitureCategory $category): RedirectResponse
@@ -88,7 +88,7 @@ class FurnitureController extends Controller
     public function destroyItem(FurnitureItem $item): RedirectResponse
     {
         if ($item->rooms()->exists()) {
-            return back()->withErrors(['item' => 'No se puede eliminar este elemento porque está asignado a una habitación.']);
+            return back()->withErrors(['item' => 'No se puede eliminar este elemento porque está asignado a un Playroom.']);
         }
         $old = $item->toArray();
         $item->delete();

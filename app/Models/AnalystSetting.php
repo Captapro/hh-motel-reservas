@@ -18,7 +18,7 @@ OBJETIVOS (qué quieres lograr este trimestre)
 - Ej.: subir la venta mensual a $X / llenar las tardes de semana / subir el ticket promedio
 
 COSTOS (aproximados, por estadía o por mes)
-- Costo de aseo y lavandería por habitación usada: $
+- Costo de aseo y lavandería por Playroom usado: $
 - Costo fijo mensual (arriendo, sueldos, luz, agua): $
 - Comisión de pago en línea (Mercado Pago): %
 
@@ -29,7 +29,7 @@ TEMPORADAS Y FECHAS CLAVE
 - Ej.: fines de mes, 14 de febrero, fiestas patrias, eventos cercanos
 
 REGLAS QUE NO SE TOCAN
-- Ej.: no bajar de $X la habitación más barata / la categoría MAX no lleva descuento
+- Ej.: no bajar de $X el Playroom más barato / la categoría MAX no lleva descuento
 
 OTRAS NOTAS
 -

@@ -34,7 +34,7 @@
     <div class="page-inner">
     <a class="back-btn" href="{{ route('rooms.board') }}">← Volver al tablero</a>
     <h1>Próximas reservas</h1>
-    <p class="sub">Todas las habitaciones</p>
+    <p class="sub">Todos los Playrooms</p>
 
     @php $today = $bookings->filter(fn ($b) => $b->starts_at->isSameDay($now)); @endphp
     @php $later = $bookings->filter(fn ($b) => ! $b->starts_at->isSameDay($now)); @endphp

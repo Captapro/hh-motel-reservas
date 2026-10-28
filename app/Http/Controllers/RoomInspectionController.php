@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class RoomInspectionController extends Controller
 {
     /**
-     * Cuánto dura válida la marca de "escaneó esta habitación" (ver
+     * Cuánto dura válida la marca de "escaneó este Playroom" (ver
      * RoomQrController::confirmScan) -- suficiente para completar el
      * formulario sin apuro, corto para que no sirva de shortcut permanente
      * guardando el link.
@@ -28,7 +28,7 @@ class RoomInspectionController extends Controller
             $scannedAt = $request->session()->get('qr_scanned_at.'.$room->id);
             if (! $scannedAt || (now()->timestamp - $scannedAt) > self::SCAN_VALID_SECONDS) {
                 return redirect()->route('rooms.qr.show', $room)
-                    ->withErrors(['pin' => 'Tenés que escanear el QR de esta habitación con la cámara antes de inspeccionarla.']);
+                    ->withErrors(['pin' => 'Tenés que escanear el QR de este Playroom con la cámara antes de inspeccionarlo.']);
             }
         }
 
@@ -60,7 +60,7 @@ class RoomInspectionController extends Controller
             return redirect()->route('shift_round.index')->with('status', $statusMessage);
         }
 
-        // Si vino del QR de la puerta (anfitrión escaneando esa habitación en
+        // Si vino del QR de la puerta (anfitrión escaneando ese Playroom en
         // particular, no navegando desde el tablero), vuelve ahí mismo en vez
         // de mandarlo al tablero -- sigue en el mismo lugar físico.
         if ($request->boolean('from_qr')) {
@@ -71,7 +71,7 @@ class RoomInspectionController extends Controller
     }
 
     /**
-     * Panel de mantención: última inspección de cada habitación, para ver de
+     * Panel de mantención: última inspección de cada Playroom, para ver de
      * un vistazo cuáles necesitan revisión y cuáles nunca se inspeccionaron.
      */
     public function panel(): View

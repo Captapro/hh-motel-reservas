@@ -107,7 +107,7 @@
     </div>
 
     <div class="cards" style="margin-top:14px;">
-        <div class="card count"><div class="label">Habitaciones vendidas</div><div class="value">{{ $live->count() }}</div></div>
+        <div class="card count"><div class="label">Playrooms vendidos</div><div class="value">{{ $live->count() }}</div></div>
         <div class="card revenue"><div class="label">Venta total</div><div class="value">{{ $money($revenue) }}</div></div>
         <div class="card collected"><div class="label">Cobrado de esas ventas</div><div class="value">{{ $money($collected) }}</div></div>
         <div class="card pending"><div class="label">Pendiente</div><div class="value">{{ $money($pending) }}</div></div>
@@ -159,7 +159,7 @@
                     <tr class="blank">@for ($c = 0; $c < 15; $c++)<td>&nbsp;</td>@endfor</tr>
                 @endfor
                 <tr class="total">
-                    <td colspan="6">Total del día ({{ $live->count() }} {{ $live->count() === 1 ? 'habitación' : 'habitaciones' }})</td>
+                    <td colspan="6">Total del día ({{ $live->count() }} {{ $live->count() === 1 ? 'Playroom' : 'Playrooms' }})</td>
                     <td class="n">{{ $money($lodging) }}</td><td class="n">{{ $money($extrasSum) }}</td><td class="n">{{ $money($revenue) }}</td>
                     <td class="n">{{ $money($collected) }}</td><td class="n">{{ $money($pending) }}</td><td colspan="4"></td>
                 </tr>

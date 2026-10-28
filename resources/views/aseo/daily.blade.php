@@ -94,7 +94,7 @@
                 <div class="linen-chip">Sin salidas con cama este día</div>
             @endforelse
         </div>
-        <p class="hint">Un juego por cada salida de LITE, PLUS o MAX, siempre asociado a la habitación puntual — las GO (201, 301) son cápsulas sin cama y solo llevan toallas.</p>
+        <p class="hint">Un juego por cada salida de LITE, PLUS o MAX, siempre asociado al Playroom puntual — las GO (201, 301) son cápsulas sin cama y solo llevan toallas.</p>
         <p class="hint">Un juego de sábanas = bajera + sábana encimera + dúvet (cubrecama) + 2 cabeceras. Las frazadas no se cambian en cada salida — la mucama revisa si están ocupadas/sucias y decide si van a lavar. Toallas = 2 grandes + 1 por cada persona adicional sobre 2 (todas las categorías, incluida GO).</p>
     </div>
 
@@ -105,7 +105,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Habitación</th><th>Reserva</th><th>Salida (check-out)</th><th>Aseo listo</th><th>Quién limpió</th><th>Estado</th><th>Ropa de cama</th><th>Toallas</th>
+                        <th>Playroom</th><th>Reserva</th><th>Salida (check-out)</th><th>Aseo listo</th><th>Quién limpió</th><th>Estado</th><th>Ropa de cama</th><th>Toallas</th>
                     </tr>
                 </thead>
                 <tbody>

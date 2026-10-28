@@ -152,7 +152,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
     <tr data-href="{{ route('reservations.show', $b->code) }}" data-state="{{ $k }}" class="{{ in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'dim' : '' }}">
      <td data-label="Entrada"><b>{{ $b->starts_at->format('H:i') }}</b>@if(! $b->starts_at->isSameDay($date)) <small>({{ $b->starts_at->locale('es')->isoFormat('ddd D') }})</small>@endif</td>
      <td data-label="Salida">{{ $b->ends_at->format('H:i') }}</td>
-     <td data-label="Habitación"><b>{{ $b->room->name }}</b> <small>{{ $b->room->category->name }}</small></td>
+     <td data-label="Playroom"><b>{{ $b->room->name }}</b> <small>{{ $b->room->category->name }}</small></td>
      <td data-label="Cliente">{{ $b->customer->name }}</td>
      <td data-label="Reserva"><a class="code" href="{{ route('reservations.show', $b->code) }}">{{ $b->code }}</a></td>
      <td data-label="Origen"><span class="org org-{{ $b->origin ?: 'none' }}">{{ $b->originLabel() }}</span></td>

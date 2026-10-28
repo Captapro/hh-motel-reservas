@@ -53,7 +53,7 @@
         <div class="progress-bar"><div class="fill" style="width:{{ $total > 0 ? round($done->count() / $total * 100) : 0 }}%;"></div></div>
     </div>
 
-    <a class="scan-btn" href="{{ route('shift_round.scan') }}?ronda=1">📷 Escanear QR de la habitación →</a>
+    <a class="scan-btn" href="{{ route('shift_round.scan') }}?ronda=1">📷 Escanear QR del Playroom →</a>
 
     <h2 class="section">Pendientes ({{ $pending->count() }})</h2>
     <div class="rg">
@@ -63,7 +63,7 @@
                 <div class="name">{{ $room->name }}</div>
                 <div class="cat">{{ $room->category->name }}</div>
             </div>
-            <div class="go">Ir a la habitación →</div>
+            <div class="go">Ir al Playroom →</div>
         </a>
     @empty
         <p class="empty">@if($total > 0) ¡Ronda completa! No queda ninguna disponible sin revisar hoy. @else No hay Playrooms disponibles en este momento (todas ocupadas, en aseo o inactivas). @endif</p>

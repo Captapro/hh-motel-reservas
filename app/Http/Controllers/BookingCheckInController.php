@@ -62,11 +62,11 @@ class BookingCheckInController extends Controller
             ->with('status', 'Pase de '.$booking->customer->name.' — '.$booking->room->name.'. Completa el check-in.');
     }
 
-    /** Sin la habitación pagada no hay check-in: primero se registra el pago. */
+    /** Sin el Playroom pagado no hay check-in: primero se registra el pago. */
     private function toPaymentFirst(Booking $booking, int $due, string $after): RedirectResponse
     {
         return redirect()->route('payments.create', ['code' => $booking->code, 'after' => $after])
-            ->withErrors(['booking' => 'La habitación tiene que estar pagada antes del check-in. Falta cobrar $'.number_format($due, 0, ',', '.').'.']);
+            ->withErrors(['booking' => 'El Playroom tiene que estar pagado antes del check-in. Falta cobrar $'.number_format($due, 0, ',', '.').'.']);
     }
 
     public function show(string $code, UpsellResolver $upsells): View|RedirectResponse
@@ -108,7 +108,7 @@ class BookingCheckInController extends Controller
     public function store(Request $request, string $code, ConsumptionService $consumption, AvailabilityChecker $availability, RateRuleResolver $rateRules): RedirectResponse
     {
         return DB::transaction(function () use ($request, $code, $consumption, $availability, $rateRules) {
-            // Antes esto bloqueaba TODAS las habitaciones (Room::orderBy('id')
+            // Antes esto bloqueaba TODAS los Playrooms (Room::orderBy('id')
             // ->lockForUpdate()->get() sin filtro) "por si" el check-in traía
             // un upgrade -- de paso dejaba a cualquier otra operación sobre
             // CUALQUIER pieza (crear una reserva nueva, extender otra, etc.)
@@ -146,7 +146,7 @@ class BookingCheckInController extends Controller
         // salió tarde) no se puede habilitar hasta reactivarla.
         if ($booking->room->operational_status !== 'activa') {
             return back()->withInput()->withErrors([
-                'booking' => 'La habitación '.$booking->room->name.' está en estado "'.$booking->room->operational_status.'" — hay que reactivarla antes de poder hacer el check-in.',
+                'booking' => 'El Playroom '.$booking->room->name.' está en estado "'.$booking->room->operational_status.'" — hay que reactivarlo antes de poder hacer el check-in.',
             ]);
         }
 
@@ -156,7 +156,7 @@ class BookingCheckInController extends Controller
         // puede meter a otro encima.
         if ($this->roomHasGuestInside($booking->room, $booking->id)) {
             return back()->withInput()->withErrors([
-                'booking' => 'La habitación '.$booking->room->name.' todavía tiene un huésped adentro (sin check-out) — hay que finalizar esa reserva antes de hacer este check-in.',
+                'booking' => 'El Playroom '.$booking->room->name.' todavía tiene un huésped adentro (sin check-out) — hay que finalizar esa reserva antes de hacer este check-in.',
             ]);
         }
 
@@ -172,7 +172,7 @@ class BookingCheckInController extends Controller
 
         // El registro de acompañantes es obligatorio para mayores de 18 —
         // no bloquea crear/gestionar la reserva, pero sí habilitar la
-        // habitación: sin el registro completo no se puede hacer check-in.
+        // Playroom: sin el registro completo no se puede hacer check-in.
         // "Personas" incluye al titular (ya identificado por su cuenta), así
         // que hacen falta guests_count - 1 acompañantes con nombre y apellido.
         $guestNames = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $validated['guest_names'] ?? ''))));

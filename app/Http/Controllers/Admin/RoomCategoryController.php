@@ -31,7 +31,7 @@ class RoomCategoryController extends Controller
 
         return redirect()->route('admin.categories.index')->with('status', $category->is_active
             ? "{$category->name} habilitada — vuelve a ofrecerse en el tablero y el catálogo."
-            : "{$category->name} deshabilitada — sus habitaciones libres ya no se ofrecen.");
+            : "{$category->name} deshabilitada — sus Playrooms libres ya no se ofrecen.");
     }
 
     /**
@@ -58,7 +58,7 @@ class RoomCategoryController extends Controller
 
         return redirect()->route('admin.categories.index')->with('status', $setting->$field
             ? "{$labels[$field]} habilitado — vuelve a ofrecerse en el tablero."
-            : "{$labels[$field]} deshabilitado — sus habitaciones libres ya no se ofrecen.");
+            : "{$labels[$field]} deshabilitado — sus Playrooms libres ya no se ofrecen.");
     }
 
     public function create(): View
