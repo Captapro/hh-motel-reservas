@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\HistoricalSale;
 use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\View\View;
@@ -87,8 +88,12 @@ class DailySalesController extends Controller
         $advanceBookings = $advancePayments->unique('booking_id')->values();
         $lateTotal = $latePayments->sum('amount');
 
+        // Ventas anotadas en la planilla de recepción ese día (antes del sistema).
+        $planilla = HistoricalSale::with('guests')->whereDate('sold_on', $day->toDateString())->orderBy('starts_time')->orderBy('source_row')->get();
+
         return view('sales.daily', [
             'day' => $day,
+            'planilla' => $planilla,
             'bookings' => $bookings,
             'sold' => $sold,
             'revenue' => $revenue,

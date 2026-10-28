@@ -115,7 +115,7 @@
             <tbody>
             @foreach ($planilla['days'] as $r)
                 <tr class="{{ $r['total'] === 0 ? 'zero' : '' }} {{ $r['date']->isWeekend() ? 'weekend' : '' }}">
-                    <td>@if (auth()->user()?->isSoporte() && $r['total'] > 0)<a href="{{ route('admin.historical.sales', ['mes' => $first->format('Y-m'), 'dia' => $r['date']->toDateString()]) }}#detalle">{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}</a>@else{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}@endif</td>
+                    <td>@if ($r['total'] > 0)<a href="{{ route('sales.daily', $r['date']->toDateString()) }}">{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}</a>@else{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}@endif</td>
                     <td class="n">{{ $r['stays'] }}</td><td class="n">{{ $money($r['lodging']) }}</td><td class="n">{{ $money($r['extra_hour']) }}</td><td class="n">{{ $money($r['extra_person']) }}</td><td class="n">{{ $money($r['services']) }}</td><td class="n">{{ $money($r['extras']) }}</td><td class="n">{{ $money($r['split']) }}</td>
                     <td class="n"><b>{{ $money($r['total']) }}</b></td><td class="n">{{ $money($r['card']) }}</td><td class="n">{{ $money($r['cash']) }}</td><td class="n">{{ $money($r['transfer']) }}</td>
                 </tr>

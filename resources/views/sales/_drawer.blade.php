@@ -2,8 +2,8 @@
      data-sale="CODIGO" lo abre al hacer click (los links dentro de la fila
      siguen funcionando normal). --}}
 <style>
-    tr[data-sale] { cursor:pointer; }
-    tr[data-sale]:hover td { background:#fff7ed !important; }
+    tr[data-sale], tr[data-sale-url] { cursor:pointer; }
+    tr[data-sale]:hover td, tr[data-sale-url]:hover td { background:#fff7ed !important; }
     #sd-back { position:fixed; inset:0; background:rgba(17,24,39,.35); z-index:200; display:none; }
     #sd-back.open { display:block; }
     #sd { position:fixed; top:0; right:0; bottom:0; width:min(480px, 100vw); background:#fff; color:#1f2937; z-index:201; box-shadow:-8px 0 30px rgba(16,24,40,.18); transform:translateX(100%); transition:transform .18s ease; display:flex; flex-direction:column; }
@@ -48,12 +48,12 @@
         const base = @json(url('/ventas/reserva'));
         let token = 0;
         function close() { panel.classList.remove('open'); back.classList.remove('open'); panel.setAttribute('aria-hidden', 'true'); }
-        async function open(code) {
+        async function open(url) {
             const mine = ++token;
             body.innerHTML = '<p style="padding:24px 0;color:#6b7280">Cargando…</p>';
             panel.classList.add('open'); back.classList.add('open'); panel.setAttribute('aria-hidden', 'false');
             try {
-                const r = await fetch(base + '/' + encodeURIComponent(code), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 if (!r.ok) throw new Error(r.status);
                 const html = await r.text();
                 if (mine === token) { body.innerHTML = html; body.scrollTop = 0; }
@@ -62,9 +62,9 @@
             }
         }
         document.addEventListener('click', function (ev) {
-            const row = ev.target.closest('tr[data-sale]');
+            const row = ev.target.closest('tr[data-sale], tr[data-sale-url]');
             if (!row || ev.target.closest('a, button, input, select, label')) return;
-            open(row.dataset.sale);
+            open(row.dataset.saleUrl || base + '/' + encodeURIComponent(row.dataset.sale));
         });
         back.addEventListener('click', close);
         document.getElementById('sd-close').addEventListener('click', close);

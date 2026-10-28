@@ -741,6 +741,15 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('sales.monthly', '2026-10'))->assertOk()
             ->assertSee('Planilla de recepción')->assertSee('Hora extra')->assertSee('Persona adicional')->assertSee('Otros servicios')->assertSee('Extras (productos)')->assertSee('$139.000')->assertSee('Total planilla')->assertSee('planilla</span>', false);
 
+        // Ventas del día: las ventas de la planilla de ese día, con su detalle en el panel; los nombres solo los ve soporte.
+        $sale = HistoricalSale::where('source_row', 3)->firstOrFail();
+        $this->get(route('sales.daily', '2026-10-02'))->assertOk()->assertSee('Planilla de recepción')->assertSee('Ana Prueba Uno')->assertSee(route('sales.historical', $sale), false);
+        $this->get(route('sales.historical', $sale))->assertOk()->assertSee('Ana Prueba Uno')->assertSee('Boleta 900')->assertSee('R0001')->assertSee('Estudiantes $5000 OFF');
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        $this->get(route('sales.daily', '2026-10-02'))->assertOk()->assertSee('Planilla de recepción')->assertDontSee('Ana Prueba Uno');
+        $this->get(route('sales.historical', $sale))->assertOk()->assertDontSee('Ana Prueba Uno')->assertSee('solo los ve soporte');
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+
         // Quitarla borra sus ventas y a las personas ligadas.
         $this->delete(route('admin.historical.destroy'), ['fuente' => 'planilla-2026-10'])->assertRedirect();
         $this->assertSame(0, HistoricalSale::count());

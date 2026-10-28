@@ -42,6 +42,7 @@ use App\Http\Controllers\DailyAseoController;
 use App\Http\Controllers\DailySalesController;
 use App\Http\Controllers\GuestReviewController;
 use App\Http\Controllers\HelpController;
+use App\Http\Controllers\HistoricalSaleDetailController;
 use App\Http\Controllers\ImageResizeController;
 use App\Http\Controllers\MercadoPagoController;
 use App\Http\Controllers\MonthlySalesController;
@@ -131,6 +132,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::put('/reservas/{code}', [ReservationController::class, 'update'])->name('reservations.update');
 
     Route::get('/ventas/reserva/{code}', [SaleDetailController::class, 'show'])->name('sales.detail');
+    Route::get('/ventas/planilla/{sale}', [HistoricalSaleDetailController::class, 'show'])->name('sales.historical');
     Route::get('/ventas/{date?}', [DailySalesController::class, 'show'])->name('sales.daily');
     Route::post('/reservas/{code}/pagos/{payment}/devolver', [PaymentRefundController::class, 'store'])->middleware('role:administrador')->name('payments.refund');
     Route::put('/pagos/{payment}/documento', [PaymentDocumentController::class, 'update'])->name('payments.document');

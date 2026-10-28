@@ -166,6 +166,45 @@
             </tbody>
         </table>
     </div>
+    @if ($planilla->isNotEmpty())
+        @php
+            $pLabels = ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro servicio', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'];
+            $pStays = $planilla->where('sale_type', 'ALOJAMIENTO');
+            $showNames = (bool) auth()->user()?->isSoporte();
+        @endphp
+        <div class="sec-label">Planilla de recepción (ventas anotadas antes del sistema)</div>
+        <p class="sub">{{ $planilla->count() }} líneas · {{ $pStays->count() }} estadías · <b>{{ $money($planilla->sum(fn ($s) => $s->total())) }}</b> en total. No se suman a las cifras de arriba. Toca una fila para ver su detalle.</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hora</th><th>N°</th><th>Tipo</th><th>Detalle</th><th>Hab.</th><th>Categoría</th>@if ($showNames)<th>Titular</th>@endif
+                        <th>Horas</th><th>Salida</th><th class="n">Monto</th><th>Pago</th><th>Voucher / boleta</th><th>Turno</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($planilla as $p)
+                        @php $holder = $p->guests->firstWhere('is_holder', true); @endphp
+                        <tr data-sale-url="{{ route('sales.historical', $p) }}" title="Ver el detalle completo">
+                            <td>{{ $p->starts_time ?: '—' }}</td>
+                            <td>{{ $p->source_row }}</td>
+                            <td>{{ $pLabels[$p->concept()] ?? $p->sale_type }}</td>
+                            <td>{{ $p->detail ?: '—' }}@if ($p->discount_note)<br><span style="color:#999;font-size:12px;">{{ $p->discount_note }}</span>@endif</td>
+                            <td>{{ $p->room_label ?: '—' }}</td>
+                            <td>{{ $p->category ?: '—' }}</td>
+                            @if ($showNames)<td>{{ $holder?->name ?: '—' }}</td>@endif
+                            <td>{{ $p->hours_paid ? $p->hours_paid.' h' : '—' }}</td>
+                            <td>{{ $p->ends_time ?: '—' }}</td>
+                            <td class="n"><b>{{ $money($p->total()) }}</b></td>
+                            <td>{{ $p->payment_method ? ucfirst($p->payment_method) : '—' }}</td>
+                            <td>{{ $p->receipt_number ? 'B '.$p->receipt_number : ($p->voucher_number ? 'V '.$p->voucher_number : '—') }}</td>
+                            <td>{{ $p->shift ? ucfirst(mb_strtolower($p->shift)) : '—' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
     @if ($cancelledCount > 0)
         <p class="sub">{{ $cancelledCount }} {{ Str::plural('reserva', $cancelledCount) }} cancelada{{ $cancelledCount > 1 ? 's' : '' }} ese día — no se cuenta en los totales, aparece atenuada en la tabla.</p>
     @endif
