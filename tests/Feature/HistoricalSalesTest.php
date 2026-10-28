@@ -114,6 +114,20 @@ class HistoricalSalesTest extends TestCase
         }
     }
 
+    public function test_extras_core_spelled_with_an_s_counts_as_extra_core(): void
+    {
+        $header = (string) strtok((string) file_get_contents($this->file), "\n");
+        $row = '1,,5-octubre,Voucher,9,,,EXTRAS CORE,GOLOSO,1,,,,,,203,,,,,,,,$17.500,EFECTIVO,,,,NOCHE,';
+        $path = tempnam(sys_get_temp_dir(), 'planilla');
+        file_put_contents($path, $header."\n".$row."\n");
+
+        $summary = app(HistoricalSalesImporter::class)->import($path, 'planilla-prueba', 2026, true);
+        unlink($path);
+
+        $this->assertSame(['EXTRA CORE' => 1], collect($summary['por_tipo'])->map->lineas->all());
+        $this->assertSame(17500, $summary['venta_principal']);
+    }
+
     public function test_each_line_counts_in_its_own_concept(): void
     {
         $concept = fn (string $type, ?string $detail = null) => (new HistoricalSale(['sale_type' => $type, 'detail' => $detail]))->concept();

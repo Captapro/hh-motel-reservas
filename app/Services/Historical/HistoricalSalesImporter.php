@@ -82,6 +82,8 @@ class HistoricalSalesImporter
 
             $date = $this->parseDate($this->cell($row, $columns, 'fecha'), $defaultYear);
             $type = mb_strtoupper($this->cell($row, $columns, 'sale_type'));
+            // Algunas planillas escriben «EXTRAS CORE» (con S): es el mismo «EXTRA CORE».
+            $type = $type === 'EXTRAS CORE' ? 'EXTRA CORE' : $type;
             $name = $this->cleanName($this->cell($row, $columns, 'name'));
 
             // Una fila con fecha y monto del alojamiento pero sin tipo de venta es una
