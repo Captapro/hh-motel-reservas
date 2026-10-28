@@ -739,7 +739,7 @@ class BookingIntegrityTest extends TestCase
 
         // Ventas ("Historial de ventas"): el mes aparece en el historial y trae su bloque de la planilla.
         $this->get(route('sales.monthly', '2026-10'))->assertOk()
-            ->assertSee('Planilla de recepción')->assertSee('$139.000')->assertSee('Total planilla')->assertSee('planilla</span>', false);
+            ->assertSee('Planilla de recepción')->assertSee('Hora extra')->assertSee('Packs y servicios')->assertSee('Extras (productos)')->assertSee('$139.000')->assertSee('Total planilla')->assertSee('planilla</span>', false);
 
         // Quitarla borra sus ventas y a las personas ligadas.
         $this->delete(route('admin.historical.destroy'), ['fuente' => 'planilla-2026-10'])->assertRedirect();

@@ -44,16 +44,19 @@ class HistoricalDataService
         }
 
         $money = fn (Collection $c) => (int) $c->sum(fn (HistoricalSale $s) => $s->total());
+        $of = fn (Collection $c, string $concept) => $money($c->filter(fn (HistoricalSale $s) => $s->concept() === $concept));
         $byDay = $lines->groupBy(fn (HistoricalSale $s) => $s->sold_on->toDateString());
         $days = collect();
         for ($d = $first->copy(); $d->lte($last); $d->addDay()) {
             $g = $byDay->get($d->toDateString(), collect());
-            $stays = $g->where('sale_type', 'ALOJAMIENTO');
             $days->push([
                 'date' => $d->copy(),
-                'stays' => $stays->count(),
-                'lodging' => $money($stays),
-                'others' => $money($g->where('sale_type', '!=', 'ALOJAMIENTO')),
+                'stays' => $g->where('sale_type', 'ALOJAMIENTO')->count(),
+                'lodging' => $of($g, 'alojamiento'),
+                'extra_hour' => $of($g, 'hora_extra'),
+                'packs' => $of($g, 'packs'),
+                'extras' => $of($g, 'extras'),
+                'split' => $of($g, 'fraccionado'),
                 'total' => $money($g),
                 'cash' => $money($g->where('payment_method', 'efectivo')),
                 'card' => $money($g->where('payment_method', 'tarjeta')),
@@ -64,10 +67,7 @@ class HistoricalDataService
         return [
             'sources' => $lines->pluck('source')->unique()->values()->all(),
             'days' => $days,
-            'totals' => [
-                'stays' => $days->sum('stays'), 'lodging' => $days->sum('lodging'), 'others' => $days->sum('others'), 'total' => $days->sum('total'),
-                'cash' => $days->sum('cash'), 'card' => $days->sum('card'), 'transfer' => $days->sum('transfer'),
-            ],
+            'totals' => collect(['stays', 'lodging', 'extra_hour', 'packs', 'extras', 'split', 'total', 'cash', 'card', 'transfer'])->mapWithKeys(fn ($k) => [$k => $days->sum($k)])->all(),
         ];
     }
 
@@ -104,9 +104,10 @@ class HistoricalDataService
             'totales' => [
                 'estadias' => $stays->count(),
                 'venta_alojamiento' => $total($stays),
-                'venta_horas_extra_y_packs' => $total($lines->where('sale_type', 'EXTRA CORE')),
-                'venta_pago_fraccionado' => $total($lines->where('sale_type', 'PAGO FRACCIONADO')),
-                'venta_extras_productos' => $total($lines->where('sale_type', 'EXTRAS')),
+                'venta_hora_extra' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'hora_extra')),
+                'venta_packs_y_servicios' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'packs')),
+                'venta_pago_fraccionado' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'fraccionado')),
+                'venta_extras_productos' => $total($lines->filter(fn (HistoricalSale $s) => $s->concept() === 'extras')),
                 'venta_total' => $total($lines),
                 'ticket_promedio_estadia' => $stays->count() ? (int) round($total($stays) / $stays->count()) : 0,
                 'duracion_promedio_min' => $stays->whereNotNull('duration_minutes')->count() ? (int) round($stays->whereNotNull('duration_minutes')->avg('duration_minutes')) : 0,

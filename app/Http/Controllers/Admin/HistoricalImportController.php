@@ -44,21 +44,22 @@ class HistoricalImportController extends Controller
         $from = Carbon::parse($month.'-01')->startOfMonth();
         $lines = HistoricalSale::query()->whereBetween('sold_on', [$from->toDateString(), $from->copy()->endOfMonth()->toDateString()])->get();
 
-        $days = $lines->groupBy(fn (HistoricalSale $s) => $s->sold_on->toDateString())->map(function (Collection $g, string $date) {
-            $stays = $g->where('sale_type', 'ALOJAMIENTO');
-
-            return [
-                'date' => $date,
-                'weekday' => Carbon::parse($date)->locale('es')->isoFormat('dddd'),
-                'stays' => $stays->count(),
-                'lodging' => (int) $stays->sum(fn (HistoricalSale $s) => $s->total()),
-                'others' => (int) $g->where('sale_type', '!=', 'ALOJAMIENTO')->sum(fn (HistoricalSale $s) => $s->total()),
-                'total' => (int) $g->sum(fn (HistoricalSale $s) => $s->total()),
-                'cash' => (int) $g->where('payment_method', 'efectivo')->sum(fn (HistoricalSale $s) => $s->total()),
-                'card' => (int) $g->where('payment_method', 'tarjeta')->sum(fn (HistoricalSale $s) => $s->total()),
-                'transfer' => (int) $g->where('payment_method', 'transferencia')->sum(fn (HistoricalSale $s) => $s->total()),
-            ];
-        })->sortKeys()->values();
+        $money = fn (Collection $c) => (int) $c->sum(fn (HistoricalSale $s) => $s->total());
+        $of = fn (Collection $c, string $concept) => $money($c->filter(fn (HistoricalSale $s) => $s->concept() === $concept));
+        $days = $lines->groupBy(fn (HistoricalSale $s) => $s->sold_on->toDateString())->map(fn (Collection $g, string $date) => [
+            'date' => $date,
+            'weekday' => Carbon::parse($date)->locale('es')->isoFormat('dddd'),
+            'stays' => $g->where('sale_type', 'ALOJAMIENTO')->count(),
+            'lodging' => $of($g, 'alojamiento'),
+            'extra_hour' => $of($g, 'hora_extra'),
+            'packs' => $of($g, 'packs'),
+            'extras' => $of($g, 'extras'),
+            'split' => $of($g, 'fraccionado'),
+            'total' => $money($g),
+            'cash' => $money($g->where('payment_method', 'efectivo')),
+            'card' => $money($g->where('payment_method', 'tarjeta')),
+            'transfer' => $money($g->where('payment_method', 'transferencia')),
+        ])->sortKeys()->values();
 
         $day = (string) $request->query('dia', '');
         $detail = preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)

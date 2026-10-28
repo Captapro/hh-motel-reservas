@@ -72,6 +72,10 @@ class HistoricalSalesTest extends TestCase
 
         $this->assertSame(3, $summary['totales']['estadias']);
         $this->assertSame(36000 + 31000 + 50000, $summary['totales']['venta_alojamiento']);
+        // La hora extra va aparte de los packs y de los extras (productos).
+        $this->assertSame(20000, $summary['totales']['venta_hora_extra']);
+        $this->assertSame(0, $summary['totales']['venta_packs_y_servicios']);
+        $this->assertSame(2000, $summary['totales']['venta_extras_productos']);
         $this->assertSame(['desde' => '2026-10-01', 'hasta' => '2026-10-03'], $summary['cobertura_cargada']);
         $this->assertSame(1, $summary['descuentos']['estadias_con_descuento']);
         // Ana (RUT válido) estuvo 2 veces; Beto (RUT válido) 1 vez; Carla tiene RUT inválido y Diego pasaporte: no se cuentan.
