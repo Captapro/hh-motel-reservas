@@ -403,13 +403,16 @@ class PublicBookingController extends Controller
         // cambiarlas en Administración, el catálogo no sigue con horas viejas.
         $shortVersion = md5(json_encode(ShortStaySetting::current()->only(['enabled', 'catalog_enabled', 'min_minutes', 'max_minutes'])));
         $times = Cache::remember("catalog-times:{$date}:{$category}:{$minDuration}:{$shortVersion}", 300, function () use ($date, $category, $minDuration, $rateRules, $shortStays) {
+            // Son 96 horarios por día: lo que no cambia entre ellos se consulta una sola vez.
+            $pricedRules = RateRulePrice::where('room_category_id', $category)->where('duration_minutes', (int) $minDuration)->pluck('rate_rule_id')->all();
+            $offersShortStay = ShortStaySetting::current()->offeredOn('catalogo');
             $valid = [];
             for ($minute = 0; $minute < 24 * 60; $minute += 15) {
                 $start = Carbon::parse($date)->addMinutes($minute);
                 $rate = $rateRules->resolve($start, $start->copy()->addMinutes((int) $minDuration));
-                if ($rate && $rate->prices()->where('room_category_id', $category)->where('duration_minutes', (int) $minDuration)->exists()) {
+                if ($rate && in_array($rate->id, $pricedRules, true)) {
                     $valid[] = $start->format('H:i');
-                } elseif ($shortStays->quoteForCategory($category, $start, (int) $minDuration, 'catalogo')) {
+                } elseif ($offersShortStay && $shortStays->quoteForCategory($category, $start, (int) $minDuration, 'catalogo')) {
                     // Cerca del cierre: se puede pedir como estadía corta.
                     $valid[] = $start->format('H:i');
                 }

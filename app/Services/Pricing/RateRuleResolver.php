@@ -19,9 +19,41 @@ use Illuminate\Support\Collection;
  */
 class RateRuleResolver
 {
+    /**
+     * Lo que se lee de la base se recuerda por día mientras viva esta instancia
+     * (una solicitud): el catálogo consulta los 96 horarios de un día seguidos,
+     * y sin esto cada uno repetía las mismas consultas de tarifas y ventanas.
+     *
+     * @var array<string, ?CalendarOverride>
+     */
+    private array $overrides = [];
+
+    /** @var array<string, Collection<int, RateRule>> */
+    private array $candidates = [];
+
+    private function overrideFor(string $date): ?CalendarOverride
+    {
+        if (! array_key_exists($date, $this->overrides)) {
+            $this->overrides[$date] = CalendarOverride::with('forcedRateRule.windows')->where('date', $date)->first();
+        }
+
+        return $this->overrides[$date];
+    }
+
+    /** @return Collection<int, RateRule> */
+    private function candidatesFor(string $date): Collection
+    {
+        return $this->candidates[$date] ??= RateRule::with('windows')
+            ->where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', $date))
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $date))
+            ->orderByDesc('priority')
+            ->get();
+    }
+
     public function resolve(Carbon $startsAt, Carbon $endsAt): ?RateRule
     {
-        $override = CalendarOverride::where('date', $startsAt->toDateString())->first();
+        $override = $this->overrideFor($startsAt->toDateString());
         if ($override) {
             $rule = $override->forcedRateRule;
             if ($rule && $this->rangeFullyCoveredByRule($rule, $startsAt, $endsAt)) {
@@ -29,11 +61,7 @@ class RateRuleResolver
             }
         }
 
-        $candidates = RateRule::where('is_active', true)
-            ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', $startsAt->toDateString()))
-            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $startsAt->toDateString()))
-            ->orderByDesc('priority')
-            ->get();
+        $candidates = $this->candidatesFor($startsAt->toDateString());
 
         foreach ($candidates as $rule) {
             if ($this->rangeFullyCoveredByRule($rule, $startsAt, $endsAt)) {
@@ -53,7 +81,7 @@ class RateRuleResolver
      */
     public function currentStatus(Carbon $now): ?array
     {
-        $override = CalendarOverride::where('date', $now->toDateString())->first();
+        $override = $this->overrideFor($now->toDateString());
         if ($override && $override->forcedRateRule) {
             $window = $this->findWindowCovering($override->forcedRateRule->windows, $now);
             if ($window) {
@@ -61,11 +89,7 @@ class RateRuleResolver
             }
         }
 
-        $candidates = RateRule::where('is_active', true)
-            ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', $now->toDateString()))
-            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $now->toDateString()))
-            ->orderByDesc('priority')
-            ->get();
+        $candidates = $this->candidatesFor($now->toDateString());
 
         foreach ($candidates as $rule) {
             $window = $this->findWindowCovering($rule->windows, $now);
