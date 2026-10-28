@@ -159,6 +159,79 @@ class HistoricalDataService
         ];
     }
 
+    /**
+     * Comportamiento de los clientes según todo lo cargado de las planillas, para
+     * la pantalla «Comportamiento de clientes». Solo cifras, sin nombres ni RUT.
+     * Las personas se cuentan por RUT válido; «nueva» significa que su primera
+     * estadía de lo cargado cae en ese mes (con pocos meses cargados hay más
+     * «nuevas» de las reales). Devuelve null si no hay planillas.
+     */
+    public function behavior(): ?array
+    {
+        $coverage = $this->coverage();
+        if ($coverage === null) {
+            return null;
+        }
+
+        $from = Carbon::parse($coverage['desde'])->startOfDay();
+        $to = Carbon::parse($coverage['hasta'])->endOfDay();
+        $summary = $this->summary($from, $to);
+        $stayCount = $summary['totales']['estadias'];
+
+        // Una fila por persona y estadía (titular o acompañante con RUT válido).
+        $visits = HistoricalGuest::query()
+            ->where('document_kind', 'rut')
+            ->join('historical_sales', 'historical_sales.id', '=', 'historical_guests.historical_sale_id')
+            ->where('historical_sales.sale_type', 'ALOJAMIENTO')
+            ->get(['historical_guests.document', 'historical_sales.id as sale_id', 'historical_sales.sold_on'])
+            ->unique(fn ($r) => $r->document.'|'.$r->sale_id)
+            ->map(fn ($r) => ['doc' => $r->document, 'sale' => $r->sale_id, 'day' => Carbon::parse($r->sold_on)->startOfDay()]);
+
+        $byPerson = $visits->groupBy('doc');
+        $people = $byPerson->count();
+        $returned = $byPerson->filter(fn (Collection $g) => $g->pluck('sale')->unique()->count() >= 2)->count();
+
+        // Días entre una estadía y la siguiente de la misma persona (mismo día no cuenta).
+        $gaps = collect();
+        foreach ($byPerson as $g) {
+            $days = $g->pluck('day')->sort()->values()->unique(fn (Carbon $d) => $d->toDateString())->values();
+            for ($i = 1; $i < $days->count(); $i++) {
+                $gaps->push((int) $days[$i - 1]->diffInDays($days[$i]));
+            }
+        }
+        $median = $gaps->isEmpty() ? null : (int) $gaps->sort()->values()->get(intdiv($gaps->count(), 2));
+        $buckets = [['Hasta 7 días', 0, 7], ['8 a 14 días', 8, 14], ['15 a 30 días', 15, 30], ['31 a 60 días', 31, 60], ['61 a 90 días', 61, 90], ['Más de 90 días', 91, PHP_INT_MAX]];
+
+        // Por mes: personas distintas, cuántas son su primera vez en lo cargado y cuántas ya habían venido antes.
+        $firstDay = $byPerson->map(fn (Collection $g) => $g->min('day'));
+        $months = $visits->groupBy(fn ($v) => $v['day']->format('Y-m'))->sortKeys()->map(function (Collection $g, string $ym) use ($firstDay) {
+            $docs = $g->pluck('doc')->unique();
+            $new = $docs->filter(fn ($d) => $firstDay[$d]->format('Y-m') === $ym)->count();
+
+            return ['label' => Carbon::parse($ym.'-01')->locale('es')->isoFormat('MMM YY'), 'people' => $docs->count(), 'new' => $new, 'returning' => $docs->count() - $new];
+        })->values();
+
+        $rows = fn (array $groups) => collect($groups)->map(fn ($g) => ['label' => $g['grupo'], 'count' => $g['estadias']])->values();
+
+        return [
+            'coverage' => $coverage,
+            'stays' => $stayCount,
+            'stays_with_rut' => $visits->pluck('sale')->unique()->count(),
+            'people' => $people,
+            'returned' => $returned,
+            'returned_pct' => $people ? (int) round($returned * 100 / $people) : 0,
+            'stays_per_person' => $people ? round($visits->count() / $people, 1) : 0,
+            'median_gap' => $median,
+            'frequency' => collect($summary['personas']['distribucion_estadias_por_persona'])->map(fn ($n, $label) => ['label' => $label, 'count' => $n])->values(),
+            'gap_buckets' => collect($buckets)->map(fn ($b) => ['label' => $b[0], 'count' => $gaps->filter(fn ($d) => $d >= $b[1] && $d <= $b[2])->count()])->values(),
+            'months' => $months,
+            'categories' => $rows($summary['por_categoria'])->sortByDesc('count')->values(),
+            'hours' => $rows($summary['por_horas_pagadas'])->sortBy(fn ($r) => (int) $r['label'] ?: 999)->values(),
+            'weekdays' => $rows($summary['por_dia_semana']),
+            'shifts' => $rows($summary['por_turno'])->sortByDesc('count')->values(),
+        ];
+    }
+
     private function group(Collection $rows, callable $key): array
     {
         return $rows->groupBy($key)->map(fn (Collection $g, $k) => [

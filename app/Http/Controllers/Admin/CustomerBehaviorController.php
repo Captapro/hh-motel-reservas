@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Services\Analyst\HistoricalDataService;
 use App\Support\TimeFormat;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -77,6 +78,7 @@ class CustomerBehaviorController extends Controller
                 'median_gap' => $gaps->isEmpty() ? null : (int) $gaps->sort()->values()->get(intdiv($gaps->count(), 2)),
                 'at_risk' => $risk->count(),
             ],
+            'historical' => app(HistoricalDataService::class)->behavior(),
             'segments' => $segments,
             'monthly' => $this->newVsReturning(),
             'categories' => $this->tally($inRange, fn (Booking $b) => $b->room?->category?->name ?? 'Sin categoría', $value),

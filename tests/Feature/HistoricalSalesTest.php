@@ -91,6 +91,29 @@ class HistoricalSalesTest extends TestCase
         }
     }
 
+    public function test_customer_behavior_uses_all_loaded_sheets_without_exposing_people(): void
+    {
+        $service = app(HistoricalDataService::class);
+        $this->assertNull($service->behavior());
+
+        app(HistoricalSalesImporter::class)->import($this->file, 'planilla-2026-10', 2026);
+        $b = $service->behavior();
+
+        // Ana (2 estadías) y Beto (1) tienen RUT válido; Carla e invitados con documento raro no cuentan.
+        $this->assertSame(2, $b['people']);
+        $this->assertSame(1, $b['returned']);
+        $this->assertSame(50, $b['returned_pct']);
+        $this->assertSame(['desde' => '2026-10-01', 'hasta' => '2026-10-03'], $b['coverage']);
+        $this->assertSame(2, $b['months'][0]['people']);
+        $this->assertSame(2, $b['months'][0]['new']); // con un solo mes cargado todas son «nuevas»
+        $this->assertCount(7, $b['weekdays']);
+
+        $json = json_encode($b, JSON_UNESCAPED_UNICODE);
+        foreach (['Ana', 'Beto', 'Carla', 'Diego', '11111111', '22222222', 'P1234567'] as $secret) {
+            $this->assertStringNotContainsString($secret, $json);
+        }
+    }
+
     public function test_each_line_counts_in_its_own_concept(): void
     {
         $concept = fn (string $type, ?string $detail = null) => (new HistoricalSale(['sale_type' => $type, 'detail' => $detail]))->concept();

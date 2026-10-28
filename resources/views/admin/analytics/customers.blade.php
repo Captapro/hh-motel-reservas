@@ -146,6 +146,36 @@
         </div>
     </div>
 
+    @if ($historical)
+        <h2 class="an-title">Con las planillas históricas</h2>
+        <p class="sub">Todo lo cargado de las planillas de recepción ({{ \Carbon\Carbon::parse($historical['coverage']['desde'])->format('d/m/Y') }} – {{ \Carbon\Carbon::parse($historical['coverage']['hasta'])->format('d/m/Y') }}), sin importar el rango de arriba. Son estadías anteriores al sistema: <b>no se mezclan</b> con las cifras de arriba. Personas contadas por RUT válido; {{ $historical['stays_with_rut'] }} de {{ $historical['stays'] }} estadías traen al menos un RUT válido. Mientras haya pocos meses cargados, «nuevas» está sobreestimado.</p>
+        <div class="kpis kpis-all">
+            <div class="kpi"><div class="k-label">Personas distintas</div><div class="k-value">{{ $historical['people'] }}</div><div class="k-delta flat">por RUT válido, titulares y acompañantes</div></div>
+            <div class="kpi"><div class="k-label">Volvieron</div><div class="k-value">{{ $historical['returned'] }}</div><div class="k-delta flat">{{ $historical['returned_pct'] }}% de las personas</div></div>
+            <div class="kpi"><div class="k-label">Estadías por persona</div><div class="k-value">{{ str_replace('.', ',', $historical['stays_per_person']) }}</div><div class="k-delta flat">promedio</div></div>
+            <div class="kpi"><div class="k-label">Vuelven cada</div><div class="k-value">{{ $historical['median_gap'] !== null ? $historical['median_gap'].' días' : '—' }}</div><div class="k-delta flat">típico entre una estadía y otra</div></div>
+        </div>
+        <div class="an-grid">
+            <div class="card t-blue"><h3>Cuántas veces vino cada persona</h3>{!! $bars($historical['frequency']) !!}</div>
+            <div class="card t-blue"><h3>Días entre una estadía y la siguiente</h3>{!! $bars($historical['gap_buckets']) !!}</div>
+            <div class="card t-green"><h3>Categoría (estadías)</h3>{!! $bars($historical['categories']) !!}</div>
+            <div class="card t-green"><h3>Horas pagadas</h3>{!! $bars($historical['hours']) !!}</div>
+            <div class="card t-green"><h3>Día de la semana</h3>{!! $bars($historical['weekdays']) !!}</div>
+            <div class="card t-green"><h3>Turno</h3>{!! $bars($historical['shifts']) !!}</div>
+            <div class="card t-orange span2">
+                <h3>Por mes: personas nuevas y que ya habían venido</h3>
+                <table class="chart-table">
+                    <thead><tr><td>Mes</td><td class="v">Personas</td><td class="v">Nuevas</td><td class="v">Ya habían venido</td><td class="v">% que volvió</td></tr></thead>
+                    <tbody>
+                        @foreach ($historical['months'] as $m)
+                            <tr><td style="text-transform:capitalize;">{{ $m['label'] }}</td><td class="v">{{ $m['people'] }}</td><td class="v">{{ $m['new'] }}</td><td class="v">{{ $m['returning'] }}</td><td class="v">{{ $pct($m['returning'], $m['people']) }}%</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
     <style>
         .stack-chart { display:flex; align-items:flex-end; gap:12px; height:150px; margin-top:8px; }
         .stack-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
