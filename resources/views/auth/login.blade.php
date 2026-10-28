@@ -21,6 +21,7 @@
         .remember input { width:auto; }
         button { width:100%; margin-top:22px; background:var(--hh-accent); color:#21170e; border:none; padding:13px; border-radius:9px; font-size:15px; font-weight:750; cursor:pointer; }
         button:hover { background:var(--hh-accent-hover); }
+        .ok { background:#14251c; border:1px solid #2e6e45; color:#8fe0ad; padding:11px 13px; border-radius:8px; margin-bottom:16px; font-size:13.5px; }
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:11px 13px; border-radius:8px; margin-bottom:16px; font-size:13.5px; }
     </style>
 </head>
@@ -28,6 +29,10 @@
     <div class="card">
         <div class="brand">HH MOTEL</div>
         <h1>Acceso interno</h1>
+
+        @if (session('status'))
+            <div class="ok">{{ session('status') }}</div>
+        @endif
 
         @if ($errors->any())
             <div class="errors">

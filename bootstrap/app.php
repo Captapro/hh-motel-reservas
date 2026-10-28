@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureAiAccess;
 use App\Http\Middleware\EnsureMucamaSession;
 use App\Http\Middleware\EnsureSectionAccess;
+use App\Http\Middleware\EnsureShiftReceived;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
@@ -34,7 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Global (no solo en rutas 'auth'): así una cuenta desactivada a
         // mitad de sesión pierde el acceso en el siguiente click, sin
         // depender de que cada grupo de rutas la incluya a mano.
-        $middleware->web(append: [EnsureUserIsActive::class]);
+        $middleware->web(append: [EnsureUserIsActive::class, EnsureShiftReceived::class]);
 
         // Mercado Pago avisa los pagos con un POST sin sesión ni token CSRF;
         // se valida con la firma del aviso (MercadoPagoController::webhook).

@@ -24,14 +24,11 @@ class CashRegisterController extends Controller
 
         $cashMethodId = PaymentMethod::where('code', 'efectivo')->value('id');
 
-        // Saldo en caja: todo el efectivo cobrado en reservas, más los
-        // ingresos manuales, menos los egresos manuales — histórico
-        // completo, porque la caja no se vacía sola cada medianoche.
-        $totalCashFromSales = (int) Payment::where('payment_method_id', $cashMethodId)
-            ->where('status', 'aprobado')->sum('amount');
-        $totalIngresos = (int) CashMovement::where('type', 'ingreso')->sum('amount');
-        $totalEgresos = (int) CashMovement::where('type', 'egreso')->sum('amount');
-        $saldoEnCaja = $totalCashFromSales + $totalIngresos - $totalEgresos;
+        $balance = CashMovement::balance();
+        $totalCashFromSales = $balance['sales'];
+        $totalIngresos = $balance['ingresos'];
+        $totalEgresos = $balance['egresos'];
+        $saldoEnCaja = $balance['saldo'];
 
         // Detalle del día elegido, para el desglose día a día.
         $dayPayments = Payment::with(['booking.room', 'booking.customer'])

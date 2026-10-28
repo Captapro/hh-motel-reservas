@@ -86,11 +86,19 @@
         <a class="hh-new-btn" href="{{ route('reservations.create', ['modo' => 'ingreso']) }}">+ Ingreso presencial</a>
         <a class="hh-new-btn hh-alt-btn" href="{{ route('reservations.create') }}">+ Reserva</a>
         @auth
+            @if (auth()->user()->isAdministrador() && ($hhShiftAlerts = \App\Models\ShiftHandover::pendingReviewCount()) > 0)
+                <a href="{{ route('cash.shifts') }}" style="background:#3a1c22; color:#e88a9a; font-weight:600;">⚠ Turnos con diferencias ({{ $hhShiftAlerts }})</a>
+            @endif
             <span style="color:#aaa; font-size:12.5px; padding:0 4px;">{{ auth()->user()->name }}</span>
-            <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-                @csrf
-                <button type="submit" class="hh-danger" style="background:none; border:none; cursor:pointer; font:inherit;">Salir</button>
-            </form>
+            @if (auth()->user()->isRecepcion())
+                {{-- El anfitrión sale entregando el turno: cuenta caja chica y stock. --}}
+                <a href="{{ route('shift.deliver') }}" class="hh-danger">Entregar turno y salir</a>
+            @else
+                <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+                    @csrf
+                    <button type="submit" class="hh-danger" style="background:none; border:none; cursor:pointer; font:inherit;">Salir</button>
+                </form>
+            @endif
         @endauth
     </div>
     @if (request()->routeIs('admin.*') && auth()->user()?->isAdministrador())

@@ -59,6 +59,7 @@ use App\Http\Controllers\RoomBoardController;
 use App\Http\Controllers\RoomInspectionController;
 use App\Http\Controllers\RoomQrController;
 use App\Http\Controllers\SaleDetailController;
+use App\Http\Controllers\ShiftHandoverController;
 use App\Http\Controllers\ShiftRoundController;
 use Illuminate\Support\Facades\Route;
 
@@ -115,6 +116,14 @@ Route::get('/login', [LoginController::class, 'create'])->middleware('guest')->n
 Route::post('/login', [LoginController::class, 'store'])->middleware(['guest', 'throttle:8,1,login.store'])->name('login.store');
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
+// Entrega de turno del anfitrión (caja chica + stock). Fuera de 'section':
+// tiene que poder hacerla aunque su perfil no vea Caja ni Productos.
+Route::middleware('auth')->group(function () {
+    Route::get('/turno/recibir', [ShiftHandoverController::class, 'receive'])->name('shift.receive');
+    Route::get('/turno/entregar', [ShiftHandoverController::class, 'deliver'])->name('shift.deliver');
+    Route::post('/turno/{kind}', [ShiftHandoverController::class, 'store'])->whereIn('kind', ['recibir', 'entregar'])->name('shift.store');
+});
+
 // Asistente de ayuda (botón "Ayuda" de todas las pantallas del equipo).
 Route::post('/ayuda', [HelpController::class, 'ask'])->middleware(['auth', 'ai:ayuda', 'throttle:30,1,help.ask'])->name('help.ask');
 
@@ -149,6 +158,8 @@ Route::middleware(['auth', 'section'])->group(function () {
     });
     Route::get('/caja/{date?}', [CashRegisterController::class, 'show'])->name('cash.show');
     Route::post('/caja', [CashRegisterController::class, 'store'])->name('cash.store');
+    Route::get('/caja-turnos', [ShiftHandoverController::class, 'index'])->middleware('role:administrador')->name('cash.shifts');
+    Route::post('/caja-turnos/{handover}/revisada', [ShiftHandoverController::class, 'review'])->middleware('role:administrador')->name('cash.shifts.review');
     Route::get('/aseo/semana/{date?}', [AseoSummaryController::class, 'week'])->name('aseo.week');
     Route::get('/aseo/mes/{date?}', [AseoSummaryController::class, 'month'])->name('aseo.month');
     Route::get('/aseo/{date?}', [DailyAseoController::class, 'show'])->name('aseo.daily');

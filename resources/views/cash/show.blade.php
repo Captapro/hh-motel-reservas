@@ -86,6 +86,9 @@
                 <a href="{{ route('cash.show') }}" class="today">Ir a hoy</a>
             @endunless
             <a href="{{ route('cash.show', $day->copy()->addDay()->toDateString()) }}">Día siguiente →</a>
+            @if (auth()->user()?->isAdministrador())
+                <a href="{{ route('cash.shifts') }}">Entregas de turno</a>
+            @endif
         </div>
     </div>
 
