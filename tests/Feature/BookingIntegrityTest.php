@@ -383,7 +383,7 @@ class BookingIntegrityTest extends TestCase
 
         Http::assertSentCount(1);
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/confirmada') && $r['codigo'] === $booking->code
-            && $r['email'] === 'cliente@example.com' && $r['first_name'] === 'Camila' && $r['pagado'] === '$10.000' && $r['saldo'] === '$10.000' && $r['token'] === $booking->pass_token);
+            && $r['email'] === 'cliente@example.com' && $r['first_name'] === 'Camila' && str_ends_with($r['fecha_hora'], ' a las 12:00') && str_starts_with($r['fecha_hora'], $r['fecha']) && $r['pagado'] === '$10.000' && $r['saldo'] === '$10.000' && $r['token'] === $booking->pass_token);
 
         // Ingreso presencial: no se avisa, el cliente está en recepción.
         Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);

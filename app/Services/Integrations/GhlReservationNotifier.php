@@ -44,6 +44,7 @@ class GhlReservationNotifier
         $booking->loadMissing(['customer', 'room.category']);
         $tz = 'America/Santiago';
         $money = fn (int $n) => '$'.number_format($n, 0, ',', '.');
+        $date = ucfirst($booking->starts_at->timezone($tz)->locale('es')->isoFormat('dddd D [de] MMMM'));
         $minutes = (int) $booking->duration_minutes;
         $total = (int) $booking->price_final + $booking->addonsTotal();
         $customer = $booking->customer;
@@ -57,8 +58,10 @@ class GhlReservationNotifier
             'codigo' => $booking->code,
             'habitacion' => $booking->room->name,
             'categoria' => $booking->room->category->name,
-            'fecha' => ucfirst($booking->starts_at->timezone($tz)->locale('es')->isoFormat('dddd D [de] MMMM')),
+            'fecha' => $date,
             'hora_entrada' => $booking->starts_at->timezone($tz)->format('H:i'),
+            // Junto, para la plantilla de WhatsApp (Meta pide pocas variables por texto).
+            'fecha_hora' => $date.' a las '.$booking->starts_at->timezone($tz)->format('H:i'),
             'hora_salida' => $booking->ends_at->timezone($tz)->format('H:i'),
             'duracion' => $minutes >= 60 ? rtrim(rtrim(number_format($minutes / 60, 1, ',', ''), '0'), ',').' h' : $minutes.' min',
             'personas' => (string) $booking->guests_count,
