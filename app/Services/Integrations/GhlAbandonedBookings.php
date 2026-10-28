@@ -96,15 +96,19 @@ class GhlAbandonedBookings
     {
         try {
             $tz = 'America/Santiago';
+            $slot = [
+                'categoria' => $booking->room->room_category_id,
+                'fecha' => $booking->starts_at->timezone($tz)->toDateString(),
+                'hora' => $booking->starts_at->timezone($tz)->format('H:i'),
+                'duracion' => (int) $booking->duration_minutes,
+            ];
+            // Los botones de las plantillas de WhatsApp solo dejan variable la
+            // parte final del enlace: el token (pase) y la consulta (reservar).
             $payload = $this->notifier->payload($booking) + [
                 'hora_limite' => $booking->expires_at?->timezone($tz)->format('H:i') ?? '',
                 'link_pago' => route('catalog.booked', ['token' => $booking->pass_token]),
-                'link_reservar' => route('catalog.reserve', [
-                    'categoria' => $booking->room->room_category_id,
-                    'fecha' => $booking->starts_at->timezone($tz)->toDateString(),
-                    'hora' => $booking->starts_at->timezone($tz)->format('H:i'),
-                    'duracion' => (int) $booking->duration_minutes,
-                ]),
+                'link_reservar' => route('catalog.reserve', $slot),
+                'reservar_query' => http_build_query($slot),
             ];
             $response = Http::timeout(6)->acceptJson()->post($url, $payload);
             if (! $response->successful()) {
