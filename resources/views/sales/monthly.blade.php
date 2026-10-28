@@ -105,13 +105,13 @@
             <div class="card"><div class="label">Alojamiento</div><div class="value">{{ $money($planilla['totals']['lodging']) }}</div></div>
             <div class="card"><div class="label">Hora extra</div><div class="value">{{ $money($planilla['totals']['extra_hour']) }}</div></div>
             <div class="card"><div class="label">Persona adicional</div><div class="value">{{ $money($planilla['totals']['extra_person']) }}</div></div>
-            <div class="card"><div class="label">Otros servicios</div><div class="value">{{ $money($planilla['totals']['services']) }}</div></div>
-            <div class="card"><div class="label">Extras (productos)</div><div class="value">{{ $money($planilla['totals']['extras']) }}</div></div>
+            <div class="card"><div class="label">Otros extra core</div><div class="value">{{ $money($planilla['totals']['services']) }}</div></div>
+            <div class="card"><div class="label">Extras (consumos)</div><div class="value">{{ $money($planilla['totals']['extras']) }}</div></div>
             @if ($planilla['totals']['split'] > 0)<div class="card"><div class="label">Pago fraccionado</div><div class="value">{{ $money($planilla['totals']['split']) }}</div></div>@endif
             <div class="card green"><div class="label">Ticket promedio</div><div class="value">{{ $money($planilla['totals']['stays'] ? (int) round($planilla['totals']['lodging'] / $planilla['totals']['stays']) : 0) }}</div></div>
         </div>
         <div class="table-wrap"><table>
-            <thead><tr><th>Fecha</th><th class="n">Estadías</th><th class="n">Alojamiento</th><th class="n">Hora extra</th><th class="n">Persona adicional</th><th class="n">Otros servicios</th><th class="n">Extras</th><th class="n">Pago fraccionado</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th></tr></thead>
+            <thead><tr><th>Fecha</th><th class="n">Estadías</th><th class="n">Alojamiento</th><th class="n">Hora extra</th><th class="n">Persona adicional</th><th class="n">Otros extra core</th><th class="n">Extras</th><th class="n">Pago fraccionado</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th></tr></thead>
             <tbody>
             @foreach ($planilla['days'] as $r)
                 <tr class="{{ $r['total'] === 0 ? 'zero' : '' }} {{ $r['date']->isWeekend() ? 'weekend' : '' }}">

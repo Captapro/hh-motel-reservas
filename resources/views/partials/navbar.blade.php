@@ -116,6 +116,7 @@
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.products.index') }}" class="{{ request()->routeIs('admin.products.*') ? 'hh-active' : '' }}">Productos</a>
                 <a href="{{ route('admin.combos.index') }}" class="{{ request()->routeIs('admin.combos.*') ? 'hh-active' : '' }}">Combos</a>
+                <a href="{{ route('admin.core_extras.index') }}" class="{{ request()->routeIs('admin.core_extras.*') ? 'hh-active' : '' }}">Extras core</a>
             </span>
             <span class="hh-subnav-sep"></span>
             <span class="hh-subnav-group">

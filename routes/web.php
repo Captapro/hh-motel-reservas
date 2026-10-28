@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\CleanupController;
 use App\Http\Controllers\Admin\ComboController;
+use App\Http\Controllers\Admin\CoreExtraController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CustomerBehaviorController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
@@ -274,6 +275,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::get('/productos/{product}/editar', [ProductController::class, 'edit'])->name('products.edit');
         Route::put('/productos/{product}', [ProductController::class, 'update'])->name('products.update');
         Route::post('/productos/{product}/stock', [ProductController::class, 'restock'])->name('products.restock');
+
+        Route::get('/extras-core', [CoreExtraController::class, 'index'])->name('core_extras.index');
+        Route::post('/extras-core', [CoreExtraController::class, 'store'])->name('core_extras.store');
+        Route::put('/extras-core/{coreExtra}', [CoreExtraController::class, 'update'])->name('core_extras.update');
+        Route::delete('/extras-core/{coreExtra}', [CoreExtraController::class, 'destroy'])->name('core_extras.destroy');
 
         Route::get('/combos/crear', [ComboController::class, 'create'])->name('combos.create');
         Route::post('/combos', [ComboController::class, 'store'])->name('combos.store');

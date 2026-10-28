@@ -8,6 +8,7 @@ use App\Http\Controllers\BookingCancelController;
 use App\Http\Controllers\RoomBoardController;
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Models\CoreExtra;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\HistoricalGuest;
@@ -28,6 +29,7 @@ use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
+use App\Services\Historical\HistoricalSalesImporter;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Payments\MercadoPagoPayments;
 use App\Support\GuestLine;
@@ -75,6 +77,7 @@ class BookingIntegrityTest extends TestCase
             '2026_10_28_120000_add_abandon_notices_to_bookings.php',
             '2026_10_28_130000_add_privacy_consent_to_customers.php',
             '2026_10_28_140000_create_historical_sales_tables.php',
+            '2026_10_28_150000_create_core_extras_table.php',
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
@@ -739,7 +742,7 @@ class BookingIntegrityTest extends TestCase
 
         // Ventas ("Historial de ventas"): el mes aparece en el historial y trae su bloque de la planilla.
         $this->get(route('sales.monthly', '2026-10'))->assertOk()
-            ->assertSee('Planilla de recepción')->assertSee('Hora extra')->assertSee('Persona adicional')->assertSee('Otros servicios')->assertSee('Extras (productos)')->assertSee('$139.000')->assertSee('Total planilla')->assertSee('planilla</span>', false);
+            ->assertSee('Planilla de recepción')->assertSee('Hora extra')->assertSee('Persona adicional')->assertSee('Otros extra core')->assertSee('Extras (consumos)')->assertSee('$139.000')->assertSee('Total planilla')->assertSee('planilla</span>', false);
 
         // Ventas del día: las ventas de la planilla de ese día, con su detalle en el panel; los nombres solo los ve soporte.
         $sale = HistoricalSale::where('source_row', 3)->firstOrFail();
@@ -754,6 +757,28 @@ class BookingIntegrityTest extends TestCase
         $this->delete(route('admin.historical.destroy'), ['fuente' => 'planilla-2026-10'])->assertRedirect();
         $this->assertSame(0, HistoricalSale::count());
         $this->assertSame(0, HistoricalGuest::count());
+    }
+
+    public function test_core_extras_list_starts_empty_and_can_take_names_found_in_the_sheets(): void
+    {
+        (new HistoricalSalesImporter)->import(base_path('tests/fixtures/planilla_ventas_ejemplo.csv'), 'planilla-2026-10', 2026);
+
+        $this->get(route('admin.core_extras.index'))->assertOk()
+            ->assertSee('El listado está vacío')->assertSee('HORA EXTRA')->assertSee('Agregar al listado');
+
+        // Agregar uno de los de la planilla, y uno propio; no se repiten.
+        $this->post(route('admin.core_extras.store'), ['name' => 'Hora extra'])->assertRedirect(route('admin.core_extras.index'));
+        $this->post(route('admin.core_extras.store'), ['name' => 'Toalla adicional', 'price' => 3000])->assertSessionHasNoErrors();
+        $this->post(route('admin.core_extras.store'), ['name' => '  toalla   ADICIONAL '])->assertSessionHasErrors('name');
+        $this->assertSame(2, CoreExtra::count());
+        $this->get(route('admin.core_extras.index'))->assertSee('En el listado')->assertSee('Toalla adicional');
+
+        // Editar y quitar.
+        $towel = CoreExtra::where('name', 'Toalla adicional')->firstOrFail();
+        $this->put(route('admin.core_extras.update', $towel), ['name' => 'Toalla extra', 'price' => 3500, 'is_active' => 1])->assertRedirect();
+        $this->assertSame(3500, $towel->fresh()->price);
+        $this->delete(route('admin.core_extras.destroy', $towel))->assertRedirect();
+        $this->assertSame(1, CoreExtra::count());
     }
 
     public function test_payment_screen_offers_the_mercado_pago_link_to_send_by_whatsapp(): void

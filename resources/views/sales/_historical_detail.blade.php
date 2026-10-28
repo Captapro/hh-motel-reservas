@@ -1,6 +1,6 @@
 @php
     $money = fn ($n) => '$'.number_format((int) $n, 0, ',', '.');
-    $labels = ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro servicio', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'];
+    $labels = ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro extra core', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'];
     $duration = $sale->duration_minutes ? intdiv($sale->duration_minutes, 60).':'.str_pad($sale->duration_minutes % 60, 2, '0', STR_PAD_LEFT).' h' : null;
 @endphp
 <div class="sd-head">

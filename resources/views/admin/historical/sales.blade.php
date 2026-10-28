@@ -26,7 +26,7 @@
             <p class="sub">No hay ventas cargadas en este mes.</p>
         @else
             <table class="table">
-                <thead><tr><th>Día</th><th>Estadías</th><th>Alojamiento</th><th>Hora extra</th><th>Persona adicional</th><th>Otros servicios</th><th>Extras</th><th>Pago fraccionado</th><th>Total</th><th>Efectivo</th><th>Tarjeta</th><th>Transferencia</th></tr></thead>
+                <thead><tr><th>Día</th><th>Estadías</th><th>Alojamiento</th><th>Hora extra</th><th>Persona adicional</th><th>Otros extra core</th><th>Extras</th><th>Pago fraccionado</th><th>Total</th><th>Efectivo</th><th>Tarjeta</th><th>Transferencia</th></tr></thead>
                 <tbody>
                 @foreach ($days as $d)
                     <tr @if ($d['date'] === $day) style="background:#fff0d9;" @endif>
@@ -71,7 +71,7 @@
                 @foreach ($detail as $s)
                     <tr>
                         <td>{{ $s->source_row }}</td>
-                        <td>{{ ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro servicio', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'][$s->concept()] ?? ucfirst(mb_strtolower($s->sale_type)) }}</td>
+                        <td>{{ ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro extra core', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'][$s->concept()] ?? ucfirst(mb_strtolower($s->sale_type)) }}</td>
                         <td>{{ $s->detail ?: ($s->category ?: '') }}@if ($s->discount_note)<br><span class="sub" style="font-size:12px;">{{ $s->discount_note }}</span>@endif</td>
                         <td>{{ $s->room_label }}{{ $s->category && $s->room_label ? ' · '.$s->category : '' }}</td>
                         <td>{{ $s->hours_paid ? $s->hours_paid.' h' : '' }}</td>

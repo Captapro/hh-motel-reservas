@@ -168,7 +168,7 @@
     </div>
     @if ($planilla->isNotEmpty())
         @php
-            $pLabels = ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro servicio', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'];
+            $pLabels = ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro extra core', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'];
             $pStays = $planilla->where('sale_type', 'ALOJAMIENTO');
             $showNames = (bool) auth()->user()?->isSoporte();
         @endphp
