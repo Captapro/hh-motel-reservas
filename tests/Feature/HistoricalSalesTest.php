@@ -184,6 +184,21 @@ class HistoricalSalesTest extends TestCase
         $this->assertSame(['06/06/2026'], $summary['fuera_de_mes']['dias']);
     }
 
+    public function test_a_date_cell_with_the_date_repeated_on_two_lines_is_read(): void
+    {
+        $header = (string) strtok((string) file_get_contents($this->file), "\n");
+        $row = '1,,"29-junio'."\n".'29-junio",Voucher,9,,,ALOJAMIENTO,,,Ana Prueba Uno,11111111-1,CHILE,30,2,201,3,10:00,13:05,3:05,PLUS,,,$25.000,TARJETA,,,,MAÑANA,';
+        $path = tempnam(sys_get_temp_dir(), 'planilla');
+        file_put_contents($path, $header."\n".$row."\n");
+
+        $summary = app(HistoricalSalesImporter::class)->import($path, 'planilla-prueba', 2026, true);
+        unlink($path);
+
+        $this->assertSame(1, $summary['lineas']);
+        $this->assertSame('2026-06-29', $summary['desde']);
+        $this->assertSame(25000, $summary['venta_principal']);
+    }
+
     public function test_each_line_counts_in_its_own_concept(): void
     {
         $concept = fn (string $type, ?string $detail = null) => (new HistoricalSale(['sale_type' => $type, 'detail' => $detail]))->concept();

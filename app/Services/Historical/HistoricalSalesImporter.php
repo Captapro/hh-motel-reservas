@@ -245,7 +245,8 @@ class HistoricalSalesImporter
 
     private function parseDate(string $raw, int $defaultYear): ?Carbon
     {
-        $raw = mb_strtolower(trim($raw));
+        // Una celda con la fecha repetida en dos líneas («29-junio\n29-junio») vale por la primera.
+        $raw = mb_strtolower(trim((string) preg_split('/\R/u', trim($raw))[0]));
         if ($raw === '') {
             return null;
         }
