@@ -11,7 +11,9 @@ use App\Models\Room;
 use App\Models\RoomCategory;
 use App\Models\ShortStaySetting;
 use Carbon\Carbon;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /**
@@ -242,5 +244,31 @@ class PublicBookingValidationTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionDoesntHaveErrors();
         $this->assertSame(1, Booking::count());
+    }
+
+    public function test_with_online_payment_the_customer_goes_straight_to_mercado_pago(): void
+    {
+        // Un token pegado en Render con un salto de línea al final no debe romper el cobro.
+        foreach (['2026_08_18_120014_create_booking_addons_table.php', '2026_08_18_120015_create_payment_methods_table.php', '2026_08_18_120016_create_payments_table.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        config(['services.mercadopago.access_token' => "APP_USR-token-de-prueba\n"]);
+        Http::fake(['api.mercadopago.com/checkout/preferences' => Http::response(['init_point' => 'https://www.mercadopago.cl/checkout/v1/redirect?pref_id=123'])]);
+
+        $this->post('/catalogo/reservar', $this->bookingPayload())->assertSessionHasNoErrors();
+        $booking = Booking::firstOrFail();
+
+        $this->get(route('catalog.pay', $booking->pass_token))
+            ->assertRedirect('https://www.mercadopago.cl/checkout/v1/redirect?pref_id=123');
+        Http::assertSent(fn (Request $r) => $r->hasHeader('Authorization', 'Bearer APP_USR-token-de-prueba'));
+    }
+
+    public function test_store_sends_the_customer_to_the_payment_when_mercado_pago_is_on(): void
+    {
+        config(['services.mercadopago.access_token' => 'APP_USR-token-de-prueba']);
+
+        $response = $this->post('/catalogo/reservar', $this->bookingPayload());
+
+        $response->assertRedirect(route('catalog.pay', Booking::firstOrFail()->pass_token));
     }
 }

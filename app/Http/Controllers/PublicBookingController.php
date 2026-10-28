@@ -279,6 +279,12 @@ class PublicBookingController extends Controller
                 app(BookingAllocationService::class)->upgrade($booking, $upgrade, null);
             }
 
+            // Con pago en línea, el cliente sigue directo a Mercado Pago; si el
+            // cobro no se puede abrir, catalog.pay lo devuelve a su reserva.
+            if (app(MercadoPagoClient::class)->enabled()) {
+                return redirect()->route('catalog.pay', $booking->pass_token);
+            }
+
             return redirect()->route('catalog.booked', $booking->pass_token);
         } finally {
             $lock->release();

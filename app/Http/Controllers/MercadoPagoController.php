@@ -42,7 +42,7 @@ class MercadoPagoController extends Controller
      */
     public function webhook(Request $request, MercadoPagoClient $mp, MercadoPagoPayments $payments): JsonResponse
     {
-        $secret = (string) config('services.mercadopago.webhook_secret');
+        $secret = trim((string) config('services.mercadopago.webhook_secret'));
         // PHP convierte el punto de "data.id" en guion bajo al leer la dirección.
         $dataId = (string) ($request->query('data_id') ?? $request->input('data.id') ?? '');
         $type = (string) ($request->input('type') ?? $request->query('type') ?? '');

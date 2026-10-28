@@ -22,7 +22,8 @@ class MercadoPagoClient
 
     private function http(): PendingRequest
     {
-        return Http::withToken((string) config('services.mercadopago.access_token'))->acceptJson()->timeout(15);
+        // trim: una clave pegada en Render con un salto de línea al final hacía fallar todos los cobros.
+        return Http::withToken(trim((string) config('services.mercadopago.access_token')))->acceptJson()->timeout(15);
     }
 
     /** Abre el cobro por el saldo de la reserva y devuelve la dirección de pago. */
