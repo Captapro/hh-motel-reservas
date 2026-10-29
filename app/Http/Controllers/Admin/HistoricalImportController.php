@@ -108,7 +108,7 @@ class HistoricalImportController extends Controller
             ->join('historical_sales', 'historical_sales.id', '=', 'historical_guests.historical_sale_id')
             ->where('historical_sales.sale_type', 'ALOJAMIENTO')
             ->orderBy('historical_sales.sold_on')
-            ->get(['historical_guests.name', 'historical_guests.document', 'historical_guests.is_holder', 'historical_sales.id as sale_id', 'historical_sales.sold_on', 'historical_sales.amount_main', 'historical_sales.amount_extras']);
+            ->get(['historical_guests.name', 'historical_guests.document', 'historical_guests.is_holder', 'historical_sales.id as sale_id', 'historical_sales.sold_on', 'historical_sales.category', 'historical_sales.amount_main', 'historical_sales.amount_extras']);
 
         return $rows->groupBy('document')
             ->map(fn (Collection $g, string $document) => [
@@ -116,6 +116,7 @@ class HistoricalImportController extends Controller
                 'name' => $g->last()->name,
                 'visits' => $g->pluck('sale_id')->unique()->count(),
                 'spent' => (int) $g->where('is_holder', true)->unique('sale_id')->sum(fn ($r) => $r->amount_main + $r->amount_extras),
+                'categories' => $g->unique('sale_id')->countBy(fn ($r) => $r->category ?: 'Sin tipo')->sortDesc()->all(),
                 'first' => Carbon::parse($g->first()->sold_on)->format('d/m/Y'),
                 'last' => Carbon::parse($g->last()->sold_on)->format('d/m/Y'),
             ])

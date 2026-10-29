@@ -100,10 +100,10 @@
                 @else
                     <div class="table-wrap" style="margin-top:10px;">
                         <table class="table">
-                            <thead><tr><th>Persona</th><th>RUT</th><th>Veces</th><th>Gastó</th><th>Última</th></tr></thead>
+                            <thead><tr><th>Persona</th><th>RUT</th><th>Veces</th><th>Tipo de playroom</th><th>Gastó</th><th>Última</th></tr></thead>
                             <tbody>
                             @foreach ($returning->take(10) as $p)
-                                <tr><td>{{ $p['name'] }}</td><td>{{ $p['document'] }}</td><td>{{ $p['visits'] }}</td><td>${{ number_format($p['spent'], 0, ',', '.') }}</td><td>{{ $p['last'] }}</td></tr>
+                                <tr><td>{{ $p['name'] }}</td><td>{{ $p['document'] }}</td><td>{{ $p['visits'] }}</td><td>{{ collect($p['categories'])->map(fn ($n, $c) => \Illuminate\Support\Str::title(mb_strtolower($c)).' ×'.$n)->implode(' · ') }}</td><td>${{ number_format($p['spent'], 0, ',', '.') }}</td><td>{{ $p['last'] }}</td></tr>
                             @endforeach
                             </tbody>
                         </table>

@@ -143,6 +143,10 @@ class HistoricalSalesTest extends TestCase
         $this->assertSame(0, $people->sum('before'));
         $this->assertSame(['2026-10'], $people->first()['months']);
 
+        // Cada persona trae cuántas estadías hizo en cada tipo de playroom (suma = sus visitas).
+        $people->each(fn (array $p) => $this->assertSame($p['visits'], array_sum($p['categories'])));
+        $this->assertContains('PLUS', collect($people)->flatMap(fn (array $p) => array_keys($p['categories']))->all());
+
         // Un período sin planillas no trae a nadie; uno posterior ve las estadías de octubre como «antes».
         $this->assertCount(0, $analysis->people(Carbon::parse('2026-09-01'), Carbon::parse('2026-09-30')));
         $this->assertCount(0, $analysis->people(Carbon::parse('2026-11-01'), Carbon::parse('2026-11-30')));

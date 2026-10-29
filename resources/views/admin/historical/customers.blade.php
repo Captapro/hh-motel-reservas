@@ -65,7 +65,7 @@
         <div class="card" style="margin-top:14px;">
             <h2>{{ $total }} {{ $total === 1 ? 'persona' : 'personas' }} · {{ $monthName($fromMonth) }}{{ $fromMonth !== $toMonth ? ' a '.$monthName($toMonth) : '' }}</h2>
             <p class="sub" style="font-size:12.5px;">
-                <b>Visitas</b>: estadías de alojamiento en el período (titular o acompañante). <b>Gastó</b>: alojamiento de las estadías en que fue <b>titular</b> (no incluye hora extra ni extras aparte; si siempre fue acompañante sale $0).
+                <b>Visitas</b>: estadías de alojamiento en el período (titular o acompañante). <b>Tipo de playroom</b>: en qué tipo de habitación fueron esas estadías (por ejemplo «Plus ×3 · Lite ×1»; «Sin tipo» si la planilla no lo trae). <b>Gastó</b>: alojamiento de las estadías en que fue <b>titular</b> (no incluye hora extra ni extras aparte; si siempre fue acompañante sale $0).
                 <b>Antes del período</b>: estadías anteriores al primer mes elegido («—» si el período empieza en el primer mes cargado, porque antes no hay planillas). <b>En todo lo cargado</b>: todas sus estadías en las planillas. Con pocos meses cargados, no tener visitas antes no significa que sea cliente nuevo.
             </p>
             @if ($rows->isEmpty())
@@ -73,7 +73,7 @@
             @else
                 <div class="table-wrap">
                     <table class="table">
-                        <thead><tr><th>Persona</th><th>RUT</th><th>Visitas</th><th>Titular / acomp.</th><th>Gastó</th><th>Meses en que vino</th><th>Primera</th><th>Última</th><th>Antes del período</th><th>En todo lo cargado</th><th>En el sistema</th></tr></thead>
+                        <thead><tr><th>Persona</th><th>RUT</th><th>Visitas</th><th>Titular / acomp.</th><th>Tipo de playroom</th><th>Gastó</th><th>Meses en que vino</th><th>Primera</th><th>Última</th><th>Antes del período</th><th>En todo lo cargado</th><th>En el sistema</th></tr></thead>
                         <tbody>
                         @foreach ($rows as $p)
                             <tr>
@@ -81,6 +81,7 @@
                                 <td style="white-space:nowrap;">{{ $p['document'] }}</td>
                                 <td><b>{{ $p['visits'] }}</b></td>
                                 <td>{{ $p['as_holder'] }} / {{ $p['as_companion'] }}</td>
+                                <td>{{ collect($p['categories'])->map(fn ($n, $c) => \Illuminate\Support\Str::title(mb_strtolower($c)).' ×'.$n)->implode(' · ') }}</td>
                                 <td>{{ $money($p['spent']) }}</td>
                                 <td style="text-transform:capitalize;">{{ collect($p['months'])->map(fn ($m) => \Carbon\Carbon::parse($m.'-01')->locale('es')->isoFormat('MMMM'))->unique()->implode(', ') }}</td>
                                 <td>{{ $p['first']->format('d/m/Y') }}</td>

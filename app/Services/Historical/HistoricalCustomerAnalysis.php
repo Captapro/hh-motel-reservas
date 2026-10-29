@@ -50,6 +50,7 @@ class HistoricalCustomerAnalysis
                 'first' => $inPeriod->min('day'),
                 'last' => $inPeriod->max('day'),
                 'months' => $inPeriod->map(fn (array $v) => $v['day']->format('Y-m'))->unique()->sort()->values()->all(),
+                'categories' => $this->categoryMix($inPeriod),
                 'before' => $before->count(),
                 'total' => $g->count(),
             ];
@@ -86,6 +87,18 @@ class HistoricalCustomerAnalysis
         });
     }
 
+    /**
+     * Cuántas estadías hizo en cada tipo de playroom, de más a menos («PLUS» => 3).
+     * Lo que la planilla no trae como tipo va aparte como «Sin tipo».
+     *
+     * @param  Collection<int, array<string, mixed>>  $visits
+     * @return array<string, int>
+     */
+    public static function categoryMix(Collection $visits): array
+    {
+        return $visits->countBy(fn (array $v) => $v['category'] ?: 'Sin tipo')->sortDesc()->all();
+    }
+
     /** Estadías de alojamiento con RUT válido: una por persona y estadía (si figura dos veces, vale como titular). */
     private function visits(?array $documents = null): Collection
     {
@@ -95,7 +108,7 @@ class HistoricalCustomerAnalysis
             ->join('historical_sales', 'historical_sales.id', '=', 'historical_guests.historical_sale_id')
             ->where('historical_sales.sale_type', 'ALOJAMIENTO')
             ->orderBy('historical_sales.sold_on')
-            ->get(['historical_guests.document', 'historical_guests.name', 'historical_guests.is_holder', 'historical_sales.id as sale_id', 'historical_sales.sold_on', 'historical_sales.amount_main', 'historical_sales.amount_extras'])
+            ->get(['historical_guests.document', 'historical_guests.name', 'historical_guests.is_holder', 'historical_sales.id as sale_id', 'historical_sales.sold_on', 'historical_sales.category', 'historical_sales.amount_main', 'historical_sales.amount_extras'])
             ->groupBy(fn ($r) => $r->document.'|'.$r->sale_id)
             ->map(function (Collection $rows) {
                 $first = $rows->first();
@@ -105,6 +118,7 @@ class HistoricalCustomerAnalysis
                     'name' => $first->name,
                     'sale' => $first->sale_id,
                     'day' => Carbon::parse($first->sold_on)->startOfDay(),
+                    'category' => $first->category,
                     'holder' => $rows->contains(fn ($r) => (bool) $r->is_holder),
                     'amount' => (int) ($first->amount_main + $first->amount_extras),
                 ];
