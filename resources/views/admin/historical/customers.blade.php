@@ -84,7 +84,7 @@
                                 <td>{{ str_replace('.', ',', $p['per_month']) }}</td>
                                 <td>{{ $p['as_holder'] }} / {{ $p['as_companion'] }}</td>
                                 <td>{{ $money($p['spent']) }}</td>
-                                <td style="text-transform:capitalize;">{{ collect($p['months'])->map(fn ($m) => $monthName($m))->implode(', ') }}</td>
+                                <td style="text-transform:capitalize;">{{ collect($p['months'])->map(fn ($m) => \Carbon\Carbon::parse($m.'-01')->locale('es')->isoFormat('MMMM'))->unique()->implode(', ') }}</td>
                                 <td>{{ $p['first']->format('d/m/Y') }}</td>
                                 <td>{{ $p['last']->format('d/m/Y') }}</td>
                                 <td>{{ $fromMonth === $loaded['first'] ? '—' : $p['before'] }}</td>
