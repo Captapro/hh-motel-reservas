@@ -79,7 +79,7 @@
                         @foreach ($rows as $p)
                             <tr>
                                 <td>{{ $p['name'] }}</td>
-                                <td>{{ $p['document'] }}</td>
+                                <td style="white-space:nowrap;">{{ $p['document'] }}</td>
                                 <td><b>{{ $p['visits'] }}</b></td>
                                 <td>{{ str_replace('.', ',', $p['per_month']) }}</td>
                                 <td>{{ $p['as_holder'] }} / {{ $p['as_companion'] }}</td>
