@@ -516,8 +516,10 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('admin.analytics.customers'))->assertOk()->assertSee('Clientes que vuelven');
         $this->get(route('admin.analytics.returning'))->assertOk()->assertSee('Clientes que vuelven');
         $this->get(route('admin.analytics.records'))->assertOk()->assertSee('Récords de venta');
+        $this->get(route('admin.analytics.extras'))->assertOk()->assertSee('Extras por mes');
         app(HistoricalSalesImporter::class)->import(__DIR__.'/../fixtures/planilla_ventas_ejemplo.csv', 'planilla-2026-10', 2026);
         $this->get(route('admin.analytics.records'))->assertOk()->assertSee('Récord por día de la semana')->assertSee('Los 10 días de mayor venta');
+        $this->get(route('admin.analytics.extras'))->assertOk()->assertSee('Extras vendidos por mes')->assertSee('Extras por estadía');
         $this->get('/admin/historico/clientes')->assertRedirect('/admin/analytics/clientes-que-vuelven');
 
         // Muestra nombres y RUT: el administrador no ve la pestaña ni entra.

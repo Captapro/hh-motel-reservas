@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\CoreExtraController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CustomerBehaviorController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
+use App\Http\Controllers\Admin\ExtrasByMonthController;
 use App\Http\Controllers\Admin\FurnitureController;
 use App\Http\Controllers\Admin\GhlTestController;
 use App\Http\Controllers\Admin\HistoricalCustomersController;
@@ -318,6 +319,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/exportar', [AnalyticsController::class, 'export'])->name('analytics.export');
     Route::get('/analytics/clientes', [CustomerBehaviorController::class, 'index'])->name('analytics.customers');
+    Route::get('/analytics/extras', [ExtrasByMonthController::class, 'index'])->name('analytics.extras');
     Route::get('/analytics/records', [SalesRecordsController::class, 'index'])->name('analytics.records');
     Route::get('/analytics/clientes-que-vuelven', [HistoricalCustomersController::class, 'index'])->middleware('role:soporte')->name('analytics.returning');
 

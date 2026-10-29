@@ -136,6 +136,37 @@ class HistoricalDataService
             })->values();
     }
 
+    /**
+     * Venta de extras mes a mes, para ver cómo van creciendo: los extras (consumos) por un
+     * lado y los extras core (hora extra, persona adicional y otros servicios) por otro,
+     * junto a las estadías, para compararlos por estadía y no solo en pesos. Solo cifras.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function extrasByMonth(): Collection
+    {
+        return HistoricalSale::query()->get(['sold_on', 'sale_type', 'detail', 'amount_main', 'amount_extras'])
+            ->groupBy(fn (HistoricalSale $s) => $s->sold_on->format('Y-m'))
+            ->sortKeys()
+            ->map(function (Collection $g, string $ym) {
+                $of = fn (array $concepts) => (int) $g->filter(fn (HistoricalSale $s) => in_array($s->concept(), $concepts, true))->sum(fn (HistoricalSale $s) => $s->total());
+                $first = Carbon::parse($ym.'-01');
+                $lastDay = Carbon::parse($g->max('sold_on'));
+
+                return [
+                    'month' => $first,
+                    'stays' => $g->where('sale_type', 'ALOJAMIENTO')->count(),
+                    'days' => $g->map(fn (HistoricalSale $s) => $s->sold_on->toDateString())->unique()->count(),
+                    'lodging' => $of(['alojamiento']),
+                    'extras' => $of(['extras']),
+                    'core' => $of(['hora_extra', 'persona_adicional', 'servicios']),
+                    'total' => (int) $g->sum(fn (HistoricalSale $s) => $s->total()),
+                    'partial' => $lastDay->lt($first->copy()->endOfMonth()->startOfDay()),
+                    'last_day' => $lastDay,
+                ];
+            })->values();
+    }
+
     public function summary(Carbon $from, Carbon $to): array
     {
         $lines = HistoricalSale::query()

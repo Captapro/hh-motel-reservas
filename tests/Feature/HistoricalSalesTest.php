@@ -262,4 +262,18 @@ class HistoricalSalesTest extends TestCase
 
         $this->assertNull($service->records(Carbon::parse('2026-09-01'), Carbon::parse('2026-09-30')));
     }
+
+    public function test_extras_are_summed_month_by_month_with_per_stay_figures(): void
+    {
+        app(HistoricalSalesImporter::class)->import($this->file, 'planilla-2026-10', 2026);
+        $months = app(HistoricalDataService::class)->extrasByMonth();
+
+        $this->assertCount(1, $months);
+        $oct = $months->first();
+        $this->assertSame('2026-10', $oct['month']->format('Y-m'));
+        $this->assertGreaterThan(0, $oct['stays']);
+        // Lo que no es alojamiento ni pago fraccionado se reparte entre extras y extras core, sin pasarse del total.
+        $this->assertLessThanOrEqual($oct['total'] - $oct['lodging'], $oct['extras'] + $oct['core']);
+        $this->assertSame($oct['total'], app(HistoricalDataService::class)->summary(Carbon::parse('2026-10-01'), Carbon::parse('2026-10-31')->endOfDay())['totales']['venta_total']);
+    }
 }
