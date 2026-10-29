@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Historical\CategoryNames;
 use Illuminate\Database\Eloquent\Attributes\Guarded;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -42,6 +43,12 @@ class HistoricalSale extends Model
     private function isBlankDetail(): bool
     {
         return trim((string) $this->detail) === '';
+    }
+
+    /** Tipo de playroom con el nombre de hoy (la planilla antigua dice STANDARD, XL, S…). */
+    public function categoryName(): ?string
+    {
+        return CategoryNames::canonical($this->category, $this->room_label);
     }
 
     /** Venta total de la línea (alojamiento/extras principales + extras). */

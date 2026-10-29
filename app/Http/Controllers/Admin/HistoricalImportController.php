@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\HistoricalGuest;
 use App\Models\HistoricalSale;
+use App\Services\Historical\CategoryNames;
 use App\Services\Historical\HistoricalSalesImporter;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -74,7 +75,7 @@ class HistoricalImportController extends Controller
             'days' => $days,
             'day' => $detail->isNotEmpty() ? $day : null,
             'detail' => $detail,
-            'byCategory' => $this->breakdown($lines->where('sale_type', 'ALOJAMIENTO'), fn (HistoricalSale $s) => $s->category ?: 'Sin dato'),
+            'byCategory' => $this->breakdown($lines->where('sale_type', 'ALOJAMIENTO'), fn (HistoricalSale $s) => $s->categoryName() ?: 'Sin dato'),
             'byPayment' => $this->breakdown($lines, fn (HistoricalSale $s) => $s->payment_method ?: 'sin dato'),
             'byShift' => $this->breakdown($lines->where('sale_type', 'ALOJAMIENTO'), fn (HistoricalSale $s) => $s->shift ?: 'Sin dato'),
         ]);
@@ -108,7 +109,7 @@ class HistoricalImportController extends Controller
             ->join('historical_sales', 'historical_sales.id', '=', 'historical_guests.historical_sale_id')
             ->where('historical_sales.sale_type', 'ALOJAMIENTO')
             ->orderBy('historical_sales.sold_on')
-            ->get(['historical_guests.name', 'historical_guests.document', 'historical_guests.is_holder', 'historical_sales.id as sale_id', 'historical_sales.sold_on', 'historical_sales.category', 'historical_sales.amount_main', 'historical_sales.amount_extras']);
+            ->get(['historical_guests.name', 'historical_guests.document', 'historical_guests.is_holder', 'historical_sales.id as sale_id', 'historical_sales.sold_on', 'historical_sales.category', 'historical_sales.room_label', 'historical_sales.amount_main', 'historical_sales.amount_extras']);
 
         return $rows->groupBy('document')
             ->map(fn (Collection $g, string $document) => [
@@ -116,7 +117,7 @@ class HistoricalImportController extends Controller
                 'name' => $g->last()->name,
                 'visits' => $g->pluck('sale_id')->unique()->count(),
                 'spent' => (int) $g->where('is_holder', true)->unique('sale_id')->sum(fn ($r) => $r->amount_main + $r->amount_extras),
-                'categories' => $g->unique('sale_id')->countBy(fn ($r) => $r->category ?: 'Sin tipo')->sortDesc()->all(),
+                'categories' => $g->unique('sale_id')->countBy(fn ($r) => CategoryNames::canonical($r->category, $r->room_label) ?: 'Sin tipo')->sortDesc()->all(),
                 'first' => Carbon::parse($g->first()->sold_on)->format('d/m/Y'),
                 'last' => Carbon::parse($g->last()->sold_on)->format('d/m/Y'),
             ])

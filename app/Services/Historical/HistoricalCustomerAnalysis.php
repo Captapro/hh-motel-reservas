@@ -108,7 +108,7 @@ class HistoricalCustomerAnalysis
             ->join('historical_sales', 'historical_sales.id', '=', 'historical_guests.historical_sale_id')
             ->where('historical_sales.sale_type', 'ALOJAMIENTO')
             ->orderBy('historical_sales.sold_on')
-            ->get(['historical_guests.document', 'historical_guests.name', 'historical_guests.is_holder', 'historical_sales.id as sale_id', 'historical_sales.sold_on', 'historical_sales.category', 'historical_sales.amount_main', 'historical_sales.amount_extras'])
+            ->get(['historical_guests.document', 'historical_guests.name', 'historical_guests.is_holder', 'historical_sales.id as sale_id', 'historical_sales.sold_on', 'historical_sales.category', 'historical_sales.room_label', 'historical_sales.amount_main', 'historical_sales.amount_extras'])
             ->groupBy(fn ($r) => $r->document.'|'.$r->sale_id)
             ->map(function (Collection $rows) {
                 $first = $rows->first();
@@ -118,7 +118,7 @@ class HistoricalCustomerAnalysis
                     'name' => $first->name,
                     'sale' => $first->sale_id,
                     'day' => Carbon::parse($first->sold_on)->startOfDay(),
-                    'category' => $first->category,
+                    'category' => CategoryNames::canonical($first->category, $first->room_label),
                     'holder' => $rows->contains(fn ($r) => (bool) $r->is_holder),
                     'amount' => (int) ($first->amount_main + $first->amount_extras),
                 ];

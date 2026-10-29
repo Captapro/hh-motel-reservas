@@ -116,7 +116,7 @@ class HistoricalDataService
                 'duracion_promedio_min' => $stays->whereNotNull('duration_minutes')->count() ? (int) round($stays->whereNotNull('duration_minutes')->avg('duration_minutes')) : 0,
             ],
             'por_mes' => $this->group($stays, fn (HistoricalSale $s) => $s->sold_on->format('Y-m')),
-            'por_categoria' => $this->group($stays, fn (HistoricalSale $s) => $s->category ?: 'Sin dato'),
+            'por_categoria' => $this->group($stays, fn (HistoricalSale $s) => $s->categoryName() ?: 'Sin dato'),
             'por_horas_pagadas' => $this->group($stays, fn (HistoricalSale $s) => $s->hours_paid ? $s->hours_paid.' h' : 'Sin dato'),
             'por_dia_semana' => $this->ordered($this->group($stays, fn (HistoricalSale $s) => self::WEEKDAYS[$s->sold_on->dayOfWeekIso - 1]), self::WEEKDAYS),
             'por_hora_ingreso' => $this->group($stays->whereNotNull('starts_time'), fn (HistoricalSale $s) => substr($s->starts_time, 0, 2).':00'),

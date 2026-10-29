@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\HistoricalGuest;
 use App\Models\HistoricalSale;
 use App\Services\Analyst\HistoricalDataService;
+use App\Services\Historical\CategoryNames;
 use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Historical\HistoricalSalesImporter;
 use Carbon\Carbon;
@@ -229,5 +230,16 @@ class HistoricalSalesTest extends TestCase
         $this->assertSame('persona_adicional', $concept('EXTRA CORE', 'Persona adicional'));
         $this->assertSame('extras', $concept('EXTRAS', 'PRESERVATIVO'));
         $this->assertSame('fraccionado', $concept('PAGO FRACCIONADO'));
+    }
+
+    public function test_old_sheet_category_names_are_translated_to_todays_names(): void
+    {
+        $this->assertSame('PLUS', CategoryNames::canonical('STANDARD'));
+        $this->assertSame('MAX', CategoryNames::canonical('xl'));
+        $this->assertSame('PLUS', CategoryNames::canonical('PLUS'));
+        $this->assertSame('NEW LITE', CategoryNames::canonical('NEW LITE'));
+        $this->assertNull(CategoryNames::canonical(null));
+        // «S» se reparte por habitación; sin dato de la habitación no se inventa.
+        $this->assertSame('LITE / GO', CategoryNames::canonical('S', null));
     }
 }
