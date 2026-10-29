@@ -71,7 +71,6 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;">
         <a href="{{ route('sales.daily') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Venta de hoy</a>
         <a href="{{ route('sales.monthly') }}" style="padding:7px 14px;border-radius:7px;background:#ff7918;color:#111;font-weight:600;font-size:13px;text-decoration:none;">Historial de ventas</a>
-        <a href="{{ route('admin.analytics.index') }}" style="padding:7px 14px;border-radius:7px;background:#1c1c1c;border:1px solid #333;color:#eee;font-size:13px;text-decoration:none;">Analytics</a>
     </div>
     <div class="topline">
         <div>
