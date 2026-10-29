@@ -87,12 +87,12 @@
     </div>
 
     <div class="cards" style="margin-top:14px;">
-        <div class="card"><div class="label">Venta total del mes</div><div class="value">{{ $money($totals['total']) }}</div></div>
-        <div class="card blue"><div class="label">Playrooms vendidos</div><div class="value">{{ $totals['rooms'] }}</div></div>
+        <div class="card" tabindex="0" data-tip="Suma, de las estadías vendidas del mes (con su pago completo), del precio final con descuentos más los extras pagados. Se cuenta en el día de la estadía."><div class="label">Venta total del mes</div><div class="value">{{ $money($totals['total']) }}</div></div>
+        <div class="card blue" tabindex="0" data-tip="Estadías del mes con su pago completo. No cuenta canceladas, vencidas ni pendientes de pago."><div class="label">Playrooms vendidos</div><div class="value">{{ $totals['rooms'] }}</div></div>
         <div class="card gold" tabindex="0" data-tip="Venta total de las habitaciones del mes ÷ cantidad de habitaciones vendidas."><div class="label">Precio promedio por hab.</div><div class="value">{{ $money($avgTicket) }}</div></div>
-        <div class="card green"><div class="label">Cobrado en caja</div><div class="value">{{ $money($totals['cash_total']) }}</div></div>
-        <div class="card"><div class="label">Extras vendidos</div><div class="value">{{ $money($totals['extras']) }}</div></div>
-        <div class="card"><div class="label">Canceladas</div><div class="value">{{ $cancelled }}</div></div>
+        <div class="card green" tabindex="0" data-tip="Pagos aprobados recibidos durante el mes, según el día en que se cobraron (puede incluir pagos adelantados de estadías de otros días)."><div class="label">Cobrado en caja</div><div class="value">{{ $money($totals['cash_total']) }}</div></div>
+        <div class="card" tabindex="0" data-tip="Extras pagados (consumos y upsells) de las estadías del mes; ya están dentro de la venta total."><div class="label">Extras vendidos</div><div class="value">{{ $money($totals['extras']) }}</div></div>
+        <div class="card" tabindex="0" data-tip="Cantidad de reservas del mes con estado Cancelada. No suman a ninguna venta."><div class="label">Canceladas</div><div class="value">{{ $cancelled }}</div></div>
     </div>
 
 
@@ -100,14 +100,14 @@
         <div class="sec-label">Planilla de recepción (ventas anotadas antes del sistema)</div>
         <p class="sec-note">Son ventas que recepción anotó a mano. <b>No están incluidas</b> en las cifras de arriba ni en la caja del sistema.@if ($totals['total'] > 0) Sistema + planilla este mes: <b>{{ $money($totals['total'] + $planilla['totals']['total']) }}</b>.@endif</p>
         <div class="cards">
-            <div class="card"><div class="label">Venta de la planilla</div><div class="value">{{ $money($planilla['totals']['total']) }}</div></div>
-            <div class="card blue"><div class="label">Estadías</div><div class="value">{{ $planilla['totals']['stays'] }}</div></div>
-            <div class="card"><div class="label">Alojamiento</div><div class="value">{{ $money($planilla['totals']['lodging']) }}</div></div>
-            <div class="card"><div class="label">Hora extra</div><div class="value">{{ $money($planilla['totals']['extra_hour']) }}</div></div>
-            <div class="card"><div class="label">Persona adicional</div><div class="value">{{ $money($planilla['totals']['extra_person']) }}</div></div>
-            <div class="card"><div class="label">Otros extra core</div><div class="value">{{ $money($planilla['totals']['services']) }}</div></div>
-            <div class="card"><div class="label">Extras (consumos)</div><div class="value">{{ $money($planilla['totals']['extras']) }}</div></div>
-            @if ($planilla['totals']['split'] > 0)<div class="card"><div class="label">Pago fraccionado</div><div class="value">{{ $money($planilla['totals']['split']) }}</div></div>@endif
+            <div class="card" tabindex="0" data-tip="Todo lo anotado en la planilla de recepción del mes: alojamiento, hora extra, persona adicional, otros servicios, extras y pagos fraccionados. Son ventas anteriores al sistema."><div class="label">Venta de la planilla</div><div class="value">{{ $money($planilla['totals']['total']) }}</div></div>
+            <div class="card blue" tabindex="0" data-tip="Líneas de alojamiento de la planilla del mes (una por estadía; los acompañantes no cuentan aparte)."><div class="label">Estadías</div><div class="value">{{ $planilla['totals']['stays'] }}</div></div>
+            <div class="card" tabindex="0" data-tip="Cobro del playroom por las horas contratadas, sin extras, en la planilla del mes."><div class="label">Alojamiento</div><div class="value">{{ $money($planilla['totals']['lodging']) }}</div></div>
+            <div class="card" tabindex="0" data-tip="Horas adicionales cobradas sobre una estadía ya contratada."><div class="label">Hora extra</div><div class="value">{{ $money($planilla['totals']['extra_hour']) }}</div></div>
+            <div class="card" tabindex="0" data-tip="Cobro por una persona más en la habitación («Goloso» en las planillas antiguas)."><div class="label">Persona adicional</div><div class="value">{{ $money($planilla['totals']['extra_person']) }}</div></div>
+            <div class="card" tabindex="0" data-tip="Otros servicios que no son hora extra ni persona adicional (lavandería, toalla, etc.)."><div class="label">Otros extra core</div><div class="value">{{ $money($planilla['totals']['services']) }}</div></div>
+            <div class="card" tabindex="0" data-tip="Productos y consumos vendidos aparte (bebidas, preservativos, etc.)."><div class="label">Extras (consumos)</div><div class="value">{{ $money($planilla['totals']['extras']) }}</div></div>
+            @if ($planilla['totals']['split'] > 0)<div class="card" tabindex="0" data-tip="Parte del precio de una estadía que el cliente pagó aparte, por ejemplo $40.000 con una forma de pago y $5.000 con otra. Es dinero de la estadía, no una estadía más."><div class="label">Pago fraccionado</div><div class="value">{{ $money($planilla['totals']['split']) }}</div></div>@endif
             <div class="card green" tabindex="0" data-tip="Alojamiento de la planilla ÷ estadías: lo que paga en promedio cada estadía, sin extras ni pagos fraccionados."><div class="label">Ticket promedio</div><div class="value">{{ $money($planilla['totals']['stays'] ? (int) round($planilla['totals']['lodging'] / $planilla['totals']['stays']) : 0) }}</div></div>
         </div>
         <div class="table-wrap"><table>

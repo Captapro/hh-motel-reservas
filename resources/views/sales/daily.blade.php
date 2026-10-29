@@ -107,10 +107,10 @@
     </div>
 
     <div class="cards" style="margin-top:14px;">
-        <div class="card count"><div class="label">Playrooms vendidos</div><div class="value">{{ $live->count() }}</div></div>
-        <div class="card revenue"><div class="label">Venta total</div><div class="value">{{ $money($revenue) }}</div></div>
-        <div class="card collected"><div class="label">Cobrado de esas ventas</div><div class="value">{{ $money($collected) }}</div></div>
-        <div class="card pending"><div class="label">Pendiente</div><div class="value">{{ $money($pending) }}</div></div>
+        <div class="card count" tabindex="0" data-tip="Estadías del día con su pago completo. No cuenta canceladas, vencidas ni las que aún tienen saldo por pagar."><div class="label">Playrooms vendidos</div><div class="value">{{ $live->count() }}</div></div>
+        <div class="card revenue" tabindex="0" data-tip="Suma, de las estadías vendidas del día, del precio final (ya con descuentos) más los extras pagados."><div class="label">Venta total</div><div class="value">{{ $money($revenue) }}</div></div>
+        <div class="card collected" tabindex="0" data-tip="Pagos aprobados recibidos por las estadías de este día, aunque se hayan cobrado antes por adelantado. Incluye también las que aún tienen saldo."><div class="label">Cobrado de esas ventas</div><div class="value">{{ $money($collected) }}</div></div>
+        <div class="card pending" tabindex="0" data-tip="Lo que falta por pagar de las estadías activas del día: precio + extras − lo ya cobrado (nunca menos de 0)."><div class="label">Pendiente</div><div class="value">{{ $money($pending) }}</div></div>
     </div>
 
     <div class="sec-label">Registro del día</div>
