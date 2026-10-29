@@ -93,7 +93,7 @@
                         <h2>Personas que más vuelven</h2>
                         <p class="sub" style="font-size:12.5px; margin:0;">Las 10 con más estadías en todo lo cargado, por RUT válido. «Gastó» es lo pagado en las estadías donde figura como titular.</p>
                     </div>
-                    <a class="btn" href="{{ route('admin.historical.customers') }}">Ver todos, con filtros por mes →</a>
+                    <a class="btn" href="{{ route('admin.analytics.returning') }}">Ver todos, con filtros por mes →</a>
                 </div>
                 @if ($returning->isEmpty())
                     <p class="sub" style="margin-top:10px;">Todavía no hay personas con más de una estadía en lo cargado.</p>

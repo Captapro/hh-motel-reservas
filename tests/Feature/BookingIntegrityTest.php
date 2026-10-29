@@ -510,6 +510,19 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame($loyal->id, $page->viewData('risk')->first()['customer']->id);
     }
 
+    public function test_clients_that_return_lives_inside_analytics_for_soporte_only(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+        $this->get(route('admin.analytics.customers'))->assertOk()->assertSee('Clientes que vuelven');
+        $this->get(route('admin.analytics.returning'))->assertOk()->assertSee('Clientes que vuelven');
+        $this->get('/admin/historico/clientes')->assertRedirect('/admin/analytics/clientes-que-vuelven');
+
+        // Muestra nombres y RUT: el administrador no ve la pestaña ni entra.
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        $this->get(route('admin.analytics.customers'))->assertOk()->assertDontSee('Clientes que vuelven');
+        $this->get(route('admin.analytics.returning'))->assertForbidden();
+    }
+
     public function test_booking_code_does_not_collide_after_deleting_one_from_the_middle(): void
     {
         $first = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);

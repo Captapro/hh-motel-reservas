@@ -18,12 +18,7 @@
         };
     @endphp
 
-    <div class="an-nav">
-        <a href="{{ route('sales.daily') }}">Venta de hoy</a>
-        <a href="{{ route('sales.monthly') }}">Historial de ventas</a>
-        <a href="{{ route('admin.analytics.index') }}">Analytics</a>
-        <a href="{{ route('admin.analytics.customers') }}" class="on">Comportamiento de clientes</a>
-    </div>
+    @include('admin.analytics._nav', ['on' => 'customers'])
     <h1>Comportamiento de clientes</h1>
     <p class="sub">{{ $rangeLabel }}. Solo estadías que ocurrieron o están confirmadas (sin canceladas ni expiradas). Las visitas anteriores al rango se usan para saber si ya habían venido.</p>
 

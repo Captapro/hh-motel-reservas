@@ -317,6 +317,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/exportar', [AnalyticsController::class, 'export'])->name('analytics.export');
     Route::get('/analytics/clientes', [CustomerBehaviorController::class, 'index'])->name('analytics.customers');
+    Route::get('/analytics/clientes-que-vuelven', [HistoricalCustomersController::class, 'index'])->middleware('role:soporte')->name('analytics.returning');
 
     Route::get('/opiniones', [App\Http\Controllers\Admin\GuestReviewController::class, 'index'])->name('reviews.index');
     Route::delete('/opiniones', [App\Http\Controllers\Admin\GuestReviewController::class, 'destroyAll'])->middleware('role:administrador')->name('reviews.destroy_all');
@@ -345,7 +346,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
 
         Route::get('/historico', [HistoricalImportController::class, 'index'])->middleware('role:soporte')->name('historical.index');
         Route::get('/historico/ventas', [HistoricalImportController::class, 'sales'])->middleware('role:soporte')->name('historical.sales');
-        Route::get('/historico/clientes', [HistoricalCustomersController::class, 'index'])->middleware('role:soporte')->name('historical.customers');
+        Route::redirect('/historico/clientes', '/admin/analytics/clientes-que-vuelven');
         Route::post('/historico', [HistoricalImportController::class, 'store'])->middleware('role:soporte')->name('historical.store');
         Route::delete('/historico', [HistoricalImportController::class, 'destroy'])->middleware('role:soporte')->name('historical.destroy');
 

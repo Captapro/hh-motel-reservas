@@ -41,7 +41,7 @@
 {{-- Clientes, Productos, Caja, Operaciones, Ventas, Opiniones y toda Administración van en fondo blanco, como Analytics. --}}
 @php
     $hhRoute = request()->route()?->getName();
-    $hhLight = ! \Illuminate\Support\Str::is('admin.analytics.*', (string) $hhRoute) && (
+    $hhLight = (! \Illuminate\Support\Str::is('admin.analytics.*', (string) $hhRoute) || $hhRoute === 'admin.analytics.returning') && (
         \Illuminate\Support\Str::is('admin.*', (string) $hhRoute)
         || in_array(\App\Support\AccessSections::forRoute($hhRoute), ['clientes', 'productos', 'caja', 'operaciones', 'ventas', 'opiniones', 'claves'], true)
     );
@@ -127,9 +127,6 @@
             </span>
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.customers.index') }}" class="{{ request()->routeIs('admin.customers.*') ? 'hh-active' : '' }}">Clientes</a>
-                @if (auth()->user()?->isSoporte())
-                    <a href="{{ route('admin.historical.customers') }}" class="{{ request()->routeIs('admin.historical.customers') ? 'hh-active' : '' }}">Clientes que vuelven</a>
-                @endif
             </span>
             <span class="hh-subnav-group">
                 <a href="{{ route('admin.staff.index') }}" class="{{ request()->routeIs('admin.staff.*') ? 'hh-active' : '' }}">Personal</a>
@@ -140,7 +137,7 @@
             </span>
             @if (auth()->user()?->isSoporte())
                 <span class="hh-subnav-group">
-                    <a href="{{ route('admin.historical.index') }}" class="{{ request()->routeIs('admin.historical.*') && ! request()->routeIs('admin.historical.customers') ? 'hh-active' : '' }}">Ventas históricas</a>
+                    <a href="{{ route('admin.historical.index') }}" class="{{ request()->routeIs('admin.historical.*') ? 'hh-active' : '' }}">Ventas históricas</a>
                     <a href="{{ route('admin.ghl.index') }}" class="{{ request()->routeIs('admin.ghl.*') ? 'hh-active' : '' }}">Integración GHL</a>
                     <a href="{{ route('admin.cleanup.index') }}" class="{{ request()->routeIs('admin.cleanup.*') ? 'hh-active' : '' }}">Limpieza</a>
                 </span>

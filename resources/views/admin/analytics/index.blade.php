@@ -9,12 +9,7 @@
         $qs = fn ($over) => array_merge(['preset' => $preset, 'from' => $preset === 'custom' ? $from : null, 'to' => $preset === 'custom' ? $to : null, 'metric' => $metric, 'category' => $categoryId], $over);
     @endphp
 
-    <div class="an-nav">
-        <a href="{{ route('sales.daily') }}">Venta de hoy</a>
-        <a href="{{ route('sales.monthly') }}">Historial de ventas</a>
-        <a href="{{ route('admin.analytics.index') }}" class="on">Analytics</a>
-        <a href="{{ route('admin.analytics.customers') }}">Comportamiento de clientes</a>
-    </div>
+    @include('admin.analytics._nav', ['on' => 'analytics'])
     <h1>Analytics</h1>
     <p class="sub">{{ $rangeLabel }}{{ $categoryId ? ' · '.$categories->firstWhere('id', $categoryId)?->name : '' }}. Solo cuenta estadías con su pago completo (no canceladas, vencidas ni pendientes de pago).</p>
 

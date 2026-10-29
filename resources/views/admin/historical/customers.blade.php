@@ -1,6 +1,7 @@
 @extends('admin.layout')
 @section('title', 'Clientes que vuelven')
 @section('content')
+    @include('admin.analytics._nav', ['on' => 'returning'])
     <div class="page-head">
         <div>
             <h1>Clientes que vuelven</h1>
@@ -15,7 +16,7 @@
         @php
             $money = fn ($n) => '$'.number_format($n, 0, ',', '.');
             $pct = fn ($n, $t) => $t ? round($n / $t * 100) : 0;
-            $url = fn (array $over = []) => route('admin.historical.customers', array_filter(array_merge(['desde' => $fromMonth, 'hasta' => $toMonth, 'min' => $min, 'orden' => $order, 'rol' => $role, 'q' => $search], $over), fn ($v) => $v !== '' && $v !== null));
+            $url = fn (array $over = []) => route('admin.analytics.returning', array_filter(array_merge(['desde' => $fromMonth, 'hasta' => $toMonth, 'min' => $min, 'orden' => $order, 'rol' => $role, 'q' => $search], $over), fn ($v) => $v !== '' && $v !== null));
         @endphp
 
         <div class="card">
@@ -27,7 +28,7 @@
                     <a class="btn {{ $on ? '' : 'secondary' }}" style="padding:6px 12px; font-size:12.5px;" href="{{ $url($range) }}">{{ $label }}</a>
                 @endforeach
             </div>
-            <form method="GET" action="{{ route('admin.historical.customers') }}" class="add-row">
+            <form method="GET" action="{{ route('admin.analytics.returning') }}" class="add-row">
                 <div><label>Desde (mes)</label><input type="month" name="desde" value="{{ $fromMonth }}" min="{{ $loaded['first'] }}" max="{{ $loaded['last'] }}"></div>
                 <div><label>Hasta (mes)</label><input type="month" name="hasta" value="{{ $toMonth }}" min="{{ $loaded['first'] }}" max="{{ $loaded['last'] }}"></div>
                 <div><label>Mínimo de visitas</label>
