@@ -32,6 +32,51 @@ class HistoricalDataService
     }
 
     /**
+     * Días récord de venta del período: los mejores días en total y, por cada día de la
+     * semana, cuál fue su récord (y los siguientes), con el promedio para comparar.
+     * La venta del día es la de todas las líneas de la planilla con esa fecha.
+     * Solo cifras, sin personas. Devuelve null si no hay ventas en el período.
+     */
+    public function records(Carbon $from, Carbon $to): ?array
+    {
+        $days = HistoricalSale::query()
+            ->whereBetween('sold_on', [$from->toDateString(), $to->toDateString()])
+            ->get(['sold_on', 'sale_type', 'amount_main', 'amount_extras'])
+            ->groupBy(fn (HistoricalSale $s) => $s->sold_on->toDateString())
+            ->map(fn (Collection $g, string $date) => [
+                'date' => Carbon::parse($date),
+                'total' => (int) $g->sum(fn (HistoricalSale $s) => $s->total()),
+                'stays' => $g->where('sale_type', 'ALOJAMIENTO')->count(),
+            ])
+            ->filter(fn (array $d) => $d['total'] > 0)
+            ->values();
+
+        if ($days->isEmpty()) {
+            return null;
+        }
+
+        $byWeekday = collect(self::WEEKDAYS)->map(function (string $name, int $i) use ($days) {
+            $mine = $days->filter(fn (array $d) => $d['date']->dayOfWeekIso === $i + 1)->sortByDesc('total')->values();
+
+            return [
+                'weekday' => $name,
+                'days' => $mine->count(),
+                'average' => $mine->isEmpty() ? 0 : (int) round($mine->avg('total')),
+                'record' => $mine->first(),
+                'next' => $mine->slice(1, 2)->values(),
+            ];
+        });
+
+        return [
+            'days_with_sales' => $days->count(),
+            'total' => (int) $days->sum('total'),
+            'top' => $days->sortByDesc('total')->take(10)->values(),
+            'lowest' => $days->sortBy('total')->first(),
+            'by_weekday' => $byWeekday,
+        ];
+    }
+
+    /**
      * Un mes de la planilla, día por día, para la pantalla de Ventas. Solo
      * cifras (sin personas). Devuelve null si ese mes no tiene planilla.
      */

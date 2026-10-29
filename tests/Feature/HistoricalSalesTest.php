@@ -242,4 +242,24 @@ class HistoricalSalesTest extends TestCase
         // «S» se reparte por habitación; sin dato de la habitación no se inventa.
         $this->assertSame('LITE / GO', CategoryNames::canonical('S', null));
     }
+
+    public function test_record_days_are_found_overall_and_per_weekday(): void
+    {
+        app(HistoricalSalesImporter::class)->import($this->file, 'planilla-2026-10', 2026);
+        $service = app(HistoricalDataService::class);
+
+        $records = $service->records(Carbon::parse('2026-10-01'), Carbon::parse('2026-10-31'));
+        $this->assertNotNull($records);
+        $this->assertCount(7, $records['by_weekday']);
+
+        // El mejor día en total es el récord de su día de la semana, y ningún otro lo supera.
+        $best = $records['top']->first();
+        $weekday = $records['by_weekday']->firstWhere('record.date', $best['date']);
+        $this->assertNotNull($weekday);
+        $this->assertSame($best['total'], $weekday['record']['total']);
+        $this->assertSame($records['top']->max('total'), $best['total']);
+        $this->assertSame($records['total'], (int) $service->summary(Carbon::parse('2026-10-01'), Carbon::parse('2026-10-31')->endOfDay())['totales']['venta_total']);
+
+        $this->assertNull($service->records(Carbon::parse('2026-09-01'), Carbon::parse('2026-09-30')));
+    }
 }

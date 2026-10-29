@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\RateRuleController;
 use App\Http\Controllers\Admin\RoomCategoryController;
 use App\Http\Controllers\Admin\RoomController as AdminRoomController;
 use App\Http\Controllers\Admin\SalesAnalystController;
+use App\Http\Controllers\Admin\SalesRecordsController;
 use App\Http\Controllers\Admin\ShiftController;
 use App\Http\Controllers\Admin\ShortStaySettingController;
 use App\Http\Controllers\Admin\StaffController;
@@ -317,6 +318,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/exportar', [AnalyticsController::class, 'export'])->name('analytics.export');
     Route::get('/analytics/clientes', [CustomerBehaviorController::class, 'index'])->name('analytics.customers');
+    Route::get('/analytics/records', [SalesRecordsController::class, 'index'])->name('analytics.records');
     Route::get('/analytics/clientes-que-vuelven', [HistoricalCustomersController::class, 'index'])->middleware('role:soporte')->name('analytics.returning');
 
     Route::get('/opiniones', [App\Http\Controllers\Admin\GuestReviewController::class, 'index'])->name('reviews.index');

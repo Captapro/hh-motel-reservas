@@ -12,6 +12,7 @@
     <a href="{{ route('sales.monthly') }}">Historial de ventas</a>
     <a href="{{ route('admin.analytics.index') }}" @class(['on' => $on === 'analytics'])>Analytics</a>
     <a href="{{ route('admin.analytics.customers') }}" @class(['on' => $on === 'customers'])>Comportamiento de clientes</a>
+    <a href="{{ route('admin.analytics.records') }}" @class(['on' => $on === 'records'])>Récords de venta</a>
     @if (auth()->user()?->isSoporte())
         <a href="{{ route('admin.analytics.returning') }}" @class(['on' => $on === 'returning'])>Clientes que vuelven</a>
     @endif
