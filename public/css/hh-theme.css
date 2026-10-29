@@ -305,3 +305,9 @@ body > .wrap :is(input, select, textarea) { min-height: 42px; }
 .hh-equipment-edit summary { cursor: pointer; }
 @media (max-width: 900px) { .hh-equipment-row { grid-template-columns: 1fr 1fr; } .hh-equipment-row > strong { grid-column: 1 / -1; } }
 @media (max-width: 600px) { .hh-catalog-forms, .hh-equipment-row { grid-template-columns: minmax(0, 1fr); } }
+
+/* Explicación al pasar el mouse: cualquier elemento con data-tip="…" */
+[data-tip] { position: relative; cursor: help; }
+[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 6px); z-index: 60; width: max-content; max-width: min(320px, 86vw); box-sizing: border-box; background: #111827; color: #f9fafb; font: 400 12px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; text-transform: none; letter-spacing: 0; text-align: left; white-space: normal; padding: 9px 11px; border-radius: 8px; box-shadow: 0 8px 22px rgba(0,0,0,.28); opacity: 0; visibility: hidden; transform: translateY(-3px); transition: opacity .12s, transform .12s; pointer-events: none; }
+[data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; visibility: visible; transform: none; }
+[data-tip].tip-r::after { left: auto; right: 0; }

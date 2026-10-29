@@ -43,7 +43,7 @@
 
             <h2 class="an-title">Día récord de cada día de la semana</h2>
             <div class="an-grid">
-                <div class="card t-orange span2">
+                <div class="card t-orange span2" tabindex="0" data-tip="Entre todos los lunes (martes, miércoles…) del período, el que más vendió. La venta del día suma todo lo anotado con esa fecha en la planilla. El promedio es la venta media de ese día de la semana.">
                     <h3>Récord por día de la semana</h3>
                     @foreach ($records['by_weekday'] as $w)
                         @if ($w['record'])
@@ -56,7 +56,7 @@
                         @endif
                     @endforeach
                 </div>
-                <div class="card t-green">
+                <div class="card t-green" tabindex="0" data-tip="Los 10 días con más venta del período, sin importar el día de la semana. «e» son las estadías de alojamiento de ese día.">
                     <h3>Los 10 días de mayor venta</h3>
                     @foreach ($records['top'] as $d)
                         <div class="bar-row">

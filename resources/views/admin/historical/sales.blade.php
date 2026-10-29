@@ -26,7 +26,7 @@
             <p class="sub">No hay ventas cargadas en este mes.</p>
         @else
             <table class="table">
-                <thead><tr><th>Día</th><th>Estadías</th><th>Alojamiento</th><th>Hora extra</th><th>Persona adicional</th><th>Otros extra core</th><th>Extras</th><th>Pago fraccionado</th><th>Total</th><th>Efectivo</th><th>Tarjeta</th><th>Transferencia</th></tr></thead>
+                <thead><tr><th>Día</th><th data-tip="Cantidad de líneas de alojamiento del día (una por estadía; los acompañantes no cuentan aparte)." tabindex="0">Estadías</th><th data-tip="Cobro del playroom por las horas contratadas, sin extras." tabindex="0">Alojamiento</th><th data-tip="Horas adicionales cobradas sobre una estadía ya contratada." tabindex="0">Hora extra</th><th data-tip="Cobro por una persona más en la habitación («Goloso» en las planillas antiguas)." tabindex="0">Persona adicional</th><th data-tip="Otros servicios del negocio que no son hora extra ni persona adicional (lavandería, toalla, etc.)." tabindex="0">Otros extra core</th><th data-tip="Productos y consumos vendidos aparte (bebidas, preservativos, etc.)." tabindex="0">Extras</th><th data-tip="Parte del precio de una estadía que el cliente pagó aparte, por ejemplo $40.000 con una forma de pago y $5.000 con otra. Es dinero de la estadía, no una compra nueva ni una estadía más." tabindex="0">Pago fraccionado</th><th>Total</th><th>Efectivo</th><th>Tarjeta</th><th>Transferencia</th></tr></thead>
                 <tbody>
                 @foreach ($days as $d)
                     <tr @if ($d['date'] === $day) style="background:#fff0d9;" @endif>

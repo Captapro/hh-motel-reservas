@@ -57,10 +57,10 @@
         </div>
 
         <div class="cols" style="margin-top:14px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));">
-            <div class="card"><h3>Personas en el período</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['people'] }}</p><p class="sub" style="margin:0;">distintas, por RUT válido</p></div>
-            <div class="card"><h3>Volvieron dentro del período</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['returned'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['returned'], $stats['people']) }}% · 2 o más estadías en estos meses</p></div>
-            <div class="card"><h3>Ya habían venido antes</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['came_before'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['came_before'], $stats['people']) }}% · tienen estadías antes del período</p></div>
-            <div class="card"><h3>Primera vez en lo cargado</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['first_time'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['first_time'], $stats['people']) }}% · sin estadías antes</p></div>
+            <div class="card" tabindex="0" data-tip="Personas distintas (por RUT válido) con al menos una estadía de alojamiento en los meses elegidos."><h3>Personas en el período</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['people'] }}</p><p class="sub" style="margin:0;">distintas, por RUT válido</p></div>
+            <div class="card" tabindex="0" data-tip="Personas con 2 o más estadías dentro de los meses elegidos. El % es: esas personas ÷ personas del período."><h3>Volvieron dentro del período</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['returned'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['returned'], $stats['people']) }}% · 2 o más estadías en estos meses</p></div>
+            <div class="card" tabindex="0" data-tip="Personas con alguna estadía anterior al primer mes elegido. Si el período empieza en el primer mes cargado no hay historia anterior, y vale 0."><h3>Ya habían venido antes</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['came_before'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['came_before'], $stats['people']) }}% · tienen estadías antes del período</p></div>
+            <div class="card" tabindex="0" data-tip="Personas sin estadías antes del período, dentro de lo cargado. Con pocos meses cargados está sobreestimado: no se conoce lo anterior."><h3>Primera vez en lo cargado</h3><p style="font-size:26px; margin:4px 0;">{{ $stats['first_time'] }}</p><p class="sub" style="margin:0;">{{ $pct($stats['first_time'], $stats['people']) }}% · sin estadías antes</p></div>
         </div>
 
         <div class="card" style="margin-top:14px;">

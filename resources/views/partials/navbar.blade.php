@@ -49,6 +49,13 @@
 @if ($hhLight)
     <style>{!! file_get_contents(public_path('css/hh-light.css')) !!}</style>
 @endif
+<script>
+    // Si la explicación se saldría por la derecha de la pantalla, se abre hacia la izquierda.
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-tip]') : null;
+        if (el) { el.classList.toggle('tip-r', el.getBoundingClientRect().left + 330 > window.innerWidth); }
+    });
+</script>
 @include('partials.sidebar')
 <div class="hh-nav-wrap">
     <div class="hh-navbar">

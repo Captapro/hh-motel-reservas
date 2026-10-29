@@ -39,9 +39,17 @@
     </form>
 
     <div class="kpis kpis-all">
+        @php
+            $kpiTips = [
+                'reservas' => 'Estadías del período con su pago completo. No cuenta canceladas, vencidas ni pendientes de pago. El % compara con el período anterior de igual largo.',
+                'venta' => 'Suma, por cada estadía, del precio final (ya con descuentos) más los extras pagados.',
+                'ticket' => 'Venta total ÷ Reservas: lo que paga en promedio cada estadía, con extras incluidos.',
+                'descuentos' => 'Suma de los descuentos aplicados a las reservas del período (cupones, ofertas, etc.).',
+            ];
+        @endphp
         @foreach (['reservas' => 'Reservas', 'venta' => 'Venta total', 'ticket' => 'Ticket promedio', 'descuentos' => 'Descuentos dados'] as $k => $lbl)
             @php $kp = $kpis[$k]; @endphp
-            <div class="kpi">
+            <div class="kpi" data-tip="{{ $kpiTips[$k] }}" tabindex="0">
                 <div class="k-label">{{ $lbl }}</div>
                 <div class="k-value">{{ $kp['is_money'] ? $money($kp['value']) : number_format($kp['value'], 0, ',', '.') }}</div>
                 <div class="k-delta {{ $kp['delta'] === null ? 'flat' : ($kp['delta'] > 0 ? 'up' : ($kp['delta'] < 0 ? 'down' : 'flat')) }}">
@@ -54,12 +62,12 @@
             </div>
         @endforeach
         @foreach (['collected' => 'Cobrado', 'balance' => 'Saldo pendiente', 'addons' => 'Venta de extras'] as $key => $label)
-            <div class="kpi"><div class="k-label">{{ $label }}</div><div class="k-value">{{ $money($operations[$key]) }}</div><div class="k-delta flat">Periodo seleccionado</div></div>
+            <div class="kpi" tabindex="0" data-tip="{{ ['collected' => 'Pagos aprobados que se recibieron por las estadías del período (efectivo, tarjeta, transferencia…).', 'balance' => 'Venta total − Cobrado (nunca menos de 0): lo que falta por pagar de esas estadías.', 'addons' => 'Extras pagados (consumos y upsells) de las estadías del período; ya van dentro de la Venta total.'][$key] }}"><div class="k-label">{{ $label }}</div><div class="k-value">{{ $money($operations[$key]) }}</div><div class="k-delta flat">Periodo seleccionado</div></div>
         @endforeach
-        <div class="kpi"><div class="k-label">Clientes por recurrencia</div><div class="k-value">{{ $segments['frecuente'] }}</div><div class="k-delta flat">Alta recurrencia</div></div>
+        <div class="kpi" tabindex="0" data-tip="Clientes que hoy clasifican como «Frecuente» según las reglas de Clientes (visitas mínimas dentro de su ventana de análisis). No depende del rango elegido."><div class="k-label">Clientes por recurrencia</div><div class="k-value">{{ $segments['frecuente'] }}</div><div class="k-delta flat">Alta recurrencia</div></div>
     </div>
 
-    <div class="proj">
+    <div class="proj" tabindex="0" data-tip="Proyección = lo vendido hasta hoy ÷ días transcurridos del mes × días del mes. Nunca baja de lo vendido más lo ya agendado para el resto del mes.">
         <h3>Proyección a fin de mes — {{ $projection['label'] }}</h3>
         <div class="proj-grid">
             <div><span>Venta hasta hoy</span><b>{{ $money($projection['so_far']) }}</b></div>

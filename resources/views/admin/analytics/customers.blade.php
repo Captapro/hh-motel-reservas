@@ -36,14 +36,14 @@
     </form>
 
     <div class="kpis kpis-all">
-        <div class="kpi"><div class="k-label">Clientes que vinieron</div><div class="k-value">{{ $kpis['active'] }}</div><div class="k-delta flat">personas distintas</div></div>
-        <div class="kpi"><div class="k-label">Clientes nuevos</div><div class="k-value">{{ $kpis['new'] }}</div><div class="k-delta flat">primera vez en el rango</div></div>
-        <div class="kpi"><div class="k-label">Clientes que repiten</div><div class="k-value">{{ $kpis['repeaters'] }}</div><div class="k-delta flat">{{ $kpis['repeat_rate'] }}% de los que vinieron</div></div>
-        <div class="kpi"><div class="k-label">En riesgo de perderse</div><div class="k-value">{{ $kpis['at_risk'] }}</div><div class="k-delta flat">venían seguido y se atrasaron</div></div>
-        <div class="kpi"><div class="k-label">Visitas por cliente</div><div class="k-value">{{ str_replace('.', ',', $kpis['visits_per_customer']) }}</div><div class="k-delta flat">promedio en el rango</div></div>
-        <div class="kpi"><div class="k-label">Gasto por cliente</div><div class="k-value">{{ $money($kpis['spend_per_customer']) }}</div><div class="k-delta flat">Playroom + extras</div></div>
-        <div class="kpi"><div class="k-label">Vuelven cada</div><div class="k-value">{{ $kpis['median_gap'] !== null ? $kpis['median_gap'].' días' : '—' }}</div><div class="k-delta flat">típico entre una visita y otra</div></div>
-        <div class="kpi"><div class="k-label">Reservas con extras</div><div class="k-value">{{ $extras['bookings'] ? round($extras['with_extras'] / $extras['bookings'] * 100) : 0 }}%</div><div class="k-delta flat">{{ $money($extras['extra_revenue']) }} en extras</div></div>
+        <div class="kpi" data-tip="Personas distintas con al menos una estadía en el rango (sin canceladas ni expiradas)." tabindex="0"><div class="k-label">Clientes que vinieron</div><div class="k-value">{{ $kpis['active'] }}</div><div class="k-delta flat">personas distintas</div></div>
+        <div class="kpi" data-tip="Personas cuya primera estadía de todo su historial cae en este rango y que vinieron una sola vez en él." tabindex="0"><div class="k-label">Clientes nuevos</div><div class="k-value">{{ $kpis['new'] }}</div><div class="k-delta flat">primera vez en el rango</div></div>
+        <div class="kpi" data-tip="Personas que vinieron 2 o más veces en el rango, o que ya habían venido antes de él. El % es: los que repiten ÷ clientes que vinieron." tabindex="0"><div class="k-label">Clientes que repiten</div><div class="k-value">{{ $kpis['repeaters'] }}</div><div class="k-delta flat">{{ $kpis['repeat_rate'] }}% de los que vinieron</div></div>
+        <div class="kpi" data-tip="Clientes con 2 o más visitas que llevan sin volver más de 1,5 veces su frecuencia habitual (mínimo 30 días, máximo 180). La lista está más abajo." tabindex="0"><div class="k-label">En riesgo de perderse</div><div class="k-value">{{ $kpis['at_risk'] }}</div><div class="k-delta flat">venían seguido y se atrasaron</div></div>
+        <div class="kpi" data-tip="Estadías del rango ÷ clientes que vinieron." tabindex="0"><div class="k-label">Visitas por cliente</div><div class="k-value">{{ str_replace('.', ',', $kpis['visits_per_customer']) }}</div><div class="k-delta flat">promedio en el rango</div></div>
+        <div class="kpi" data-tip="Venta del rango (precio final de las estadías + extras) ÷ clientes que vinieron." tabindex="0"><div class="k-label">Gasto por cliente</div><div class="k-value">{{ $money($kpis['spend_per_customer']) }}</div><div class="k-delta flat">Playroom + extras</div></div>
+        <div class="kpi" data-tip="Mediana de los días entre una visita y la siguiente, tomando el historial completo de los clientes del rango. La mitad vuelve antes y la otra mitad después." tabindex="0"><div class="k-label">Vuelven cada</div><div class="k-value">{{ $kpis['median_gap'] !== null ? $kpis['median_gap'].' días' : '—' }}</div><div class="k-delta flat">típico entre una visita y otra</div></div>
+        <div class="kpi" data-tip="Reservas del rango que compraron al menos un extra ÷ todas las reservas del rango. Abajo, lo vendido en extras." tabindex="0"><div class="k-label">Reservas con extras</div><div class="k-value">{{ $extras['bookings'] ? round($extras['with_extras'] / $extras['bookings'] * 100) : 0 }}%</div><div class="k-delta flat">{{ $money($extras['extra_revenue']) }} en extras</div></div>
     </div>
 
     <h2 class="an-title">Quiénes son</h2>

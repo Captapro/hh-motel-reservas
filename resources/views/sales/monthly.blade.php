@@ -89,7 +89,7 @@
     <div class="cards" style="margin-top:14px;">
         <div class="card"><div class="label">Venta total del mes</div><div class="value">{{ $money($totals['total']) }}</div></div>
         <div class="card blue"><div class="label">Playrooms vendidos</div><div class="value">{{ $totals['rooms'] }}</div></div>
-        <div class="card gold"><div class="label">Precio promedio por hab.</div><div class="value">{{ $money($avgTicket) }}</div></div>
+        <div class="card gold" tabindex="0" data-tip="Venta total de las habitaciones del mes ÷ cantidad de habitaciones vendidas."><div class="label">Precio promedio por hab.</div><div class="value">{{ $money($avgTicket) }}</div></div>
         <div class="card green"><div class="label">Cobrado en caja</div><div class="value">{{ $money($totals['cash_total']) }}</div></div>
         <div class="card"><div class="label">Extras vendidos</div><div class="value">{{ $money($totals['extras']) }}</div></div>
         <div class="card"><div class="label">Canceladas</div><div class="value">{{ $cancelled }}</div></div>
@@ -108,7 +108,7 @@
             <div class="card"><div class="label">Otros extra core</div><div class="value">{{ $money($planilla['totals']['services']) }}</div></div>
             <div class="card"><div class="label">Extras (consumos)</div><div class="value">{{ $money($planilla['totals']['extras']) }}</div></div>
             @if ($planilla['totals']['split'] > 0)<div class="card"><div class="label">Pago fraccionado</div><div class="value">{{ $money($planilla['totals']['split']) }}</div></div>@endif
-            <div class="card green"><div class="label">Ticket promedio</div><div class="value">{{ $money($planilla['totals']['stays'] ? (int) round($planilla['totals']['lodging'] / $planilla['totals']['stays']) : 0) }}</div></div>
+            <div class="card green" tabindex="0" data-tip="Alojamiento de la planilla ÷ estadías: lo que paga en promedio cada estadía, sin extras ni pagos fraccionados."><div class="label">Ticket promedio</div><div class="value">{{ $money($planilla['totals']['stays'] ? (int) round($planilla['totals']['lodging'] / $planilla['totals']['stays']) : 0) }}</div></div>
         </div>
         <div class="table-wrap"><table>
             <thead><tr><th>Fecha</th><th class="n">Estadías</th><th class="n">Alojamiento</th><th class="n">Hora extra</th><th class="n">Persona adicional</th><th class="n">Otros extra core</th><th class="n">Extras</th><th class="n">Pago fraccionado</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th></tr></thead>
