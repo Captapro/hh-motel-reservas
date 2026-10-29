@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Room;
+use App\Models\RoomInspection;
 use App\Services\Booking\RoomInspectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class RoomInspectionController extends Controller
@@ -89,5 +92,17 @@ class RoomInspectionController extends Controller
         return view('rooms.inspection-panel', [
             'needsMaintenance' => $entries->filter(fn (array $e) => $e['inspection']?->needs_maintenance)->values(),
         ]);
+    }
+
+    /**
+     * Foto de una inspección. Se sirve detrás del login (no hay enlace
+     * público a storage): son fotos del interior de los Playrooms.
+     */
+    public function photo(RoomInspection $inspection, int $index): StreamedResponse
+    {
+        $path = $inspection->photos[$index] ?? null;
+        abort_unless($path && Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path, null, ['Cache-Control' => 'private, max-age=86400']);
     }
 }

@@ -178,6 +178,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/ronda-de-turno', [ShiftRoundController::class, 'index'])->name('shift_round.index');
     Route::get('/ronda-de-turno/escanear', [ShiftRoundController::class, 'scan'])->name('shift_round.scan');
     Route::get('/mantencion', [RoomInspectionController::class, 'panel'])->name('rooms.inspections.panel');
+    Route::get('/mantencion/foto/{inspection}/{index}', [RoomInspectionController::class, 'photo'])->whereNumber('index')->name('rooms.inspections.photo');
     Route::get('/habitaciones/{room}/inspeccion', [RoomInspectionController::class, 'create'])->name('rooms.inspections.create');
     Route::post('/habitaciones/{room}/inspeccion', [RoomInspectionController::class, 'store'])->name('rooms.inspections.store');
     Route::post('/qr/habitacion/{room}/ocupada', [RoomQrController::class, 'acknowledgeOccupied'])->name('rooms.qr.acknowledge_occupied');

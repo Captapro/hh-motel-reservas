@@ -76,6 +76,13 @@
             <span class="pill {{ $lastInspection->needs_maintenance ? 'warn' : 'ok' }}">
                 {{ $lastInspection->needs_maintenance ? 'Necesitaba mantención' : 'Todo OK' }}
             </span>
+            @if (! empty($lastInspection->photos))
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    @foreach ($lastInspection->photos as $i => $photo)
+                        <a href="{{ route('rooms.inspections.photo', [$lastInspection, $i]) }}" target="_blank" rel="noopener"><img src="{{ route('rooms.inspections.photo', [$lastInspection, $i]) }}" alt="Foto {{ $i + 1 }}" loading="lazy" style="width:84px; height:84px; object-fit:cover; border-radius:8px; border:1px solid #444;"></a>
+                    @endforeach
+                </div>
+            @endif
         </div>
     @endif
 

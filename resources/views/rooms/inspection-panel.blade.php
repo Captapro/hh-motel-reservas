@@ -49,6 +49,13 @@
                     @if ($entry['inspection']->notes)
                         <div class="meta warn" style="margin-top:4px;">{{ $entry['inspection']->notes }}</div>
                     @endif
+                    @if (! empty($entry['inspection']->photos))
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+                            @foreach ($entry['inspection']->photos as $i => $photo)
+                                <img src="{{ route('rooms.inspections.photo', [$entry['inspection'], $i]) }}" alt="Foto {{ $i + 1 }}" loading="lazy" style="width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid #444;">
+                            @endforeach
+                        </div>
+                    @endif
                 </a>
             @endforeach
         </div>
