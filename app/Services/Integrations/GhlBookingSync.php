@@ -29,14 +29,15 @@ class GhlBookingSync
 {
     public const TAG_PREFIX = 'Reservó:';
 
-    /**
-     * Mientras el cliente tenga una reserva viva lleva este tag; el flujo de
-     * bienvenida de WhatsApp en GHL lo excluye, así no le llega el mensaje
-     * de bienvenida a quien está coordinando su llegada o ya está adentro.
-     */
+    /** Marca al cliente con una reserva viva (para segmentar en GHL). */
     public const ACTIVE_STAY_TAG = 'hh_estadia_activa';
 
-    /** Tag que pone el flujo de bienvenida de GHL al enviarla (evita repetirla). */
+    /**
+     * El flujo de bienvenida de WhatsApp en GHL solo corre si el contacto NO
+     * tiene este tag (GHL admite un solo tag en ese filtro). El flujo lo pone
+     * al enviarla, y acá se pone también al reservar: así no le llega la
+     * bienvenida a quien coordina su llegada o ya está adentro.
+     */
     public const WELCOME_TAG = 'hh_bienvenida_wa';
 
     /** Estados en que la reserva ya terminó: la estadía deja de estar activa. */
@@ -82,7 +83,7 @@ class GhlBookingSync
             $contactId = $this->client->upsertContact($customer->phone_e164, $customer->name, $customer->email);
             $tag = self::TAG_PREFIX.$booking->starts_at->timezone('America/Santiago')->toDateString();
             $this->client->replaceTagWithPrefix($contactId, self::TAG_PREFIX, $tag);
-            $this->client->addTags($contactId, [self::ACTIVE_STAY_TAG]);
+            $this->client->addTags($contactId, [self::ACTIVE_STAY_TAG, self::WELCOME_TAG]);
             $this->client->addNote($contactId, sprintf(
                 'Reserva %s: %s (%s) · %s · $%s',
                 $booking->code,
