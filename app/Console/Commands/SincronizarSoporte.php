@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Hash;
 
 class SincronizarSoporte extends Command
 {
@@ -25,12 +26,22 @@ class SincronizarSoporte extends Command
         if (! $user) {
             User::create(['name' => 'Soporte', 'email' => $email, 'password' => $password, 'role' => 'soporte', 'is_active' => true]);
             $this->info('Cuenta de soporte creada.');
-        } elseif ($user->role !== 'soporte' || ! $user->is_active) {
-            // No se toca la contraseña: si ya existe, se mantiene la que tenga.
-            $user->update(['role' => 'soporte', 'is_active' => true]);
-            $this->info('Cuenta existente restaurada como soporte.');
         } else {
-            $this->line('La cuenta de soporte ya existe.');
+            // Render manda: si SUPPORT_PASSWORD cambió, se aplica; así la cuenta master
+            // siempre se puede recuperar cambiando la variable y reiniciando.
+            $changes = [];
+            if ($user->role !== 'soporte' || ! $user->is_active) {
+                $changes += ['role' => 'soporte', 'is_active' => true];
+            }
+            if (! Hash::check($password, $user->password)) {
+                $changes['password'] = $password;
+            }
+            if ($changes) {
+                $user->update($changes);
+                $this->info('Cuenta de soporte actualizada: '.implode(', ', array_keys($changes)).'.');
+            } else {
+                $this->line('La cuenta de soporte ya existe y está al día.');
+            }
         }
 
         return self::SUCCESS;

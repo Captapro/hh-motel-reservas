@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Support\AccessSections;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -90,7 +91,7 @@ class AccessProfilesTest extends TestCase
         $this->actingAs($admin)->get(route('admin.access.index'))->assertForbidden();
     }
 
-    public function test_support_sync_command_creates_the_account_without_overwriting_it(): void
+    public function test_support_sync_command_creates_the_account_and_keeps_it_in_sync(): void
     {
         config(['services.support.email' => 'soporte@prueba.cl', 'services.support.password' => 'clave-inicial-123']);
 
@@ -106,6 +107,10 @@ class AccessProfilesTest extends TestCase
         $this->assertSame('soporte', $user->role);
         $this->assertSame($hash, $user->password);
 
+        // Si cambian SUPPORT_PASSWORD en Render, la nueva clave queda vigente.
+        config(['services.support.password' => 'clave-nueva-456']);
+        $this->artisan('app:soporte-sincronizar')->assertSuccessful();
+        $this->assertTrue(Hash::check('clave-nueva-456', $user->fresh()->password));
     }
 
     public function test_host_sync_command_creates_a_reception_account_and_never_overwrites_it(): void
