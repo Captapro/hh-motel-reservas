@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Coupon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CouponController extends Controller
@@ -41,7 +42,7 @@ class CouponController extends Controller
     private function save(Request $request, Coupon $coupon): RedirectResponse
     {
         $validated = $request->validate([
-            'code' => ['required', 'string', 'max:50', 'unique:coupons,code,'.$coupon->id],
+            'code' => ['required', 'string', 'max:50', Rule::unique('coupons', 'code')->ignore($coupon->id)],
             'internal_name' => ['required', 'string', 'max:100'],
             'image_url' => ['nullable', 'url', 'max:500'],
             'discount_type' => ['required', 'in:percentage,fixed'],

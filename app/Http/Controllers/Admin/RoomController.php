@@ -10,6 +10,7 @@ use App\Models\RoomCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class RoomController extends Controller
@@ -92,7 +93,7 @@ class RoomController extends Controller
 
         $validated = $request->validate([
             'room_category_id' => ['required', 'exists:room_categories,id'],
-            'name' => ['required', 'string', 'max:100', 'unique:rooms,name,'.$room->id],
+            'name' => ['required', 'string', 'max:100', Rule::unique('rooms', 'name')->ignore($room->id)],
             'buffer_minutes' => ['required', 'integer', 'min:0'],
             'operational_status' => ['required', 'in:activa,mantencion,inactiva,aseo'],
             'operational_note' => ['nullable', 'string', 'max:255'],
