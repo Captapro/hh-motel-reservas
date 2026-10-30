@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Integrations\GhlBookingSync;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,20 @@ use Illuminate\Support\Collection;
 class Booking extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        // Al cerrarse la estadía, GHL vuelve a tratar al cliente como contacto
+        // nuevo para la bienvenida de WhatsApp (ver GhlBookingSync::releaseStay).
+        static::updated(function (Booking $booking) {
+            if ($booking->wasChanged('booking_status')
+                && in_array($booking->booking_status, GhlBookingSync::CLOSED_STATUSES, true)
+                && ! in_array($booking->getOriginal('booking_status'), GhlBookingSync::CLOSED_STATUSES, true)) {
+                GhlBookingSync::releaseStayLater($booking);
+            }
+        });
+        static::deleted(fn (Booking $booking) => GhlBookingSync::releaseStayLater($booking));
+    }
 
     protected function casts(): array
     {

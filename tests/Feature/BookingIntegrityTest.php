@@ -31,6 +31,7 @@ use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Historical\HistoricalSalesImporter;
 use App\Services\Integrations\GhlBookingSync;
+use App\Services\Integrations\GhlClient;
 use App\Services\Payments\MercadoPagoPayments;
 use App\Support\GuestLine;
 use Carbon\Carbon;
@@ -405,6 +406,27 @@ class BookingIntegrityTest extends TestCase
         app(PaymentService::class)->register($noEmail, $method, 20000, null, null, auth()->id(), null, '4');
         Http::assertSentCount(1);
         Http::assertSent(fn ($r) => $r['codigo'] === $noEmail->code && $r['email'] === '' && $r['phone'] === '+56911111111');
+    }
+
+    public function test_closing_the_stay_frees_the_client_for_the_whatsapp_welcome_unless_another_booking_is_alive(): void
+    {
+        config(['services.ghl.private_token' => 'pit-prueba', 'services.ghl.location_id' => 'loc-prueba']);
+        Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $this->customer->update(['ghl_contact_id' => 'c-123']);
+        $sync = new GhlBookingSync(new GhlClient);
+
+        $first = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $second = $this->booking(['starts_at' => Carbon::parse('2026-11-09 12:00')]);
+
+        // Con otra reserva viva no se toca nada: sigue siendo cliente en curso.
+        $first->update(['booking_status' => 'CANCELADA']);
+        $sync->releaseStay($first);
+        Http::assertNothingSent();
+
+        $second->update(['booking_status' => 'FINALIZADA']);
+        $sync->releaseStay($second);
+        Http::assertSent(fn ($r) => $r->method() === 'DELETE' && str_ends_with($r->url(), '/contacts/c-123/tags')
+            && $r['tags'] === [GhlBookingSync::ACTIVE_STAY_TAG, GhlBookingSync::WELCOME_TAG]);
     }
 
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void

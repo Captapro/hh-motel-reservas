@@ -29,6 +29,19 @@ class GhlBookingSync
 {
     public const TAG_PREFIX = 'Reservó:';
 
+    /**
+     * Mientras el cliente tenga una reserva viva lleva este tag; el flujo de
+     * bienvenida de WhatsApp en GHL lo excluye, así no le llega el mensaje
+     * de bienvenida a quien está coordinando su llegada o ya está adentro.
+     */
+    public const ACTIVE_STAY_TAG = 'hh_estadia_activa';
+
+    /** Tag que pone el flujo de bienvenida de GHL al enviarla (evita repetirla). */
+    public const WELCOME_TAG = 'hh_bienvenida_wa';
+
+    /** Estados en que la reserva ya terminó: la estadía deja de estar activa. */
+    public const CLOSED_STATUSES = ['FINALIZADA', 'CANCELADA', 'EXPIRADA', 'NO_SHOW'];
+
     public function __construct(private readonly GhlClient $client) {}
 
     /**
@@ -69,6 +82,7 @@ class GhlBookingSync
             $contactId = $this->client->upsertContact($customer->phone_e164, $customer->name, $customer->email);
             $tag = self::TAG_PREFIX.$booking->starts_at->timezone('America/Santiago')->toDateString();
             $this->client->replaceTagWithPrefix($contactId, self::TAG_PREFIX, $tag);
+            $this->client->addTags($contactId, [self::ACTIVE_STAY_TAG]);
             $this->client->addNote($contactId, sprintf(
                 'Reserva %s: %s (%s) · %s · $%s',
                 $booking->code,
@@ -92,6 +106,51 @@ class GhlBookingSync
                 'last_error' => $e->getMessage(),
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Agenda releaseStay() para después de responder: se llama desde el modelo
+     * cuando la reserva se cierra, y no debe demorar el checkout ni el barrido
+     * de vencidas esperando a GHL. Sin GHL configurado no hace nada.
+     */
+    public static function releaseStayLater(Booking $booking): void
+    {
+        if (! app(GhlClient::class)->isConfigured()) {
+            return;
+        }
+
+        dispatch(fn () => app(self::class)->releaseStay($booking))->afterResponse();
+    }
+
+    /**
+     * Al cerrarse la estadía le saca al contacto el tag de estadía activa y el
+     * de bienvenida enviada, para que si vuelve a escribir reciba la
+     * bienvenida de nuevo. Si el cliente tiene otra reserva viva, no toca nada.
+     * Nunca lanza, igual que sync().
+     */
+    public function releaseStay(Booking $booking): void
+    {
+        try {
+            $customer = $booking->customer;
+            if (! $customer || ! $this->client->isConfigured()) {
+                return;
+            }
+
+            $hasOtherActive = Booking::where('customer_id', $customer->id)
+                ->where('id', '!=', $booking->id)
+                ->whereNotIn('booking_status', self::CLOSED_STATUSES)
+                ->exists();
+            if ($hasOtherActive) {
+                return;
+            }
+
+            $contactId = $customer->ghl_contact_id ?: $this->client->findContactIdByPhone($customer->phone_e164);
+            if ($contactId) {
+                $this->client->removeTags($contactId, [self::ACTIVE_STAY_TAG, self::WELCOME_TAG]);
+            }
+        } catch (Throwable $e) {
+            Log::warning('GHL: no se pudo liberar la estadía de la reserva '.$booking->code, ['error' => $e->getMessage()]);
         }
     }
 }
