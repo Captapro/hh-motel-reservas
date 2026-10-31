@@ -164,6 +164,33 @@ class BookingIntegrityTest extends TestCase
         $this->getJson(route('rooms.pass_scans'))->assertExactJson([]);
     }
 
+    public function test_split_payment_returns_to_the_form_with_the_rest_before_check_in(): void
+    {
+        $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        $efectivo = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $total = $booking->balanceDue();
+
+        // Primera parte con débito: vuelve al formulario con lo que falta, sin error.
+        $this->post(route('payments.store', $booking->code), [
+            'payment_method_id' => $debito->id, 'amount' => $total - 5000, 'request_token' => (string) Str::uuid(),
+            'voucher_number' => 'V1', 'after' => 'checkin',
+        ])->assertRedirect(route('payments.create', ['code' => $booking->code, 'after' => 'checkin']))
+            ->assertSessionHasNoErrors()->assertSessionHas('split');
+
+        $this->get(route('payments.create', ['code' => $booking->code, 'after' => 'checkin']))
+            ->assertOk()->assertSee('Falta $5.000')->assertSee('value="5000"', false);
+
+        // El resto en efectivo: ahora sí pasa al check-in.
+        $this->post(route('payments.store', $booking->code), [
+            'payment_method_id' => $efectivo->id, 'amount' => 5000, 'request_token' => (string) Str::uuid(),
+            'receipt_number' => 'B1', 'after' => 'checkin',
+        ])->assertRedirect(route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso']));
+
+        $this->assertSame(0, $booking->fresh()->balanceDue());
+        $this->assertSame(2, $booking->payments()->count());
+    }
+
     public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);

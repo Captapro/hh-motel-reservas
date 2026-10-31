@@ -57,6 +57,8 @@
         #voucher-number, #receipt-number { font-size:20px; font-weight:700; padding:13px 14px; letter-spacing:.5px; }
         button.full-balance { width:auto; margin:10px 0 0; padding:9px 16px; background:#262626; border:1.5px solid #3a3a3a; color:#ddd; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer; }
         button.full-balance:hover { border-color:#ff7918; color:#fff; }
+        .split-ok { background:#1c3a24; border:1px solid #2d7a45; color:#b8f3c8; padding:12px 14px; border-radius:8px; margin-bottom: 18px; font-size:14px; }
+        .split-hint { color:#999; font-size:13px; margin:8px 0 0; }
         .doc-hint { color:#888; font-size:13px; margin:8px 0 0; min-height:0; }
         .doc-hint:empty { display:none; }
         button.note-toggle { width:auto; margin:16px 0 0; padding:4px 0; background:none; border:none; color:#bbb; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; }
@@ -68,6 +70,10 @@
     <div class="page-inner hh-payment-page">
     <h1>Registrar pago</h1>
     <div class="code">{{ $booking->code }} — {{ $booking->room->name }}</div>
+
+    @if (session('split') && ! $errors->any())
+        <div class="split-ok">✅ {{ session('split') }}</div>
+    @endif
 
     @if ($errors->any())
         <div class="errors">
@@ -132,6 +138,7 @@
             </div>
             @if ($balance > 0)
                 <button type="button" class="full-balance" id="full-balance" data-amount="{{ $balance }}">Saldo completo · ${{ number_format($balance, 0, ',', '.') }}</button>
+                <p class="split-hint">¿Paga con dos medios? Ingresa solo lo de este medio; después registras el resto.</p>
             @endif
 
             <div class="step-title"><b>3</b> <span id="doc-title">Comprobante</span></div>

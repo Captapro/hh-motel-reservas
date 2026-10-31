@@ -25,7 +25,7 @@ class PaymentController extends Controller
 
         // Recién creada con abono: se sugiere ese monto en vez del saldo
         // completo — recepción puede ajustarlo si corresponde otra cosa.
-        $suggestedAmount = $booking->deposit_amount > 0
+        $suggestedAmount = $booking->deposit_amount > 0 && ! session('split')
             ? min((int) $booking->deposit_amount, $booking->balanceDue())
             : $booking->balanceDue();
 
@@ -99,6 +99,15 @@ class PaymentController extends Controller
             );
         } catch (PaymentExceedsBalanceException $e) {
             return back()->withInput()->withErrors(['amount' => $e->getMessage()]);
+        }
+
+        // Pago dividido (ej. parte débito y parte efectivo): si todavía falta
+        // para el Playroom, se vuelve al formulario con el resto sugerido en
+        // vez de rebotar con error desde el check-in.
+        $paidLine = $method->name.' · $'.number_format($validated['amount'], 0, ',', '.');
+        if (in_array($validated['after'] ?? null, ['checkin', 'pase'], true) && ($rest = $booking->fresh()->roomBalanceDue()) > 0) {
+            return redirect()->route('payments.create', ['code' => $booking->code, 'after' => $validated['after']])
+                ->with('split', 'Registrado: '.$paidLine.'. Falta $'.number_format($rest, 0, ',', '.').' — registra el otro medio de pago.');
         }
 
         if (($validated['after'] ?? null) === 'checkin') {
