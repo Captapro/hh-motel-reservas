@@ -45,6 +45,7 @@ class LateArrivalTest extends TestCase
             '2026_08_18_120007_create_calendar_overrides_table.php',
             '2026_08_18_120008_create_coupons_table.php',
             '2026_08_18_120010_create_customers_table.php',
+            '2026_09_11_090000_add_identity_fields_to_customers_table.php',
             '2026_08_18_120011_create_bookings_table.php',
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
@@ -68,7 +69,7 @@ class LateArrivalTest extends TestCase
 
         $category = RoomCategory::create(['name' => 'LITE', 'display_order' => 1]);
         $this->room = Room::create(['room_category_id' => $category->id, 'name' => 'LITE 301', 'operational_status' => 'activa']);
-        $this->customer = Customer::create(['name' => 'Cliente Prueba', 'phone_e164' => '+56911111111']);
+        $this->customer = Customer::create(['name' => 'Cliente Prueba', 'phone_e164' => '+56911111111', 'document_type' => 'rut', 'rut' => '11111111-1', 'nationality' => 'Chilena']);
 
         // Lunes 10:00 a 23:30.
         $rule = RateRule::create(['name' => 'HH', 'is_active' => true]);

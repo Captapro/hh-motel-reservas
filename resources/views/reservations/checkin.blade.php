@@ -32,6 +32,10 @@
         .manual-extras summary::before { content:'+ '; color:#ff7918; font-weight:700; }
         .manual-extras[open] summary::before { content:'− '; }
         .manual-extras summary:hover { color:#eee; }
+        .holder-required { border-color:#7a5a1f; }
+        .holder-required p { font-size:13.5px; color:#e8c76f; margin:0 0 10px; }
+        .holder-row { display:grid; grid-template-columns:120px 1fr; gap:8px; }
+        .holder-required select, .holder-required input { width:100%; box-sizing:border-box; background:#111; border:1px solid #444; color:#fff; padding:9px 10px; border-radius:7px; font-size:14px; }
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:12px 14px; border-radius:8px; margin-bottom: 18px; font-size:14px; }
         .guests-required { border-color:#6b5a1e; }
         .guests-required .cat-label { color:#e8c76f; }
@@ -166,6 +170,33 @@
                 @endif
             </div>
         @endif
+        @php
+            $holder = $booking->customer;
+            $needDoc = ! $holder->documentNumber();
+            $needNat = ! $holder->nationality;
+        @endphp
+        @if ($needDoc || $needNat)
+            {{-- Ficha incompleta (ej. reserva del catálogo): se completa acá, con el titular presente. --}}
+            <div class="card holder-required">
+                <div class="cat-label" style="margin-top:0;">Datos del titular — obligatorio</div>
+                <p>{{ $holder->name }} no tiene {{ $needDoc && $needNat ? 'documento ni nacionalidad' : ($needDoc ? 'documento' : 'nacionalidad') }} en su ficha. Pídele su documento para habilitar el Playroom.</p>
+                @if ($needDoc)
+                    <div class="holder-row">
+                        <select name="holder_document_type" required>
+                            <option value="rut" @selected(old('holder_document_type', 'rut') === 'rut')>RUT</option>
+                            <option value="pasaporte" @selected(old('holder_document_type') === 'pasaporte')>Pasaporte</option>
+                        </select>
+                        <input type="text" name="holder_document_number" value="{{ old('holder_document_number') }}" placeholder="12.345.678-9" required maxlength="30" autocomplete="off">
+                    </div>
+                @endif
+                @if ($needNat)
+                    <input type="text" name="holder_nationality" list="holder-nationalities" value="{{ old('holder_nationality', 'Chilena') }}" placeholder="Nacionalidad" required maxlength="60" style="margin-top:8px;">
+                    <datalist id="holder-nationalities">
+                        @foreach (['Chilena', 'Argentina', 'Peruana', 'Venezolana', 'Colombiana', 'Boliviana', 'Ecuatoriana', 'Brasileña', 'Paraguaya', 'Uruguaya'] as $nat)<option value="{{ $nat }}">@endforeach
+                    </datalist>
+                @endif
+            </div>
+        @endif
         <div class="card guests-required" @if ($guestsReady) style="display:none" @endif>
             <div class="cat-label" style="margin-top:0;">Registro de acompañantes — obligatorio</div>
             <p>
@@ -194,14 +225,19 @@
             </div>
         @endif
 
-                <button type="submit" class="save">{{ $express ? 'Confirmar ingreso' : 'Registrar check-in' }}</button>
+                @if ($express)
+                    <button type="submit" class="save">Confirmar ingreso</button>
+                @else
+                    {{-- Primero los datos; después se pasa a ofrecer consumo y recién ahí se registra. --}}
+                    <button type="button" class="save" id="ci-next">Continuar: ofrecer consumo →</button>
+                @endif
                 @if ($express)
                     <a class="back" href="{{ route('bookings.checkin.show', $booking->code) }}">+ Ofrecer algo más antes de entrar</a>
                 @endif
                 <a class="back" href="{{ route('reservations.show', $booking->code) }}">← Volver sin registrar</a>
             </div>
             @unless ($express)
-            <div class="ci-col">
+            <div class="ci-col" id="ci-offer" hidden>
         <div class="offer-panel">
                 <div class="offer-head">
                     <span class="offer-title">Ofrecer productos y combos</span>
@@ -260,6 +296,7 @@
                 </div>
             </div>
 
+                <button type="submit" class="save" style="margin-top:14px;">Registrar check-in</button>
             </div>
             @endunless
         </div>
@@ -340,6 +377,27 @@
                 hhAddGuestRow();
             }
         })();
+        // Paso 1 → 2: con los datos del titular y los acompañantes completos se
+        // abre la tarjeta de consumos para que el anfitrión ofrezca packs.
+        document.getElementById('ci-next')?.addEventListener('click', function () {
+            for (const field of document.querySelectorAll('.holder-required [required]')) {
+                if (!field.checkValidity()) { field.reportValidity(); return; }
+            }
+            hhSyncGuestNames();
+            const required = {{ $requiredGuests }};
+            const filled = document.getElementById('guest-names-hidden').value.split('\n').filter(function (s) { return s.trim(); }).length;
+            const errEl = document.getElementById('guests-error');
+            if (filled < required) {
+                errEl.textContent = 'Faltan ' + (required - filled) + ' acompañante(s) por registrar (nombre y apellido) antes de seguir.';
+                errEl.hidden = false;
+                return;
+            }
+            errEl.hidden = true;
+            const offer = document.getElementById('ci-offer');
+            offer.hidden = false;
+            this.hidden = true;
+            offer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
         document.querySelector('form').addEventListener('submit', function (e) {
             hhSyncGuestNames();
             const required = {{ $requiredGuests }};

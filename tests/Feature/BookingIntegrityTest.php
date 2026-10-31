@@ -70,6 +70,7 @@ class BookingIntegrityTest extends TestCase
             '2026_08_18_120008_create_coupons_table.php',
             '2026_08_18_120009_create_coupon_rooms_table.php',
             '2026_08_18_120010_create_customers_table.php',
+            '2026_09_11_090000_add_identity_fields_to_customers_table.php',
             '2026_08_18_120011_create_bookings_table.php',
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
@@ -108,7 +109,7 @@ class BookingIntegrityTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'administrador']));
         $category = RoomCategory::create(['name' => 'GO', 'base_capacity' => 2, 'is_active' => true]);
         $this->room = Room::create(['name' => 'GO 101', 'room_category_id' => $category->id, 'operational_status' => 'activa', 'buffer_minutes' => 30]);
-        $this->customer = Customer::create(['name' => 'Cliente de prueba', 'phone_e164' => '+56911111111']);
+        $this->customer = Customer::create(['name' => 'Cliente de prueba', 'phone_e164' => '+56911111111', 'document_type' => 'rut', 'rut' => '11111111-1', 'nationality' => 'Chilena']);
         $rate = RateRule::create(['name' => 'HH', 'is_active' => true, 'extra_person_price' => 10000]);
         $rate->windows()->create(['weekday' => 1, 'start_time' => '00:00:00', 'end_time' => '00:00:00', 'wraps_midnight' => true]);
         $rate->prices()->create(['room_category_id' => $category->id, 'duration_minutes' => 60, 'price' => 20000]);
@@ -272,7 +273,6 @@ class BookingIntegrityTest extends TestCase
 
     public function test_mercado_pago_payment_fills_the_customer_rut_only_when_missing_and_valid(): void
     {
-        (require database_path('migrations/2026_09_11_090000_add_identity_fields_to_customers_table.php'))->up();
         config(['services.mercadopago.access_token' => 'TEST-token', 'services.mercadopago.webhook_secret' => 'sekret']);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
         $booking->customer->update(['rut' => null, 'document_type' => null]);
@@ -528,7 +528,7 @@ class BookingIntegrityTest extends TestCase
 
     public function test_customer_behavior_page_counts_new_returning_and_at_risk_clients(): void
     {
-        foreach (['2026_09_11_090000_add_identity_fields_to_customers_table.php', '2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
+        foreach (['2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
         $this->actingAs(User::factory()->create(['role' => 'administrador']));
@@ -593,6 +593,8 @@ class BookingIntegrityTest extends TestCase
 
     public function test_monthly_summary_lists_each_sale_and_exports_csv(): void
     {
+        // Cliente sin documento: el detalle lo marca como dato faltante.
+        $this->customer->update(['rut' => null, 'document_type' => null]);
         $booking = $this->booking();
         $method = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
         $payment = app(PaymentService::class)->register($booking, $method, 20000, null, null, auth()->id());
@@ -1000,7 +1002,7 @@ class BookingIntegrityTest extends TestCase
 
     public function test_force_delete_cleans_test_clients_but_never_real_stays(): void
     {
-        foreach (['2026_09_11_090000_add_identity_fields_to_customers_table.php', '2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
+        foreach (['2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
@@ -1187,7 +1189,6 @@ class BookingIntegrityTest extends TestCase
 
     public function test_internal_form_rejects_disabled_category_and_floor(): void
     {
-        (require database_path('migrations/2026_09_11_090000_add_identity_fields_to_customers_table.php'))->up();
         $data = [
             'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 0,
             'duration_minutes' => 60, 'guests_count' => 1, 'customer_first_name' => 'Cliente',
@@ -1208,7 +1209,6 @@ class BookingIntegrityTest extends TestCase
 
     public function test_walk_in_booking_goes_to_payment_then_check_in(): void
     {
-        (require database_path('migrations/2026_09_11_090000_add_identity_fields_to_customers_table.php'))->up();
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
         $data = [
             'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 0,
@@ -1500,12 +1500,12 @@ class BookingIntegrityTest extends TestCase
         $other->prices()->create(['room_category_id' => Room::first()->room_category_id, 'duration_minutes' => 180, 'price' => 40000]);
         $data = ['room_category_id' => Room::first()->room_category_id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 0, 'duration_minutes' => 180];
         $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query($data))->assertOk()->assertJsonPath('available', false);
-        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl', 'accept_privacy' => 1])
+        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl', 'document_type' => 'rut', 'document_number' => '11.111.111-1', 'accept_privacy' => 1])
             ->assertRedirect()->assertSessionHasErrors('duration_minutes');
         $this->assertSame(0, Booking::count());
         RateRule::where('is_active', true)->first()->prices()->create(['room_category_id' => Room::first()->room_category_id, 'duration_minutes' => 180, 'price' => 40000]);
         $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query($data))->assertOk()->assertJsonPath('available', true);
-        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl', 'accept_privacy' => 1])
+        $this->post('/catalogo/reservar', $data + ['guests_count' => 1, 'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164, 'email' => 'cliente@ejemplo.cl', 'document_type' => 'rut', 'document_number' => '11.111.111-1', 'accept_privacy' => 1])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(1, Booking::count());
     }

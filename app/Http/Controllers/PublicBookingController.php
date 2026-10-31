@@ -26,6 +26,7 @@ use App\Services\Payments\MercadoPagoPayments;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\ShortStayPricer;
 use App\Support\Phone;
+use App\Support\Rut;
 use App\Support\TimeFormat;
 use Carbon\Carbon;
 use Endroid\QrCode\Builder\Builder;
@@ -123,6 +124,15 @@ class PublicBookingController extends Controller
             'last_name' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255'],
+            // Documento del titular: se verifica en persona al check-in, pero
+            // pedirlo acá deja la ficha lista y agiliza la llegada.
+            'document_type' => ['required', 'in:rut,pasaporte'],
+            'document_number' => ['required', 'string', 'max:30', function ($attribute, $value, $fail) use ($request) {
+                if ($request->input('document_type') === 'rut' && ! Rut::isValid((string) $value)) {
+                    $fail('El RUT no es válido — revisa el número y el dígito verificador.');
+                }
+            }],
+            'nationality' => ['nullable', 'string', 'max:60'],
             'coupon_code' => ['nullable', 'string', 'max:50'],
             'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
             'quantities' => ['nullable', 'array'],
@@ -141,6 +151,7 @@ class PublicBookingController extends Controller
             'website' => ['prohibited'],
         ], [
             'accept_privacy.accepted' => 'Para reservar tienes que aceptar el aviso de privacidad.',
+            'document_number.required' => 'Ingresa tu RUT o número de pasaporte.',
         ]);
 
         // Un solo envío a la vez por persona y horario: el segundo espera y ve la reserva ya creada.
@@ -195,6 +206,16 @@ class PublicBookingController extends Controller
             // Cliente que ya existía sin correo: se completa con el de esta reserva.
             if (! $customer->email) {
                 $customer->update(['email' => $validated['email']]);
+            }
+            // Documento y nacionalidad: completan la ficha, nunca reemplazan uno
+            // ya cargado (el teléfono no basta para cambiar la identidad).
+            if (! $customer->documentNumber()) {
+                $customer->update($validated['document_type'] === 'rut'
+                    ? ['document_type' => 'rut', 'rut' => Rut::normalize($validated['document_number'])]
+                    : ['document_type' => 'pasaporte', 'passport_number' => trim($validated['document_number'])]);
+            }
+            if (! $customer->nationality && filled($validated['nationality'] ?? null)) {
+                $customer->update(['nationality' => trim($validated['nationality'])]);
             }
             if ($customer->blacklist_status === 'blocked') {
                 return back()->withInput()->withErrors(['phone' => 'No es posible solicitar la reserva con los datos ingresados.']);

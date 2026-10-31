@@ -18,6 +18,7 @@ use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\UpsellResolver;
 use App\Support\GuestLine;
 use App\Support\PassScans;
+use App\Support\Rut;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -183,6 +184,14 @@ class BookingCheckInController extends Controller
             ]);
         }
 
+        // Documento y nacionalidad del titular: obligatorios para habilitar el
+        // Playroom. Solo se piden si faltan en su ficha (por ejemplo, reservas
+        // del catálogo), y lo que se ingresa acá completa la ficha.
+        $holder = $this->holderData($booking, $request);
+        if (is_string($holder)) {
+            return back()->withInput()->withErrors(['holder' => $holder]);
+        }
+
         $arrival = now();
         if ($arrival->lt($booking->starts_at)
             && ! $availability->isAvailable($booking->room, $arrival, $booking->ends_at, $booking->id)) {
@@ -217,6 +226,11 @@ class BookingCheckInController extends Controller
         ]);
 
         AuditLog::record(auth()->id(), 'reserva.check_in', 'Booking', $booking->id, $old, $booking->only(['booking_status', 'checked_in_at', 'ends_at']));
+
+        if ($holder) {
+            $booking->customer->update($holder);
+            AuditLog::record(auth()->id(), 'cliente.datos_check_in', 'Customer', $booking->customer_id, null, array_keys($holder));
+        }
 
         // El check-in es la fuente de verdad del registro de acompañantes —
         // reemplaza lo que hubiera quedado (de la creación, si algo) por lo
@@ -260,6 +274,42 @@ class BookingCheckInController extends Controller
         $roomName = $booking->fresh()->room->name;
 
         return redirect()->route('rooms.board')->with('status', $status.' — '.$roomName.'.');
+    }
+
+    /**
+     * Lo que falta del titular, validado: [] si su ficha ya está completa,
+     * los campos a guardar, o el mensaje de error para recepción.
+     *
+     * @return array<string, string>|string
+     */
+    private function holderData(Booking $booking, Request $request): array|string
+    {
+        $customer = $booking->customer;
+        $data = [];
+
+        if (! $customer->documentNumber()) {
+            $type = (string) $request->input('holder_document_type');
+            $number = trim((string) $request->input('holder_document_number'));
+            if (! in_array($type, ['rut', 'pasaporte'], true) || $number === '') {
+                return 'Falta el documento del titular (RUT o pasaporte) para hacer el check-in.';
+            }
+            if ($type === 'rut' && ! Rut::isValid($number)) {
+                return 'El RUT del titular no es válido — revisa el dígito verificador.';
+            }
+            $data += $type === 'rut'
+                ? ['document_type' => 'rut', 'rut' => Rut::normalize($number)]
+                : ['document_type' => 'pasaporte', 'passport_number' => mb_substr($number, 0, 30)];
+        }
+
+        if (! $customer->nationality) {
+            $nationality = trim((string) $request->input('holder_nationality'));
+            if ($nationality === '') {
+                return 'Falta la nacionalidad del titular para hacer el check-in.';
+            }
+            $data['nationality'] = mb_substr($nationality, 0, 60);
+        }
+
+        return $data;
     }
 
     /**

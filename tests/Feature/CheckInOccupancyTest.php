@@ -39,6 +39,7 @@ class CheckInOccupancyTest extends TestCase
             '2026_08_18_120004_create_rate_rules_table.php',
             '2026_08_18_120008_create_coupons_table.php',
             '2026_08_18_120010_create_customers_table.php',
+            '2026_09_11_090000_add_identity_fields_to_customers_table.php',
             '2026_08_18_120011_create_bookings_table.php',
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
@@ -62,7 +63,7 @@ class CheckInOccupancyTest extends TestCase
 
         $category = RoomCategory::create(['name' => 'GO', 'display_order' => 1]);
         $this->room = Room::create(['room_category_id' => $category->id, 'name' => 'GO 101', 'operational_status' => 'activa']);
-        $this->customer = Customer::create(['name' => 'Cliente Prueba', 'phone_e164' => '+56911111111']);
+        $this->customer = Customer::create(['name' => 'Cliente Prueba', 'phone_e164' => '+56911111111', 'document_type' => 'rut', 'rut' => '11111111-1', 'nationality' => 'Chilena']);
     }
 
     private function makeBooking(array $overrides = []): Booking
@@ -108,6 +109,25 @@ class CheckInOccupancyTest extends TestCase
 
         $response->assertRedirect(route('rooms.board'));
         $this->assertNotNull($next->fresh()->checked_in_at);
+    }
+
+    public function test_check_in_requires_the_holder_document_and_nationality_when_missing(): void
+    {
+        $this->customer->update(['rut' => null, 'document_type' => null, 'nationality' => null]);
+        $booking = $this->makeBooking();
+        $this->payRoom($booking);
+
+        $this->get("/reservas/{$booking->code}/checkin")->assertOk()->assertSee('Datos del titular');
+        $this->post("/reservas/{$booking->code}/checkin", [])->assertSessionHasErrors('holder');
+        $this->post("/reservas/{$booking->code}/checkin", ['holder_document_type' => 'rut', 'holder_document_number' => '12.345.678-0', 'holder_nationality' => 'Chilena'])->assertSessionHasErrors('holder');
+        $this->assertNull($booking->fresh()->checked_in_at);
+
+        $this->post("/reservas/{$booking->code}/checkin", ['holder_document_type' => 'rut', 'holder_document_number' => '11.111.111-1', 'holder_nationality' => 'Chilena'])
+            ->assertRedirect(route('rooms.board'));
+        $this->assertNotNull($booking->fresh()->checked_in_at);
+        $customer = $this->customer->fresh();
+        $this->assertSame('11111111-1', $customer->rut);
+        $this->assertSame('Chilena', $customer->nationality);
     }
 
     /**

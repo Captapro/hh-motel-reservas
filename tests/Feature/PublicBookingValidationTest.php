@@ -94,6 +94,9 @@ class PublicBookingValidationTest extends TestCase
             'last_name' => 'Público',
             'phone' => '+56922222222',
             'email' => 'cliente@ejemplo.cl',
+            'document_type' => 'rut',
+            'document_number' => '11.111.111-1',
+            'nationality' => 'Chilena',
             'accept_privacy' => 1,
         ], $overrides);
     }
@@ -177,6 +180,19 @@ class PublicBookingValidationTest extends TestCase
         $this->assertTrue($booking->short_stay);
         $this->assertTrue(Carbon::parse('2026-10-05 23:00')->eq($booking->ends_at));
         $this->assertSame(10000, (int) $booking->price_final);
+    }
+
+    public function test_catalog_booking_asks_for_a_valid_rut_and_fills_the_customer_file(): void
+    {
+        $this->post('/catalogo/reservar', $this->bookingPayload(['document_number' => '']))->assertSessionHasErrors('document_number');
+        $this->post('/catalogo/reservar', $this->bookingPayload(['document_number' => '12.345.678-0']))->assertSessionHasErrors('document_number');
+        $this->assertSame(0, Booking::count());
+
+        $this->post('/catalogo/reservar', $this->bookingPayload())->assertSessionHasNoErrors();
+        $customer = Booking::firstOrFail()->customer;
+        $this->assertSame('11111111-1', $customer->rut);
+        $this->assertSame('rut', $customer->document_type);
+        $this->assertSame('Chilena', $customer->nationality);
     }
 
     public function test_catalog_booking_requires_a_valid_email(): void

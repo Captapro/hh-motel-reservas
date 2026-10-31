@@ -69,6 +69,7 @@
         input:focus, select:focus { outline:none; border-color:var(--hh-accent); box-shadow: 0 0 0 3px #ff791833; }
         .row2 { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:12px; }
         .field-note { display:block; margin-top:6px; font-size:14px; color:#b4b7bc; line-height:1.4; }
+        .doc-row { display:grid; grid-template-columns:120px minmax(0,1fr); gap:8px; }
         .honey-field { position:absolute; left:-9999px; top:-9999px; }
         button.submit { position:sticky; bottom:calc(10px + var(--safe-b)); z-index:30; box-shadow:0 10px 28px rgba(0,0,0,.45); min-height:56px; width:100%; margin-top:26px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:17px; font-weight:750; cursor:pointer; }
         button.submit:hover { background:var(--hh-accent-hover); }
@@ -140,7 +141,7 @@
             $hasExtras = $catalogCombos->isNotEmpty() || $categoryUpsells->isNotEmpty();
             $stepNames = $hasExtras ? ['Estadía', 'Extras', 'Tus datos'] : ['Estadía', 'Tus datos'];
             // Si el formulario vuelve con errores, se abre el paso donde está el problema.
-            $dataFields = ['first_name', 'last_name', 'phone', 'email', 'birth_date'];
+            $dataFields = ['first_name', 'last_name', 'phone', 'email', 'document_type', 'document_number', 'nationality', 'birth_date'];
             $startStep = 1;
             if ($errors->any()) {
                 $startStep = collect($errors->keys())->every(fn ($k) => in_array($k, $dataFields, true)) ? count($stepNames) : 1;
@@ -285,6 +286,24 @@
 
             <label for="email">Correo electrónico</label>
             <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="email" placeholder="tucorreo@ejemplo.com">
+
+            <label for="document_number">RUT o pasaporte</label>
+            <div class="doc-row">
+                <select id="document_type" name="document_type" aria-label="Tipo de documento" required>
+                    <option value="rut" @selected(old('document_type', 'rut') === 'rut')>RUT</option>
+                    <option value="pasaporte" @selected(old('document_type') === 'pasaporte')>Pasaporte</option>
+                </select>
+                <input type="text" id="document_number" name="document_number" value="{{ old('document_number') }}" required maxlength="30" autocomplete="off" placeholder="12.345.678-9">
+            </div>
+            <small class="field-note">Lo pedimos para tener lista tu ficha; al llegar igual se verifica tu documento.</small>
+
+            <label for="nationality">Nacionalidad</label>
+            <select id="nationality" name="nationality">
+                @foreach (['Chilena', 'Argentina', 'Peruana', 'Venezolana', 'Colombiana', 'Boliviana', 'Ecuatoriana', 'Brasileña', 'Paraguaya', 'Uruguaya'] as $nat)
+                    <option value="{{ $nat }}" @selected(old('nationality', 'Chilena') === $nat)>{{ $nat }}</option>
+                @endforeach
+                <option value="" @selected(old('nationality', 'Chilena') === '')>Otra</option>
+            </select>
 
             @if ($selectedCoupon && $selectedCoupon->min_age)
                 <label for="birth_date">Fecha de nacimiento <span style="color:#9edaff; font-weight:400;">— para aplicar el cupón ({{ $selectedCoupon->min_age }}+ años)</span></label>
