@@ -56,7 +56,7 @@ class InspectionPhotoStore
     }
 
     /** @return array{0: string, 1: string} contenido y tipo; si GD no puede leerla, se guarda tal cual. */
-    private function compress(string $contents): array
+    public function compress(string $contents): array
     {
         $info = @getimagesizefromstring($contents);
         $image = $info ? @imagecreatefromstring($contents) : false;

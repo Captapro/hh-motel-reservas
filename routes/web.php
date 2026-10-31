@@ -32,6 +32,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BookingAddonController;
 use App\Http\Controllers\BookingCancelController;
 use App\Http\Controllers\BookingCheckInController;
+use App\Http\Controllers\CouponProofController;
 use App\Http\Controllers\BookingDeleteController;
 use App\Http\Controllers\BookingFinalizeController;
 use App\Http\Controllers\BookingHoldController;
@@ -195,6 +196,13 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/reservas/{code}/validar', [BookingCheckInController::class, 'validatePass'])->name('bookings.validate');
     Route::get('/reservas/{code}/checkin', [BookingCheckInController::class, 'show'])->name('bookings.checkin.show');
     Route::post('/reservas/{code}/checkin', [BookingCheckInController::class, 'store'])->name('bookings.checkin');
+    // Foto del documento de un cupón con verificación (ej. credencial de estudiante), con el celular de recepción.
+    Route::get('/reservas/{code}/credencial', [CouponProofController::class, 'create'])->name('bookings.coupon_proof.create');
+    Route::post('/reservas/{code}/credencial', [CouponProofController::class, 'store'])->name('bookings.coupon_proof.store');
+    Route::get('/reservas/{code}/credencial/estado', [CouponProofController::class, 'status'])->name('bookings.coupon_proof.status');
+    Route::get('/reservas/{code}/credencial/qr', [CouponProofController::class, 'qr'])->name('bookings.coupon_proof.qr');
+    Route::get('/reservas/{code}/credencial/foto', [CouponProofController::class, 'show'])->name('bookings.coupon_proof.show');
+    Route::post('/reservas/{code}/quitar-cupon', [CouponProofController::class, 'removeCoupon'])->name('bookings.coupon_proof.remove');
     Route::post('/reservas/{code}/cancelar', [BookingCancelController::class, 'store'])->name('bookings.cancel');
     Route::post('/reservas/{code}/mantener', [BookingHoldController::class, 'store'])->name('bookings.hold');
     Route::post('/reservas/{code}/reactivar', [BookingReactivateController::class, 'store'])->name('bookings.reactivate');

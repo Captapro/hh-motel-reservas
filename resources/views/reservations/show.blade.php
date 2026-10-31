@@ -395,6 +395,9 @@
                 <div class="row"><span class="muted">Precio original</span><span>${{ number_format($booking->price_original, 0, ',', '.') }}</span></div>
                 @if ($booking->coupon_code_snapshot)
                     <div class="row"><span class="muted">Promoción ({{ $booking->coupon_code_snapshot }})</span><span>-${{ number_format($booking->discount_amount, 0, ',', '.') }}</span></div>
+                    @if (\Illuminate\Support\Facades\Schema::hasTable('coupon_proofs') && \App\Models\CouponProof::where('booking_id', $booking->id)->exists())
+                        <div class="row"><span class="muted">Documento del cupón</span><a href="{{ route('bookings.coupon_proof.show', $booking->code) }}" target="_blank" rel="noopener" style="color:#ff7918;">Ver foto</a></div>
+                    @endif
                 @endif
                 <div class="row total"><span>Precio final (Playroom)</span><span>${{ number_format($booking->price_final, 0, ',', '.') }}</span></div>
                 @if ($booking->addonsTotal() > 0)

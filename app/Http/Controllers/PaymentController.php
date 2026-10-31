@@ -107,7 +107,7 @@ class PaymentController extends Controller
         $paidLine = $method->name.' · $'.number_format($validated['amount'], 0, ',', '.');
         if (in_array($validated['after'] ?? null, ['checkin', 'pase'], true) && ($rest = $booking->fresh()->roomBalanceDue()) > 0) {
             return redirect()->route('payments.create', ['code' => $booking->code, 'after' => $validated['after']])
-                ->with('split', 'Registrado: '.$paidLine.'. Falta $'.number_format($rest, 0, ',', '.').' — registra el otro medio de pago.');
+                ->with('split', '✅ Registrado: '.$paidLine.'. Falta $'.number_format($rest, 0, ',', '.').' — registra el otro medio de pago.');
         }
 
         if (($validated['after'] ?? null) === 'checkin') {

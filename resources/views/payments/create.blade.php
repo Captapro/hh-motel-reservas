@@ -72,7 +72,7 @@
     <div class="code">{{ $booking->code }} — {{ $booking->room->name }}</div>
 
     @if (session('split') && ! $errors->any())
-        <div class="split-ok">✅ {{ session('split') }}</div>
+        <div class="split-ok">{{ session('split') }}</div>
     @endif
 
     @if ($errors->any())

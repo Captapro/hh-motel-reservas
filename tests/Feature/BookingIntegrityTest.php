@@ -26,6 +26,7 @@ use App\Models\User;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
+use App\Services\Booking\CouponProofs;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
@@ -189,6 +190,45 @@ class BookingIntegrityTest extends TestCase
 
         $this->assertSame(0, $booking->fresh()->balanceDue());
         $this->assertSame(2, $booking->payments()->count());
+    }
+
+    public function test_student_coupon_needs_a_photo_of_the_credential_or_is_removed_before_check_in(): void
+    {
+        (require database_path('migrations/2026_10_31_150000_create_coupon_proofs_table.php'))->up();
+        Coupon::create(['code' => 'ESTUDIANTE', 'internal_name' => 'Estudiante', 'is_active' => true, 'discount_type' => 'percentage',
+            'discount_value' => 20, 'requires_verification' => true, 'verification_note' => 'Credencial de estudiante vigente']);
+        $student = $this->booking(['coupon_code' => 'ESTUDIANTE', 'guests_count' => 1]);
+        $this->assertSame(4000, $student->discount_amount);
+
+        // Sin foto: el check-in muestra el QR y no deja pasar.
+        $this->payRoom($student)->get(route('bookings.checkin.show', $student->code))
+            ->assertOk()->assertSee('Credencial de estudiante vigente')->assertSee(route('bookings.coupon_proof.qr', $student->code));
+        $this->post(route('bookings.checkin', $student->code))->assertSessionHasErrors('booking');
+        $this->assertNull($student->fresh()->checked_in_at);
+
+        // El celular sube la foto: queda guardada comprimida y el check-in pasa.
+        $this->getJson(route('bookings.coupon_proof.status', $student->code))->assertExactJson(['ok' => false]);
+        $this->post(route('bookings.coupon_proof.store', $student->code), ['photo' => UploadedFile::fake()->image('credencial.jpg', 800, 500)])
+            ->assertRedirect(route('bookings.coupon_proof.create', $student->code));
+        $this->getJson(route('bookings.coupon_proof.status', $student->code))->assertExactJson(['ok' => true]);
+        $this->get(route('bookings.coupon_proof.show', $student->code))->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->post(route('bookings.checkin', $student->code))->assertSessionHasNoErrors();
+        $this->assertNotNull($student->fresh()->checked_in_at);
+
+        // Otra reserva sin credencial: se quita el cupón y hay que cobrar la diferencia.
+        $other = $this->booking(['coupon_code' => 'ESTUDIANTE', 'guests_count' => 1, 'starts_at' => Carbon::parse('2026-10-05 15:00')]);
+        $this->payRoom($other)->post(route('bookings.coupon_proof.remove', $other->code))
+            ->assertRedirect(route('payments.create', ['code' => $other->code, 'after' => 'pase']))->assertSessionHas('split');
+        $other->refresh();
+        $this->assertNull($other->coupon_id);
+        $this->assertSame(0, $other->discount_amount);
+        $this->assertSame(4000, $other->roomBalanceDue());
+        $this->assertDatabaseMissing('coupon_redemptions', ['booking_id' => $other->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'cupon.quitado_sin_respaldo', 'entity_id' => $other->id]);
+
+        // Las fotos se borran solas a los 30 días.
+        $this->travel(31)->days();
+        $this->assertSame(1, app(CouponProofs::class)->prune());
     }
 
     public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void

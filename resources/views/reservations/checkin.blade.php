@@ -33,6 +33,13 @@
         .manual-extras[open] summary::before { content:'− '; }
         .manual-extras summary:hover { color:#eee; }
         .holder-required { border-color:#7a5a1f; }
+        .proof-ok { border-color:#2d7a45; }
+        .proof-done { font-size:14px; color:#b8f3c8; margin:0; }
+        .proof-done a { color:#ff7918; }
+        .proof-row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+        .proof-row img { background:#fff; border-radius:8px; }
+        .proof-wait { color:#9a9a9a; font-size:13px; margin:0 0 10px; }
+        button.proof-remove { background:none; border:1px solid #7a2d2d; color:#f3b8b8; padding:9px 12px; border-radius:8px; font-size:13.5px; cursor:pointer; text-align:left; }
         .holder-required p { font-size:13.5px; color:#e8c76f; margin:0 0 10px; }
         .holder-row { display:grid; grid-template-columns:120px 1fr; gap:8px; }
         .holder-required select, .holder-required input { width:100%; box-sizing:border-box; background:#111; border:1px solid #444; color:#fff; padding:9px 10px; border-radius:7px; font-size:14px; }
@@ -194,6 +201,27 @@
                     <datalist id="holder-nationalities">
                         @foreach (['Chilena', 'Argentina', 'Peruana', 'Venezolana', 'Colombiana', 'Boliviana', 'Ecuatoriana', 'Brasileña', 'Paraguaya', 'Uruguaya'] as $nat)<option value="{{ $nat }}">@endforeach
                     </datalist>
+                @endif
+            </div>
+        @endif
+        @if ($proofRequired)
+            {{-- Cupón con verificación (ej. estudiante): queda una foto del documento como respaldo. --}}
+            <div class="card proof-card {{ $proof ? 'proof-ok' : 'holder-required' }}" id="proof-card" data-status="{{ route('bookings.coupon_proof.status', $booking->code) }}" data-has="{{ $proof ? 1 : 0 }}" data-photo="{{ route('bookings.coupon_proof.show', $booking->code) }}">
+                <div class="cat-label" style="margin-top:0;">Documento del cupón {{ $booking->coupon_code_snapshot }}{{ $proof ? '' : ' — obligatorio' }}</div>
+                @if ($proof)
+                    <p class="proof-done">✅ Foto guardada a las {{ $proof->created_at->timezone('America/Santiago')->format('H:i') }}. <a href="{{ route('bookings.coupon_proof.show', $booking->code) }}" target="_blank" rel="noopener">Ver foto</a> · <a href="{{ route('bookings.coupon_proof.create', $booking->code) }}" target="_blank" rel="noopener">Cambiarla</a></p>
+                @else
+                    <p>Pide {{ $booking->coupon?->verification_note ?: 'el documento que respalda el cupón' }}. Escanea este QR con tu celular y saca la foto; esta pantalla se actualiza sola.</p>
+                    <div class="proof-row">
+                        <img src="{{ route('bookings.coupon_proof.qr', $booking->code) }}" alt="QR para sacar la foto" width="150" height="150">
+                        <div>
+                            <p class="proof-wait">Esperando la foto…</p>
+                            <button type="submit" class="proof-remove" formaction="{{ route('bookings.coupon_proof.remove', $booking->code) }}" formnovalidate
+                                onclick="return confirm('¿Quitar el cupón {{ $booking->coupon_code_snapshot }}? Se cobra la diferencia ($' + '{{ number_format($booking->discount_amount, 0, ',', '.') }}' + ') antes del check-in.')">
+                                No trae el documento: quitar cupón y cobrar ${{ number_format($booking->discount_amount, 0, ',', '.') }}
+                            </button>
+                        </div>
+                    </div>
                 @endif
             </div>
         @endif
@@ -533,5 +561,24 @@
         })();
     </script>
 @include('partials.combo-choices')
+    <script>
+        (function () {
+            const card = document.getElementById('proof-card');
+            if (!card || card.dataset.has === '1') return;
+            // Sin recargar, para no perder lo que ya se escribió (acompañantes, consumo).
+            const timer = setInterval(async function () {
+                try {
+                    const r = await fetch(card.dataset.status, { headers: { 'Accept': 'application/json' } });
+                    if (!r.ok || !(await r.json()).ok) return;
+                    clearInterval(timer);
+                    card.classList.remove('holder-required');
+                    card.classList.add('proof-ok');
+                    card.querySelector('.cat-label').textContent = card.querySelector('.cat-label').textContent.replace(' — obligatorio', '');
+                    card.querySelector('.proof-row').previousElementSibling.remove();
+                    card.querySelector('.proof-row').outerHTML = '<p class="proof-done">✅ Foto recibida. <a href="' + card.dataset.photo + '" target="_blank" rel="noopener">Ver foto</a></p>';
+                } catch (e) {}
+            }, 3000);
+        })();
+    </script>
 </body>
 </html>

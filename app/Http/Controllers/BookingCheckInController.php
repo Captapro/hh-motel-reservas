@@ -13,6 +13,7 @@ use App\Models\UpsellOffer;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\ConsumptionService;
+use App\Services\Booking\CouponProofs;
 use App\Services\Booking\LateArrivalPolicy;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\UpsellResolver;
@@ -70,9 +71,9 @@ class BookingCheckInController extends Controller
             ->withErrors(['booking' => 'El Playroom tiene que estar pagado antes del check-in. Falta cobrar $'.number_format($due, 0, ',', '.').'.']);
     }
 
-    public function show(string $code, UpsellResolver $upsells): View|RedirectResponse
+    public function show(string $code, UpsellResolver $upsells, CouponProofs $proofs): View|RedirectResponse
     {
-        $booking = Booking::with(['room.category', 'customer', 'addons', 'guests'])->where('code', $code)->firstOrFail();
+        $booking = Booking::with(['room.category', 'customer', 'addons', 'guests', 'coupon'])->where('code', $code)->firstOrFail();
 
         if ($booking->checked_in_at || in_array($booking->booking_status, self::TERMINAL, true)) {
             return redirect()->route('reservations.show', $booking->code);
@@ -96,6 +97,7 @@ class BookingCheckInController extends Controller
         // Vista previa de la regla de atrasos: recepción ve antes de confirmar
         // si tiene el tiempo completo o cuánto se le descuenta.
         $late = $booking->starts_at->lt(now()) ? app(LateArrivalPolicy::class)->resolve($booking, now()) : null;
+        $proofRequired = $proofs->required($booking);
 
         return view('reservations.checkin', [
             'booking' => $booking,
@@ -103,6 +105,8 @@ class BookingCheckInController extends Controller
             'products' => $products,
             'combos' => $combos,
             'upsells' => $applicable,
+            'proofRequired' => $proofRequired,
+            'proof' => $proofRequired ? $proofs->latest($booking) : null,
         ]);
     }
 
@@ -140,6 +144,14 @@ class BookingCheckInController extends Controller
 
         if ($due = $booking->roomBalanceDue()) {
             return $this->toPaymentFirst($booking, $due, $request->query('flujo') === 'ingreso' ? 'checkin' : 'pase');
+        }
+
+        // Cupón con verificación (ej. estudiante): sin foto del documento no
+        // hay check-in con descuento — o se sube la foto o se quita el cupón.
+        if (app(CouponProofs::class)->missing($booking)) {
+            return back()->withInput()->withErrors([
+                'booking' => 'Falta la foto del documento del cupón '.$booking->coupon_code_snapshot.'. Sácala con el celular (QR) o quita el cupón y cobra la diferencia.',
+            ]);
         }
 
         // La reserva pudo haberse hecho con la pieza disponible, pero si
