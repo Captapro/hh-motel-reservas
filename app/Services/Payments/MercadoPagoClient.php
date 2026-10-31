@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * Cliente mínimo de la API de Mercado Pago (Checkout Pro). Solo hace tres
- * cosas: abrir el cobro de una reserva, leer un pago y devolverlo.
+ * Cliente mínimo de la API de Mercado Pago (Checkout Pro): abrir el cobro de
+ * una reserva, leer un pago, buscar los pagos de una reserva y devolverlos.
  */
 class MercadoPagoClient
 {
@@ -77,6 +77,24 @@ class MercadoPagoClient
         }
 
         return $response->json();
+    }
+
+    /**
+     * Pagos de una reserva buscados por su código (external_reference), del
+     * más nuevo al más viejo. Respaldo por si el aviso de Mercado Pago no llegó.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function paymentsFor(string $code): array
+    {
+        $response = $this->http()->get(self::BASE.'/v1/payments/search', [
+            'external_reference' => $code, 'sort' => 'date_created', 'criteria' => 'desc',
+        ]);
+        if (! $response->successful()) {
+            throw new RuntimeException('No se pudieron buscar los pagos de '.$code.' en Mercado Pago (HTTP '.$response->status().').');
+        }
+
+        return (array) $response->json('results', []);
     }
 
     /** Devolución total del pago. */

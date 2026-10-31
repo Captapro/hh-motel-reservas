@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Services\Integrations\GhlBookingSync;
+use App\Services\Payments\MercadoPagoClient;
+use App\Services\Payments\MercadoPagoReconciler;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -183,11 +185,17 @@ class Booking extends Model
      * habitación vuelve a estar disponible. Las que recepción marcó como "pagará
      * en recepción / pago tardío" no tienen vencimiento y no se tocan.
      */
+    /**
+     * Las reservas del catálogo se pagan en línea: solo se vencen después de
+     * preguntarle a Mercado Pago si ya están pagadas (MercadoPagoReconciler,
+     * cada 30 s). Mientras no se haya revisado, siguen retenidas.
+     */
     public static function releaseExpired(): int
     {
         $expired = static::where('booking_status', 'PENDIENTE_PAGO')
             ->whereNotNull('expires_at')->where('expires_at', '<=', now())
-            ->get();
+            ->get()
+            ->filter(fn (Booking $b) => $b->origin !== 'catalogo' || ! app(MercadoPagoClient::class)->enabled() || MercadoPagoReconciler::wasChecked($b->id));
 
         foreach ($expired as $booking) {
             $booking->update(['booking_status' => 'EXPIRADA', 'notes' => trim(($booking->notes ? $booking->notes."\n" : '').'Retención vencida: no se registró el pago a tiempo.')]);

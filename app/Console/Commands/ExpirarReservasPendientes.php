@@ -8,6 +8,7 @@ use App\Services\Booking\InspectionPhotoStore;
 use App\Services\Integrations\CustomerActivityTags;
 use App\Services\Integrations\GhlAbandonedBookings;
 use App\Services\Integrations\GhlReviewRequests;
+use App\Services\Payments\MercadoPagoReconciler;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
@@ -17,8 +18,10 @@ class ExpirarReservasPendientes extends Command
 
     protected $description = 'Libera las reservas pendientes de pago cuya retención venció y avisa a GHL para rescatarlas y para pedir la opinión tras el check-out';
 
-    public function handle(GhlAbandonedBookings $abandoned, GhlReviewRequests $reviews, InspectionPhotoStore $photos, CouponProofs $proofs, CustomerActivityTags $activity): int
+    public function handle(GhlAbandonedBookings $abandoned, GhlReviewRequests $reviews, InspectionPhotoStore $photos, CouponProofs $proofs, CustomerActivityTags $activity, MercadoPagoReconciler $mercadoPago): int
     {
+        // Antes de vencer, se le pregunta a Mercado Pago si alguna ya está pagada.
+        $mercadoPago->checkExpiring();
         $n = Booking::releaseExpired();
         if ($n > 0) {
             $this->info("{$n} reserva(s) expirada(s).");

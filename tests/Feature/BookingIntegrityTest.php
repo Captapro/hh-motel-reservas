@@ -165,6 +165,33 @@ class BookingIntegrityTest extends TestCase
         $this->getJson(route('rooms.pass_scans'))->assertExactJson([]);
     }
 
+    public function test_online_booking_asks_mercado_pago_before_expiring_and_records_a_payment_that_never_got_notified(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $paid = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $unpaid = $this->booking(['starts_at' => Carbon::parse('2026-10-05 15:00')]);
+        foreach ([$paid, $unpaid] as $b) {
+            $this->assertSame('catalogo', $b->origin);
+            $b->update(['booking_status' => 'PENDIENTE_PAGO', 'expires_at' => now()->subMinute()]);
+        }
+        Http::fake([
+            'api.mercadopago.com/v1/payments/search*' => fn ($request) => Http::response(['results' => $request['external_reference'] === $paid->code
+                ? [['id' => 555, 'external_reference' => $paid->code, 'status' => 'approved', 'transaction_amount' => $paid->balanceDue()]]
+                : []]),
+            '*' => Http::response([], 200),
+        ]);
+
+        // Sin revisar a Mercado Pago (p. ej. al cargar el tablero) no se vence ninguna del catálogo.
+        $this->assertSame(0, Booking::releaseExpired());
+
+        $this->artisan('app:reservas-expirar')->assertSuccessful();
+
+        $this->assertSame('CONFIRMADA', $paid->fresh()->booking_status);
+        $this->assertSame(0, $paid->fresh()->balanceDue());
+        $this->assertDatabaseHas('payments', ['booking_id' => $paid->id, 'external_id' => 'MP-555', 'status' => 'aprobado']);
+        $this->assertSame('EXPIRADA', $unpaid->fresh()->booking_status);
+    }
+
     public function test_split_payment_returns_to_the_form_with_the_rest_before_check_in(): void
     {
         $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
@@ -878,8 +905,10 @@ class BookingIntegrityTest extends TestCase
         $held = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'origin' => 'catalogo']);
         $held->update(['expires_at' => now()->addMinutes(10)]);
 
-        // Pasados los 10 minutos, otro cliente puede tomar el mismo horario.
+        // Pasados los 10 minutos (y revisado en Mercado Pago que no se pagó), otro cliente puede tomar el mismo horario.
         $this->travelTo(now()->addMinutes(11));
+        Http::fake(['api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []])]);
+        $this->artisan('app:reservas-expirar')->assertSuccessful();
         $other = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'customer' => Customer::create(['name' => 'Otro', 'phone_e164' => '+56922222222'])]);
         $this->assertSame('EXPIRADA', $held->fresh()->booking_status);
         $this->assertNotSame($held->id, $other->id);
