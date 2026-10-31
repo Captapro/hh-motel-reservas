@@ -33,7 +33,7 @@ class MercadoPagoHistory
     public function __construct(private readonly MercadoPagoClient $client) {}
 
     /**
-     * @return array{rows: Collection, totals: array, missing_in_mp: Collection, point_days: Collection}
+     * @return array{rows: Collection, totals: array, missing_in_mp: Collection, days: Collection}
      */
     public function month(Carbon $first, ?string $day = null): array
     {
@@ -90,7 +90,7 @@ class MercadoPagoHistory
             ->values();
 
         return [
-            // El detalle se puede acotar a un día; los totales siempre son del mes.
+            // El detalle es de un día; los totales siempre son del mes.
             'rows' => $day ? $rows->filter(fn ($r) => $r['at']->toDateString() === $day)->values() : $rows,
             'totals' => [
                 'gross' => $approved->sum('amount'),
@@ -102,30 +102,37 @@ class MercadoPagoHistory
                 'missing' => $rows->where('missing', true)->count(),
             ],
             'missing_in_mp' => $missingInMp,
-            'point_days' => $this->pointDays($approved->where('point', true), $from, $to, $tz),
+            'days' => $this->days($rows, $from, $to, $tz),
         ];
     }
 
-    /** Por día: lo que cobró la máquina en Mercado Pago contra lo que recepción anotó como débito/crédito. */
-    private function pointDays(Collection $point, Carbon $from, Carbon $to, string $tz): Collection
+    /**
+     * Resumen de cada día del mes con movimientos: lo cobrado y, para cuadrar
+     * la caja, lo que cobró la máquina contra lo que recepción anotó como
+     * débito o crédito.
+     */
+    private function days(Collection $rows, Carbon $from, Carbon $to, string $tz): Collection
     {
-        if ($point->isEmpty()) {
-            return collect();
-        }
-
         $cards = Payment::where('status', 'aprobado')->whereBetween('created_at', [$from, $to])
             ->whereHas('paymentMethod', fn ($q) => $q->whereIn('code', ['debito', 'credito']))
             ->get(['amount', 'created_at'])
             ->groupBy(fn (Payment $p) => $p->created_at->timezone($tz)->toDateString())
             ->map(fn ($g) => (int) $g->sum('amount'));
-        $machine = $point->groupBy(fn ($r) => $r['at']->toDateString())->map(fn ($g) => (int) $g->sum('amount'));
+        $byDay = $rows->groupBy(fn ($r) => $r['at']->toDateString());
 
-        return $machine->keys()->merge($cards->keys())->unique()->sortDesc()->values()
-            ->map(fn (string $day) => [
-                'day' => Carbon::parse($day, $tz),
-                'machine' => $machine->get($day, 0),
-                'system' => $cards->get($day, 0),
-            ]);
+        return $byDay->keys()->merge($cards->keys())->unique()->sortDesc()->values()
+            ->map(function (string $day) use ($byDay, $cards, $tz) {
+                $approved = $byDay->get($day, collect())->where('status', 'approved');
+
+                return [
+                    'day' => Carbon::parse($day, $tz),
+                    'count' => $byDay->get($day, collect())->count(),
+                    'gross' => (int) $approved->sum('amount'),
+                    'net' => (int) $approved->sum('net'),
+                    'machine' => (int) $approved->where('point', true)->sum('amount'),
+                    'system' => $cards->get($day, 0),
+                ];
+            });
     }
 
     /** @return array<int, array<string, mixed>> */

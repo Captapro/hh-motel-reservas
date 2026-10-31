@@ -17,7 +17,10 @@ class MercadoPagoController extends Controller
     {
         $month = preg_match('/^\d{4}-\d{2}$/', (string) request('mes')) ? (string) request('mes') : now('America/Santiago')->format('Y-m');
         $first = Carbon::createFromFormat('Y-m-d', $month.'-01', 'America/Santiago')->startOfDay();
-        $day = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) request('dia')) && str_starts_with((string) request('dia'), $month) ? (string) request('dia') : null;
+        // Siempre se muestra el detalle de un día: el elegido, o hoy (o el último día si es un mes pasado).
+        $day = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) request('dia')) && str_starts_with((string) request('dia'), $month)
+            ? (string) request('dia')
+            : min(now('America/Santiago')->toDateString(), $first->copy()->endOfMonth()->toDateString());
 
         $data = null;
         $error = null;
@@ -34,7 +37,7 @@ class MercadoPagoController extends Controller
 
         return view('admin.mercadopago.index', [
             'first' => $first,
-            'day' => $day ? Carbon::parse($day, 'America/Santiago') : null,
+            'day' => Carbon::parse($day, 'America/Santiago'),
             'prev' => $first->copy()->subMonth()->format('Y-m'),
             'next' => $first->copy()->addMonth()->format('Y-m'),
             'isCurrent' => $first->format('Y-m') === now('America/Santiago')->format('Y-m'),

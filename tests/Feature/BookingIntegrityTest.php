@@ -219,7 +219,9 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, $data['totals']['missing']);
         $this->assertTrue($data['rows']->firstWhere('id', '102')['missing']);
         $this->assertTrue($data['rows']->firstWhere('id', '101')['in_system']);
-        $this->assertSame(['machine' => 7000, 'system' => 7000], collect($data['point_days']->first())->only(['machine', 'system'])->all());
+        // Sin elegir día, el detalle es el de hoy; abajo, el resumen por día con máquina vs caja.
+        $this->assertCount(5, $data['rows']);
+        $this->assertSame(['count' => 5, 'gross' => 47000, 'machine' => 7000, 'system' => 7000], collect($data['days']->first())->only(['count', 'gross', 'machine', 'system'])->all());
 
         $this->assertSame('Máquina (Point)', $data['rows']->firstWhere('id', '103')['channel']);
         $this->assertSame('Reserva online', $data['rows']->firstWhere('id', '105')['channel']);

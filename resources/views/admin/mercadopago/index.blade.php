@@ -13,7 +13,9 @@
         tr.mp-missing td { background:#2a1a1e; }
         td.num, th.num { text-align:right; white-space:nowrap; }
         .mp-muted { color:#888; }
-        .mp-nav { display:flex; gap:8px; align-items:center; }
+        .mp-nav { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        .mp-days tbody tr:hover td { background:#242424; }
+        tr.mp-current td { background:#2a2214; }
     </style>
 
     <div class="page-head">
@@ -50,25 +52,28 @@
 
         <div class="card">
             <div class="cols-h" style="flex-wrap:wrap;">
-                <h2>Detalle de pagos{{ $day ? ' · '.ucfirst($day->locale('es')->isoFormat('dddd D')) : ' del mes' }}</h2>
+                <h2>Detalle del día · {{ ucfirst($day->locale('es')->isoFormat('dddd D [de] MMMM')) }}</h2>
                 <div class="mp-nav">
-                    <input type="date" value="{{ $day?->toDateString() }}" min="{{ $first->toDateString() }}" max="{{ $first->copy()->endOfMonth()->toDateString() }}" style="width:auto; padding:6px 9px; font-size:13.5px;"
-                        onchange="location.href='{{ route('admin.mercadopago.index', ['mes' => $first->format('Y-m')]) }}' + (this.value ? '&dia=' + this.value : '')" aria-label="Filtrar por día">
-                    @if ($day)<a class="link" href="{{ route('admin.mercadopago.index', ['mes' => $first->format('Y-m')]) }}">Ver todo el mes</a>@endif
+                    <a class="link" href="{{ route('admin.mercadopago.index', ['mes' => $day->copy()->subDay()->format('Y-m'), 'dia' => $day->copy()->subDay()->toDateString()]) }}">← Día anterior</a>
+                    <input type="date" value="{{ $day->toDateString() }}" max="{{ now('America/Santiago')->toDateString() }}" style="width:auto; padding:6px 9px; font-size:13.5px;"
+                        onchange="if (this.value) location.href='{{ route('admin.mercadopago.index') }}?mes=' + this.value.slice(0, 7) + '&dia=' + this.value" aria-label="Elegir día">
+                    @if ($day->toDateString() < now('America/Santiago')->toDateString())
+                        <a class="link" href="{{ route('admin.mercadopago.index', ['mes' => $day->copy()->addDay()->format('Y-m'), 'dia' => $day->copy()->addDay()->toDateString()]) }}">Día siguiente →</a>
+                    @endif
                 </div>
             </div>
             @php $approvedRows = $data['rows']->where('status', 'approved'); @endphp
-            <p class="sub" style="margin:0 0 8px;">{{ $data['rows']->count() }} movimiento(s) · aprobado {{ $money($approvedRows->sum('amount')) }} · neto {{ $money($approvedRows->sum('net')) }}</p>
+            <p class="sub" style="margin:0 0 8px;">{{ $data['rows']->count() }} movimiento(s) · aprobado {{ $money($approvedRows->sum('amount')) }} · neto {{ $money($approvedRows->sum('net')) }} · <a class="link" href="{{ route('cash.show', $day->toDateString()) }}">ver caja del día</a></p>
             @if ($data['rows']->isEmpty())
-                <p class="sub" style="margin:0;">No hay pagos {{ $day ? 'ese día' : 'este mes' }}.</p>
+                <p class="sub" style="margin:0;">No hay pagos ese día.</p>
             @else
                 <div style="overflow-x:auto;">
                 <table class="tbl-compact">
-                    <thead><tr><th>Fecha</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° MP</th></tr></thead>
+                    <thead><tr><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° MP</th></tr></thead>
                     <tbody>
                         @foreach ($data['rows'] as $r)
                             <tr class="{{ $r['missing'] ? 'mp-missing' : '' }}">
-                                <td style="white-space:nowrap;">{{ $r['at']->format('d/m H:i') }}</td>
+                                <td style="white-space:nowrap;">{{ $r['at']->format('H:i') }}</td>
                                 <td><span class="pill {{ $r['status'] === 'approved' ? '' : ($r['status'] === 'rejected' ? 'pill-bad' : 'pill-warn') }}">{{ $r['status_label'] }}</span></td>
                                 <td>{{ $r['channel'] }}</td>
                                 <td>{{ $r['type'] }}</td>
@@ -95,17 +100,20 @@
             @endif
         </div>
 
-        @if ($data['point_days']->isNotEmpty())
-            <details class="card">
-                <summary style="cursor:pointer; font-weight:600; font-size:14.5px;">Máquina vs. caja, por día</summary>
-                <p class="sub" style="margin:8px 0;">Lo que cobró la máquina de Mercado Pago contra lo que recepción registró como débito o crédito ese día. Hasta octubre la caja se llevaba en planilla, por eso el sistema aparece en $0; desde el 1 de noviembre se cuadra acá.</p>
+        @if ($data['days']->isNotEmpty())
+            <details class="card mp-days">
+                <summary style="cursor:pointer; font-weight:600; font-size:14.5px;">Días del mes ({{ $data['days']->count() }}) — aprieta un día para ver su detalle</summary>
+                <p class="sub" style="margin:8px 0;">"Máquina" es lo que cobró la máquina de Mercado Pago; "Caja (tarjeta)" es lo que recepción registró como débito o crédito ese día. Hasta octubre la caja se llevaba en planilla, por eso aparece en $0; desde el 1 de noviembre se cuadra acá.</p>
                 <table class="tbl-compact">
-                    <thead><tr><th>Día</th><th class="num">Máquina (MP)</th><th class="num">Sistema (tarjeta)</th><th class="num">Diferencia</th></tr></thead>
+                    <thead><tr><th>Día</th><th class="num">Movimientos</th><th class="num">Cobrado</th><th class="num">Neto</th><th class="num">Máquina</th><th class="num">Caja (tarjeta)</th><th class="num">Diferencia</th></tr></thead>
                     <tbody>
-                        @foreach ($data['point_days'] as $d)
-                            @php $diff = $d['machine'] - $d['system']; @endphp
-                            <tr>
-                                <td><a class="link" href="{{ route('admin.mercadopago.index', ['mes' => $first->format('Y-m'), 'dia' => $d['day']->toDateString()]) }}">{{ ucfirst($d['day']->locale('es')->isoFormat('ddd D')) }}</a> · <a class="link mp-muted" href="{{ route('cash.show', $d['day']->toDateString()) }}">caja</a></td>
+                        @foreach ($data['days'] as $d)
+                            @php $diff = $d['machine'] - $d['system']; $dayUrl = route('admin.mercadopago.index', ['mes' => $first->format('Y-m'), 'dia' => $d['day']->toDateString()]); @endphp
+                            <tr class="{{ $d['day']->isSameDay($day) ? 'mp-current' : '' }}" onclick="location.href='{{ $dayUrl }}'" style="cursor:pointer;">
+                                <td><a class="link" href="{{ $dayUrl }}">{{ ucfirst($d['day']->locale('es')->isoFormat('ddd D')) }}</a></td>
+                                <td class="num">{{ $d['count'] }}</td>
+                                <td class="num">{{ $money($d['gross']) }}</td>
+                                <td class="num">{{ $money($d['net']) }}</td>
                                 <td class="num">{{ $money($d['machine']) }}</td>
                                 <td class="num">{{ $money($d['system']) }}</td>
                                 <td class="num {{ $diff === 0 ? 'mp-ok' : 'mp-bad' }}">{{ $diff === 0 ? 'Cuadra' : ($diff > 0 ? '+' : '−').$money(abs($diff)) }}</td>
@@ -120,7 +128,7 @@
             <div class="card">
                 <h2>Registrados en el sistema pero no en Mercado Pago</h2>
                 <table class="tbl-compact">
-                    <thead><tr><th>Fecha</th><th>Reserva / referencia</th><th class="num">Monto</th><th>Referencia</th></tr></thead>
+                    <thead><tr><th>Fecha</th><th>Reserva</th><th class="num">Monto</th><th>Referencia</th></tr></thead>
                     <tbody>
                         @foreach ($data['missing_in_mp'] as $p)
                             <tr>
