@@ -351,7 +351,14 @@
         const hhTkTime = (v) => v.slice(11, 16);
         const hhTkHour = (v) => Number(v.slice(11, 13));
         const hhAbs = (v) => { const [y, m, d] = hhTkDate(v).split('-').map(Number); return Date.UTC(y, m - 1, d, hhTkHour(v), Number(v.slice(14, 16))) / 60000; };
-        const hhPick = () => document.getElementById('date-pick').value;
+        // La "noche" elegida (el día en que empieza). El campo de fecha muestra la fecha real del
+        // horario: al pasar a la madrugada cambia solo al día siguiente, sin cambiar la noche.
+        let hhNight = document.getElementById('date-pick').value;
+        const hhPick = () => hhNight;
+        document.getElementById('date-pick').addEventListener('change', (e) => {
+            hhNight = e.target.value;
+            ['time-select', 'time', 'time_hour', 'time_minute'].forEach((id) => { document.getElementById(id).value = ''; });
+        });
         function hhFullDay(iso) {
             const out = [];
             for (let t = 0; t < 24 * 60; t += 15) out.push(hhPad(Math.floor(t / 60)) + ':' + hhPad(t % 60));
@@ -486,6 +493,7 @@
                 document.getElementById('time_hour').value = '';
                 document.getElementById('time_minute').value = '';
                 document.getElementById('date').value = hhPick();
+                document.getElementById('date-pick').value = hhPick();
                 range.classList.add('err');
                 range.textContent = 'La hora que tenías no está disponible ese día. Elige otra.';
                 hhUpdateSummary(); hhCheckAvailability();
@@ -497,8 +505,8 @@
         // Lo que se envía: la fecha real del horario (la del día siguiente si es de madrugada) y la hora.
         function hhSyncTime() {
             const value = document.getElementById('time-select').value;
-            if (!value || !hhTimeOk(value)) { document.getElementById('date').value = hhPick(); return; }
-            document.getElementById('date').value = hhTkDate(value);
+            if (!value || !hhTimeOk(value)) { document.getElementById('date').value = document.getElementById('date-pick').value = hhPick(); return; }
+            document.getElementById('date').value = document.getElementById('date-pick').value = hhTkDate(value);
             document.getElementById('time').value = hhTkTime(value);
             document.getElementById('time_hour').value = hhTkHour(value);
             document.getElementById('time_minute').value = Number(value.slice(14, 16));
@@ -675,7 +683,7 @@
                 // La fecha enviada es la real del horario: si es de madrugada, la noche empezó el día anterior.
                 const eff = hhPick();
                 const back = hhShiftDate(eff, -1);
-                if (Number(oh) < HH_NIGHT_ENDS && back >= hhIso(new Date())) document.getElementById('date-pick').value = back;
+                if (Number(oh) < HH_NIGHT_ENDS && back >= hhIso(new Date())) hhNight = back;
                 document.getElementById('time-select').value = eff + ' ' + hhPad(parseInt(oh, 10)) + ':' + hhPad(parseInt(document.getElementById('time_minute').value || '0', 10));
             }
         })();
