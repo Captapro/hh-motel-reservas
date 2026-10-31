@@ -111,6 +111,20 @@ class GhlBookingSync
     }
 
     /**
+     * Agenda sync() para después de responder: al reservar desde el catálogo
+     * el cliente pasa al pago sin esperar las llamadas a GHL. Sin GHL
+     * configurado no hace nada.
+     */
+    public static function syncLater(Booking $booking): void
+    {
+        if (! app(GhlClient::class)->isConfigured()) {
+            return;
+        }
+
+        dispatch(fn () => app(self::class)->sync($booking))->afterResponse();
+    }
+
+    /**
      * Agenda releaseStay() para después de responder: se llama desde el modelo
      * cuando la reserva se cierra, y no debe demorar el checkout ni el barrido
      * de vencidas esperando a GHL. Sin GHL configurado no hace nada.

@@ -19,26 +19,26 @@
         * { box-sizing: border-box; }
         body { background:var(--hh-canvas); color:var(--hh-ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; line-height: 1.45; }
         .wrap { max-width: 520px; margin: 0 auto; padding: 18px 16px calc(40px + var(--safe-b)); }
-        a.back { color:#62656c; text-decoration:none; font-size:13px; display:inline-block; margin-bottom: 18px; }
-        .brand { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--hh-accent); margin-bottom: 8px; }
-        h1 { font-size: 25px; margin: 0 0 6px; letter-spacing: -.03em; }
-        p.sub { color:#62656c; font-size: 13.5px; margin: 0 0 24px; }
+        a.back { color:#4b4e54; text-decoration:none; font-size:15.5px; display:inline-block; margin-bottom: 18px; }
+        .brand { font-size: 15.5px; font-weight: 800; letter-spacing: .1em; color: var(--hh-accent); margin-bottom: 8px; }
+        h1 { font-size: 27px; margin: 0 0 6px; letter-spacing: -.03em; }
+        p.sub { color:#4b4e54; font-size: 16px; margin: 0 0 24px; }
         .card { background:var(--hh-surface); color:#f5f5f5; border-radius:12px; box-shadow: 0 3px 10px #1011120b; padding: 22px 22px 26px; }
-        .hint-box { background:#1c2f1c; border:1px solid #2e5a2e; color:#8fe0ad; border-radius:9px; padding:12px 14px; font-size:12.5px; margin-bottom:22px; }
-        .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:12px 14px; border-radius:8px; margin-bottom: 18px; font-size:14px; }
-        .steps { display:flex; gap:8px; margin: 0 0 18px; font-size:11px; font-weight:700; color:#8a8d93; text-transform:uppercase; letter-spacing:.06em; }
-        .steps button { flex:1; padding:8px 4px; border:0; border-bottom:2px solid #4a4d53; background:none; color:#8a8d93; font:inherit; text-transform:inherit; letter-spacing:inherit; text-align:center; cursor:default; }
-        .steps button.done { color:#c1c3c7; border-color:#8a8d93; cursor:pointer; }
+        .hint-box { background:#1c2f1c; border:1px solid #2e5a2e; color:#8fe0ad; border-radius:9px; padding:12px 14px; font-size:15px; margin-bottom:22px; }
+        .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:12px 14px; border-radius:8px; margin-bottom: 18px; font-size:16px; }
+        .steps { display:flex; gap:8px; margin: 0 0 18px; font-size:13px; font-weight:700; color:#b4b7bc; text-transform:uppercase; letter-spacing:.06em; }
+        .steps button { flex:1; padding:8px 4px; border:0; border-bottom:2px solid #4a4d53; background:none; color:#b4b7bc; font:inherit; text-transform:inherit; letter-spacing:inherit; text-align:center; cursor:default; }
+        .steps button.done { color:#c1c3c7; border-color:#b4b7bc; cursor:pointer; }
         .steps button.on { color:var(--hh-accent); border-color:var(--hh-accent); }
         .step[hidden], [data-only-step][hidden] { display:none !important; }
-        .step-title { font-size:17px; font-weight:800; margin:4px 0 2px; color:#fff; }
-        .step-back { display:inline-block; margin-top:14px; background:none; border:0; padding:6px 0; color:#c1c3c7; font-size:13px; text-decoration:underline; cursor:pointer; }
-        .recap { display:flex; justify-content:space-between; align-items:center; gap:10px; background:#202123; border:1px solid #4a4d53; border-radius:9px; padding:10px 12px; font-size:13px; color:#e4e5e7; margin-bottom:6px; }
-        .recap button { flex:none; background:none; border:0; color:#ff9a4d; font-size:12.5px; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
-        .step-error { display:none; margin-top:12px; padding:10px 12px; border-radius:8px; background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; font-size:13px; }
+        .step-title { font-size:19px; font-weight:800; margin:4px 0 2px; color:#fff; }
+        .step-back { display:inline-block; margin-top:14px; background:none; border:0; padding:6px 0; color:#c1c3c7; font-size:15.5px; text-decoration:underline; cursor:pointer; }
+        .recap { display:flex; justify-content:space-between; align-items:center; gap:10px; background:#202123; border:1px solid #4a4d53; border-radius:9px; padding:10px 12px; font-size:15.5px; color:#e4e5e7; margin-bottom:6px; }
+        .recap button { flex:none; background:none; border:0; color:#ff9a4d; font-size:15px; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
+        .step-error { display:none; margin-top:12px; padding:10px 12px; border-radius:8px; background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; font-size:15.5px; }
         .step-error.show { display:block; }
-        label { display:block; font-size: 12.5px; color:#c1c3c7; margin: 16px 0 6px; }
-        input, select { width:100%; box-sizing:border-box; background:#202123; border:1px solid #62656b; color:#f4f5f7; padding:11px 12px; border-radius:8px; font-size:15px; min-height:46px; }
+        label { display:block; font-size: 15px; color:#c1c3c7; margin: 16px 0 6px; }
+        input, select { width:100%; box-sizing:border-box; background:#202123; border:1px solid #62656b; color:#f4f5f7; padding:11px 12px; border-radius:8px; font-size:17px; min-height:46px; }
         input[type="date"], input[type="time"] { color-scheme: dark; }
         /* En iOS/Safari los campos de fecha y hora tienen un ancho propio y se
            salían del rectángulo: se les quita el estilo nativo para que
@@ -47,69 +47,78 @@
         input[type="date"], input[type="time"] { -webkit-appearance:none; appearance:none; display:block; width:100%; max-width:100%; min-width:0; margin:0; }
         .card, .card form, .card label, .card > * { min-width:0; }
         .people-stepper { display:grid; grid-template-columns:60px 1fr 60px; gap:8px; align-items:stretch; }
-        .people-stepper button { min-height:54px; border-radius:12px; border:1px solid #4a4d53; background:#26272a; color:#f4f5f7; font-size:28px; font-weight:700; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+        .people-stepper button { min-height:54px; border-radius:12px; border:1px solid #4a4d53; background:#26272a; color:#f4f5f7; font-size:30px; font-weight:700; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
         .people-stepper button:active:not(:disabled) { background:#ff7918; border-color:#ff7918; color:#21170e; }
         .people-stepper button:disabled { opacity:.3; cursor:not-allowed; }
-        .people-stepper input { text-align:center; font-size:24px; font-weight:800; min-height:54px; -moz-appearance:textfield; appearance:textfield; }
+        .people-stepper input { text-align:center; font-size:26px; font-weight:800; min-height:54px; -moz-appearance:textfield; appearance:textfield; }
         .people-stepper input::-webkit-inner-spin-button, .people-stepper input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
         .tp { display:flex; align-items:center; justify-content:center; gap:10px; padding:12px; border:1px solid #4a4d53; border-radius:12px; background:#1b1c1e; }
         .tp-col { display:grid; grid-template-rows:auto auto auto; gap:6px; width:96px; }
-        .tp-col button { min-height:46px; border-radius:10px; border:1px solid #4a4d53; background:#26272a; color:#f4f5f7; font-size:26px; font-weight:700; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; }
+        .tp-col button { min-height:46px; border-radius:10px; border:1px solid #4a4d53; background:#26272a; color:#f4f5f7; font-size:28px; font-weight:700; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; }
         .tp-col button:active:not(:disabled) { background:#ff7918; border-color:#ff7918; color:#21170e; }
         .tp-col button:disabled { opacity:.25; cursor:not-allowed; }
         .tp-col output { display:flex; align-items:center; justify-content:center; min-height:62px; border-radius:10px; background:#202123; border:2px solid #62656b; font-size:34px; font-weight:800; font-variant-numeric:tabular-nums; color:#f4f5f7; }
         .tp.set .tp-col output { border-color:var(--hh-accent); }
-        .tp-colon { font-size:34px; font-weight:800; color:#8a8d93; }
-        .tp-note { text-align:center; font-size:12.5px; color:#ff9a4d; font-weight:600; margin-top:6px; min-height:16px; }
-        .tp-empty { flex:1; text-align:center; font-size:13px; color:#8a8d93; padding:10px 0; }
+        .tp-colon { font-size:34px; font-weight:800; color:#b4b7bc; }
+        .tp-note { text-align:center; font-size:15px; color:#ff9a4d; font-weight:600; margin-top:6px; min-height:16px; }
+        .tp-empty { flex:1; text-align:center; font-size:15.5px; color:#b4b7bc; padding:10px 0; }
         .tp.missing { border-color:#e5747f; box-shadow:0 0 0 3px rgba(229,116,127,.2); }
-        .time-range { font-size:12px; color:#8a8d93; margin-top:6px; min-height:16px; }
+        .time-range { font-size:14.5px; color:#b4b7bc; margin-top:6px; min-height:16px; }
         .time-range.err { color:#f3b8b8; }
         .time-parts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
         input:focus, select:focus { outline:none; border-color:var(--hh-accent); box-shadow: 0 0 0 3px #ff791833; }
         .row2 { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:12px; }
-        .field-note { display:block; margin-top:6px; font-size:11.5px; color:#8a8d93; line-height:1.4; }
+        .field-note { display:block; margin-top:6px; font-size:14px; color:#b4b7bc; line-height:1.4; }
         .honey-field { position:absolute; left:-9999px; top:-9999px; }
-        button.submit { position:sticky; bottom:calc(10px + var(--safe-b)); z-index:30; box-shadow:0 10px 28px rgba(0,0,0,.45); min-height:56px; width:100%; margin-top:26px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:15px; font-weight:750; cursor:pointer; }
+        button.submit { position:sticky; bottom:calc(10px + var(--safe-b)); z-index:30; box-shadow:0 10px 28px rgba(0,0,0,.45); min-height:56px; width:100%; margin-top:26px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:17px; font-weight:750; cursor:pointer; }
         button.submit:hover { background:var(--hh-accent-hover); }
-        .summary { background:#fff; color:var(--hh-ink); border:1px solid #dedfdf; border-radius:10px; padding:13px 14px; margin-top:18px; font-size:13px; }
-        .summary strong { display:block; font-size:15px; margin-bottom:3px; }
-        .summary small { color:#62656c; }
-        .legal { font-size:11.5px; color:#8a8d93; margin-top:14px; text-align:center; }
+        .summary { background:#fff; color:var(--hh-ink); border:1px solid #dedfdf; border-radius:10px; padding:13px 14px; margin-top:18px; font-size:15.5px; }
+        .summary strong { display:block; font-size:17px; margin-bottom:3px; }
+        .summary small { color:#4b4e54; }
+        .legal { font-size:14px; color:#b4b7bc; margin-top:14px; text-align:center; }
         .consent { margin-top:16px; display:flex; flex-direction:column; gap:10px; }
-        .consent-row { display:flex; gap:10px; align-items:flex-start; font-size:13px; line-height:1.4; color:#d6d8dc; font-weight:400; margin:0; cursor:pointer; }
+        .consent-row { display:flex; gap:10px; align-items:flex-start; font-size:15.5px; line-height:1.4; color:#d6d8dc; font-weight:400; margin:0; cursor:pointer; }
         .consent-row input { width:20px; height:20px; min-width:20px; margin:1px 0 0; accent-color:var(--hh-accent, #ff7918); flex:none; }
         .consent-row a { color:#ffb27a; text-decoration:underline; }
-        .consent-error { color:#ff8a8a; font-size:12.5px; font-weight:600; }
-        .coupon-applied { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#12202b; border:1px solid #2e5a72; color:#9edaff; border-radius:9px; padding:11px 14px; font-size:12.5px; margin-bottom:22px; }
-        .coupon-applied a { color:#9edaff; text-decoration:underline; flex:none; font-size:12px; }
-        .coupon-warning { display:none; background:#3a2a12; border:1px solid #7a5a1f; color:#ffd699; border-radius:9px; padding:11px 14px; font-size:12.5px; margin-top:10px; }
+        .consent-error { color:#ff8a8a; font-size:15px; font-weight:600; }
+        .coupon-applied { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#12202b; border:1px solid #2e5a72; color:#9edaff; border-radius:9px; padding:11px 14px; font-size:15px; margin-bottom:22px; }
+        .coupon-applied a { color:#9edaff; text-decoration:underline; flex:none; font-size:14.5px; }
+        .coupon-warning { display:none; background:#3a2a12; border:1px solid #7a5a1f; color:#ffd699; border-radius:9px; padding:11px 14px; font-size:15px; margin-top:10px; }
         .coupon-warning.show { display:block; }
-        .avail-status { display:none; align-items:center; gap:7px; font-size:12.5px; margin-top:10px; padding:9px 12px; border-radius:8px; }
+        .coupon-entry { display:grid; grid-template-columns:1fr auto; gap:8px; }
+        .coupon-entry input { text-transform:uppercase; }
+        .coupon-entry button { min-height:46px; padding:0 18px; border-radius:8px; border:1px solid var(--hh-accent); background:transparent; color:#ffb27a; font-size:16px; font-weight:750; cursor:pointer; }
+        .coupon-entry button:active { background:var(--hh-accent); color:#21170e; }
+        .coupon-error { margin-top:8px; color:#f3b8b8; font-size:15px; }
+        .go-pay { position:fixed; inset:0; z-index:100; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; background:rgba(16,17,18,.94); color:#fff; font-size:19px; font-weight:700; text-align:center; padding:24px; }
+        .go-pay.show { display:flex; }
+        .go-pay small { font-size:15px; font-weight:400; color:#c4c6ca; }
+        .go-pay .spin { width:42px; height:42px; border-radius:50%; border:4px solid #ff7918; border-top-color:transparent; animation:hh-spin .8s linear infinite; }
+        .avail-status { display:none; align-items:center; gap:7px; font-size:15px; margin-top:10px; padding:9px 12px; border-radius:8px; }
         .avail-status.show { display:flex; }
         .avail-status.checking { background:#242527; color:#c1c3c7; }
         .avail-status.ok { background:#1c2f1c; border:1px solid #2e5a2e; color:#8fe0ad; }
         .avail-status.no { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; }
         .avail-status.short { background:#2e2410; border:1px solid #c98a1b; color:#f3d9a4; display:block; line-height:1.45; }
         .avail-status.short b { color:#fff; }
-        .short-accept { display:flex; gap:9px; align-items:center; margin-top:8px; padding:10px 12px; border-radius:8px; border:1px solid #c98a1b; color:#fff; font-weight:650; font-size:13.5px; cursor:pointer; }
+        .short-accept { display:flex; gap:9px; align-items:center; margin-top:8px; padding:10px 12px; border-radius:8px; border:1px solid #c98a1b; color:#fff; font-weight:650; font-size:16px; cursor:pointer; }
         .short-accept[hidden] { display:none; }
         .short-accept input { width:18px; height:18px; flex:none; }
         .avail-status .spin { width:11px; height:11px; border-radius:50%; border:2px solid currentColor; border-top-color:transparent; animation:hh-spin .7s linear infinite; flex:none; }
         @keyframes hh-spin { to { transform:rotate(360deg); } }
         .extras { margin-top:14px; padding-top:4px; }
-        .extras h2 { font-size:17px; margin:0 0 4px; }
-        .extras p { color:#c1c3c7; font-size:12px; margin:0 0 12px; }
+        .extras h2 { font-size:19px; margin:0 0 4px; }
+        .extras p { color:#c1c3c7; font-size:14.5px; margin:0 0 12px; }
         .extra-list { display:grid; gap:9px; }
         .extra-item { display:flex; align-items:center; gap:10px; background:linear-gradient(105deg,#27201b,#202123 58%); border:1px solid #b45c24; border-left:4px solid var(--hh-accent); border-radius:10px; padding:11px 12px; box-shadow:0 3px 12px #0002; }
         .extra-item input { width:18px; min-height:18px; accent-color:var(--hh-accent); flex:none; }
         .extra-copy { flex:1; min-width:0; }
-        .extra-name { display:block; color:#fff; font-size:13.5px; font-weight:800; line-height:1.25; }
-        .extra-detail { display:block; color:#d5a27f; font-size:11px; margin-top:4px; line-height:1.25; }
-        .extra-badge { display:inline-block; color:#21170e; background:#ffb37d; border-radius:999px; padding:2px 7px; font-size:9px; font-weight:900; letter-spacing:.04em; margin-bottom:5px; }
-        .extra-price { color:#ffab72; font-size:13px; font-weight:750; white-space:nowrap; }
-        .extra-qty { width:58px; min-height:34px; padding:6px; font-size:13px; }
-        .extras-total { color:#ffbd91; font-size:12px; margin-top:10px; text-align:right; }
+        .extra-name { display:block; color:#fff; font-size:16px; font-weight:800; line-height:1.25; }
+        .extra-detail { display:block; color:#d5a27f; font-size:13px; margin-top:4px; line-height:1.25; }
+        .extra-badge { display:inline-block; color:#21170e; background:#ffb37d; border-radius:999px; padding:2px 7px; font-size:11px; font-weight:900; letter-spacing:.04em; margin-bottom:5px; }
+        .extra-price { color:#ffab72; font-size:15.5px; font-weight:750; white-space:nowrap; }
+        .extra-qty { width:58px; min-height:34px; padding:6px; font-size:15.5px; }
+        .extras-total { color:#ffbd91; font-size:14.5px; margin-top:10px; text-align:right; }
     </style>
 </head>
 <body>
@@ -170,7 +179,9 @@
             </select>
 
             <label for="date">Fecha</label>
-            <input type="date" id="date" name="date" min="{{ now()->toDateString() }}" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}" required>
+            <input type="date" id="date-pick" min="{{ now()->toDateString() }}" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}" required>
+            {{-- Fecha real que se envía: la del día siguiente si la hora elegida es de madrugada. --}}
+            <input type="hidden" name="date" id="date" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}">
 
             {{-- Hora: hora y minutos con + / −, que solo recorren los horarios disponibles de ese día. --}}
             <label>Hora de llegada</label>
@@ -208,6 +219,18 @@
                 <input type="number" id="guests_count" name="guests_count" min="1" max="10" value="{{ old('guests_count', 2) }}" required inputmode="numeric" aria-live="polite">
                 <button type="button" data-d="1" aria-label="Una persona más">+</button>
             </div>
+
+            @unless ($selectedCoupon)
+                {{-- Cupón con código: recarga el formulario con lo ya elegido y el cupón aplicado. --}}
+                <label for="coupon-input">¿Tienes un cupón de descuento?</label>
+                <div class="coupon-entry">
+                    <input type="text" id="coupon-input" value="{{ $couponNotFound ? request('cupon') : '' }}" placeholder="Escribe tu código" autocomplete="off" autocapitalize="characters" maxlength="50">
+                    <button type="button" id="coupon-apply">Aplicar</button>
+                </div>
+                @if ($couponNotFound)
+                    <div class="coupon-error">Ese cupón no existe o ya no está vigente. Revisa que esté bien escrito.</div>
+                @endif
+            @endunless
 
             <div class="step-error" id="step1-error" role="alert"></div>
             <button class="submit" type="button" data-next>Continuar →</button>
@@ -288,6 +311,11 @@
         </form>
         </div>
     </div>
+    <div class="go-pay" id="go-pay" role="status" aria-live="polite">
+        <div class="spin"></div>
+        <div>Estamos guardando tu reserva…</div>
+        <small>En unos segundos pasas al pago.<br>No cierres esta página.</small>
+    </div>
     <script>
         const hhDurationsByCategory = @json($durationsByCategory->mapWithKeys(fn ($v, $k) => [(string) $k => $v]));
         const hhCouponConstraints = @json($couponConstraints);
@@ -308,59 +336,75 @@
             });
         }
 
-        // Una sola lista de horas en formato 24 h (cada 15 minutos). Las de hoy que ya pasaron no se ofrecen.
-        function hhTimeLabel(h, m) {
-            return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-        }
-        // Horas realmente ofrecidas ese día para esa categoría (según el horario de las tarifas).
-        // Si la consulta falla, se muestra la lista completa y la disponibilidad se valida igual al elegir.
+        // Selector de hora de la "noche" del día elegido: desde la mañana de ese día hasta la
+        // madrugada siguiente (00:00 a 05:45 del día después). Así, al pasar de 23:45 se sigue
+        // a 00:00 y la fecha de la reserva cambia sola al día siguiente. Cada horario es
+        // "AAAA-MM-DD HH:MM" con su fecha real, que es la que se envía.
+        const HH_NIGHT_ENDS = 6;
         let hhAllowedTimes = null;
+        let hhTimeList = [];
+        let hhTimesLoading = false;
+        const hhPad = (n) => String(n).padStart(2, '0');
+        const hhIso = (d) => d.getFullYear() + '-' + hhPad(d.getMonth() + 1) + '-' + hhPad(d.getDate());
+        const hhShiftDate = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return hhIso(new Date(y, m - 1, d + n)); };
+        const hhTkDate = (v) => v.slice(0, 10);
+        const hhTkTime = (v) => v.slice(11, 16);
+        const hhTkHour = (v) => Number(v.slice(11, 13));
+        const hhAbs = (v) => { const [y, m, d] = hhTkDate(v).split('-').map(Number); return Date.UTC(y, m - 1, d, hhTkHour(v), Number(v.slice(14, 16))) / 60000; };
+        const hhPick = () => document.getElementById('date-pick').value;
+        function hhFullDay(iso) {
+            const out = [];
+            for (let t = 0; t < 24 * 60; t += 15) out.push(hhPad(Math.floor(t / 60)) + ':' + hhPad(t % 60));
+            return out;
+        }
+        // Horas realmente ofrecidas (según el horario de las tarifas) del día elegido y del siguiente.
+        // Si la consulta falla, se usa la lista completa y la disponibilidad se valida igual al elegir.
         async function hhLoadTimes() {
-            const date = document.getElementById('date').value;
+            const date = hhPick();
             const category = document.getElementById('room_category_id').value;
             hhAllowedTimes = null;
             hhTimesLoading = true;
             hhBuildTimes();
             if (date && category) {
+                const get = (d) => fetch('{{ route('catalog.reserve.times') }}?' + new URLSearchParams({ date: d, room_category_id: category }), { headers: { 'Accept': 'application/json' } })
+                    .then((r) => r.ok ? r.json() : Promise.reject()).then((j) => j.times);
                 try {
-                    const r = await fetch('{{ route('catalog.reserve.times') }}?' + new URLSearchParams({ date: date, room_category_id: category }), { headers: { 'Accept': 'application/json' } });
-                    if (r.ok) hhAllowedTimes = (await r.json()).times;
+                    const [today, next] = await Promise.all([get(date), get(hhShiftDate(date, 1))]);
+                    hhAllowedTimes = { [date]: today, [hhShiftDate(date, 1)]: next };
                 } catch (e) { /* se usa la lista completa */ }
             }
             hhTimesLoading = false;
             hhBuildTimes();
         }
-        // Selector de hora con botones: solo aparecen las horas del horario de atención de ese día
-        // (cada 15 minutos), así no se puede elegir una hora que después el sistema rechace.
-        let hhTimeList = [];
-        let hhTimesLoading = false;
-        const hhToMin = (v) => { const p = v.split(':').map(Number); return p[0] * 60 + p[1]; };
-        const hhFromMin = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
         function hhTimeOk(value) {
-            return !!value && (!hhAllowedTimes || hhTimeList.includes(value));
+            return !!value && hhTimeList.includes(value);
         }
         function hhOpeningText() {
             if (!hhTimeList.length) return hhAllowedTimes ? 'Sin horarios disponibles para esta fecha.' : '';
-            // Tramos continuos (ej. 00:00–02:00 y 10:30–23:45) para que se entienda el horario.
+            // Tramos continuos (ej. 10:30 a 02:00) para que se entienda el horario.
             const runs = [];
             let start = hhTimeList[0], prev = hhTimeList[0];
             for (let i = 1; i < hhTimeList.length; i++) {
-                if (hhToMin(hhTimeList[i]) - hhToMin(prev) > 15) { runs.push(start + ' a ' + prev); start = hhTimeList[i]; }
+                if (hhAbs(hhTimeList[i]) - hhAbs(prev) > 15) { runs.push(hhTkTime(start) + ' a ' + hhTkTime(prev)); start = hhTimeList[i]; }
                 prev = hhTimeList[i];
             }
-            runs.push(start + ' a ' + prev);
+            runs.push(hhTkTime(start) + ' a ' + hhTkTime(prev));
             return 'Horario disponible: ' + runs.join(' y ');
         }
         function hhBuildTimes() {
-            const input = document.getElementById('time-select');
-            if (!input) return;
-            const dateValue = document.getElementById('date').value;
+            const pick = hhPick();
+            if (!pick) { hhTimeList = []; hhValidateTime(false); hhRenderPicker(); return; }
+            const next = hhShiftDate(pick, 1);
             const now = new Date();
-            const todayIso = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-            const nowMinutes = now.getHours() * 60 + now.getMinutes();
-            const all = [];
-            for (let t = 0; t < 24 * 60; t += 15) all.push(hhFromMin(t));
-            hhTimeList = (hhAllowedTimes || all).filter((v) => dateValue !== todayIso || hhToMin(v) >= nowMinutes - 5);
+            const nowAbs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes()) / 60000;
+            const of = (iso) => (hhAllowedTimes ? (hhAllowedTimes[iso] || []) : hhFullDay(iso)).map((t) => iso + ' ' + t);
+            // Hoy después de medianoche todavía se puede pedir la madrugada de hoy.
+            const earlyToday = pick === hhIso(now) && now.getHours() < HH_NIGHT_ENDS
+                ? of(pick).filter((v) => hhTkHour(v) < HH_NIGHT_ENDS) : [];
+            hhTimeList = earlyToday
+                .concat(of(pick).filter((v) => hhTkHour(v) >= HH_NIGHT_ENDS))
+                .concat(of(next).filter((v) => hhTkHour(v) < HH_NIGHT_ENDS))
+                .filter((v) => hhAbs(v) >= nowAbs - 5);
             hhValidateTime(false);
             hhRenderPicker();
         }
@@ -379,20 +423,21 @@
             if (!hhTimeList.length || hhTimesLoading) return;
             const value = document.getElementById('time-select').value;
             const i = hhTimeList.indexOf(value);
-            if (i < 0) { hhSetTime(d > 0 ? (hhTimeList.find((v) => Number(v.slice(0, 2)) >= 6) || hhTimeList[0]) : hhTimeList[hhTimeList.length - 1]); return; }
+            if (i < 0) { hhSetTime(d > 0 ? (hhTimeList.find((v) => hhTkHour(v) >= HH_NIGHT_ENDS) || hhTimeList[0]) : hhTimeList[hhTimeList.length - 1]); return; }
             if (part === 'm') {
                 const next = hhTimeList[i + d];
                 if (next) hhSetTime(next);
                 return;
             }
+            const hourKey = (v) => v.slice(0, 13);
             const hours = [];
-            hhTimeList.forEach((v) => { const h = v.slice(0, 2); if (!hours.includes(h)) hours.push(h); });
-            const h = hours[hours.indexOf(value.slice(0, 2)) + d];
+            hhTimeList.forEach((v) => { if (!hours.includes(hourKey(v))) hours.push(hourKey(v)); });
+            const h = hours[hours.indexOf(hourKey(value)) + d];
             if (!h) return;
-            const inHour = hhTimeList.filter((v) => v.slice(0, 2) === h);
-            const same = inHour.find((v) => v.slice(3) === value.slice(3));
+            const inHour = hhTimeList.filter((v) => hourKey(v) === h);
+            const same = inHour.find((v) => v.slice(14) === value.slice(14));
             // Sin los mismos minutos, el más cercano dentro de esa hora.
-            hhSetTime(same || inHour.reduce((a, b) => Math.abs(hhToMin(b) - hhToMin(value)) < Math.abs(hhToMin(a) - hhToMin(value)) ? b : a));
+            hhSetTime(same || inHour.reduce((a, b) => Math.abs(hhAbs(b) - hhAbs(value)) < Math.abs(hhAbs(a) - hhAbs(value)) ? b : a));
         }
         document.querySelectorAll('[data-tp]').forEach((b) => b.addEventListener('click', () => hhStepTime(b.dataset.tp, Number(b.dataset.d))));
         function hhRenderPicker() {
@@ -409,18 +454,26 @@
             }
             picker.querySelectorAll('.tp-col, .tp-colon').forEach((el) => { el.hidden = empty; });
             picker.classList.toggle('set', i >= 0);
-            document.getElementById('tp-h').textContent = i >= 0 ? value.slice(0, 2) : '--';
-            document.getElementById('tp-m').textContent = i >= 0 ? value.slice(3) : '--';
+            document.getElementById('tp-h').textContent = i >= 0 ? value.slice(11, 13) : '--';
+            document.getElementById('tp-m').textContent = i >= 0 ? value.slice(14, 16) : '--';
             const first = hhTimeList[0], last = hhTimeList[hhTimeList.length - 1];
             picker.querySelectorAll('[data-tp]').forEach((b) => {
                 const up = Number(b.dataset.d) > 0;
                 if (i < 0) { b.disabled = empty; return; }
                 b.disabled = b.dataset.tp === 'm'
                     ? (up ? value === last : value === first)
-                    : (up ? value.slice(0, 2) === last.slice(0, 2) : value.slice(0, 2) === first.slice(0, 2));
+                    : (up ? value.slice(0, 13) === last.slice(0, 13) : value.slice(0, 13) === first.slice(0, 13));
             });
-            // Las horas de 00 a 05 son la madrugada de la fecha elegida: se avisa para que no se confunda.
-            document.getElementById('tp-note').textContent = i >= 0 && Number(value.slice(0, 2)) < 6 ? 'De madrugada (después de la medianoche)' : '';
+            // La madrugada es del día siguiente al elegido: se muestra la fecha real para que no se confunda.
+            const note = document.getElementById('tp-note');
+            if (i >= 0 && hhTkDate(value) !== hhPick()) {
+                const [y, m, d] = hhTkDate(value).split('-').map(Number);
+                note.textContent = 'Madrugada del ' + new Date(y, m - 1, d).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' }) + ' (después de medianoche)';
+            } else if (i >= 0 && hhTkHour(value) < HH_NIGHT_ENDS) {
+                note.textContent = 'De madrugada (después de medianoche)';
+            } else {
+                note.textContent = '';
+            }
         }
         // Si la hora elegida ya no está disponible (cambió la fecha o la categoría), se borra y se pide otra.
         function hhValidateTime(fromUser) {
@@ -432,6 +485,7 @@
                 document.getElementById('time').value = '';
                 document.getElementById('time_hour').value = '';
                 document.getElementById('time_minute').value = '';
+                document.getElementById('date').value = hhPick();
                 range.classList.add('err');
                 range.textContent = 'La hora que tenías no está disponible ese día. Elige otra.';
                 hhUpdateSummary(); hhCheckAvailability();
@@ -440,15 +494,15 @@
             }
         }
 
+        // Lo que se envía: la fecha real del horario (la del día siguiente si es de madrugada) y la hora.
         function hhSyncTime() {
             const value = document.getElementById('time-select').value;
-            if (!value || !hhTimeOk(value)) return;
-            const [hour, minute] = value.split(':').map(Number);
-            document.getElementById('time').value = value;
-            document.getElementById('time_hour').value = hour;
-            document.getElementById('time_minute').value = minute;
+            if (!value || !hhTimeOk(value)) { document.getElementById('date').value = hhPick(); return; }
+            document.getElementById('date').value = hhTkDate(value);
+            document.getElementById('time').value = hhTkTime(value);
+            document.getElementById('time_hour').value = hhTkHour(value);
+            document.getElementById('time_minute').value = Number(value.slice(14, 16));
         }
-
         function hhCheckCouponWindow() {
             if (!hhCouponConstraints) return;
             const warning = document.getElementById('coupon-warning');
@@ -597,30 +651,37 @@
                 if (e.defaultPrevented) return;
                 sending = true;
                 if (btn) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = 'Enviando…'; }
+                document.getElementById('go-pay').classList.add('show');
                 // Red de seguridad: si la página no avanzó, se puede volver a intentar.
                 setTimeout(function () {
                     sending = false;
+                    document.getElementById('go-pay').classList.remove('show');
                     if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Solicitar reserva'; }
                 }, 20000);
             });
             // Al volver atrás desde la confirmación, el botón debe quedar usable otra vez.
             window.addEventListener('pageshow', function () {
                 sending = false;
+                document.getElementById('go-pay').classList.remove('show');
                 if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Solicitar reserva'; }
             });
         })();
-        ['room_category_id','date','time-select','duration_minutes'].forEach(id => document.getElementById(id).addEventListener('change', () => { hhSyncTime(); hhUpdateSummary(); hhCheckCouponWindow(); hhCheckAvailability(); }));
+        ['room_category_id','date-pick','time-select','duration_minutes'].forEach(id => document.getElementById(id).addEventListener('change', () => { hhSyncTime(); hhUpdateSummary(); hhCheckCouponWindow(); hhCheckAvailability(); }));
         hhBuildTimes();
         // Si el formulario vuelve con una hora ya elegida (por un error al enviar), se deja puesta.
         (function () {
             const oh = document.getElementById('time_hour').value;
             if (oh !== '') {
-                document.getElementById('time-select').value = String(parseInt(oh, 10)).padStart(2, '0') + ':' + String(parseInt(document.getElementById('time_minute').value || '0', 10)).padStart(2, '0');
+                // La fecha enviada es la real del horario: si es de madrugada, la noche empezó el día anterior.
+                const eff = hhPick();
+                const back = hhShiftDate(eff, -1);
+                if (Number(oh) < HH_NIGHT_ENDS && back >= hhIso(new Date())) document.getElementById('date-pick').value = back;
+                document.getElementById('time-select').value = eff + ' ' + hhPad(parseInt(oh, 10)) + ':' + hhPad(parseInt(document.getElementById('time_minute').value || '0', 10));
             }
         })();
         hhBuildTimes();
         hhLoadTimes();
-        document.getElementById('date').addEventListener('change', hhLoadTimes);
+        document.getElementById('date-pick').addEventListener('change', hhLoadTimes);
         document.getElementById('room_category_id').addEventListener('change', hhLoadTimes);
         hhUpdateDurations();
         hhUpdateSummary();
@@ -628,6 +689,25 @@
         hhCheckAvailability();
         document.querySelectorAll('[data-extra-toggle]').forEach((input) => input.addEventListener('change', hhUpdateExtrasTotal));
         hhUpdateExtrasTotal();
+        (function () {
+            const apply = document.getElementById('coupon-apply');
+            if (!apply) return;
+            const input = document.getElementById('coupon-input');
+            const go = function () {
+                const code = input.value.trim();
+                if (!code) { input.focus(); return; }
+                hhSyncTime();
+                const params = new URLSearchParams({ categoria: document.getElementById('room_category_id').value, cupon: code });
+                const roomId = document.querySelector('input[name="room_id"]').value;
+                if (roomId) params.set('room_id', roomId);
+                params.set('fecha', document.getElementById('date').value || hhPick());
+                if (document.getElementById('time').value) params.set('hora', document.getElementById('time').value);
+                if (document.getElementById('duration_minutes').value) params.set('duracion', document.getElementById('duration_minutes').value);
+                window.location = '{{ route('catalog.reserve') }}?' + params.toString();
+            };
+            apply.addEventListener('click', go);
+            input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+        })();
     </script>
 
     <script>
@@ -644,7 +724,7 @@
                 const cat = document.getElementById('room_category_id');
                 const dur = document.getElementById('duration_minutes');
                 const date = document.getElementById('date').value;
-                const time = document.getElementById('time-select').value;
+                const time = document.getElementById('time').value;
                 const guests = document.getElementById('guests_count').value;
                 const text = [cat.selectedOptions[0]?.textContent, date ? fmtDate(date) : '', time, dur.selectedOptions[0]?.textContent, guests + (guests === '1' ? ' persona' : ' personas')].filter(Boolean).join(' · ');
                 form.querySelectorAll('[data-recap]').forEach((el) => { el.textContent = text; });
@@ -684,7 +764,7 @@
                     picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return false;
                 }
-                for (const id of ['room_category_id', 'date', 'duration_minutes', 'guests_count']) {
+                for (const id of ['room_category_id', 'date-pick', 'duration_minutes', 'guests_count']) {
                     const el = document.getElementById(id);
                     if (!el.checkValidity()) { el.reportValidity(); return false; }
                 }
@@ -715,7 +795,7 @@
                 if (k < current) show(k, true);
             }));
             window.addEventListener('popstate', (e) => show(e.state?.hhStep || 1, false));
-            ['room_category_id', 'date', 'time-select', 'duration_minutes', 'guests_count'].forEach((id) => document.getElementById(id).addEventListener('change', () => document.getElementById('step1-error').classList.remove('show')));
+            ['room_category_id', 'date-pick', 'time-select', 'duration_minutes', 'guests_count'].forEach((id) => document.getElementById(id).addEventListener('change', () => document.getElementById('step1-error').classList.remove('show')));
 
             history.replaceState({ hhStep: {{ $startStep }} }, '');
             show({{ $startStep }}, false);

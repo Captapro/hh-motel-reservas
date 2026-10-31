@@ -89,6 +89,7 @@ class PublicBookingController extends Controller
             'selectedCategoryId' => $selectedCategoryId,
             'selectedRoomId' => $selectedRoomId,
             'selectedCoupon' => $selectedCoupon,
+            'couponNotFound' => $request->filled('cupon') && ! $selectedCoupon,
             'durationsByCategory' => $durationsByCategory,
             'catalogCombos' => $catalogCombos,
             'categoryUpsells' => $categoryUpsells,

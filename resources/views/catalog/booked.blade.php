@@ -18,42 +18,42 @@
         * { box-sizing: border-box; }
         body { background:var(--hh-canvas); color:var(--hh-ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; line-height: 1.45; }
         .wrap { max-width: 440px; margin: 0 auto; padding: 24px 16px calc(40px + var(--safe-b)); text-align:center; }
-        .check { width:56px; height:56px; border-radius:50%; background:#1c3a2a; color:#6fd39a; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; margin: 0 auto 18px; }
-        h1 { font-size: 21px; margin: 0 0 8px; letter-spacing:-.02em; }
-        p.sub { color:#62656c; font-size: 14px; margin: 0 0 26px; }
+        .check { width:56px; height:56px; border-radius:50%; background:#1c3a2a; color:#6fd39a; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:800; margin: 0 auto 18px; }
+        h1 { font-size: 23px; margin: 0 0 8px; letter-spacing:-.02em; }
+        p.sub { color:#4b4e54; font-size: 16px; margin: 0 0 26px; }
         .card { background:var(--hh-surface); color:#f5f5f5; border-radius: 12px; box-shadow: 0 3px 10px #1011120b; padding: 20px 22px; text-align:left; margin-bottom: 22px; }
-        .row { display:flex; justify-content:space-between; padding: 7px 0; font-size: 14px; border-bottom: 1px solid #505154; }
+        .row { display:flex; justify-content:space-between; padding: 7px 0; font-size: 16px; border-bottom: 1px solid #505154; }
         .row:last-child { border-bottom:none; }
         .row span.muted { color:#c1c3c7; }
-        .code { font-family: ui-monospace, monospace; color:var(--hh-accent); font-size: 16px; font-weight:700; }
-        .status-badge { display:inline-flex; background:#3a2a12; color:#ffd699; border:1px solid #7a5a1f; border-radius:20px; padding:3px 10px; font-size:11.5px; font-weight:700; }
+        .code { font-family: ui-monospace, monospace; color:var(--hh-accent); font-size: 18px; font-weight:700; }
+        .status-badge { display:inline-flex; background:#3a2a12; color:#ffd699; border:1px solid #7a5a1f; border-radius:20px; padding:3px 10px; font-size:14px; font-weight:700; }
         .discount-row span:last-child { color:#6ee7b7; }
-        .next-steps { background:#fff; border:1px solid #e2e2df; border-radius:10px; padding:14px 16px; margin-bottom:20px; text-align:left; font-size:13px; color:#42464e; }
-        .next-steps strong { display:block; margin-bottom:6px; font-size:13.5px; }
+        .next-steps { background:#fff; border:1px solid #e2e2df; border-radius:10px; padding:14px 16px; margin-bottom:20px; text-align:left; font-size:15.5px; color:#42464e; }
+        .next-steps strong { display:block; margin-bottom:6px; font-size:16px; }
         .next-steps ul { margin:0; padding-left:18px; }
         .next-steps li { margin-bottom:4px; }
         .qr-box { background:#fff; border:1px solid #e2e2df; border-radius:12px; padding:18px; margin-bottom:20px; text-align:center; }
         .qr-box img { width:170px; height:170px; image-rendering:pixelated; }
-        .qr-box strong { display:block; margin:10px 0 2px; font-size:14px; color:#242424; }
-        .qr-box small { color:#62656c; font-size:12.5px; }
-        .qr-box a.pass { display:inline-block; margin-top:12px; color:#b4510d; font-weight:700; font-size:13.5px; text-decoration:none; }
-        .pay-box { background:#fff; border:1px solid #e2e2df; border-radius:10px; padding:14px 16px; margin-bottom:20px; text-align:left; font-size:13.5px; color:#42464e; }
-        .pay-box strong { display:block; margin-bottom:8px; font-size:14px; }
+        .qr-box strong { display:block; margin:10px 0 2px; font-size:16px; color:#242424; }
+        .qr-box small { color:#4b4e54; font-size:15px; }
+        .qr-box a.pass { display:inline-block; margin-top:12px; color:#b4510d; font-weight:700; font-size:16px; text-decoration:none; }
+        .pay-box { background:#fff; border:1px solid #e2e2df; border-radius:10px; padding:14px 16px; margin-bottom:20px; text-align:left; font-size:16px; color:#42464e; }
+        .pay-box strong { display:block; margin-bottom:8px; font-size:16px; }
         .pay-box .line { display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid #eeeeea; }
         .pay-box .line:last-of-type { border-bottom:none; }
-        .pay-box .line span:first-child { color:#62656c; }
+        .pay-box .line span:first-child { color:#4b4e54; }
         .pay-box a.mp { display:block; text-align:center; margin-top:10px; background:#e8f1ff; color:#1a4fa0; padding:11px; border-radius:8px; font-weight:700; text-decoration:none; }
-        .pay-box small { display:block; margin-top:10px; color:#62656c; }
-        a.btn { display:block; background:var(--hh-accent); color:#21170e; text-decoration:none; padding: 13px; border-radius: 9px; font-weight:750; font-size:14.5px; }
+        .pay-box small { display:block; margin-top:10px; color:#4b4e54; }
+        a.btn { display:block; background:var(--hh-accent); color:#21170e; text-decoration:none; padding: 13px; border-radius: 9px; font-weight:750; font-size:16.5px; }
         a.btn:hover { background:var(--hh-accent-hover); }
-        a.back { display:block; margin-top:14px; color:#62656c; text-decoration:none; font-size:13px; }
+        a.back { display:block; margin-top:14px; color:#4b4e54; text-decoration:none; font-size:15.5px; }
         .pay-hero { background:#fff; border:2px solid var(--hh-accent); border-radius:14px; padding:18px 18px 14px; margin-bottom:20px; box-shadow:0 6px 18px rgba(255,121,24,.15); }
-        .pay-timer { display:flex; flex-direction:column; align-items:center; gap:2px; margin-bottom:14px; color:#62656c; font-size:12.5px; }
+        .pay-timer { display:flex; flex-direction:column; align-items:center; gap:2px; margin-bottom:14px; color:#4b4e54; font-size:15px; }
         .pay-timer b { font-size:34px; line-height:1.1; color:var(--hh-ink); font-variant-numeric:tabular-nums; letter-spacing:.02em; }
         .pay-timer b.urgent { color:#c0392b; }
-        a.btn.pay-btn { font-size:16px; padding:15px; border-radius:11px; }
-        .pay-hero small { display:block; margin-top:10px; color:#62656c; font-size:12.5px; }
-        .qr-pending { background:#fff; border:1px dashed #d7d7d2; border-radius:12px; padding:14px 16px; margin-bottom:20px; color:#62656c; font-size:13px; }
+        a.btn.pay-btn { font-size:18px; padding:15px; border-radius:11px; }
+        .pay-hero small { display:block; margin-top:10px; color:#4b4e54; font-size:15px; }
+        .qr-pending { background:#fff; border:1px dashed #d7d7d2; border-radius:12px; padding:14px 16px; margin-bottom:20px; color:#4b4e54; font-size:15.5px; }
     </style>
 </head>
 <body>

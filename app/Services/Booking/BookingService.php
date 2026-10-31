@@ -33,7 +33,6 @@ class BookingService
         private AvailabilityChecker $availabilityChecker,
         private BookingCodeGenerator $codeGenerator,
         private PaymentService $paymentService,
-        private GhlBookingSync $ghlSync,
         private RateRuleResolver $rateRuleResolver,
         private ShortStayPricer $shortStayPricer,
     ) {}
@@ -53,7 +52,7 @@ class BookingService
 
             return $this->createLocked($data);
         }, 3);
-        $this->ghlSync->sync($booking);
+        GhlBookingSync::syncLater($booking);
 
         return $booking;
     }

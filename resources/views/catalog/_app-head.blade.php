@@ -24,7 +24,7 @@
     img { -webkit-user-drag: none; }
     @media (max-width: 760px) {
         /* 16px evita que iOS haga zoom al tocar un campo. */
-        input, select, textarea { font-size: 16px !important; }
+        input, select, textarea { font-size: 18px !important; }
     }
     @media (prefers-reduced-motion: reduce) {
         html { scroll-behavior: auto; }
@@ -41,12 +41,12 @@
     .ab-btn.wa:active { background: #2b3a2f; }
     .ab-center { justify-self: center; display: flex; align-items: center; min-width: 0; color: #fff; text-decoration: none; }
     .ab-center img { display: block; height: 50px; width: auto; }
-    .ab-title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+    .ab-title { font-size: 18px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
     .ab-nav { display: none; }
     @media (min-width: 900px) {
         .app-bar-in { grid-template-columns: 1fr auto 1fr; padding: 0 20px; }
         .ab-nav { display: flex; gap: 6px; justify-self: end; align-items: center; grid-column: 3; grid-row: 1; }
-        .ab-nav a { color: #d6d8dc; text-decoration: none; font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 999px; }
+        .ab-nav a { color: #d6d8dc; text-decoration: none; font-size: 16px; font-weight: 600; padding: 9px 14px; border-radius: 999px; }
         .ab-nav a:hover { background: #ffffff1c; color: #fff; }
         .ab-nav a.primary { background: var(--hh-accent); color: #21170e; }
         .ab-nav a.primary:hover { background: var(--hh-accent-hover); }
@@ -57,12 +57,12 @@
     /* ===== Barra inferior de pestañas (solo celular) ===== */
     .tab-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; background: rgba(0,0,0,.9); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid #ffffff1c; padding-bottom: var(--safe-b); }
     .tab-bar-in { display: flex; align-items: center; justify-content: space-around; max-width: 560px; margin: 0 auto; height: 62px; padding: 0 6px; }
-    .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 56px; color: #9a9ca1; text-decoration: none; font-size: 10.5px; font-weight: 700; letter-spacing: .01em; }
+    .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 56px; color: #c4c6ca; text-decoration: none; font-size: 12.5px; font-weight: 700; letter-spacing: .01em; }
     .tab svg { width: 24px; height: 24px; }
     .tab.on { color: var(--hh-accent); }
     .tab:active { opacity: .7; }
     .tab.cta { flex: 1.5; }
-    .tab.cta span { background: var(--hh-accent); color: #21170e; border-radius: 16px; padding: 12px 20px; font-size: 14px; font-weight: 800; letter-spacing: 0; box-shadow: 0 6px 18px #ff791840; }
+    .tab.cta span { background: var(--hh-accent); color: #21170e; border-radius: 16px; padding: 12px 20px; font-size: 16px; font-weight: 800; letter-spacing: 0; box-shadow: 0 6px 18px #ff791840; }
     .tab.cta:active span { background: var(--hh-accent-hover); transform: scale(.97); }
     body.has-tabbar { padding-bottom: calc(76px + var(--safe-b)); }
     @media (min-width: 900px) { .tab-bar { display: none; } body.has-tabbar { padding-bottom: 0; } }
@@ -71,9 +71,9 @@
     .cta-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; background: rgba(0,0,0,.92); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid #ffffff1c; padding: 10px 14px calc(10px + var(--safe-b)); }
     .cta-bar-in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
     .cta-bar .cta-price { color: #fff; line-height: 1.15; flex: none; }
-    .cta-bar .cta-price small { display: block; color: #9a9ca1; font-size: 11px; font-weight: 600; }
-    .cta-bar .cta-price b { font-size: 20px; letter-spacing: -.02em; }
-    .cta-bar a.cta-go { flex: 1; text-align: center; background: var(--hh-accent); color: #21170e; text-decoration: none; font-weight: 800; font-size: 15px; padding: 15px 18px; border-radius: 14px; box-shadow: 0 6px 18px #ff791840; }
+    .cta-bar .cta-price small { display: block; color: #c4c6ca; font-size: 13px; font-weight: 600; }
+    .cta-bar .cta-price b { font-size: 22px; letter-spacing: -.02em; }
+    .cta-bar a.cta-go { flex: 1; text-align: center; background: var(--hh-accent); color: #21170e; text-decoration: none; font-weight: 800; font-size: 17px; padding: 15px 18px; border-radius: 14px; box-shadow: 0 6px 18px #ff791840; }
     .cta-bar a.cta-go:active { background: var(--hh-accent-hover); transform: scale(.98); }
     body.has-ctabar { padding-bottom: calc(86px + var(--safe-b)); }
 </style>

@@ -11,11 +11,11 @@
         * { box-sizing:border-box; }
         body { background:var(--hh-canvas); color:var(--hh-ink); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin:0; line-height:1.55; }
         .wrap { max-width:640px; margin:0 auto; padding:24px 16px calc(40px + var(--safe-b)); }
-        h1 { font-size:22px; margin:0 0 6px; letter-spacing:-.02em; }
-        h2 { font-size:15px; margin:24px 0 6px; }
-        p, li { font-size:14px; color:#3d4046; }
+        h1 { font-size:24px; margin:0 0 6px; letter-spacing:-.02em; }
+        h2 { font-size:17px; margin:24px 0 6px; }
+        p, li { font-size:16px; color:#3d4046; }
         ul { padding-left:20px; margin:6px 0; }
-        .updated { font-size:12.5px; color:#7a7d83; margin-bottom:8px; }
+        .updated { font-size:15px; color:#7a7d83; margin-bottom:8px; }
         a { color:var(--hh-accent); }
     </style>
 </head>
