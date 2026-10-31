@@ -63,13 +63,16 @@ class CashRegisterController extends Controller
             ->where('status', 'aprobado')
             ->whereBetween('created_at', [$day->copy(), $dayEnd])
             ->get();
+        // Mercado Pago va aparte de la máquina: al cerrar el turno se cuadra
+        // la máquina por un lado y lo que entró por internet por el otro.
         $groupOf = fn (?string $code) => match ($code) {
-            'debito', 'credito', 'mercado_pago' => 'Tarjeta',
+            'debito', 'credito' => 'Tarjeta (máquina)',
+            'mercado_pago' => 'Mercado Pago (online)',
             'efectivo' => 'Efectivo',
             'transferencia' => 'Transferencia',
             default => 'Otro',
         };
-        $collectedByGroup = collect(['Tarjeta', 'Efectivo', 'Transferencia', 'Otro'])->mapWithKeys(
+        $collectedByGroup = collect(['Tarjeta (máquina)', 'Mercado Pago (online)', 'Efectivo', 'Transferencia', 'Otro'])->mapWithKeys(
             fn ($g) => [$g => $collected->filter(fn (Payment $p) => $groupOf($p->paymentMethod?->code) === $g)->sum('amount')]
         );
         $stayOf = fn (Payment $p) => $p->booking?->starts_at->copy()->timezone('America/Santiago');
