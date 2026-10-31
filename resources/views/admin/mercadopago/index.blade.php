@@ -83,6 +83,7 @@
                                 <td>
                                     @if ($r['in_system'])<span class="mp-ok">✓ Registrado</span>
                                     @elseif ($r['missing'])<span class="mp-bad">⚠ Falta</span>
+                                    @elseif ($r['deleted_booking'])<span class="mp-muted">Reserva borrada</span>
                                     @else<span class="mp-muted">—</span>@endif
                                 </td>
                                 <td class="mp-muted" style="font-family:ui-monospace,monospace; font-size:12px;">{{ $r['id'] }}</td>

@@ -56,6 +56,8 @@ class MercadoPagoHistory
             $fee = (int) round(collect($mp['fee_details'] ?? [])->sum('amount'));
             $isPoint = str_contains(strtoupper((string) ($mp['point_of_interaction']['type'] ?? '')), 'POINT');
             $booking = $code !== '' ? $bookings->get($code) : null;
+            // Código de reserva del sistema aunque la reserva ya no exista (p. ej. una de prueba borrada).
+            $isBookingCode = (bool) preg_match('/^HH-\d{8}-\d+$/', $code);
             $inSystem = $localByMp->has($id);
 
             return [
@@ -68,11 +70,12 @@ class MercadoPagoHistory
                 'net' => (int) round((float) ($mp['transaction_details']['net_received_amount'] ?? ($amount - $fee))),
                 'type' => self::TYPE[$mp['payment_type_id'] ?? ''] ?? (string) ($mp['payment_type_id'] ?? '—'),
                 // La máquina también manda una referencia ("Venta presencial"): solo es reserva online si el código es de una reserva.
-                'channel' => $booking ? 'Reserva online' : ($isPoint ? 'Máquina (Point)' : (! empty($mp['pos_id']) ? 'QR' : 'Otro')),
+                'channel' => $booking || $isBookingCode ? 'Reserva online' : ($isPoint ? 'Máquina (Point)' : (! empty($mp['pos_id']) ? 'QR' : 'Otro')),
                 'point' => $isPoint,
                 'code' => $code,
                 'booking' => $booking,
                 'in_system' => $inSystem,
+                'deleted_booking' => $isBookingCode && ! $booking,
                 // Pago aprobado de una reserva que el sistema no tiene: hay que revisarlo.
                 'missing' => $status === 'approved' && $booking && ! $inSystem,
             ];
