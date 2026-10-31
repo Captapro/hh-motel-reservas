@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\InspectionPhoto;
 use App\Models\Room;
 use App\Models\RoomInspection;
 use App\Services\Booking\RoomInspectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
@@ -98,11 +100,20 @@ class RoomInspectionController extends Controller
      * Foto de una inspección. Se sirve detrás del login (no hay enlace
      * público a storage): son fotos del interior de los Playrooms.
      */
-    public function photo(RoomInspection $inspection, int $index): StreamedResponse
+    public function photo(RoomInspection $inspection, int $index): Response|StreamedResponse
     {
-        $path = $inspection->photos[$index] ?? null;
-        abort_unless($path && Storage::disk('public')->exists($path), 404);
+        $ref = $inspection->photos[$index] ?? null;
+        abort_unless($ref, 404);
 
-        return Storage::disk('public')->response($path, null, ['Cache-Control' => 'private, max-age=86400']);
+        if (str_starts_with($ref, InspectionPhoto::PREFIX)) {
+            $photo = InspectionPhoto::where('room_inspection_id', $inspection->id)->find((int) substr($ref, strlen(InspectionPhoto::PREFIX)));
+            abort_unless($photo, 404);
+            return response($photo->contents(), 200, ['Content-Type' => $photo->mime, 'Cache-Control' => 'private, max-age=86400']);
+        }
+
+        // Fotos antiguas que todavía están en el disco (antes de pasarlas a la base de datos).
+        abort_unless(Storage::disk('public')->exists($ref), 404);
+
+        return Storage::disk('public')->response($ref, null, ['Cache-Control' => 'private, max-age=86400']);
     }
 }

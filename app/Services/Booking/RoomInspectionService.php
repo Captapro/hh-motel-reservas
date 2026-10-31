@@ -31,7 +31,6 @@ class RoomInspectionService
         ])->all();
 
         $needsMaintenance = in_array('falla', $checklist, true) || in_array('falla', $checklist['furniture'], true);
-        $photos = collect($request->file('photos', []))->map(fn ($photo) => $photo->store('inspections', 'public'))->values()->all();
 
         $data = [
             'room_id' => $room->id,
@@ -46,11 +45,16 @@ class RoomInspectionService
         if (Schema::hasColumn('room_inspections', 'defects')) {
             $data['defects'] = $validated['defects'] ?? null;
         }
-        if (Schema::hasColumn('room_inspections', 'photos')) {
-            $data['photos'] = $photos;
+        $inspection = RoomInspection::create($data);
+
+        // Fotos comprimidas en la base de datos (no en el disco del servidor).
+        $uploads = $request->file('photos', []);
+        if ($uploads && Schema::hasColumn('room_inspections', 'photos')) {
+            $store = app(InspectionPhotoStore::class);
+            $inspection->update(['photos' => collect($uploads)->map(fn ($photo) => $store->store($inspection, (string) file_get_contents($photo->getRealPath())))->values()->all()]);
         }
 
-        return RoomInspection::create($data);
+        return $inspection;
     }
 
     /**
