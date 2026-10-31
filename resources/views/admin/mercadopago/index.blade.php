@@ -86,7 +86,7 @@
                                 <td class="num mp-muted">{{ $r['fee'] ? $money($r['fee']) : '—' }}</td>
                                 <td class="num">{{ $money($r['net']) }}</td>
                                 <td>
-                                    @if ($r['in_system'])<span class="mp-ok">✓ Registrado</span>@if ($r['voucher'])<br><span class="mp-muted" style="font-size:12px;">voucher {{ $r['voucher'] }}</span>@endif
+                                    @if ($r['in_system'])<span class="mp-ok">✓ Registrado</span>@if ($r['voucher'])<br><span class="mp-muted" style="font-size:12px;">voucher N° {{ $r['voucher'] }}</span>@endif
                                     @elseif ($r['missing'])<span class="mp-bad">⚠ Falta</span>
                                     @elseif ($r['deleted_booking'])<span class="mp-muted">Reserva borrada</span>
                                     @else<span class="mp-muted">—</span>@endif

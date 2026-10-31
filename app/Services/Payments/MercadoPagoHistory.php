@@ -20,6 +20,8 @@ class MercadoPagoHistory
 
     private const MAX_PAGES = 20;
 
+    private const MATCH_MINUTES = 20;
+
     private const STATUS = [
         'approved' => 'Aprobado', 'rejected' => 'Rechazado', 'refunded' => 'Devuelto', 'charged_back' => 'Contracargo',
         'cancelled' => 'Cancelado', 'pending' => 'Pendiente', 'in_process' => 'En revisión', 'in_mediation' => 'En disputa',
@@ -47,13 +49,7 @@ class MercadoPagoHistory
         $bookings = Booking::whereIn('code', $codes)->get(['id', 'code'])->keyBy('code');
         $local = Payment::where('external_id', 'like', 'MP-%')->get(['id', 'booking_id', 'external_id', 'amount', 'status', 'created_at']);
         $localByMp = $local->keyBy(fn (Payment $p) => explode('-', $p->external_id)[1] ?? '');
-        // Cobros de la máquina: recepción anota el voucher; se cruza contra el N° de operación o el código de autorización.
-        $byVoucher = Payment::with('booking:id,code')->where('status', 'aprobado')->whereNotNull('voucher_number')
-            ->whereBetween('created_at', [$from->copy()->subDay(), $to->copy()->addDay()])
-            ->get(['id', 'booking_id', 'voucher_number', 'amount'])
-            ->keyBy(fn (Payment $p) => self::voucherKey($p->voucher_number));
-
-        $rows = collect($raw)->map(function (array $mp) use ($tz, $bookings, $localByMp, $byVoucher) {
+        $rows = collect($raw)->map(function (array $mp) use ($tz, $bookings, $localByMp) {
             $id = (string) ($mp['id'] ?? '');
             $status = (string) ($mp['status'] ?? '');
             $code = (string) ($mp['external_reference'] ?? '');
@@ -63,10 +59,7 @@ class MercadoPagoHistory
             $booking = $code !== '' ? $bookings->get($code) : null;
             // Código de reserva del sistema aunque la reserva ya no exista (p. ej. una de prueba borrada).
             $isBookingCode = (bool) preg_match('/^HH-\d{8}-\d+$/', $code);
-            $auth = (string) ($mp['authorization_code'] ?? '');
-            $byCard = $byVoucher->get(self::voucherKey($id)) ?? ($auth !== '' ? $byVoucher->get(self::voucherKey($auth)) : null);
-            $inSystem = $localByMp->has($id) || $byCard !== null;
-            $linked = $booking ?? $byCard?->booking;
+            $inSystem = $localByMp->has($id);
 
             return [
                 'id' => $id,
@@ -81,15 +74,16 @@ class MercadoPagoHistory
                 'channel' => $booking || $isBookingCode ? 'Reserva online' : ($isPoint ? 'Máquina (Point)' : (! empty($mp['pos_id']) ? 'QR' : 'Otro')),
                 'point' => $isPoint,
                 'code' => $code,
-                'booking' => $linked,
+                'booking' => $booking,
                 'in_system' => $inSystem,
-                'auth' => $auth,
-                'voucher' => $byCard?->voucher_number,
+                'auth' => (string) ($mp['authorization_code'] ?? ''),
+                'voucher' => null,
                 'deleted_booking' => $isBookingCode && ! $booking,
                 // Pago aprobado de una reserva que el sistema no tiene: hay que revisarlo.
                 'missing' => $status === 'approved' && $booking && ! $inSystem,
             ];
         })->sortByDesc('at')->values();
+        $rows = $this->matchMachine($rows, $from, $to);
 
         $approved = $rows->where('status', 'approved');
         $mpIds = $rows->pluck('id')->all();
@@ -116,10 +110,36 @@ class MercadoPagoHistory
         ];
     }
 
-    /** Solo dígitos y sin ceros a la izquierda: "000123" anotado a mano calza con "123". */
-    public static function voucherKey(?string $value): string
+    /**
+     * Cada cobro de la máquina se cruza con el pago de tarjeta que registró
+     * recepción: mismo monto y a menos de MATCH_MINUTES, el más cercano y cada
+     * uno una sola vez. El voucher del motel es un correlativo propio (01, 02…
+     * cada mes), no un número de Mercado Pago, así que se cruza por monto y hora.
+     */
+    private function matchMachine(Collection $rows, Carbon $from, Carbon $to): Collection
     {
-        return ltrim(preg_replace('/\D/', '', (string) $value), '0');
+        $cards = Payment::with('booking:id,code')->where('status', 'aprobado')
+            ->whereHas('paymentMethod', fn ($q) => $q->whereIn('code', ['debito', 'credito']))
+            ->whereBetween('created_at', [$from->copy()->subHour(), $to->copy()->addHour()])
+            ->get(['id', 'booking_id', 'voucher_number', 'amount', 'created_at']);
+        $used = [];
+
+        return $rows->map(function (array $r) use ($cards, &$used) {
+            if (! $r['point'] || $r['status'] !== 'approved') {
+                return $r;
+            }
+            $match = $cards
+                ->filter(fn (Payment $p) => ! isset($used[$p->id]) && (int) $p->amount === $r['amount']
+                    && abs($p->created_at->diffInMinutes($r['at'], false)) <= self::MATCH_MINUTES)
+                ->sortBy(fn (Payment $p) => abs($p->created_at->diffInSeconds($r['at'], false)))
+                ->first();
+            if (! $match) {
+                return $r;
+            }
+            $used[$match->id] = true;
+
+            return ['in_system' => true, 'booking' => $match->booking, 'voucher' => $match->voucher_number] + $r;
+        });
     }
 
     /**

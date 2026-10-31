@@ -201,11 +201,13 @@ class BookingIntegrityTest extends TestCase
         $mpMethod = PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago', 'requires_external_id' => true]);
         $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
         Payment::create(['booking_id' => $registered->id, 'payment_method_id' => $mpMethod->id, 'amount' => 20000, 'status' => 'aprobado', 'external_id' => 'MP-101']);
-        Payment::create(['booking_id' => $registered->id, 'payment_method_id' => $debito->id, 'amount' => 7000, 'status' => 'aprobado', 'external_id' => 'REC-1', 'voucher_number' => '00012345']);
+        Payment::create(['booking_id' => $registered->id, 'payment_method_id' => $debito->id, 'amount' => 7000, 'status' => 'aprobado', 'external_id' => 'REC-1', 'voucher_number' => '07']);
         Http::fake(['api.mercadopago.com/v1/payments/search*' => Http::response(['results' => [
             ['id' => 101, 'status' => 'approved', 'external_reference' => $registered->code, 'transaction_amount' => 20000, 'payment_type_id' => 'credit_card', 'date_approved' => '2026-10-01T10:00:00.000-03:00', 'fee_details' => [['amount' => 700]], 'transaction_details' => ['net_received_amount' => 19300]],
             ['id' => 102, 'status' => 'approved', 'external_reference' => $lost->code, 'transaction_amount' => 20000, 'payment_type_id' => 'debit_card', 'date_approved' => '2026-10-01T11:00:00.000-03:00'],
-            ['id' => 103, 'status' => 'approved', 'authorization_code' => '012345', 'external_reference' => 'Venta presencial', 'transaction_amount' => 7000, 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'date_approved' => '2026-10-01T11:30:00.000-03:00'],
+            ['id' => 103, 'status' => 'approved', 'authorization_code' => '012345', 'external_reference' => 'Venta presencial', 'transaction_amount' => 7000, 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'date_approved' => '2026-10-01T11:50:00.000-03:00'],
+            // Mismo monto pero otra hora (más de 20 min): no se cruza con el mismo pago de caja.
+            ['id' => 106, 'status' => 'approved', 'external_reference' => 'Venta presencial', 'transaction_amount' => 7000, 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'date_approved' => '2026-10-01T09:00:00.000-03:00'],
             ['id' => 105, 'status' => 'refunded', 'external_reference' => 'HH-20260901-00009', 'transaction_amount' => 250, 'date_created' => '2026-10-01T08:00:00.000-03:00'],
             ['id' => 104, 'status' => 'rejected', 'transaction_amount' => 5000, 'date_created' => '2026-10-01T09:00:00.000-03:00'],
         ]])]);
@@ -213,27 +215,29 @@ class BookingIntegrityTest extends TestCase
         $data = $this->get(route('admin.mercadopago.index', ['mes' => '2026-10']))->assertOk()
             ->assertSee('Faltan en el sistema')->assertSee($lost->code)->viewData('data');
 
-        $this->assertSame(47000, $data['totals']['gross']);
+        $this->assertSame(54000, $data['totals']['gross']);
         $this->assertSame(40000, $data['totals']['online']);
-        $this->assertSame(7000, $data['totals']['point']);
+        $this->assertSame(14000, $data['totals']['point']);
         $this->assertSame(1, $data['totals']['missing']);
         $this->assertTrue($data['rows']->firstWhere('id', '102')['missing']);
         $this->assertTrue($data['rows']->firstWhere('id', '101')['in_system']);
         // Sin elegir día, el detalle es el de hoy; abajo, el resumen por día con máquina vs caja.
-        $this->assertCount(5, $data['rows']);
-        $this->assertSame(['count' => 5, 'gross' => 47000, 'machine' => 7000, 'system' => 7000], collect($data['days']->first())->only(['count', 'gross', 'machine', 'system'])->all());
+        $this->assertCount(6, $data['rows']);
+        $this->assertSame(['count' => 6, 'gross' => 54000, 'machine' => 14000, 'system' => 7000], collect($data['days']->first())->only(['count', 'gross', 'machine', 'system'])->all());
 
         $this->assertSame('Máquina (Point)', $data['rows']->firstWhere('id', '103')['channel']);
-        // El voucher que anotó recepción calza con el código de autorización de la máquina.
+        // La máquina se cruza con el pago de tarjeta de caja por monto y hora, y muestra el correlativo del motel.
         $this->assertTrue($data['rows']->firstWhere('id', '103')['in_system']);
+        $this->assertSame('07', $data['rows']->firstWhere('id', '103')['voucher']);
         $this->assertSame($registered->code, $data['rows']->firstWhere('id', '103')['booking']->code);
+        $this->assertFalse($data['rows']->firstWhere('id', '106')['in_system']);
         $this->assertSame('Reserva online', $data['rows']->firstWhere('id', '105')['channel']);
         $this->assertTrue($data['rows']->firstWhere('id', '105')['deleted_booking']);
 
         // Filtro por día: el detalle se acota, los totales siguen siendo del mes.
         $other = $this->get(route('admin.mercadopago.index', ['mes' => '2026-10', 'dia' => '2026-10-02']))->assertOk()->viewData('data');
         $this->assertCount(0, $other['rows']);
-        $this->assertSame(47000, $other['totals']['gross']);
+        $this->assertSame(54000, $other['totals']['gross']);
 
         // Sin credencial: avisa en vez de romperse. Anfitrión no entra.
         config(['services.mercadopago.access_token' => null]);
