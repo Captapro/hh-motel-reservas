@@ -158,6 +158,7 @@ class ReservationController extends Controller
             'walk_in' => ['nullable', 'boolean'],
             'short_stay' => ['nullable', 'boolean'],
             'guest_names' => ['nullable', 'string'],
+            'marketing_opt_in' => ['nullable', 'boolean'],
             'quantities' => ['nullable', 'array'],
             'quantities.*' => ['nullable', 'integer', 'min:0', 'max:20'],
             'combo_quantities' => ['nullable', 'array'],
@@ -250,6 +251,10 @@ class ReservationController extends Controller
         }
         if ($customer->blacklist_status === 'blocked') {
             return back()->withInput()->withErrors(['customer_phone' => 'Cliente bloqueado en lista negra. Revisar con administración antes de reservar.']);
+        }
+        // Promociones: solo se enciende si el cliente lo acepta; no marcarlo no da de baja a quien ya aceptó.
+        if (! empty($validated['marketing_opt_in']) && ! $customer->marketing_opt_in) {
+            $customer->update(['marketing_opt_in' => true, 'marketing_opt_in_at' => now()]);
         }
 
         try {

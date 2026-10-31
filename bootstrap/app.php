@@ -39,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Mercado Pago avisa los pagos con un POST sin sesión ni token CSRF;
         // se valida con la firma del aviso (MercadoPagoController::webhook).
-        $middleware->validateCsrfTokens(except: ['webhooks/mercadopago']);
+        $middleware->validateCsrfTokens(except: ['webhooks/mercadopago', 'webhooks/ghl/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

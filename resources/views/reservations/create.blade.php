@@ -430,6 +430,10 @@
 
                     <label>Email</label>
                     <input type="email" name="customer_email" id="customer-email" value="{{ old('customer_email') }}" required>
+                    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px;">
+                        <input type="checkbox" name="marketing_opt_in" value="1" @checked(old('marketing_opt_in')) style="width:auto;margin:0;">
+                        El cliente acepta recibir promociones por WhatsApp o correo
+                    </label>
 
                     <div class="sub-head">Identificación <span>— el documento es obligatorio; nacionalidad y fecha de nacimiento no, salvo para cupones que la exigen</span></div>
 

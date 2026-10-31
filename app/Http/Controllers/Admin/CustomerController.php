@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\CustomerSegmentRule;
 use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Integrations\GhlClient;
+use App\Services\Integrations\GhlMarketingConsent;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -200,15 +201,23 @@ class CustomerController extends Controller
             'passport_number' => ['nullable', 'string', 'max:30'],
             'nationality' => ['nullable', 'string', 'max:60'],
             'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'marketing_opt_in' => ['nullable', 'boolean'],
         ]);
 
+        $optIn = (bool) ($validated['marketing_opt_in'] ?? false);
+        unset($validated['marketing_opt_in']);
         $customer->update($validated);
+        if ($customer->marketing_opt_in !== $optIn) {
+            $customer->update(['marketing_opt_in' => $optIn, 'marketing_opt_in_at' => now()]);
+            AuditLog::record(auth()->id(), $optIn ? 'cliente.marketing_si' : 'cliente.marketing_no', 'Customer', $customer->id, null, ['via' => 'ficha']);
+        }
 
         $status = 'Datos del cliente actualizados.';
         try {
             if ($ghl->isConfigured()) {
                 $contactId = $ghl->upsertContact($customer->phone_e164, $customer->name, $customer->email);
                 $customer->update(['ghl_contact_id' => $customer->ghl_contact_id ?: $contactId, 'ghl_synced_at' => now()]);
+                (new GhlMarketingConsent($ghl))->apply($customer, $contactId);
                 $status .= ' Sincronizado con GHL.';
             } else {
                 $status .= ' (GHL no está configurado -- no se sincronizó.)';

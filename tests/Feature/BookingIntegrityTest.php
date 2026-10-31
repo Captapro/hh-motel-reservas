@@ -31,6 +31,7 @@ use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Historical\HistoricalSalesImporter;
 use App\Services\Integrations\GhlBookingSync;
+use App\Services\Integrations\GhlMarketingConsent;
 use App\Services\Integrations\GhlClient;
 use App\Services\Payments\MercadoPagoPayments;
 use App\Support\GuestLine;
@@ -455,6 +456,26 @@ class BookingIntegrityTest extends TestCase
         $sync->releaseStay($second);
         Http::assertSent(fn ($r) => $r->method() === 'DELETE' && str_ends_with($r->url(), '/contacts/c-123/tags')
             && $r['tags'] === [GhlBookingSync::ACTIVE_STAY_TAG, GhlBookingSync::WELCOME_TAG]);
+    }
+
+    public function test_marketing_permission_is_reflected_in_ghl_and_ghl_can_unsubscribe(): void
+    {
+        config(['services.ghl.private_token' => 'pit-prueba', 'services.ghl.location_id' => 'loc-prueba', 'services.ghl.inbound_secret' => 'token-ghl']);
+        Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $this->customer->update(['ghl_contact_id' => 'c-123', 'marketing_opt_in' => true]);
+        $consent = new GhlMarketingConsent(new GhlClient);
+
+        // Con permiso: lleva el tag de marketing y se le saca el de "no".
+        $this->assertTrue($consent->sync($this->customer));
+        Http::assertSent(fn ($r) => $r->method() === 'POST' && str_ends_with($r->url(), '/contacts/c-123/tags') && $r['tags'] === [GhlMarketingConsent::MARKETING_YES]);
+        Http::assertSent(fn ($r) => $r->method() === 'DELETE' && str_ends_with($r->url(), '/contacts/c-123/tags') && $r['tags'] === [GhlMarketingConsent::MARKETING_NO]);
+
+        // GHL avisa la baja: sin token no se acepta; con token queda sin permiso y con el tag "no".
+        $this->postJson(route('webhooks.ghl.marketing_optout'), ['phone' => '+56 9 1111 1111'])->assertStatus(401);
+        $this->assertTrue($this->customer->fresh()->marketing_opt_in);
+        $this->postJson(route('webhooks.ghl.marketing_optout', ['token' => 'token-ghl']), ['phone' => '+56 9 1111 1111'])->assertOk()->assertJsonPath('result', 'baja');
+        $this->assertFalse($this->customer->fresh()->marketing_opt_in);
+        Http::assertSent(fn ($r) => $r->method() === 'POST' && str_ends_with($r->url(), '/contacts/c-123/tags') && $r['tags'] === [GhlMarketingConsent::MARKETING_NO]);
     }
 
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void

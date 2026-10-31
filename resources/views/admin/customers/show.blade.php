@@ -121,6 +121,10 @@
                         <input type="date" name="birth_date" value="{{ $customer->birth_date?->toDateString() }}">
                     </div>
                 </div>
+                <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:400;">
+                    <input type="checkbox" name="marketing_opt_in" value="1" @checked($customer->marketing_opt_in) style="width:auto;margin:0;">
+                    Acepta recibir promociones (WhatsApp y correo)@if ($customer->marketing_opt_in_at) <span class="sub" style="margin:0;">— desde {{ $customer->marketing_opt_in_at->timezone('America/Santiago')->format('d/m/Y') }}</span>@endif
+                </label>
                 <p class="sub" style="margin:10px 0 0;">El teléfono no se edita acá — es la identidad del cliente. Al guardar, se sincroniza el correo/nombre con GHL de inmediato.</p>
                 <div class="actions" style="margin-top:12px;"><button class="btn" type="submit">Guardar cambios</button></div>
             </form>

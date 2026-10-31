@@ -59,6 +59,8 @@ return [
         'webhook_confirmada' => env('GHL_WEBHOOK_RESERVA_CONFIRMADA'),
         'webhook_pago_pendiente' => env('GHL_WEBHOOK_PAGO_PENDIENTE'),
         'webhook_reserva_vencida' => env('GHL_WEBHOOK_RESERVA_VENCIDA'),
+        // Token que GHL agrega a la URL al llamar al sistema (baja de publicidad).
+        'inbound_secret' => env('GHL_INBOUND_SECRET'),
     ],
 
     'hh_payment' => [

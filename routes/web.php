@@ -48,6 +48,7 @@ use App\Http\Controllers\GuestReviewController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\HistoricalSaleDetailController;
 use App\Http\Controllers\ImageResizeController;
+use App\Http\Controllers\GhlWebhookController;
 use App\Http\Controllers\MercadoPagoController;
 use App\Http\Controllers\MonthlySalesController;
 use App\Http\Controllers\MucamaActivityController;
@@ -84,6 +85,7 @@ Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->mi
 // pedir sesión.
 Route::get('/catalogo/pagar/{token}', [MercadoPagoController::class, 'pay'])->middleware('throttle:10,1,catalog.pay')->name('catalog.pay');
 Route::post('/webhooks/mercadopago', [MercadoPagoController::class, 'webhook'])->middleware('throttle:120,1,webhooks.mercadopago')->name('webhooks.mercadopago');
+Route::post('/webhooks/ghl/marketing-baja', [GhlWebhookController::class, 'marketingOptOut'])->middleware('throttle:60,1,webhooks.ghl')->name('webhooks.ghl.marketing_optout');
 Route::get('/catalogo/reservado/{token}', [PublicBookingController::class, 'booked'])->name('catalog.booked');
 // El pase PDF se manda directo al cliente por WhatsApp (ver el botón de
 // "instrucciones de pago" en reservations/show) -- tiene que poder abrirlo

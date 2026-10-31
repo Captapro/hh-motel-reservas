@@ -84,6 +84,7 @@ class GhlBookingSync
             $tag = self::TAG_PREFIX.$booking->starts_at->timezone('America/Santiago')->toDateString();
             $this->client->replaceTagWithPrefix($contactId, self::TAG_PREFIX, $tag);
             $this->client->addTags($contactId, [self::ACTIVE_STAY_TAG, self::WELCOME_TAG]);
+            (new GhlMarketingConsent($this->client))->apply($customer, $contactId);
             $this->client->addNote($contactId, sprintf(
                 'Reserva %s: %s (%s) · %s · $%s',
                 $booking->code,
