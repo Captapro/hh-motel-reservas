@@ -192,6 +192,40 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('EXPIRADA', $unpaid->fresh()->booking_status);
     }
 
+    public function test_mercado_pago_history_crosses_the_account_with_the_system(): void
+    {
+        Cache::flush();
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        $registered = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $lost = $this->booking(['starts_at' => Carbon::parse('2026-10-05 15:00')]);
+        $mpMethod = PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago', 'requires_external_id' => true]);
+        $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        Payment::create(['booking_id' => $registered->id, 'payment_method_id' => $mpMethod->id, 'amount' => 20000, 'status' => 'aprobado', 'external_id' => 'MP-101']);
+        Payment::create(['booking_id' => $registered->id, 'payment_method_id' => $debito->id, 'amount' => 7000, 'status' => 'aprobado', 'external_id' => 'REC-1']);
+        Http::fake(['api.mercadopago.com/v1/payments/search*' => Http::response(['results' => [
+            ['id' => 101, 'status' => 'approved', 'external_reference' => $registered->code, 'transaction_amount' => 20000, 'payment_type_id' => 'credit_card', 'date_approved' => '2026-10-01T10:00:00.000-03:00', 'fee_details' => [['amount' => 700]], 'transaction_details' => ['net_received_amount' => 19300]],
+            ['id' => 102, 'status' => 'approved', 'external_reference' => $lost->code, 'transaction_amount' => 20000, 'payment_type_id' => 'debit_card', 'date_approved' => '2026-10-01T11:00:00.000-03:00'],
+            ['id' => 103, 'status' => 'approved', 'transaction_amount' => 7000, 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'date_approved' => '2026-10-01T11:30:00.000-03:00'],
+            ['id' => 104, 'status' => 'rejected', 'transaction_amount' => 5000, 'date_created' => '2026-10-01T09:00:00.000-03:00'],
+        ]])]);
+
+        $data = $this->get(route('admin.mercadopago.index', ['mes' => '2026-10']))->assertOk()
+            ->assertSee('Faltan en el sistema')->assertSee($lost->code)->viewData('data');
+
+        $this->assertSame(47000, $data['totals']['gross']);
+        $this->assertSame(40000, $data['totals']['online']);
+        $this->assertSame(7000, $data['totals']['point']);
+        $this->assertSame(1, $data['totals']['missing']);
+        $this->assertTrue($data['rows']->firstWhere('id', '102')['missing']);
+        $this->assertTrue($data['rows']->firstWhere('id', '101')['in_system']);
+        $this->assertSame(['machine' => 7000, 'system' => 7000], collect($data['point_days']->first())->only(['machine', 'system'])->all());
+
+        // Sin credencial: avisa en vez de romperse. Anfitrión no entra.
+        config(['services.mercadopago.access_token' => null]);
+        $this->get(route('admin.mercadopago.index'))->assertOk()->assertSee('no está conectado');
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->get(route('admin.mercadopago.index'))->assertForbidden();
+    }
+
     public function test_split_payment_returns_to_the_form_with_the_rest_before_check_in(): void
     {
         $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);

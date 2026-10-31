@@ -88,6 +88,7 @@
             <a href="{{ route('cash.show', $day->copy()->addDay()->toDateString()) }}">Día siguiente →</a>
             @if (auth()->user()?->isAdministrador())
                 <a href="{{ route('cash.shifts') }}">Entregas de turno</a>
+                <a href="{{ route('admin.mercadopago.index', ['mes' => $day->format('Y-m')]) }}">Mercado Pago</a>
             @endif
         </div>
     </div>

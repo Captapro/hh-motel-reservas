@@ -87,11 +87,20 @@ class MercadoPagoClient
      */
     public function paymentsFor(string $code): array
     {
-        $response = $this->http()->get(self::BASE.'/v1/payments/search', [
-            'external_reference' => $code, 'sort' => 'date_created', 'criteria' => 'desc',
-        ]);
+        return $this->searchPayments(['external_reference' => $code, 'sort' => 'date_created', 'criteria' => 'desc']);
+    }
+
+    /**
+     * Búsqueda de pagos de la cuenta (GET /v1/payments/search).
+     *
+     * @param  array<string, mixed>  $query
+     * @return array<int, array<string, mixed>>
+     */
+    public function searchPayments(array $query): array
+    {
+        $response = $this->http()->get(self::BASE.'/v1/payments/search', $query);
         if (! $response->successful()) {
-            throw new RuntimeException('No se pudieron buscar los pagos de '.$code.' en Mercado Pago (HTTP '.$response->status().').');
+            throw new RuntimeException('No se pudieron buscar pagos en Mercado Pago (HTTP '.$response->status().').');
         }
 
         return (array) $response->json('results', []);

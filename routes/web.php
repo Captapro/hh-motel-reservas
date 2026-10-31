@@ -340,6 +340,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
     Route::get('/opiniones/qr.png', [App\Http\Controllers\Admin\GuestReviewController::class, 'qrImage'])->name('reviews.qr_image');
 
     Route::middleware('role:administrador')->group(function () {
+        // Historial de la cuenta de Mercado Pago cruzado con el sistema.
+        Route::get('/mercado-pago', [App\Http\Controllers\Admin\MercadoPagoController::class, 'index'])->name('mercadopago.index');
         Route::get('/personal', [StaffController::class, 'index'])->name('staff.index');
         Route::post('/personal', [StaffController::class, 'store'])->name('staff.store');
         Route::put('/personal/{staff}', [StaffController::class, 'update'])->name('staff.update');

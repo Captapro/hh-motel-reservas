@@ -79,7 +79,7 @@
     <div class="topline">
         <div>
             <h1>{{ $first->locale('es')->isoFormat('MMMM YYYY') }}</h1>
-            <p class="sub" style="margin-bottom:0;">Historial de ventas · <a href="{{ route('sales.daily') }}">Venta de hoy</a></p>
+            <p class="sub" style="margin-bottom:0;">Historial de ventas · <a href="{{ route('sales.daily') }}">Venta de hoy</a>@if (auth()->user()?->isAdministrador()) · <a href="{{ route('admin.mercadopago.index', ['mes' => $first->format('Y-m')]) }}">Mercado Pago</a>@endif</p>
         </div>
         <div class="nav-day">
             <a href="{{ route('sales.monthly', $prev->format('Y-m')) }}">← {{ $prev->locale('es')->isoFormat('MMM YYYY') }}</a>
