@@ -69,7 +69,7 @@
             @else
                 <div style="overflow-x:auto;">
                 <table class="tbl-compact">
-                    <thead><tr><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° MP</th></tr></thead>
+                    <thead><tr><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° operación</th><th>Cód. autorización</th></tr></thead>
                     <tbody>
                         @foreach ($data['rows'] as $r)
                             <tr class="{{ $r['missing'] ? 'mp-missing' : '' }}">
@@ -86,12 +86,13 @@
                                 <td class="num mp-muted">{{ $r['fee'] ? $money($r['fee']) : '—' }}</td>
                                 <td class="num">{{ $money($r['net']) }}</td>
                                 <td>
-                                    @if ($r['in_system'])<span class="mp-ok">✓ Registrado</span>
+                                    @if ($r['in_system'])<span class="mp-ok">✓ Registrado</span>@if ($r['voucher'])<br><span class="mp-muted" style="font-size:12px;">voucher {{ $r['voucher'] }}</span>@endif
                                     @elseif ($r['missing'])<span class="mp-bad">⚠ Falta</span>
                                     @elseif ($r['deleted_booking'])<span class="mp-muted">Reserva borrada</span>
                                     @else<span class="mp-muted">—</span>@endif
                                 </td>
                                 <td class="mp-muted" style="font-family:ui-monospace,monospace; font-size:12px;">{{ $r['id'] }}</td>
+                                <td class="mp-muted" style="font-family:ui-monospace,monospace; font-size:12px;">{{ $r['auth'] ?: '—' }}</td>
                             </tr>
                         @endforeach
                     </tbody>

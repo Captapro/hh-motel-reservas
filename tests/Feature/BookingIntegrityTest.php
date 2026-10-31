@@ -201,11 +201,11 @@ class BookingIntegrityTest extends TestCase
         $mpMethod = PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago', 'requires_external_id' => true]);
         $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
         Payment::create(['booking_id' => $registered->id, 'payment_method_id' => $mpMethod->id, 'amount' => 20000, 'status' => 'aprobado', 'external_id' => 'MP-101']);
-        Payment::create(['booking_id' => $registered->id, 'payment_method_id' => $debito->id, 'amount' => 7000, 'status' => 'aprobado', 'external_id' => 'REC-1']);
+        Payment::create(['booking_id' => $registered->id, 'payment_method_id' => $debito->id, 'amount' => 7000, 'status' => 'aprobado', 'external_id' => 'REC-1', 'voucher_number' => '00012345']);
         Http::fake(['api.mercadopago.com/v1/payments/search*' => Http::response(['results' => [
             ['id' => 101, 'status' => 'approved', 'external_reference' => $registered->code, 'transaction_amount' => 20000, 'payment_type_id' => 'credit_card', 'date_approved' => '2026-10-01T10:00:00.000-03:00', 'fee_details' => [['amount' => 700]], 'transaction_details' => ['net_received_amount' => 19300]],
             ['id' => 102, 'status' => 'approved', 'external_reference' => $lost->code, 'transaction_amount' => 20000, 'payment_type_id' => 'debit_card', 'date_approved' => '2026-10-01T11:00:00.000-03:00'],
-            ['id' => 103, 'status' => 'approved', 'external_reference' => 'Venta presencial', 'transaction_amount' => 7000, 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'date_approved' => '2026-10-01T11:30:00.000-03:00'],
+            ['id' => 103, 'status' => 'approved', 'authorization_code' => '012345', 'external_reference' => 'Venta presencial', 'transaction_amount' => 7000, 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'date_approved' => '2026-10-01T11:30:00.000-03:00'],
             ['id' => 105, 'status' => 'refunded', 'external_reference' => 'HH-20260901-00009', 'transaction_amount' => 250, 'date_created' => '2026-10-01T08:00:00.000-03:00'],
             ['id' => 104, 'status' => 'rejected', 'transaction_amount' => 5000, 'date_created' => '2026-10-01T09:00:00.000-03:00'],
         ]])]);
@@ -224,6 +224,9 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(['count' => 5, 'gross' => 47000, 'machine' => 7000, 'system' => 7000], collect($data['days']->first())->only(['count', 'gross', 'machine', 'system'])->all());
 
         $this->assertSame('Máquina (Point)', $data['rows']->firstWhere('id', '103')['channel']);
+        // El voucher que anotó recepción calza con el código de autorización de la máquina.
+        $this->assertTrue($data['rows']->firstWhere('id', '103')['in_system']);
+        $this->assertSame($registered->code, $data['rows']->firstWhere('id', '103')['booking']->code);
         $this->assertSame('Reserva online', $data['rows']->firstWhere('id', '105')['channel']);
         $this->assertTrue($data['rows']->firstWhere('id', '105')['deleted_booking']);
 

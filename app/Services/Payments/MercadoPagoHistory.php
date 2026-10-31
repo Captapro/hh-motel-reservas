@@ -47,8 +47,13 @@ class MercadoPagoHistory
         $bookings = Booking::whereIn('code', $codes)->get(['id', 'code'])->keyBy('code');
         $local = Payment::where('external_id', 'like', 'MP-%')->get(['id', 'booking_id', 'external_id', 'amount', 'status', 'created_at']);
         $localByMp = $local->keyBy(fn (Payment $p) => explode('-', $p->external_id)[1] ?? '');
+        // Cobros de la máquina: recepción anota el voucher; se cruza contra el N° de operación o el código de autorización.
+        $byVoucher = Payment::with('booking:id,code')->where('status', 'aprobado')->whereNotNull('voucher_number')
+            ->whereBetween('created_at', [$from->copy()->subDay(), $to->copy()->addDay()])
+            ->get(['id', 'booking_id', 'voucher_number', 'amount'])
+            ->keyBy(fn (Payment $p) => self::voucherKey($p->voucher_number));
 
-        $rows = collect($raw)->map(function (array $mp) use ($tz, $bookings, $localByMp) {
+        $rows = collect($raw)->map(function (array $mp) use ($tz, $bookings, $localByMp, $byVoucher) {
             $id = (string) ($mp['id'] ?? '');
             $status = (string) ($mp['status'] ?? '');
             $code = (string) ($mp['external_reference'] ?? '');
@@ -58,7 +63,10 @@ class MercadoPagoHistory
             $booking = $code !== '' ? $bookings->get($code) : null;
             // Código de reserva del sistema aunque la reserva ya no exista (p. ej. una de prueba borrada).
             $isBookingCode = (bool) preg_match('/^HH-\d{8}-\d+$/', $code);
-            $inSystem = $localByMp->has($id);
+            $auth = (string) ($mp['authorization_code'] ?? '');
+            $byCard = $byVoucher->get(self::voucherKey($id)) ?? ($auth !== '' ? $byVoucher->get(self::voucherKey($auth)) : null);
+            $inSystem = $localByMp->has($id) || $byCard !== null;
+            $linked = $booking ?? $byCard?->booking;
 
             return [
                 'id' => $id,
@@ -73,8 +81,10 @@ class MercadoPagoHistory
                 'channel' => $booking || $isBookingCode ? 'Reserva online' : ($isPoint ? 'Máquina (Point)' : (! empty($mp['pos_id']) ? 'QR' : 'Otro')),
                 'point' => $isPoint,
                 'code' => $code,
-                'booking' => $booking,
+                'booking' => $linked,
                 'in_system' => $inSystem,
+                'auth' => $auth,
+                'voucher' => $byCard?->voucher_number,
                 'deleted_booking' => $isBookingCode && ! $booking,
                 // Pago aprobado de una reserva que el sistema no tiene: hay que revisarlo.
                 'missing' => $status === 'approved' && $booking && ! $inSystem,
@@ -104,6 +114,12 @@ class MercadoPagoHistory
             'missing_in_mp' => $missingInMp,
             'days' => $this->days($rows, $from, $to, $tz),
         ];
+    }
+
+    /** Solo dígitos y sin ceros a la izquierda: "000123" anotado a mano calza con "123". */
+    public static function voucherKey(?string $value): string
+    {
+        return ltrim(preg_replace('/\D/', '', (string) $value), '0');
     }
 
     /**
