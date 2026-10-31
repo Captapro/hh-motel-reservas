@@ -25,6 +25,10 @@
     if (auth()->user()?->canUseAi('analista')) {
         $navigation[] = ['admin.analyst.index', 'admin.analyst.*', 'Analista IA', 'M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z'];
     }
+    // Mercado Pago: historial de la cuenta del motel, solo administrador y soporte.
+    if (auth()->user()?->isAdministrador()) {
+        $navigation[] = ['admin.mercadopago.index', 'admin.mercadopago.*', 'Mercado Pago', 'M2 6h20v12H2z M2 10h20 M6 15h4 M15 15h3'];
+    }
     if (auth()->user()?->isAdministrador()) {
         $navigation[] = ['admin.categories.index', 'admin.categories.*,admin.rooms.*,admin.furniture.*,admin.rates.*,admin.offers.*,admin.upsells.*,admin.coupons.*,admin.staff.*,admin.shifts.*,admin.help.*,admin.customers.*,admin.products.*,admin.combos.*,admin.core_extras.*,admin.historical.*,admin.access.*,admin.ghl.*,admin.cleanup.*', 'Administración', 'M12 3v3 M12 18v3 M3 12h3 M18 12h3 M6 6l2 2 M16 16l2 2 M6 18l2-2 M16 8l2-2 M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0'];
     }
