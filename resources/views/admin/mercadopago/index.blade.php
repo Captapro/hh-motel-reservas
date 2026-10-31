@@ -6,16 +6,16 @@
         .mp-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:14px; }
         .mp-kpi .k { color:#888; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
         .mp-kpi .v { font-size:22px; font-weight:800; margin-top:4px; }
-        .mp-kpi .v.bad { color:#e88a9a; }
-        .mp-alert { background:#3a1c22; border:1px solid #7a2d3a; color:#f3b8c2; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:14px; }
-        .mp-ok { color:#6fd39a; }
-        .mp-bad { color:#e88a9a; font-weight:600; }
-        tr.mp-missing td { background:#2a1a1e; }
+        .mp-kpi .v.bad { color:#d0384f; }
+        .mp-alert { background:rgba(232,90,110,.12); border:1px solid rgba(232,90,110,.5); color:#c0394f; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:14px; }
+        .mp-ok { color:#1f9d55; }
+        .mp-bad { color:#d0384f; font-weight:600; }
+        tr.mp-missing td { background:rgba(232,90,110,.12); }
         td.num, th.num { text-align:right; white-space:nowrap; }
         .mp-muted { color:#888; }
         .mp-nav { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-        .mp-days tbody tr:hover td { background:#242424; }
-        tr.mp-current td { background:#2a2214; }
+        .mp-days tbody tr:hover td { background:rgba(127,127,127,.10); }
+        tr.mp-current td { background:rgba(255,121,24,.12); font-weight:600; }
     </style>
 
     <div class="page-head">
