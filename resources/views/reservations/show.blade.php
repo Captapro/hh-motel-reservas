@@ -442,7 +442,10 @@
                             @endif
                             <form method="POST" action="{{ route('payments.document', $payment) }}" class="pay-docs" @if ($hasDoc) hidden @endif>
                                 @csrf @method('PUT')
+                                {{-- Mercado Pago no entrega voucher de máquina: solo se anota la boleta. --}}
+                                @unless ($payment->paymentMethod->code === 'mercado_pago')
                                 <label>N° voucher <input name="voucher_number" value="{{ $payment->voucher_number }}" placeholder="Voucher" maxlength="30"></label>
+                                @endunless
                                 <label>N° boleta <input name="receipt_number" value="{{ $payment->receipt_number }}" placeholder="Boleta" maxlength="30"></label>
                                 <button type="submit">Guardar</button>
                             </form>

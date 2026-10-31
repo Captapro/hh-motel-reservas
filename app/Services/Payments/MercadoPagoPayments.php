@@ -10,6 +10,7 @@ use App\Models\Refund;
 use App\Services\Booking\PaymentService;
 use App\Services\Integrations\GhlReservationNotifier;
 use App\Support\PaymentAlerts;
+use App\Support\Rut;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -73,6 +74,7 @@ class MercadoPagoPayments
                 'raw_payload' => ['id' => $mp['id'] ?? null, 'status' => $mp['status'] ?? null, 'payment_type_id' => $mp['payment_type_id'] ?? null, 'date_approved' => $mp['date_approved'] ?? null],
                 'notes' => 'Pago en línea (Mercado Pago)',
             ]);
+            $this->fillCustomerRut($locked, $mp);
             $statusBefore = (string) $locked->booking_status;
             $this->payments->recalculateStatus($locked->fresh());
             DB::afterCommit(fn () => app(GhlReservationNotifier::class)->paymentRegistered($locked->fresh(), $payment, $statusBefore));
@@ -89,6 +91,27 @@ class MercadoPagoPayments
 
             return $wasClosed || $overpaid ? 'registrado_revisar' : 'registrado';
         });
+    }
+
+    /**
+     * El RUT que el cliente escribió al pagar en Mercado Pago completa su ficha,
+     * solo si todavía no tiene documento y el RUT es válido: nunca pisa uno ya cargado.
+     */
+    private function fillCustomerRut(Booking $booking, array $mp): void
+    {
+        $customer = $booking->customer;
+        if (! $customer || $customer->documentNumber()) {
+            return;
+        }
+
+        $id = $mp['payer']['identification'] ?? $mp['card']['cardholder']['identification'] ?? null;
+        $number = is_array($id) && strtoupper((string) ($id['type'] ?? '')) === 'RUT' ? (string) ($id['number'] ?? '') : '';
+        if ($number === '' || ! Rut::isValid($number)) {
+            return;
+        }
+
+        $customer->update(['rut' => Rut::normalize($number), 'document_type' => 'rut']);
+        AuditLog::record(null, 'cliente.rut_mercadopago', 'Customer', $customer->id, null, ['reserva' => $booking->code]);
     }
 
     /**

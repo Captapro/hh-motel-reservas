@@ -270,6 +270,34 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, $booking->payments()->count());
     }
 
+    public function test_mercado_pago_payment_fills_the_customer_rut_only_when_missing_and_valid(): void
+    {
+        (require database_path('migrations/2026_09_11_090000_add_identity_fields_to_customers_table.php'))->up();
+        config(['services.mercadopago.access_token' => 'TEST-token', 'services.mercadopago.webhook_secret' => 'sekret']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking->customer->update(['rut' => null, 'document_type' => null]);
+        Http::fake(['api.mercadopago.com/v1/payments/701' => Http::response([
+            'id' => 701, 'status' => 'approved', 'external_reference' => $booking->code, 'transaction_amount' => 20000,
+            'payer' => ['identification' => ['type' => 'RUT', 'number' => '11.111.111-1']],
+        ])]);
+
+        $this->mpWebhook('701')->assertOk();
+
+        $customer = $booking->customer->fresh();
+        $this->assertSame('11111111-1', $customer->rut);
+        $this->assertSame('rut', $customer->document_type);
+
+        // Con documento ya cargado, el de Mercado Pago no lo reemplaza.
+        $other = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00')]);
+        $other->customer->update(['rut' => '22222222-2', 'document_type' => 'rut']);
+        Http::fake(['api.mercadopago.com/v1/payments/702' => Http::response([
+            'id' => 702, 'status' => 'approved', 'external_reference' => $other->code, 'transaction_amount' => 20000,
+            'payer' => ['identification' => ['type' => 'RUT', 'number' => '11.111.111-1']],
+        ])]);
+        $this->mpWebhook('702')->assertOk();
+        $this->assertSame('22222222-2', $other->customer->fresh()->rut);
+    }
+
     public function test_mercado_pago_webhook_ignores_merchant_order_notices_without_signature(): void
     {
         config(['services.mercadopago.webhook_secret' => 'sekret']);
