@@ -78,12 +78,13 @@ class MercadoPagoHistory
                 'in_system' => $inSystem,
                 'auth' => (string) ($mp['authorization_code'] ?? ''),
                 'voucher' => null,
+                'correlative' => null,
                 'deleted_booking' => $isBookingCode && ! $booking,
                 // Pago aprobado de una reserva que el sistema no tiene: hay que revisarlo.
                 'missing' => $status === 'approved' && $booking && ! $inSystem,
             ];
         })->sortByDesc('at')->values();
-        $rows = $this->matchMachine($rows, $from, $to);
+        $rows = $this->matchMachine($this->numberMachine($rows), $from, $to);
 
         $approved = $rows->where('status', 'approved');
         $mpIds = $rows->pluck('id')->all();
@@ -108,6 +109,20 @@ class MercadoPagoHistory
             'missing_in_mp' => $missingInMp,
             'days' => $this->days($rows, $from, $to, $tz),
         ];
+    }
+
+    /**
+     * Numera los cobros aprobados de la máquina del mes en orden (01, 02, 03…),
+     * igual que el voucher interno que lleva recepción.
+     */
+    private function numberMachine(Collection $rows): Collection
+    {
+        $order = $rows->filter(fn ($r) => $r['point'] && $r['status'] === 'approved')
+            ->sortBy(fn ($r) => $r['at']->getTimestamp().'-'.$r['id'])->pluck('id')->values()->flip();
+
+        return $rows->map(fn ($r) => $order->has($r['id'])
+            ? ['correlative' => str_pad((string) ($order[$r['id']] + 1), 2, '0', STR_PAD_LEFT)] + $r
+            : $r);
     }
 
     /**

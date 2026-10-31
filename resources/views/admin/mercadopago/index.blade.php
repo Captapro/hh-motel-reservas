@@ -69,10 +69,11 @@
             @else
                 <div style="overflow-x:auto;">
                 <table class="tbl-compact">
-                    <thead><tr><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° operación</th><th>Cód. autorización</th></tr></thead>
+                    <thead><tr><th>N° voucher</th><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° operación</th><th>Cód. autorización</th></tr></thead>
                     <tbody>
                         @foreach ($data['rows'] as $r)
                             <tr class="{{ $r['missing'] ? 'mp-missing' : '' }}">
+                                <td style="font-weight:700; font-family:ui-monospace,monospace;">{{ $r['correlative'] ?? '' }}</td>
                                 <td style="white-space:nowrap;">{{ $r['at']->format('H:i') }}</td>
                                 <td><span class="pill {{ $r['status'] === 'approved' ? '' : ($r['status'] === 'rejected' ? 'pill-bad' : 'pill-warn') }}">{{ $r['status_label'] }}</span></td>
                                 <td>{{ $r['channel'] }}</td>

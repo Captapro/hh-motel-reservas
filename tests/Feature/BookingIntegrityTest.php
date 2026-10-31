@@ -231,6 +231,10 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('07', $data['rows']->firstWhere('id', '103')['voucher']);
         $this->assertSame($registered->code, $data['rows']->firstWhere('id', '103')['booking']->code);
         $this->assertFalse($data['rows']->firstWhere('id', '106')['in_system']);
+        // Correlativo de la máquina en el mes, como el voucher interno: 106 (09:00) es el 01, 103 (11:50) el 02.
+        $this->assertSame('01', $data['rows']->firstWhere('id', '106')['correlative']);
+        $this->assertSame('02', $data['rows']->firstWhere('id', '103')['correlative']);
+        $this->assertNull($data['rows']->firstWhere('id', '101')['correlative']);
         $this->assertSame('Reserva online', $data['rows']->firstWhere('id', '105')['channel']);
         $this->assertTrue($data['rows']->firstWhere('id', '105')['deleted_booking']);
 
