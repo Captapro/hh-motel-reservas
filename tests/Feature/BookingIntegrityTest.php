@@ -205,7 +205,7 @@ class BookingIntegrityTest extends TestCase
         Http::fake(['api.mercadopago.com/v1/payments/search*' => Http::response(['results' => [
             ['id' => 101, 'status' => 'approved', 'external_reference' => $registered->code, 'transaction_amount' => 20000, 'payment_type_id' => 'credit_card', 'date_approved' => '2026-10-01T10:00:00.000-03:00', 'fee_details' => [['amount' => 700]], 'transaction_details' => ['net_received_amount' => 19300]],
             ['id' => 102, 'status' => 'approved', 'external_reference' => $lost->code, 'transaction_amount' => 20000, 'payment_type_id' => 'debit_card', 'date_approved' => '2026-10-01T11:00:00.000-03:00'],
-            ['id' => 103, 'status' => 'approved', 'transaction_amount' => 7000, 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'date_approved' => '2026-10-01T11:30:00.000-03:00'],
+            ['id' => 103, 'status' => 'approved', 'external_reference' => 'Venta presencial', 'transaction_amount' => 7000, 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'date_approved' => '2026-10-01T11:30:00.000-03:00'],
             ['id' => 104, 'status' => 'rejected', 'transaction_amount' => 5000, 'date_created' => '2026-10-01T09:00:00.000-03:00'],
         ]])]);
 
@@ -219,6 +219,13 @@ class BookingIntegrityTest extends TestCase
         $this->assertTrue($data['rows']->firstWhere('id', '102')['missing']);
         $this->assertTrue($data['rows']->firstWhere('id', '101')['in_system']);
         $this->assertSame(['machine' => 7000, 'system' => 7000], collect($data['point_days']->first())->only(['machine', 'system'])->all());
+
+        $this->assertSame('Máquina (Point)', $data['rows']->firstWhere('id', '103')['channel']);
+
+        // Filtro por día: el detalle se acota, los totales siguen siendo del mes.
+        $other = $this->get(route('admin.mercadopago.index', ['mes' => '2026-10', 'dia' => '2026-10-02']))->assertOk()->viewData('data');
+        $this->assertCount(0, $other['rows']);
+        $this->assertSame(47000, $other['totals']['gross']);
 
         // Sin credencial: avisa en vez de romperse. Anfitrión no entra.
         config(['services.mercadopago.access_token' => null]);

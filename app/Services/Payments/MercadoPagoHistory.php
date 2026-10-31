@@ -35,7 +35,7 @@ class MercadoPagoHistory
     /**
      * @return array{rows: Collection, totals: array, missing_in_mp: Collection, point_days: Collection}
      */
-    public function month(Carbon $first): array
+    public function month(Carbon $first, ?string $day = null): array
     {
         $tz = 'America/Santiago';
         $from = $first->copy()->timezone($tz)->startOfMonth();
@@ -67,7 +67,8 @@ class MercadoPagoHistory
                 'fee' => $fee,
                 'net' => (int) round((float) ($mp['transaction_details']['net_received_amount'] ?? ($amount - $fee))),
                 'type' => self::TYPE[$mp['payment_type_id'] ?? ''] ?? (string) ($mp['payment_type_id'] ?? '—'),
-                'channel' => $booking || $code !== '' ? 'Reserva online' : ($isPoint ? 'Máquina (Point)' : (! empty($mp['pos_id']) ? 'QR' : 'Otro')),
+                // La máquina también manda una referencia ("Venta presencial"): solo es reserva online si el código es de una reserva.
+                'channel' => $booking ? 'Reserva online' : ($isPoint ? 'Máquina (Point)' : (! empty($mp['pos_id']) ? 'QR' : 'Otro')),
                 'point' => $isPoint,
                 'code' => $code,
                 'booking' => $booking,
@@ -86,7 +87,8 @@ class MercadoPagoHistory
             ->values();
 
         return [
-            'rows' => $rows,
+            // El detalle se puede acotar a un día; los totales siempre son del mes.
+            'rows' => $day ? $rows->filter(fn ($r) => $r['at']->toDateString() === $day)->values() : $rows,
             'totals' => [
                 'gross' => $approved->sum('amount'),
                 'fees' => $approved->sum('fee'),
