@@ -336,9 +336,9 @@
             });
         }
 
-        // Selector de hora de la "noche" del día elegido: desde la mañana de ese día hasta la
-        // madrugada siguiente (00:00 a 05:45 del día después). Así, al pasar de 23:45 se sigue
-        // a 00:00 y la fecha de la reserva cambia sola al día siguiente. Cada horario es
+        // Selector de hora del día elegido, seguido de la madrugada siguiente (00:00 a 05:45 del
+        // día después). Así, al pasar de 23:45 se sigue a 00:00 y la fecha de la reserva cambia
+        // sola al día siguiente. Cada horario es
         // "AAAA-MM-DD HH:MM" con su fecha real, que es la que se envía.
         const HH_NIGHT_ENDS = 6;
         let hhAllowedTimes = null;
@@ -405,11 +405,9 @@
             const now = new Date();
             const nowAbs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes()) / 60000;
             const of = (iso) => (hhAllowedTimes ? (hhAllowedTimes[iso] || []) : hhFullDay(iso)).map((t) => iso + ' ' + t);
-            // Hoy después de medianoche todavía se puede pedir la madrugada de hoy.
-            const earlyToday = pick === hhIso(now) && now.getHours() < HH_NIGHT_ENDS
-                ? of(pick).filter((v) => hhTkHour(v) < HH_NIGHT_ENDS) : [];
-            hhTimeList = earlyToday
-                .concat(of(pick).filter((v) => hhTkHour(v) >= HH_NIGHT_ENDS))
+            // Todo el día elegido (también su madrugada: 04:00 del sábado es del sábado) y,
+            // a continuación, la madrugada del día siguiente.
+            hhTimeList = of(pick)
                 .concat(of(next).filter((v) => hhTkHour(v) < HH_NIGHT_ENDS))
                 .filter((v) => hhAbs(v) >= nowAbs - 5);
             hhValidateTime(false);
@@ -680,11 +678,7 @@
         (function () {
             const oh = document.getElementById('time_hour').value;
             if (oh !== '') {
-                // La fecha enviada es la real del horario: si es de madrugada, la noche empezó el día anterior.
-                const eff = hhPick();
-                const back = hhShiftDate(eff, -1);
-                if (Number(oh) < HH_NIGHT_ENDS && back >= hhIso(new Date())) hhNight = back;
-                document.getElementById('time-select').value = eff + ' ' + hhPad(parseInt(oh, 10)) + ':' + hhPad(parseInt(document.getElementById('time_minute').value || '0', 10));
+                document.getElementById('time-select').value = hhPick() + ' ' + hhPad(parseInt(oh, 10)) + ':' + hhPad(parseInt(document.getElementById('time_minute').value || '0', 10));
             }
         })();
         hhBuildTimes();
