@@ -460,6 +460,9 @@ class BookingIntegrityTest extends TestCase
         $sync->releaseStay($second);
         Http::assertSent(fn ($r) => $r->method() === 'DELETE' && str_ends_with($r->url(), '/contacts/c-123/tags')
             && $r['tags'] === [GhlBookingSync::ACTIVE_STAY_TAG, GhlBookingSync::WELCOME_TAG]);
+        // Vino de verdad (FINALIZADA): queda marcado para los públicos de Meta; la cancelada no.
+        Http::assertSent(fn ($r) => $r->method() === 'POST' && str_ends_with($r->url(), '/contacts/c-123/tags') && $r['tags'] === [GhlBookingSync::ATTENDED_TAG]);
+        Http::assertSentCount(2);
     }
 
     public function test_marketing_permission_is_reflected_in_ghl_and_ghl_can_unsubscribe(): void

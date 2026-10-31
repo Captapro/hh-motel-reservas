@@ -40,6 +40,13 @@ class GhlBookingSync
      */
     public const WELCOME_TAG = 'hh_bienvenida_wa';
 
+    /**
+     * Se pone cuando el cliente de verdad vino (estadía FINALIZADA). El flujo de
+     * GHL de públicos de Meta lo usa para pasarlo a "en pausa" 15 días y después
+     * a "clientes activos"; el flujo lo quita para que la próxima visita lo vuelva a disparar.
+     */
+    public const ATTENDED_TAG = 'hh_asistio';
+
     /** Estados en que la reserva ya terminó: la estadía deja de estar activa. */
     public const CLOSED_STATUSES = ['FINALIZADA', 'CANCELADA', 'EXPIRADA', 'NO_SHOW'];
 
@@ -153,16 +160,19 @@ class GhlBookingSync
                 return;
             }
 
+            $contactId = $customer->ghl_contact_id ?: $this->client->findContactIdByPhone($customer->phone_e164);
+            if (! $contactId) {
+                return;
+            }
+            if ($booking->booking_status === 'FINALIZADA') {
+                $this->client->addTags($contactId, [self::ATTENDED_TAG]);
+            }
+
             $hasOtherActive = Booking::where('customer_id', $customer->id)
                 ->where('id', '!=', $booking->id)
                 ->whereNotIn('booking_status', self::CLOSED_STATUSES)
                 ->exists();
-            if ($hasOtherActive) {
-                return;
-            }
-
-            $contactId = $customer->ghl_contact_id ?: $this->client->findContactIdByPhone($customer->phone_e164);
-            if ($contactId) {
+            if (! $hasOtherActive) {
                 $this->client->removeTags($contactId, [self::ACTIVE_STAY_TAG, self::WELCOME_TAG]);
             }
         } catch (Throwable $e) {
