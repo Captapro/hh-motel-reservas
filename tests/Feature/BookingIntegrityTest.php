@@ -30,6 +30,7 @@ use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Historical\HistoricalSalesImporter;
+use App\Services\Integrations\CustomerActivityTags;
 use App\Services\Integrations\GhlBookingSync;
 use App\Exceptions\InvalidCouponException;
 use App\Services\Pricing\CouponValidator;
@@ -527,6 +528,36 @@ class BookingIntegrityTest extends TestCase
         $other = Customer::create(['name' => 'Otra persona', 'phone_e164' => '+56977777777']);
         $this->expectException(InvalidCouponException::class);
         app(CouponValidator::class)->validate($coupon, $this->room, Carbon::parse('2026-11-05 12:00'), 60, $other, 20000);
+    }
+
+    public function test_customer_activity_tags_follow_days_since_last_visit_and_only_change_when_the_bucket_changes(): void
+    {
+        (require database_path('migrations/2026_10_31_140000_add_activity_tag_to_customers.php'))->up();
+        config(['services.ghl.private_token' => 'pit-prueba', 'services.ghl.location_id' => 'loc-prueba']);
+        Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $this->customer->update(['ghl_contact_id' => 'c-123']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking->update(['booking_status' => 'FINALIZADA', 'checked_out_at' => Carbon::parse('2026-11-02 13:00')]);
+        $tags = new CustomerActivityTags(new GhlClient);
+
+        $this->assertSame('hh_pausa', CustomerActivityTags::tagForDays(3));
+        $this->assertNull(CustomerActivityTags::tagForDays(20));
+        $this->assertSame('hh_inactivo_45', CustomerActivityTags::tagForDays(50));
+        $this->assertSame('hh_inactivo_90', CustomerActivityTags::tagForDays(200));
+
+        // Recién vino: en pausa. Una segunda pasada sin cambios no llama a GHL.
+        Carbon::setTestNow(Carbon::parse('2026-11-05 10:00'));
+        $this->assertSame(1, $tags->sync());
+        Http::assertSent(fn ($r) => $r->method() === 'POST' && $r['tags'] === ['hh_pausa']);
+        $this->assertSame(0, $tags->sync());
+
+        // A los 31 días pasa a "30 días sin venir" y se le saca la pausa.
+        Carbon::setTestNow(Carbon::parse('2026-12-03 10:00'));
+        $this->assertSame(1, $tags->sync());
+        Http::assertSent(fn ($r) => $r->method() === 'POST' && $r['tags'] === ['hh_inactivo_30']);
+        Http::assertSent(fn ($r) => $r->method() === 'DELETE' && in_array('hh_pausa', $r['tags'], true));
+        $this->assertSame('hh_inactivo_30', $this->customer->fresh()->activity_tag);
+        $this->assertSame(1, $tags->report()['hh_inactivo_30']['customers']->count());
     }
 
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void

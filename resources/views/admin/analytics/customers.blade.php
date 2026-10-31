@@ -141,6 +141,33 @@
         </div>
     </div>
 
+    <h2 class="an-title">Hace cuánto no vienen</h2>
+    <p class="sub">Según su última estadía finalizada. En GHL cada cliente lleva la etiqueta de su tramo (se actualiza sola): úsalas para campañas de «te extrañamos» o públicos de Meta.</p>
+    <div class="an-grid">
+        @foreach ($activity as $tag => $group)
+            <div class="card {{ $tag === 'hh_pausa' ? 't-green' : 't-orange' }}">
+                <h3>{{ $group['label'] }} — {{ $group['customers']->count() }}</h3>
+                <p class="legend">Etiqueta en GHL: <code>{{ $tag }}</code></p>
+                <table class="chart-table">
+                    <tbody>
+                        @forelse ($group['customers']->take(15) as $r)
+                            <tr>
+                                <td><a class="link" href="{{ route('admin.customers.show', $r['customer']) }}">{{ $r['customer']->name }}</a></td>
+                                <td class="v">hace {{ $r['days'] }} d</td>
+                                <td class="v">@if ($r['customer']->phone_e164)<a class="link" target="_blank" rel="noopener" href="https://wa.me/{{ preg_replace('/\D/', '', $r['customer']->phone_e164) }}">WhatsApp</a>@endif</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="3" class="empty">Nadie en este tramo.</td></tr>
+                        @endforelse
+                        @if ($group['customers']->count() > 15)
+                            <tr><td colspan="3" class="empty">y {{ $group['customers']->count() - 15 }} más</td></tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        @endforeach
+    </div>
+
     @if ($historical)
         <h2 class="an-title">Con las planillas históricas</h2>
         <p class="sub">Todo lo cargado de las planillas de recepción ({{ \Carbon\Carbon::parse($historical['coverage']['desde'])->format('d/m/Y') }} – {{ \Carbon\Carbon::parse($historical['coverage']['hasta'])->format('d/m/Y') }}), sin importar el rango de arriba. Son estadías anteriores al sistema: <b>no se mezclan</b> con las cifras de arriba. Personas contadas por RUT válido; {{ $historical['stays_with_rut'] }} de {{ $historical['stays'] }} estadías traen al menos un RUT válido. Mientras haya pocos meses cargados, «nuevas» está sobreestimado.</p>

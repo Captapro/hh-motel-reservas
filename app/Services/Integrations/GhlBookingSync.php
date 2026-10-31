@@ -102,6 +102,10 @@ class GhlBookingSync
             ));
 
             if (! $customer->ghl_contact_id) {
+                // Contacto recién enlazado: su tramo de actividad se vuelve a poner en la próxima pasada.
+                if (array_key_exists('activity_tag', $customer->getAttributes())) {
+                    $customer->forceFill(['activity_tag' => null]);
+                }
                 $customer->update(['ghl_contact_id' => $contactId, 'ghl_synced_at' => now()]);
             } else {
                 $customer->update(['ghl_synced_at' => now()]);

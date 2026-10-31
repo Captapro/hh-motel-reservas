@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Services\Analyst\HistoricalDataService;
+use App\Services\Integrations\CustomerActivityTags;
 use App\Support\TimeFormat;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -98,6 +99,7 @@ class CustomerBehaviorController extends Controller
             'gapBuckets' => $this->bucketGaps($gaps),
             'top' => $this->topCustomers($byCustomer, $value, $history),
             'risk' => $risk->take(10),
+            'activity' => app(CustomerActivityTags::class)->report(),
         ]);
     }
 
