@@ -57,7 +57,11 @@
         tr.total td { background:#2e2e2e !important; border-top:2px solid #555; color:#fff; }
         tr.today td { background:#33201a !important; }
         tr.cur-month td { background:#33201a !important; }
-    </style>
+        details.planilla { margin-top:26px; border:1px solid #2e2e2e; border-radius:10px; padding:0 16px; }
+        details.planilla > summary { cursor:pointer; padding:14px 0; font-weight:700; font-size:14px; color:#ddd; list-style:revert; }
+        details.planilla > summary span { font-weight:400; color:#888; font-size:12.5px; }
+        details.planilla[open] { padding-bottom:16px; }
+</style>
 </head>
 <body>
 @include('partials.navbar')
@@ -94,35 +98,6 @@
         <div class="card" tabindex="0" data-tip="Cantidad de reservas del mes con estado Cancelada. No suman a ninguna venta."><div class="label">Canceladas</div><div class="value">{{ $cancelled }}</div></div>
     </div>
 
-
-    @if ($planilla)
-        <div class="sec-label">Planilla de recepción (ventas anotadas antes del sistema)</div>
-        <p class="sec-note">Son ventas que recepción anotó a mano. <b>No están incluidas</b> en las cifras de arriba ni en la caja del sistema.@if ($totals['total'] > 0) Sistema + planilla este mes: <b>{{ $money($totals['total'] + $planilla['totals']['total']) }}</b>.@endif</p>
-        <div class="cards">
-            <div class="card" tabindex="0" data-tip="Todo lo anotado en la planilla de recepción del mes: alojamiento, hora extra, persona adicional, otros servicios, extras y pagos fraccionados. Son ventas anteriores al sistema."><div class="label">Venta de la planilla</div><div class="value">{{ $money($planilla['totals']['total']) }}</div></div>
-            <div class="card blue" tabindex="0" data-tip="Líneas de alojamiento de la planilla del mes (una por estadía; los acompañantes no cuentan aparte)."><div class="label">Estadías</div><div class="value">{{ $planilla['totals']['stays'] }}</div></div>
-            <div class="card" tabindex="0" data-tip="Cobro del playroom por las horas contratadas, sin extras, en la planilla del mes."><div class="label">Alojamiento</div><div class="value">{{ $money($planilla['totals']['lodging']) }}</div></div>
-            <div class="card" tabindex="0" data-tip="Horas adicionales cobradas sobre una estadía ya contratada."><div class="label">Hora extra</div><div class="value">{{ $money($planilla['totals']['extra_hour']) }}</div></div>
-            <div class="card" tabindex="0" data-tip="Cobro por una persona más en la habitación («Goloso» en las planillas antiguas)."><div class="label">Persona adicional</div><div class="value">{{ $money($planilla['totals']['extra_person']) }}</div></div>
-            <div class="card" tabindex="0" data-tip="Otros servicios que no son hora extra ni persona adicional (lavandería, toalla, etc.)."><div class="label">Otros extra core</div><div class="value">{{ $money($planilla['totals']['services']) }}</div></div>
-            <div class="card" tabindex="0" data-tip="Productos y consumos vendidos aparte (bebidas, preservativos, etc.)."><div class="label">Extras (consumos)</div><div class="value">{{ $money($planilla['totals']['extras']) }}</div></div>
-            @if ($planilla['totals']['split'] > 0)<div class="card" tabindex="0" data-tip="Parte del precio de una estadía que el cliente pagó aparte, por ejemplo $40.000 con una forma de pago y $5.000 con otra. Es dinero de la estadía, no una estadía más."><div class="label">Pago fraccionado</div><div class="value">{{ $money($planilla['totals']['split']) }}</div></div>@endif
-            <div class="card green" tabindex="0" data-tip="Alojamiento de la planilla ÷ estadías: lo que paga en promedio cada estadía, sin extras ni pagos fraccionados."><div class="label">Ticket promedio</div><div class="value">{{ $money($planilla['totals']['stays'] ? (int) round($planilla['totals']['lodging'] / $planilla['totals']['stays']) : 0) }}</div></div>
-        </div>
-        <div class="table-wrap"><table>
-            <thead><tr><th>Fecha</th><th class="n">Estadías</th><th class="n">Alojamiento</th><th class="n">Hora extra</th><th class="n">Persona adicional</th><th class="n">Otros extra core</th><th class="n">Extras</th><th class="n">Pago fraccionado</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th></tr></thead>
-            <tbody>
-            @foreach ($planilla['days'] as $r)
-                <tr class="{{ $r['total'] === 0 ? 'zero' : '' }} {{ $r['date']->isWeekend() ? 'weekend' : '' }}">
-                    <td>@if ($r['total'] > 0)<a href="{{ route('sales.daily', $r['date']->toDateString()) }}">{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}</a>@else{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}@endif</td>
-                    <td class="n">{{ $r['stays'] }}</td><td class="n">{{ $money($r['lodging']) }}</td><td class="n">{{ $money($r['extra_hour']) }}</td><td class="n">{{ $money($r['extra_person']) }}</td><td class="n">{{ $money($r['services']) }}</td><td class="n">{{ $money($r['extras']) }}</td><td class="n">{{ $money($r['split']) }}</td>
-                    <td class="n"><b>{{ $money($r['total']) }}</b></td><td class="n">{{ $money($r['card']) }}</td><td class="n">{{ $money($r['cash']) }}</td><td class="n">{{ $money($r['transfer']) }}</td>
-                </tr>
-            @endforeach
-                <tr class="total"><td>Total planilla</td><td class="n">{{ $planilla['totals']['stays'] }}</td><td class="n">{{ $money($planilla['totals']['lodging']) }}</td><td class="n">{{ $money($planilla['totals']['extra_hour']) }}</td><td class="n">{{ $money($planilla['totals']['extra_person']) }}</td><td class="n">{{ $money($planilla['totals']['services']) }}</td><td class="n">{{ $money($planilla['totals']['extras']) }}</td><td class="n">{{ $money($planilla['totals']['split']) }}</td><td class="n">{{ $money($planilla['totals']['total']) }}</td><td class="n">{{ $money($planilla['totals']['card']) }}</td><td class="n">{{ $money($planilla['totals']['cash']) }}</td><td class="n">{{ $money($planilla['totals']['transfer']) }}</td></tr>
-            </tbody>
-        </table></div>
-    @endif
 
     <div class="sec-label" style="margin-top:22px;border-top:none;padding-top:0;">Historial por mes</div>
     <p class="sec-note">Todos los meses con ventas. Toca un mes para ver su registro diario completo.</p>
@@ -274,6 +249,39 @@
         @endforelse
         </tbody>
     </table></div>
+    {{-- La planilla de recepción va al final y cerrada: lo principal es lo del sistema.
+         Solo aparece en los meses que tienen planilla. --}}
+    @if ($planilla)
+        <details class="planilla">
+        <summary>Planilla de recepción · {{ $money($planilla['totals']['total']) }} <span>ventas anotadas a mano antes del sistema (toca para ver)</span></summary>
+        <p class="sec-note">Son ventas que recepción anotó a mano. <b>No están incluidas</b> en las cifras de arriba ni en la caja del sistema.@if ($totals['total'] > 0) Sistema + planilla este mes: <b>{{ $money($totals['total'] + $planilla['totals']['total']) }}</b>.@endif</p>
+        <div class="cards">
+            <div class="card" tabindex="0" data-tip="Todo lo anotado en la planilla de recepción del mes: alojamiento, hora extra, persona adicional, otros servicios, extras y pagos fraccionados. Son ventas anteriores al sistema."><div class="label">Venta de la planilla</div><div class="value">{{ $money($planilla['totals']['total']) }}</div></div>
+            <div class="card blue" tabindex="0" data-tip="Líneas de alojamiento de la planilla del mes (una por estadía; los acompañantes no cuentan aparte)."><div class="label">Estadías</div><div class="value">{{ $planilla['totals']['stays'] }}</div></div>
+            <div class="card" tabindex="0" data-tip="Cobro del playroom por las horas contratadas, sin extras, en la planilla del mes."><div class="label">Alojamiento</div><div class="value">{{ $money($planilla['totals']['lodging']) }}</div></div>
+            <div class="card" tabindex="0" data-tip="Horas adicionales cobradas sobre una estadía ya contratada."><div class="label">Hora extra</div><div class="value">{{ $money($planilla['totals']['extra_hour']) }}</div></div>
+            <div class="card" tabindex="0" data-tip="Cobro por una persona más en la habitación («Goloso» en las planillas antiguas)."><div class="label">Persona adicional</div><div class="value">{{ $money($planilla['totals']['extra_person']) }}</div></div>
+            <div class="card" tabindex="0" data-tip="Otros servicios que no son hora extra ni persona adicional (lavandería, toalla, etc.)."><div class="label">Otros extra core</div><div class="value">{{ $money($planilla['totals']['services']) }}</div></div>
+            <div class="card" tabindex="0" data-tip="Productos y consumos vendidos aparte (bebidas, preservativos, etc.)."><div class="label">Extras (consumos)</div><div class="value">{{ $money($planilla['totals']['extras']) }}</div></div>
+            @if ($planilla['totals']['split'] > 0)<div class="card" tabindex="0" data-tip="Parte del precio de una estadía que el cliente pagó aparte, por ejemplo $40.000 con una forma de pago y $5.000 con otra. Es dinero de la estadía, no una estadía más."><div class="label">Pago fraccionado</div><div class="value">{{ $money($planilla['totals']['split']) }}</div></div>@endif
+            <div class="card green" tabindex="0" data-tip="Alojamiento de la planilla ÷ estadías: lo que paga en promedio cada estadía, sin extras ni pagos fraccionados."><div class="label">Ticket promedio</div><div class="value">{{ $money($planilla['totals']['stays'] ? (int) round($planilla['totals']['lodging'] / $planilla['totals']['stays']) : 0) }}</div></div>
+        </div>
+        <div class="table-wrap"><table>
+            <thead><tr><th>Fecha</th><th class="n">Estadías</th><th class="n">Alojamiento</th><th class="n">Hora extra</th><th class="n">Persona adicional</th><th class="n">Otros extra core</th><th class="n">Extras</th><th class="n">Pago fraccionado</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th></tr></thead>
+            <tbody>
+            @foreach ($planilla['days'] as $r)
+                <tr class="{{ $r['total'] === 0 ? 'zero' : '' }} {{ $r['date']->isWeekend() ? 'weekend' : '' }}">
+                    <td>@if ($r['total'] > 0)<a href="{{ route('sales.daily', $r['date']->toDateString()) }}">{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}</a>@else{{ ucfirst($r['date']->locale('es')->isoFormat('ddd D')) }}@endif</td>
+                    <td class="n">{{ $r['stays'] }}</td><td class="n">{{ $money($r['lodging']) }}</td><td class="n">{{ $money($r['extra_hour']) }}</td><td class="n">{{ $money($r['extra_person']) }}</td><td class="n">{{ $money($r['services']) }}</td><td class="n">{{ $money($r['extras']) }}</td><td class="n">{{ $money($r['split']) }}</td>
+                    <td class="n"><b>{{ $money($r['total']) }}</b></td><td class="n">{{ $money($r['card']) }}</td><td class="n">{{ $money($r['cash']) }}</td><td class="n">{{ $money($r['transfer']) }}</td>
+                </tr>
+            @endforeach
+                <tr class="total"><td>Total planilla</td><td class="n">{{ $planilla['totals']['stays'] }}</td><td class="n">{{ $money($planilla['totals']['lodging']) }}</td><td class="n">{{ $money($planilla['totals']['extra_hour']) }}</td><td class="n">{{ $money($planilla['totals']['extra_person']) }}</td><td class="n">{{ $money($planilla['totals']['services']) }}</td><td class="n">{{ $money($planilla['totals']['extras']) }}</td><td class="n">{{ $money($planilla['totals']['split']) }}</td><td class="n">{{ $money($planilla['totals']['total']) }}</td><td class="n">{{ $money($planilla['totals']['card']) }}</td><td class="n">{{ $money($planilla['totals']['cash']) }}</td><td class="n">{{ $money($planilla['totals']['transfer']) }}</td></tr>
+            </tbody>
+        </table></div>
+        </details>
+    @endif
+
     <script>
         document.getElementById('only-missing')?.addEventListener('change', function () {
             const rows = document.querySelectorAll('#detail-table tbody tr[data-booking]');

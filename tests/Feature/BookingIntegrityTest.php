@@ -816,7 +816,11 @@ class BookingIntegrityTest extends TestCase
 
         // Ventas ("Historial de ventas"): el mes aparece en el historial y trae su bloque de la planilla.
         $this->get(route('sales.monthly', '2026-10'))->assertOk()
-            ->assertSee('Planilla de recepción')->assertSee('Hora extra')->assertSee('Persona adicional')->assertSee('Otros extra core')->assertSee('Extras (consumos)')->assertSee('$139.000')->assertSee('Total planilla')->assertSee('planilla</span>', false);
+            ->assertSee('Planilla de recepción')->assertSee('Hora extra')->assertSee('Persona adicional')->assertSee('Otros extra core')->assertSee('Extras (consumos)')->assertSee('$139.000')->assertSee('Total planilla')->assertSee('planilla</span>', false)
+            ->assertSeeInOrder(['Registro diario', 'Detalle de ventas', '<details class="planilla">'], false);
+
+        // Un mes sin planilla no muestra el bloque.
+        $this->get(route('sales.monthly', '2026-08'))->assertOk()->assertDontSee('<details class="planilla">', false);
 
         // Ventas del día: las ventas de la planilla de ese día, con su detalle en el panel; los nombres solo los ve soporte.
         $sale = HistoricalSale::where('source_row', 3)->firstOrFail();

@@ -69,6 +69,10 @@
         tr.total td { background:#2e2e2e !important; border-top:2px solid #555; color:#fff; }
         tr.today td { background:#33201a !important; }
         tr.cur-month td { background:#33201a !important; }
+        details.planilla { margin-top:26px; border:1px solid #2e2e2e; border-radius:10px; padding:0 16px; }
+        details.planilla > summary { cursor:pointer; padding:14px 0; font-weight:700; font-size:14px; color:#ddd; list-style:revert; }
+        details.planilla > summary span { font-weight:400; color:#888; font-size:12.5px; }
+        details.planilla[open] { padding-bottom:16px; }
     </style>
 </head>
 <body>
@@ -165,13 +169,18 @@
             </tbody>
         </table>
     </div>
+    @if ($cancelledCount > 0)
+        <p class="sub">{{ $cancelledCount }} {{ Str::plural('reserva', $cancelledCount) }} cancelada{{ $cancelledCount > 1 ? 's' : '' }} ese día — no se cuenta en los totales, aparece atenuada en la tabla.</p>
+    @endif
     @if ($planilla->isNotEmpty())
         @php
             $pLabels = ['alojamiento' => 'Alojamiento', 'hora_extra' => 'Hora extra', 'persona_adicional' => 'Persona adicional', 'servicios' => 'Otro extra core', 'extras' => 'Extra', 'fraccionado' => 'Pago fraccionado'];
             $pStays = $planilla->where('sale_type', 'ALOJAMIENTO');
             $showNames = (bool) auth()->user()?->isSoporte();
         @endphp
-        <div class="sec-label">Planilla de recepción (ventas anotadas antes del sistema)</div>
+        {{-- La planilla va cerrada: lo principal es lo del sistema. --}}
+        <details class="planilla">
+        <summary>Planilla de recepción · {{ $money($planilla->sum(fn ($s) => $s->total())) }} <span>ventas anotadas a mano antes del sistema (toca para ver)</span></summary>
         <p class="sub">{{ $planilla->count() }} líneas · {{ $pStays->count() }} estadías · <b>{{ $money($planilla->sum(fn ($s) => $s->total())) }}</b> en total. No se suman a las cifras de arriba. Toca una fila para ver su detalle.</p>
         <div class="table-wrap">
             <table>
@@ -203,9 +212,7 @@
                 </tbody>
             </table>
         </div>
-    @endif
-    @if ($cancelledCount > 0)
-        <p class="sub">{{ $cancelledCount }} {{ Str::plural('reserva', $cancelledCount) }} cancelada{{ $cancelledCount > 1 ? 's' : '' }} ese día — no se cuenta en los totales, aparece atenuada en la tabla.</p>
+        </details>
     @endif
     </div>
     @include('sales._drawer')
