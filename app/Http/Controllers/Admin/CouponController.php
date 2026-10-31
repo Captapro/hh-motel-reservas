@@ -14,7 +14,7 @@ class CouponController extends Controller
 {
     public function index(): View
     {
-        return view('admin.coupons.index', ['coupons' => Coupon::where('auto_apply', false)->orderBy('code')->get()]);
+        return view('admin.coupons.index', ['coupons' => Coupon::where('auto_apply', false)->whereNull('customer_id')->orderBy('code')->get()]);
     }
 
     public function create(): View

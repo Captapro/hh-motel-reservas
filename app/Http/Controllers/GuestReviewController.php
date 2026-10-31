@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\GuestReview;
+use App\Services\Integrations\GhlReviewRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,7 +28,7 @@ class GuestReviewController extends Controller
         return view('reviews.create', ['booking' => $booking]);
     }
 
-    public function store(Request $request, ?string $code = null): RedirectResponse
+    public function store(Request $request, GhlReviewRequests $rewards, ?string $code = null): RedirectResponse
     {
         $validated = $request->validate([
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
@@ -35,27 +36,51 @@ class GuestReviewController extends Controller
 
         $booking = $code ? Booking::where('code', $code)->first() : null;
 
-        $review = GuestReview::create([
-            'booking_id' => $booking?->id,
-            'rating' => $validated['rating'],
-        ]);
+        // Una opinión por estadía: si vuelve a abrir el link, se usa la que ya dejó.
+        $review = ($booking ? GuestReview::where('booking_id', $booking->id)->first() : null)
+            ?? GuestReview::create([
+                'booking_id' => $booking?->id,
+                'rating' => $validated['rating'],
+            ]);
 
         // {review} en las rutas de comentario es solo el ID autoincremental
         // -- sin esta marca de sesión, cualquiera que adivinara/probara IDs
         // consecutivos podía sobrescribir el comentario de otra opinión.
         $request->session()->put('review_access.'.$review->id, true);
 
-        $googleLink = config('services.hh_reviews.google_review_link');
-
-        if ($validated['rating'] > self::LOW_RATING_MAX && $googleLink) {
-            return redirect()->away($googleLink);
+        // Opinión desde el link de su estadía: 10% para la próxima visita,
+        // cualquiera sea la nota (el premio es por opinar, no por la reseña en Google).
+        if ($booking) {
+            $rewards->rewardFor($review);
         }
 
-        if ($validated['rating'] > self::LOW_RATING_MAX) {
-            return redirect()->route('reviews.create')->with('status', '¡Gracias por tu opinión!');
+        $googleLink = config('services.hh_reviews.google_review_link');
+
+        if ($review->rating > self::LOW_RATING_MAX) {
+            // QR fijo de recepción (sin reserva): directo a Google, como siempre.
+            if (! $booking && $googleLink) {
+                return redirect()->away($googleLink);
+            }
+
+            return $booking
+                ? redirect()->route('reviews.thanks', $review)
+                : redirect()->route('reviews.create')->with('status', '¡Gracias por tu opinión!');
         }
 
         return redirect()->route('reviews.comment.edit', $review);
+    }
+
+    /** Gracias, con el cupón de la próxima visita y (si le gustó) la invitación opcional a Google. */
+    public function thanks(Request $request, GuestReview $review): View|RedirectResponse
+    {
+        if (! $request->session()->get('review_access.'.$review->id)) {
+            return redirect()->route('reviews.create');
+        }
+
+        return view('reviews.thanks', [
+            'coupon' => $review->coupon,
+            'googleLink' => $review->rating > self::LOW_RATING_MAX ? config('services.hh_reviews.google_review_link') : null,
+        ]);
     }
 
     public function editComment(Request $request, GuestReview $review): View|RedirectResponse
@@ -67,7 +92,7 @@ class GuestReviewController extends Controller
         return view('reviews.comment', ['review' => $review]);
     }
 
-    public function updateComment(Request $request, GuestReview $review): View|RedirectResponse
+    public function updateComment(Request $request, GuestReview $review): RedirectResponse
     {
         if (! $request->session()->get('review_access.'.$review->id)) {
             return redirect()->route('reviews.create');
@@ -79,6 +104,6 @@ class GuestReviewController extends Controller
 
         $review->update(['comment' => $validated['comment'] ?? null]);
 
-        return view('reviews.thanks');
+        return redirect()->route('reviews.thanks', $review);
     }
 }

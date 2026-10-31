@@ -22,6 +22,11 @@ class CouponValidator
             throw new InvalidCouponException('Este cupón no está activo.');
         }
 
+        // Cupón personal: solo lo usa el cliente al que se le entregó.
+        if ($coupon->customer_id && $coupon->customer_id !== $customer?->id) {
+            throw new InvalidCouponException('Este cupón es personal y no corresponde a este cliente.');
+        }
+
         $today = $startsAt->toDateString();
         if ($coupon->starts_at && $today < $coupon->starts_at->toDateString()) {
             throw new InvalidCouponException('Este cupón todavía no comienza su vigencia.');

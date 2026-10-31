@@ -48,7 +48,7 @@
                                     @endif
                                 </td>
                                 <td>{{ $review->booking?->customer?->name ?? '—' }}</td>
-                                <td style="max-width:320px;">{{ $review->comment ?? '—' }}</td>
+                                <td style="max-width:320px;">{{ $review->comment ?? '—' }}@if ($review->coupon)<br><span class="sub">Cupón {{ $review->coupon->code }}</span>@endif</td>
                                 <td class="sub">{{ $review->created_at->timezone('America/Santiago')->format('d/m/Y H:i') }}</td>
                             </tr>
                         @empty
@@ -69,6 +69,10 @@
                 <div>
                     <div class="sub" style="margin-bottom:2px;">Calificaciones bajas (0-3)</div>
                     <div style="font-size:22px; font-weight:800; {{ $lowCount > 0 ? 'color:#e88a9a;' : '' }}">{{ $lowCount }}</div>
+                </div>
+                <div>
+                    <div class="sub" style="margin-bottom:2px;">Cupones 10% por opinión este mes</div>
+                    <div style="font-size:22px; font-weight:800;">{{ $rewards['given'] }} <span class="sub" style="font-size:13px;">entregados · {{ $rewards['used'] }} usados</span></div>
                 </div>
             </div>
 

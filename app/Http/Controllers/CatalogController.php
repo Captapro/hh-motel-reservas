@@ -29,7 +29,7 @@ class CatalogController extends Controller
         // puede autoaplicarse desde un banner -- la verificación de
         // identidad/edad la sigue haciendo recepción al check-in, así que
         // acá solo se filtra por vigencia de fecha.
-        $coupons = Coupon::where('auto_apply', false)->where('is_active', true)
+        $coupons = Coupon::where('auto_apply', false)->where('is_active', true)->whereNull('customer_id')
             ->get()
             ->filter(fn (Coupon $c) => (! $c->starts_at || $today->greaterThanOrEqualTo($c->starts_at)) && (! $c->ends_at || $today->lessThanOrEqualTo($c->ends_at)))
             ->map(function (Coupon $c) use ($catalogFallbackPhoto) {

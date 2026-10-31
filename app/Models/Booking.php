@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
     'coupon_id', 'coupon_code_snapshot', 'discount_amount', 'price_final', 'deposit_amount',
     'notes', 'expires_at', 'consumption_offered_at', 'consumption_offered_by',
     'checked_in_at', 'checked_out_at', 'payment_instructions_sent_at',
-    'room_checked_at', 'room_checked_by', 'payment_reminder_sent_at', 'abandon_notified_at',
+    'room_checked_at', 'room_checked_by', 'payment_reminder_sent_at', 'abandon_notified_at', 'review_requested_at',
 ])]
 class Booking extends Model
 {
@@ -51,6 +51,7 @@ class Booking extends Model
             'room_checked_at' => 'datetime',
             'payment_reminder_sent_at' => 'datetime',
             'abandon_notified_at' => 'datetime',
+            'review_requested_at' => 'datetime',
         ];
     }
 

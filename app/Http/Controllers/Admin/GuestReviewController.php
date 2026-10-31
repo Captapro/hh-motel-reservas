@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Coupon;
 use App\Models\GuestReview;
+use App\Services\Integrations\GhlReviewRequests;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +20,7 @@ class GuestReviewController extends Controller
 {
     public function index(): View
     {
-        $reviews = GuestReview::with('booking.customer', 'booking.room')
+        $reviews = GuestReview::with('booking.customer', 'booking.room', 'coupon')
             ->latest()
             ->limit(200)
             ->get();
@@ -28,7 +30,22 @@ class GuestReviewController extends Controller
             'reviews' => $reviews,
             'lowCount' => GuestReview::where('rating', '<=', 3)->count(),
             'avgRating' => round((float) GuestReview::avg('rating'), 1),
+            'rewards' => $this->rewardsThisMonth(),
         ]);
+    }
+
+    /**
+     * Cupones del 10% por opinión de este mes: cuántos se entregaron y cuántos
+     * ya se usaron en una reserva.
+     *
+     * @return array{given: int, used: int}
+     */
+    private function rewardsThisMonth(): array
+    {
+        $month = now('America/Santiago')->startOfMonth();
+        $coupons = Coupon::where('origin', GhlReviewRequests::ORIGIN)->where('created_at', '>=', $month)->withCount('redemptions')->get();
+
+        return ['given' => $coupons->count(), 'used' => $coupons->where('redemptions_count', '>', 0)->count()];
     }
 
     /** Borra todo el historial interno de calificaciones (limpiar datos de prueba). */

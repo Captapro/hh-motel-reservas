@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'code', 'auto_apply', 'internal_name', 'image_url', 'discount_type', 'discount_value', 'min_amount', 'max_discount_amount',
+    'code', 'customer_id', 'origin', 'auto_apply', 'internal_name', 'image_url', 'discount_type', 'discount_value', 'min_amount', 'max_discount_amount',
     'starts_at', 'ends_at', 'allowed_weekdays', 'allowed_time_start', 'allowed_time_end', 'allowed_durations',
     'max_uses_total', 'max_uses_per_customer', 'is_stackable', 'requires_verification', 'verification_note',
     'min_age', 'is_active', 'included_extra_guests',

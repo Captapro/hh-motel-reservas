@@ -31,6 +31,10 @@ use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Historical\HistoricalSalesImporter;
 use App\Services\Integrations\GhlBookingSync;
+use App\Exceptions\InvalidCouponException;
+use App\Services\Pricing\CouponValidator;
+use App\Models\GuestReview;
+use App\Services\Integrations\GhlReviewRequests;
 use App\Services\Integrations\GhlMarketingConsent;
 use App\Services\Integrations\GhlClient;
 use App\Services\Payments\MercadoPagoPayments;
@@ -476,6 +480,50 @@ class BookingIntegrityTest extends TestCase
         $this->postJson(route('webhooks.ghl.marketing_optout', ['token' => 'token-ghl']), ['phone' => '+56 9 1111 1111'])->assertOk()->assertJsonPath('result', 'baja');
         $this->assertFalse($this->customer->fresh()->marketing_opt_in);
         Http::assertSent(fn ($r) => $r->method() === 'POST' && str_ends_with($r->url(), '/contacts/c-123/tags') && $r['tags'] === [GhlMarketingConsent::MARKETING_NO]);
+    }
+
+    public function test_after_checkout_the_guest_is_asked_once_and_gets_a_personal_ten_percent_coupon(): void
+    {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        config(['services.ghl.webhook_pedir_opinion' => 'https://services.leadconnectorhq.com/hooks/opinion', 'services.ghl.webhook_cupon_opinion' => 'https://services.leadconnectorhq.com/hooks/cupon']);
+        Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $next = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00')]);
+        Carbon::setTestNow(Carbon::parse('2026-11-02 15:00'));
+        $booking->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 12:00'), 'checked_out_at' => Carbon::parse('2026-11-02 14:50')]);
+        $requests = app(GhlReviewRequests::class);
+
+        // Antes de los 15 minutos no se pide; después, una sola vez.
+        $requests->sendDue();
+        Http::assertNothingSent();
+        Carbon::setTestNow(Carbon::parse('2026-11-02 15:06'));
+        $requests->sendDue();
+        $requests->sendDue();
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/opinion') && str_ends_with($r['link_opinion'], '/opinion/'.$booking->code));
+
+        // Opina (aunque sea con nota baja): recibe su cupón personal del 10%, que no sale en el catálogo.
+        $this->post(route('reviews.store', $booking->code), ['rating' => 2])->assertRedirect();
+        $coupon = Coupon::where('customer_id', $this->customer->id)->firstOrFail();
+        $this->assertSame(10, (int) $coupon->discount_value);
+        $this->assertSame(1, $coupon->max_uses_total);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/cupon') && $r['cupon_codigo'] === $coupon->code);
+        $review = GuestReview::firstOrFail();
+        $this->get(route('reviews.thanks', $review))->assertOk()->assertSee($coupon->code);
+
+        // Volver a opinar no da otro cupón; y a quien ya opinó no se le vuelve a pedir.
+        $this->post(route('reviews.store', $booking->code), ['rating' => 5]);
+        $this->assertSame(1, Coupon::where('customer_id', $this->customer->id)->count());
+        $next->update(['booking_status' => 'FINALIZADA', 'checked_out_at' => Carbon::parse('2026-11-02 14:40')]);
+        $requests->sendDue();
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/hooks/opinion') && ($r['codigo'] ?? null) === $next->code);
+
+        // Es personal: otro cliente no lo puede usar.
+        $other = Customer::create(['name' => 'Otra persona', 'phone_e164' => '+56977777777']);
+        $this->expectException(InvalidCouponException::class);
+        app(CouponValidator::class)->validate($coupon, $this->room, Carbon::parse('2026-11-05 12:00'), 60, $other, 20000);
     }
 
     public function test_stay_in_progress_is_not_counted_as_an_upcoming_booking(): void

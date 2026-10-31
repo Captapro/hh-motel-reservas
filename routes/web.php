@@ -101,6 +101,7 @@ Route::get('/opinion/{code?}', [GuestReviewController::class, 'create'])->name('
 Route::post('/opinion/{code?}', [GuestReviewController::class, 'store'])->middleware('throttle:10,1,reviews.store')->name('reviews.store');
 Route::get('/opinion/{review}/comentario', [GuestReviewController::class, 'editComment'])->name('reviews.comment.edit');
 Route::post('/opinion/{review}/comentario', [GuestReviewController::class, 'updateComment'])->middleware('throttle:10,1,reviews.comment.update')->name('reviews.comment.update');
+Route::get('/opinion/{review}/gracias', [GuestReviewController::class, 'thanks'])->name('reviews.thanks');
 
 // QR pegado en la puerta de cada habitación + panel general de mucamas --
 // login liviano por PIN (ver MucamaAuthController), no el guard de auth()

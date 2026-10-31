@@ -59,6 +59,9 @@ return [
         'webhook_confirmada' => env('GHL_WEBHOOK_RESERVA_CONFIRMADA'),
         'webhook_pago_pendiente' => env('GHL_WEBHOOK_PAGO_PENDIENTE'),
         'webhook_reserva_vencida' => env('GHL_WEBHOOK_RESERVA_VENCIDA'),
+        // Opiniones: pedir la opinión tras el check-out y mandar el cupón del 10% al dejarla.
+        'webhook_pedir_opinion' => env('GHL_WEBHOOK_PEDIR_OPINION'),
+        'webhook_cupon_opinion' => env('GHL_WEBHOOK_CUPON_OPINION'),
         // Token que GHL agrega a la URL al llamar al sistema (baja de publicidad).
         'inbound_secret' => env('GHL_INBOUND_SECRET'),
     ],
