@@ -660,6 +660,16 @@
         hhSyncCompactWidth();
         window.addEventListener('resize', hhSyncCompactWidth);
 
+        // "Cambiar estado" abierto: un clic fuera (o Esc) lo cierra y la tarjeta vuelve a su tamaño.
+        document.addEventListener('click', function (event) {
+            document.querySelectorAll('.card details[open]').forEach(function (d) {
+                if (! d.contains(event.target)) d.open = false;
+            });
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') document.querySelectorAll('.card details[open]').forEach(function (d) { d.open = false; });
+        });
+
         // Copiar el link de la ficha pública sin salir del tablero -- antes
         // el único camino era abrir la ficha en otra pestaña y copiarlo ahí,
         // lo que sacaba a recepción del flujo. navigator.clipboard falla
