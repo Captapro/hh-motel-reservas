@@ -77,7 +77,7 @@
                 <div class="row2">
                     <div>
                         <label>Producto</label>
-                        <select name="product_id" required>
+                        <select name="product_id">
                             <option value="">Elegir…</option>
                             @foreach ($products as $p)
                                 <option value="{{ $p->id }}" @selected(old('product_id') == $p->id)>{{ $p->name }} · ${{ number_format($p->price, 0, ',', '.') }}</option>
@@ -85,6 +85,11 @@
                         </select>
                     </div>
                     <div style="flex:0 1 90px;"><label>Cantidad</label><input type="number" name="quantity" min="1" max="20" value="{{ old('quantity', 1) }}" required></div>
+                </div>
+                <div class="hint" style="margin:-4px 0 8px;">O, si no es un producto, un cobro libre (deja el producto en "Elegir…"):</div>
+                <div class="row2">
+                    <div><label>Descripción</label><input name="custom_description" maxlength="150" value="{{ old('custom_description') }}" placeholder="Ej. Diferencia hora adicional HOT"></div>
+                    <div style="flex:0 1 140px;"><label>Monto</label><input type="number" name="custom_amount" min="1" step="1" value="{{ old('custom_amount') }}"></div>
                 </div>
                 <div class="row2">
                     <div><label>Hora de la venta</label><input type="time" name="sold_at" value="{{ old('sold_at') }}" required></div>

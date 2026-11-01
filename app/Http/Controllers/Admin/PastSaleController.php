@@ -135,7 +135,10 @@ class PastSaleController extends Controller
     {
         $v = $request->validate([
             'booking_code' => ['required', 'string', 'exists:bookings,code'],
-            'product_id' => ['required', 'exists:products,id'],
+            // Producto del inventario, o un monto libre con descripción (ej. diferencia de una hora adicional mal cobrada).
+            'product_id' => ['nullable', 'required_without:custom_amount', 'exists:products,id'],
+            'custom_description' => ['nullable', 'required_with:custom_amount', 'string', 'max:150'],
+            'custom_amount' => ['nullable', 'integer', 'min:1'],
             'quantity' => ['required', 'integer', 'min:1', 'max:20'],
             'sold_at' => ['required', 'date_format:H:i'],
             'payment_method' => ['required', 'in:'.implode(',', self::METHODS)],
@@ -143,7 +146,7 @@ class PastSaleController extends Controller
             'receipt_number' => ['nullable', 'string', 'max:30'],
         ]);
         $booking = Booking::where('code', $v['booking_code'])->firstOrFail();
-        $product = Product::findOrFail($v['product_id']);
+        $product = filled($v['product_id'] ?? null) ? Product::findOrFail($v['product_id']) : null;
         $method = PaymentMethod::where('code', $v['payment_method'])->firstOrFail();
         $userId = $request->user()->id;
         $soldAt = Carbon::parse($booking->starts_at->timezone('America/Santiago')->toDateString().' '.$v['sold_at'], 'America/Santiago');
@@ -151,13 +154,14 @@ class PastSaleController extends Controller
             $soldAt->addDay();
         }
         $soldAt->setTimezone(config('app.timezone'));
-        $amount = (int) $product->price * (int) $v['quantity'];
+        $name = $product?->name ?? $v['custom_description'];
+        $amount = (int) ($product?->price ?? $v['custom_amount']) * (int) $v['quantity'];
 
-        DB::transaction(function () use ($booking, $product, $method, $v, $amount, $userId, $soldAt) {
+        DB::transaction(function () use ($booking, $product, $name, $method, $v, $amount, $userId, $soldAt) {
             $addon = BookingAddon::create([
                 'booking_id' => $booking->id,
-                'product_id' => $product->id,
-                'description' => $v['quantity'] > 1 ? "{$v['quantity']} x {$product->name}" : $product->name,
+                'product_id' => $product?->id,
+                'description' => $v['quantity'] > 1 ? "{$v['quantity']} x {$name}" : $name,
                 'quantity' => $v['quantity'],
                 'amount' => $amount,
                 'added_by' => $userId,
@@ -168,7 +172,7 @@ class PastSaleController extends Controller
         });
 
         return redirect()->route('admin.past_sales.create')
-            ->with('status', "Consumo agregado a {$booking->code}: {$product->name} ({$v['quantity']}) — sin descontar stock.");
+            ->with('status', "Consumo agregado a {$booking->code}: {$name} ({$v['quantity']}) por $".number_format($amount, 0, ',', '.').' — sin descontar stock.');
     }
 
     private function pay(Booking $booking, PaymentMethod $method, int $amount, array $v, int $userId, Carbon $at): void
