@@ -100,8 +100,11 @@
         .section.aseo.panel-box .section-head h2 { color:#9a7414; }
         .section.fuera.panel-box .section-head h2 { color:#5f6368; }
         .section.panel-box .grid { margin-bottom:10px; }
-        .panel-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-bottom:34px; align-items:start; }
-        .panel-row > .section { margin-bottom:0; min-width:0; }
+        /* El ancho se reparte según cuántos Playrooms tiene cada panel (flex-grow en el HTML):
+           uno vacío queda angosto y el otro usa el resto, con más tarjetas por fila y menos scroll. */
+        .panel-row { display:flex; flex-wrap:wrap; gap:14px; margin-bottom:34px; align-items:flex-start; }
+        .panel-row > .section { margin-bottom:0; min-width:0; flex:1 1 300px; }
+        .panel-row > .section:has(> .panel-empty:not([hidden])) { flex-basis:260px; }
         .section.aseo .section-head h2 { color:#e8c76f; }
         .section.disponibles .section-head h2 { color:#34d399; }
         .section.fuera .section-head h2 { color:#aaa; }
@@ -560,9 +563,9 @@
             </div>
 
 
-            {{-- En aseo y Fuera de servicio: mismo panel enmarcado que Ocupadas, siempre visibles y lado a lado, debajo de Disponibles. --}}
+            {{-- En aseo y Fuera de servicio: mismo panel enmarcado que Ocupadas, siempre visibles y lado a lado, debajo de Disponibles; el que tiene más Playrooms ocupa más ancho. --}}
             <div class="panel-row">
-            <div class="section aseo panel-box">
+            <div class="section aseo panel-box" style="flex-grow:{{ $grouped['en_aseo']->count() }};">
                 <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span></div>
                 <div class="sidebar-empty panel-empty" @if ($grouped['en_aseo']->isNotEmpty()) hidden @endif>Ningún Playroom en aseo ahora.</div>
                 @if ($grouped['en_aseo']->isNotEmpty())
@@ -575,7 +578,7 @@
                 @endif
             </div>
 
-            <div class="section fuera panel-box">
+            <div class="section fuera panel-box" style="flex-grow:{{ $grouped['fuera_de_servicio']->count() }};">
                 <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span></div>
                 <div class="sidebar-empty panel-empty" @if ($grouped['fuera_de_servicio']->isNotEmpty()) hidden @endif>Ningún Playroom fuera de servicio.</div>
                 @if ($grouped['fuera_de_servicio']->isNotEmpty())
