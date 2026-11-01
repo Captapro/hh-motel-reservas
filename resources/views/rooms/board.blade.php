@@ -234,8 +234,8 @@
         .aseo-cleaner-input:focus { outline:none; border-color:#e8c76f; }
         .aseo-ready-btn { display:block; width:100%; text-align:center; background:#3a331c; border:1px solid #6b5a1e; color:#e8c76f; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; cursor:pointer; }
         .aseo-ready-btn:hover { border-color:#e8c76f; }
-        a.checkout-btn { display:block; text-align:center; margin-top:8px; background:#2a2a2a; border:1px solid #444; color:#eee; text-decoration:none; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; }
-        a.checkout-btn:hover { border-color:#ff7918; color:#ff7918; }
+        a.checkout-btn, button.checkout-btn { display:block; width:100%; cursor:pointer; font-family:inherit; text-align:center; margin-top:8px; background:#2a2a2a; border:1px solid #444; color:#eee; text-decoration:none; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; }
+        a.checkout-btn:hover, button.checkout-btn:hover { border-color:#ff7918; color:#ff7918; }
         a.checkout-btn.pending-balance { background:#2a2010; border-color:#6b5a1e; color:#e8a23f; }
         a.checkout-btn.pending-balance:hover { border-color:#e8a23f; color:#ffcf7a; }
         .bookings-btn { display:block; width:100%; box-sizing:border-box; text-align:center; margin-top:8px; text-decoration:none; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; background:none; font-family:inherit; cursor:pointer; }
@@ -288,7 +288,7 @@
         .compact .card .code { order:5; flex:1 1 100%; margin:0; }
         .compact .card a.reserve-btn { order:7; flex:1 1 0; min-width:0; margin:0; padding:5px 4px; font-size:11px; white-space:nowrap; }
         .compact .card a.consumo-btn, .compact .card a.checkout-btn, .compact .card .checkin-btn { order:7; flex:1 1 100%; margin:0; padding:5px; }
-        .compact .card .aseo-ready-form { order:7; flex:1 1 100%; margin:2px 0 0; }
+        .compact .card .aseo-ready-form, .compact .card .occupied-out-form { order:7; flex:1 1 100%; margin:2px 0 0; }
         .compact .card .chip-actions { order:7; }
         .compact .card .bookings-btn, .compact .card .copy-link-btn { order:8; flex:0 0 auto; width:auto; margin:0; padding:4px 6px; font-size:11px; white-space:nowrap; }
         .compact .card details { order:8; flex:0 0 auto; margin:0; }

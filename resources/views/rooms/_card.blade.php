@@ -55,7 +55,11 @@
         @endif
     @elseif ($room->operational_status === 'ocupada')
         <div class="eta">{{ $room->operational_note ?: 'Ocupada sin reserva en el sistema' }}</div>
-        <div class="eta" style="color:#ffcf6e;">Cuando salga: Cambiar estado → Aseo</div>
+        <form method="POST" action="{{ route('rooms.status', $room) }}" class="occupied-out-form" onsubmit="return confirm('¿El cliente de {{ $room->name }} ya salió? La pieza pasa a aseo.');">
+            @csrf
+            <input type="hidden" name="operational_status" value="__aseo">
+            <button type="submit" class="checkout-btn">Salió → mandar a aseo</button>
+        </form>
     @elseif ($room->operational_status !== 'activa')
         @if ($room->operational_note)
             <div class="eta">{{ $room->operational_note }}</div>
