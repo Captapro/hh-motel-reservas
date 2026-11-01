@@ -12,7 +12,8 @@ use Illuminate\View\View;
 /**
  * Entrega de turno del anfitrión. Al entrar no puede trabajar hasta recibir
  * el turno (EnsureShiftReceived); al salir, "Salir" lo trae a entregarlo.
- * El conteo es a ciegas: no ve cuánto debería haber hasta después.
+ * El formulario viene lleno con la caja y el stock del sistema; si el
+ * anfitrión corrige algo, queda como diferencia para el administrador.
  */
 class ShiftHandoverController extends Controller
 {
@@ -33,6 +34,8 @@ class ShiftHandoverController extends Controller
         return view('shifts.handover', [
             'kind' => $kind,
             'products' => $this->handovers->countableProducts(),
+            // Viene lleno con lo que dice el sistema: el anfitrión revisa y corrige solo lo que no calce.
+            'expectedCash' => \App\Models\CashMovement::balance()['saldo'],
         ]);
     }
 

@@ -67,7 +67,9 @@ class ShiftHandoverTest extends TestCase
         $this->login();
 
         $this->get('/caja')->assertRedirect(route('shift.receive'));
-        $this->get('/turno/recibir')->assertOk()->assertSee('Cerveza')->assertDontSee('50.000');
+        // Viene lleno con lo del sistema: caja y stock, para revisar en vez de digitar.
+        $this->get('/turno/recibir')->assertOk()->assertSee('Cerveza')
+            ->assertSee('value="50000"', false)->assertSee('inputmode="numeric" value="10"', false);
 
         $this->post('/turno/recibir', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]])
             ->assertRedirect(route('rooms.board'));

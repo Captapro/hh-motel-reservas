@@ -43,10 +43,10 @@
         <div class="brand">HH MOTEL</div>
         @if ($kind === 'recibir')
             <h1>Recibir turno</h1>
-            <p class="lead">Hola {{ auth()->user()->name }}. Antes de empezar, cuenta la caja chica y los productos. Al aceptar, lo que recibes queda a tu cargo.</p>
+            <p class="lead">Hola {{ auth()->user()->name }}. Revisa la caja chica y los productos: ya vienen con lo que dice el sistema, corrige solo lo que no calce. Al aceptar, lo que recibes queda a tu cargo.</p>
         @else
             <h1>Entregar turno</h1>
-            <p class="lead">Antes de salir, cuenta la caja chica y los productos que dejas.</p>
+            <p class="lead">Antes de salir, revisa la caja chica y los productos que dejas: ya vienen con lo que dice el sistema, corrige solo lo que no calce.</p>
         @endif
 
         @if ($errors->any())
@@ -61,17 +61,17 @@
             @csrf
             <h2>Caja chica</h2>
             <label class="big" for="counted_cash">Efectivo que hay en la caja</label>
-            <div class="money"><span>$</span><input type="number" id="counted_cash" name="counted_cash" min="0" step="1" inputmode="numeric" value="{{ old('counted_cash') }}" required autofocus></div>
-            <p class="hint">Cuenta billetes y monedas. Escribe solo números, sin puntos.</p>
+            <div class="money"><span>$</span><input type="number" id="counted_cash" name="counted_cash" min="0" step="1" inputmode="numeric" value="{{ old('counted_cash', $expectedCash) }}" required autofocus></div>
+            <p class="hint">Ya viene con lo que dice el sistema. Si al contar billetes y monedas da otra cifra, escríbela (solo números, sin puntos).</p>
 
             <h2>Productos</h2>
-            @if ($kind === 'entregar' && $products->isNotEmpty())
+            @if ($products->isNotEmpty())
                 <p class="hint" style="margin:0 0 6px;">Ya viene con lo que dice el sistema. Revisa cada uno y corrige solo si no calza con lo que ves.</p>
             @endif
             @forelse ($products as $product)
                 <div class="prod">
                     <label class="name" for="p{{ $product->id }}">{{ $product->name }}</label>
-                    <input type="number" id="p{{ $product->id }}" name="counts[{{ $product->id }}]" min="0" step="1" inputmode="numeric" value="{{ old('counts.'.$product->id, $kind === 'entregar' ? $product->stock : null) }}" required>
+                    <input type="number" id="p{{ $product->id }}" name="counts[{{ $product->id }}]" min="0" step="1" inputmode="numeric" value="{{ old('counts.'.$product->id, $product->stock) }}" required>
                 </div>
             @empty
                 <p class="empty">No hay productos con control de stock.</p>
