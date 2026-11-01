@@ -32,6 +32,8 @@
        invisible sobre el fondo oscuro del navbar. */
     .hh-navbar .hh-danger { color:#a87878; }
     .hh-navbar .hh-danger:hover { background:#2e1c1c; color:#e88a8a; }
+    .hh-shift-pending { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; padding:9px 16px; background:#3a2a10; border-bottom:1px solid #93641a; color:#ffd89a; font-size:13.5px; }
+    .hh-shift-pending a { background:#ff7918; color:#21170e; font-weight:700; text-decoration:none; padding:6px 12px; border-radius:6px; }
 </style>
 {{-- Se incrusta el CSS en vez de enlazarlo: al ser un archivo externo, la
      latencia de red (notoria en Render) dejaba una fraccion de segundo con
@@ -58,6 +60,9 @@
 </script>
 @include('partials.sidebar')
 <div class="hh-nav-wrap">
+    @if (! empty($shiftReceivePending))
+        <div class="hh-shift-pending">⚠ Te falta recibir el turno (contar caja y productos). <a href="{{ route('shift.receive') }}">Recibir turno ahora</a></div>
+    @endif
     <div class="hh-navbar">
         <span class="hh-brand">HH MOTEL</span>
         @php $u = auth()->user(); @endphp

@@ -36,6 +36,17 @@ class ShiftHandoverController extends Controller
         ]);
     }
 
+    /** Hay gente en la entrada: atiende primero y cuenta después (queda el aviso arriba). */
+    public function later(Request $request): RedirectResponse
+    {
+        $log = $request->user()->openShiftLog();
+        abort_unless($log, 404);
+        $request->session()->put('shift_receive_later', $log->id);
+
+        return redirect()->route($request->user()->homeRoute())
+            ->with('status', 'Listo, atiende tranquilo. Cuando puedas, aprieta "Recibir turno ahora" arriba para contar la caja y los productos.');
+    }
+
     public function store(Request $request, string $kind): RedirectResponse
     {
         abort_unless(in_array($kind, ['recibir', 'entregar'], true), 404);
@@ -70,6 +81,8 @@ class ShiftHandoverController extends Controller
 
             return redirect()->route('login')->with('status', 'Turno entregado. '.$summary);
         }
+
+        $request->session()->forget('shift_receive_later');
 
         return redirect()->route($request->user()->homeRoute())->with('status', 'Turno recibido. '.$summary);
     }

@@ -128,6 +128,7 @@ Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')-
 Route::middleware('auth')->group(function () {
     Route::get('/turno/recibir', [ShiftHandoverController::class, 'receive'])->name('shift.receive');
     Route::get('/turno/entregar', [ShiftHandoverController::class, 'deliver'])->name('shift.deliver');
+    Route::post('/turno/recibir/despues', [ShiftHandoverController::class, 'later'])->name('shift.later');
     Route::post('/turno/{kind}', [ShiftHandoverController::class, 'store'])->whereIn('kind', ['recibir', 'entregar'])->name('shift.store');
 });
 

@@ -78,6 +78,18 @@ class ShiftHandoverTest extends TestCase
         $this->get('/caja')->assertOk();
     }
 
+    public function test_the_host_can_attend_first_and_count_later_with_a_reminder(): void
+    {
+        $this->login();
+        $this->get('/turno/recibir')->assertSee('atender primero');
+
+        $this->post('/turno/recibir/despues')->assertRedirect(route('rooms.board'));
+        $this->get('/caja')->assertOk()->assertSee('Te falta recibir el turno');
+
+        $this->post('/turno/recibir', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]])->assertRedirect();
+        $this->get('/caja')->assertOk()->assertDontSee('Te falta recibir el turno');
+    }
+
     public function test_a_difference_needs_a_note_and_then_becomes_the_new_count(): void
     {
         $this->login();

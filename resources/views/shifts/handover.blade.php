@@ -31,6 +31,8 @@
         button.go { width:100%; margin-top:18px; background:var(--hh-accent); color:#21170e; border:none; padding:14px; border-radius:9px; font-size:16px; font-weight:750; cursor:pointer; }
         button.go:hover { background:var(--hh-accent-hover); }
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:11px 13px; border-radius:8px; margin-bottom:16px; font-size:13.5px; line-height:1.45; }
+        button.later { width:100%; margin-top:10px; background:transparent; color:#ddd; border:1px solid #3a3a3a; padding:12px; border-radius:9px; font-size:14.5px; font-weight:600; cursor:pointer; }
+        button.later:hover { border-color:var(--hh-accent); color:#fff; }
         .foot { display:flex; justify-content:space-between; align-items:center; margin-top:18px; font-size:13px; }
         .foot a, .foot button { color:#888; background:none; border:none; font:inherit; cursor:pointer; text-decoration:none; padding:0; }
         .foot a:hover, .foot button:hover { color:#ddd; }
@@ -82,6 +84,13 @@
 
             <button type="submit" class="go">{{ $kind === 'recibir' ? 'Acepto el turno' : 'Entregar turno y salir' }}</button>
         </form>
+
+        @if ($kind === 'recibir')
+            <form method="POST" action="{{ route('shift.later') }}">
+                @csrf
+                <button type="submit" class="later">🚪 Hay gente esperando — atender primero y contar después</button>
+            </form>
+        @endif
 
         <div class="foot">
             @if ($kind === 'entregar')

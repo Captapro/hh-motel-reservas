@@ -13,11 +13,14 @@ use Symfony\Component\HttpFoundation\Response;
  * chica y el stock (ShiftHandoverController). Un turno = un StaffShiftLog;
  * si la sesión sigue abierta de un día para otro y el turno anterior ya se
  * cerró solo, parte uno nuevo y tiene que volver a recibir.
+ * Si hay gente esperando puede dejar el conteo para después: trabaja normal
+ * y la barra de arriba le recuerda que le falta recibir el turno.
  */
 class EnsureShiftReceived
 {
     public function handle(Request $request, Closure $next): Response
     {
+        view()->share('shiftReceivePending', false);
         $user = $request->user();
         $route = $request->route();
 
@@ -32,6 +35,12 @@ class EnsureShiftReceived
             $received = ShiftHandover::where('staff_shift_log_id', $log->id)->where('kind', 'recibir')->exists();
         } catch (\Illuminate\Database\QueryException $e) {
             // Sin las tablas de turnos (migración pendiente) no se bloquea el trabajo.
+            return $next($request);
+        }
+
+        if (! $received && (int) $request->session()->get('shift_receive_later') === $log->id) {
+            view()->share('shiftReceivePending', true);
+
             return $next($request);
         }
 
