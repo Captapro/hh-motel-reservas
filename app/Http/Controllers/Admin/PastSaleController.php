@@ -139,6 +139,7 @@ class PastSaleController extends Controller
             'product_id' => ['nullable', 'required_without:custom_amount', 'exists:products,id'],
             'custom_description' => ['nullable', 'required_with:custom_amount', 'string', 'max:150'],
             'custom_amount' => ['nullable', 'integer', 'min:1'],
+            'notes' => ['nullable', 'string', 'max:255'],
             'quantity' => ['required', 'integer', 'min:1', 'max:20'],
             'sold_at' => ['required', 'date_format:H:i'],
             'payment_method' => ['required', 'in:'.implode(',', self::METHODS)],
@@ -168,14 +169,14 @@ class PastSaleController extends Controller
             ]);
             $addon->forceFill(['created_at' => $soldAt, 'updated_at' => $soldAt])->save();
             AuditLog::record($userId, 'reserva.consumo_desde_planilla', 'BookingAddon', $addon->id, null, $addon->toArray());
-            $this->pay($booking, $method, $amount, $v, $userId, $soldAt);
+            $this->pay($booking, $method, $amount, $v, $userId, $soldAt, $v['notes'] ?? null);
         });
 
         return redirect()->route('admin.past_sales.create')
             ->with('status', "Consumo agregado a {$booking->code}: {$name} ({$v['quantity']}) por $".number_format($amount, 0, ',', '.').' — sin descontar stock.');
     }
 
-    private function pay(Booking $booking, PaymentMethod $method, int $amount, array $v, int $userId, Carbon $at): void
+    private function pay(Booking $booking, PaymentMethod $method, int $amount, array $v, int $userId, Carbon $at, ?string $note = null): void
     {
         $payment = Payment::create([
             'booking_id' => $booking->id,
@@ -185,7 +186,7 @@ class PastSaleController extends Controller
             'voucher_number' => $v['voucher_number'] ?? null,
             'receipt_number' => $v['receipt_number'] ?? null,
             'registered_by' => $userId,
-            'notes' => 'Cargado desde planilla',
+            'notes' => $note ?: 'Cargado desde planilla',
         ]);
         // Con la hora real del cobro, para que la caja del día y el cruce con la máquina calcen.
         $payment->forceFill(['created_at' => $at, 'updated_at' => $at])->save();

@@ -106,6 +106,8 @@
                     <div><label>N° voucher</label><input name="voucher_number" maxlength="30"></div>
                     <div><label>N° boleta</label><input name="receipt_number" maxlength="30"></div>
                 </div>
+                <label>Nota del pago (opcional)</label>
+                <input name="notes" maxlength="255" value="{{ old('notes') }}" placeholder="Por defecto: Cargado desde planilla">
                 <div class="actions" style="margin-top:16px;"><button class="btn" type="submit">Agregar consumo</button></div>
             </form>
 

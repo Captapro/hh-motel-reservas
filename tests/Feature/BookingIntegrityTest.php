@@ -1541,10 +1541,11 @@ class BookingIntegrityTest extends TestCase
         // Un cobro libre (ej. la diferencia de una hora adicional) va con descripción y monto, sin producto.
         $this->post(route('admin.past_sales.addon'), [
             'booking_code' => $booking->code, 'custom_description' => 'Diferencia hora adicional HOT', 'custom_amount' => 5000,
-            'quantity' => 1, 'sold_at' => '12:40', 'payment_method' => 'debito', 'voucher_number' => '12',
+            'quantity' => 1, 'sold_at' => '12:40', 'payment_method' => 'debito', 'voucher_number' => '12', 'notes' => 'Ajuste de prueba',
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(51500, $booking->fresh()->paidAmount());
         $this->assertSame('Diferencia hora adicional HOT', $booking->addons()->latest('id')->first()->description);
+        $this->assertSame('Ajuste de prueba', Payment::latest('id')->first()->notes);
         // Sin producto ni monto no se carga nada.
         $this->post(route('admin.past_sales.addon'), ['booking_code' => $booking->code, 'quantity' => 1, 'sold_at' => '12:40', 'payment_method' => 'debito'])
             ->assertSessionHasErrors('product_id');
