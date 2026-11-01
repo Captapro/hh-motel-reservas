@@ -210,6 +210,11 @@
         .overdue-room .pill-ocupada { background:#7d2635; color:#fff; }
         @keyframes overdue-warning { 0%,100% { opacity:1; text-shadow:0 0 0 rgba(255,82,82,0); } 50% { opacity:.45; text-shadow:0 0 10px rgba(255,82,82,.9); } }
         @media (prefers-reduced-motion: reduce) { .overdue-room .overtime { animation:none; } }
+        /* Por vencer: 10 minutos o menos para la hora de salida. */
+        .ending-soon { border-color:#e8c76f !important; box-shadow:0 0 0 2px rgba(232,199,111,.25), 0 8px 22px rgba(232,199,111,.12); }
+        .ending-soon .ending-soon-text, .compact .card .eta.ending-soon-text { color:#ffcf6e; font-weight:800; animation: overdue-warning 1.5s ease-in-out infinite; }
+        .ending-soon .pill-ocupada { background:#6b5a1e; color:#fff; }
+        @media (prefers-reduced-motion: reduce) { .ending-soon .ending-soon-text { animation:none; } }
         .code { font-family: ui-monospace, monospace; font-size: 11px; margin-top:2px; color:#888; }
         a.consumo-btn { display:block; text-align:center; margin-top:6px; background:#1c2f3a; border:1px solid #3a5a72; color:#7fbcdc; text-decoration:none; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; }
         a.consumo-btn:hover { border-color:#7fbcdc; }
@@ -284,7 +289,7 @@
         .compact .card .cat { order:4; flex:0 0 auto; margin:0; }
         .compact .card .cat-label { display:none; }
         .compact .card .eta { order:5; flex:1 1 0; min-width:0; margin:0; text-align:right; }
-        .compact .card .eta.aseo-help, .compact .card .eta[style] { flex:1 1 100%; text-align:left; }
+        .compact .card .eta.aseo-help, .compact .card .eta[style], .compact .card .eta.ending-soon-text { flex:1 1 100%; text-align:left; }
         .compact .card .code { order:5; flex:1 1 100%; margin:0; }
         .compact .card a.reserve-btn { order:7; flex:1 1 0; min-width:0; margin:0; padding:5px 4px; font-size:11px; white-space:nowrap; }
         .compact .card a.consumo-btn, .compact .card a.checkout-btn, .compact .card .checkin-btn { order:7; flex:1 1 100%; margin:0; padding:5px; }
@@ -813,6 +818,24 @@
 <script>
     // Se recarga solo cada 30 s, salvo mientras alguien usa el chat de Ayuda
     // (window.hhHoldRefresh lo marca partials/help-widget): recargar lo cerraría.
+    // Suena una vez por estadía cuando entra en "por vencer" (el tablero se recarga cada 30 s).
+    (function () {
+        let warned = [];
+        try { warned = JSON.parse(localStorage.getItem('hh-ending-soon-warned') || '[]'); } catch (e) {}
+        const fresh = [...document.querySelectorAll('.card[data-ending-soon]')].map(c => c.dataset.endingSoon).filter(code => !warned.includes(code));
+        if (!fresh.length) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [0, 0.35].forEach(function (at) {
+                const osc = ctx.createOscillator(), gain = ctx.createGain();
+                osc.frequency.value = 880; gain.gain.value = 0.15;
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + at); osc.stop(ctx.currentTime + at + 0.2);
+            });
+        } catch (e) {}
+        try { localStorage.setItem('hh-ending-soon-warned', JSON.stringify(warned.concat(fresh).slice(-200))); } catch (e) {}
+    })();
+
     setInterval(function () { if (!window.hhHoldRefresh) window.location.reload(); }, 30000);
 </script>
 </body>
