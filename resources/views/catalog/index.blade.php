@@ -133,6 +133,11 @@
         .photo-modal.is-open, .video-modal.is-open { display:flex; }
         .photo-modal img { max-width:min(1000px, 100%); max-height:82vh; object-fit:contain; border-radius:14px; }
         .video-modal video { max-width:min(1000px, 100%); max-height:82vh; border-radius:14px; }
+        .photo-nav { position:fixed; top:50%; transform:translateY(-50%); border:0; background:#ffffff26; color:#fff; width:48px; height:48px; border-radius:999px; font-size:26px; line-height:1; cursor:pointer; z-index:91; }
+        .photo-nav:hover { background:#ffffff40; }
+        .photo-nav.prev { left:10px; } .photo-nav.next { right:10px; }
+        .photo-nav[hidden], .photo-count[hidden] { display:none; }
+        .photo-count { position:fixed; bottom: calc(18px + var(--safe-b)); left:50%; transform:translateX(-50%); color:#fff; background:#ffffff26; border-radius:999px; padding:6px 14px; font-size:14px; font-weight:700; z-index:91; }
         .photo-close { position:fixed; top: calc(14px + var(--safe-t)); right:14px; border:0; background:#ffffff26; color:#fff; border-radius:999px; min-height:44px; padding:0 18px; font-weight:700; font-size:16px; cursor:pointer; z-index:91; }
     </style>
 </head>
@@ -336,7 +341,10 @@
 
     <div class="photo-modal" id="photo-modal" role="dialog" aria-modal="true" aria-label="Vista ampliada de la foto">
         <button class="photo-close" type="button" id="photo-close">Cerrar ✕</button>
+        <button class="photo-nav prev" type="button" id="photo-prev" aria-label="Foto anterior">‹</button>
         <img id="photo-modal-image" src="" alt="Foto ampliada">
+        <button class="photo-nav next" type="button" id="photo-next" aria-label="Foto siguiente">›</button>
+        <div class="photo-count" id="photo-count"></div>
     </div>
     <div class="video-modal" id="video-modal" role="dialog" aria-modal="true" aria-label="Reproductor de video">
         <button class="photo-close" type="button" id="video-close">Cerrar ✕</button>
@@ -345,12 +353,44 @@
     <script>
         const photoModal = document.getElementById('photo-modal');
         const photoModalImage = document.getElementById('photo-modal-image');
-        function closePhoto() { photoModal.classList.remove('is-open'); photoModalImage.src = ''; }
+        // Galería: con la foto abierta se pasa a la siguiente con las flechas, deslizando o con el teclado.
+        const photoPrev = document.getElementById('photo-prev');
+        const photoNext = document.getElementById('photo-next');
+        const photoCount = document.getElementById('photo-count');
+        let gallery = [];
+        let galleryIndex = 0;
+        function showPhoto(i) {
+            if (!gallery.length) return;
+            galleryIndex = (i + gallery.length) % gallery.length;
+            photoModalImage.src = gallery[galleryIndex];
+            const many = gallery.length > 1;
+            photoPrev.hidden = photoNext.hidden = photoCount.hidden = !many;
+            photoCount.textContent = (galleryIndex + 1) + ' / ' + gallery.length;
+        }
+        function closePhoto() { photoModal.classList.remove('is-open'); photoModalImage.src = ''; gallery = []; }
         document.querySelectorAll('.photo-trigger').forEach((link) => link.addEventListener('click', (event) => {
             event.preventDefault();
-            photoModalImage.src = link.dataset.photo;
+            const group = link.closest('[data-slides]');
+            const links = group ? Array.from(group.querySelectorAll('.photo-trigger')) : [link];
+            gallery = links.map((l) => l.dataset.photo);
+            showPhoto(links.indexOf(link));
             photoModal.classList.add('is-open');
         }));
+        photoPrev.addEventListener('click', () => showPhoto(galleryIndex - 1));
+        photoNext.addEventListener('click', () => showPhoto(galleryIndex + 1));
+        let touchX = null;
+        photoModal.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+        photoModal.addEventListener('touchend', (e) => {
+            if (touchX === null) return;
+            const dx = e.changedTouches[0].clientX - touchX;
+            touchX = null;
+            if (Math.abs(dx) > 40) showPhoto(galleryIndex + (dx < 0 ? 1 : -1));
+        });
+        document.addEventListener('keydown', (event) => {
+            if (!photoModal.classList.contains('is-open')) return;
+            if (event.key === 'ArrowRight') showPhoto(galleryIndex + 1);
+            if (event.key === 'ArrowLeft') showPhoto(galleryIndex - 1);
+        });
         document.getElementById('photo-close').addEventListener('click', closePhoto);
         photoModal.addEventListener('click', (event) => { if (event.target === photoModal) closePhoto(); });
 
