@@ -96,11 +96,31 @@
         .addon-combo-name { font-size:13.5px; font-weight:700; color:#fff; line-height:1.2; }
         .addon-combo-items { font-size:11px; color:#9a9a9a; line-height:1.3; min-height:26px; }
         .addon-combo-price { font-size:16px; font-weight:800; color:#ff7918; margin:1px 0 3px; }
-        .addon-cols { column-count:2; column-gap:22px; }
-        .addon-block { break-inside:avoid; margin-bottom:4px; }
-        .addon-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; }
-        .addon-name { font-size:13px; font-weight:600; color:#f1f1f1; line-height:1.25; }
-        .addon-price { font-size:11px; color:#8d8f94; margin-top:1px; }
+        .addon-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:10px 0 4px; }
+        .addon-tools input[type=search] { flex:1 1 220px; min-width:0; background:#111; border:1px solid #3a3a3a; color:#f1f1f1; padding:9px 12px; border-radius:8px; font-size:14px; }
+        .addon-tools input[type=search]:focus { outline:none; border-color:#ff7918; }
+        .addon-chips { display:flex; flex-wrap:wrap; gap:6px; }
+        .addon-chips button { width:auto; margin:0; padding:6px 12px; border-radius:999px; background:#222; border:1px solid #3a3a3a; color:#bbb; font-size:12.5px; font-weight:600; cursor:pointer; }
+        .addon-chips button.on { background:#ff7918; border-color:#ff7918; color:#21170e; }
+        .addon-show-out { display:flex; align-items:center; gap:6px; font-size:12.5px; color:#999; cursor:pointer; margin:0; }
+        .addon-show-out input { width:auto; margin:0; }
+        .addon-block { margin-bottom:6px; }
+        .addon-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(175px, 1fr)); gap:8px; }
+        .addon-tile { display:flex; flex-direction:column; gap:6px; padding:10px 11px; background:#1f1f1f; border:1px solid #333; border-radius:10px; }
+        .addon-tile:has(.qty.has) { border-color:#ff7918; background:#2a1d12; }
+        .addon-tile.low .addon-stock { color:#f0b84b; }
+        .addon-tile.out, .addon-combo.out { display:none; }
+        .show-out .addon-tile.out, .show-out .addon-combo.out { display:flex; opacity:.45; }
+        .addon-tile.hide, .addon-combo.hide, .addon-block.hide { display:none !important; }
+        .addon-name { font-size:13.5px; font-weight:600; color:#f1f1f1; line-height:1.25; min-height:34px; }
+        .addon-meta { display:flex; justify-content:space-between; align-items:baseline; gap:6px; }
+        .addon-price { font-size:15px; font-weight:800; color:#ff7918; }
+        .addon-stock { font-size:11.5px; color:#8d8f94; }
+        .addon-tile .qty { justify-content:space-between; }
+        .addon-tile .qty button { width:34px !important; height:32px !important; }
+        .addon-empty { color:#888; font-size:13px; margin:8px 0; }
+        .addon-bar { position:sticky; bottom:0; z-index:5; display:flex; justify-content:flex-end; align-items:center; gap:14px; margin-top:12px; padding:10px 0 4px; background:linear-gradient(to top, #1a1a1a 75%, transparent); }
+        .addon-bar .addon-submit { margin:0; }
         .addon-panel .qty { display:flex; align-items:center; gap:2px; flex:none; }
         .addon-panel .qty button { width:28px; height:28px; margin:0; padding:0; border-radius:7px; background:#262626; border:1px solid #444; color:#ddd; font-size:17px; line-height:1; font-weight:600; cursor:pointer; }
         .addon-panel .qty button:hover:not(:disabled) { border-color:#ff7918; color:#ff7918; }
@@ -117,7 +137,7 @@
         .addon-other summary { cursor:pointer; color:#999; font-size:12.5px; list-style:none; }
         .addon-other summary::-webkit-details-marker { display:none; }
         .addon-other summary:hover { color:#ff7918; }
-        @media (max-width: 760px) { .addon-cols { column-count:1; } }
+        @media (max-width: 760px) { .addon-grid { grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); } }
         a.finalize-btn { display:block; text-align:center; margin-top: 16px; background:#2a2a2a; border:1px solid #444; color:#eee; padding:13px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none; }
         .finish-blocked { margin-top:16px; padding:14px 16px; border:1px solid #b87822; border-radius:8px; background:#fff4df; color:#74480f; display:flex; flex-direction:column; gap:4px; text-align:center; }
         .finish-blocked span { font-size:13px; }
@@ -154,6 +174,7 @@
         .pill-status { font-size:11px; letter-spacing:.03em; }
         .page-head .col-actions { margin:0; justify-content:flex-end; }
         .layout { grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1.1fr); gap:16px; }
+        @media (min-width: 1700px) { .layout { grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,2fr); } }
         .layout .card { padding:14px 18px; }
         .layout .row { padding:6px 0; font-size:14px; }
         @media (max-width: 1280px) { .layout { grid-template-columns: 1fr 1fr; } .layout > .col:nth-child(3) { grid-column: 1 / -1; } }
@@ -506,13 +527,13 @@
                 @if ($booking->checked_in_at && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
                     <form method="POST" action="{{ route('addons.store', $booking->code) }}" class="addon-panel" id="addon-panel">
                         @csrf
-                        <div class="addon-head"><b>Agregar al consumo</b><span class="addon-total" id="addon-total">Nada seleccionado</span></div>
+                        <div class="addon-head"><b>Agregar al consumo</b></div>
 
                         @if ($combos->isNotEmpty())
                             <div class="addon-cat">Combos</div>
                             <div class="addon-combos">
                                 @foreach ($combos as $combo)
-                                    <div class="addon-combo {{ $combo->isOutOfStock() ? 'out' : '' }}">
+                                    <div class="addon-combo addon-tile-combo {{ $combo->isOutOfStock() ? 'out' : '' }}" data-name="{{ mb_strtolower($combo->name) }}">
                                         <div class="addon-combo-name">{{ $combo->name }}</div>
                                         <div class="addon-combo-items">{{ $combo->description ?: $combo->itemsLabel() }}</div>
                                         <div class="addon-combo-price">${{ number_format($combo->price, 0, ',', '.') }}{!! $combo->isOutOfStock() ? ' <small>agotado</small>' : '' !!}</div>
@@ -526,15 +547,36 @@
                             </div>
                         @endif
 
-                        <div class="addon-cols">
-                            @foreach ($products->groupBy('category') as $category => $items)
-                                <div class="addon-block">
-                                    <div class="addon-cat">{{ $category ?? 'Otros' }}</div>
+                        @php
+                            $catLabels = ['bebida' => 'Bebidas', 'snack' => 'Snacks', 'sexshop' => 'Sexshop', 'servicio' => 'Servicios', 'cortesia' => 'Cortesía'];
+                            $productGroups = $products->sortBy(fn ($p) => [$p->isOutOfStock() ? 1 : 0, $p->display_order, $p->name])->groupBy(fn ($p) => $p->category ?: 'otros');
+                            $outCount = $products->filter->isOutOfStock()->count() + $combos->filter->isOutOfStock()->count();
+                        @endphp
+                        <div class="addon-tools">
+                            <input type="search" id="addon-search" placeholder="🔍 Buscar producto…" autocomplete="off">
+                            <div class="addon-chips" id="addon-chips">
+                                <button type="button" class="on" data-cat="">Todos</button>
+                                @foreach ($productGroups->keys() as $cat)
+                                    <button type="button" data-cat="{{ $cat }}">{{ $catLabels[$cat] ?? ucfirst($cat) }}</button>
+                                @endforeach
+                            </div>
+                            @if ($outCount)
+                                <label class="addon-show-out"><input type="checkbox" id="addon-show-out"> Ver agotados ({{ $outCount }})</label>
+                            @endif
+                        </div>
+
+                        @foreach ($productGroups as $cat => $items)
+                            <div class="addon-block" data-cat="{{ $cat }}">
+                                <div class="addon-cat">{{ $catLabels[$cat] ?? ucfirst($cat) }}</div>
+                                <div class="addon-grid">
                                     @foreach ($items as $product)
-                                        <div class="addon-row">
-                                            <div>
-                                                <div class="addon-name">{{ $product->name }}</div>
-                                                <div class="addon-price">${{ number_format($product->price, 0, ',', '.') }}@if ($product->track_inventory) · {{ $product->isOutOfStock() ? 'agotado' : $product->stock.' disp.' }}@endif</div>
+                                        <div class="addon-tile {{ $product->isOutOfStock() ? 'out' : ($product->isLowStock() ? 'low' : '') }}" data-name="{{ mb_strtolower($product->name) }}">
+                                            <div class="addon-name">{{ $product->name }}</div>
+                                            <div class="addon-meta">
+                                                <span class="addon-price">${{ number_format($product->price, 0, ',', '.') }}</span>
+                                                @if ($product->track_inventory)
+                                                    <span class="addon-stock">{{ $product->isOutOfStock() ? 'Agotado' : $product->stock.' disp.' }}</span>
+                                                @endif
                                             </div>
                                             <div class="qty">
                                                 <button type="button" class="q-minus" aria-label="Menos" @disabled($product->isOutOfStock())>−</button>
@@ -544,10 +586,14 @@
                                         </div>
                                     @endforeach
                                 </div>
-                            @endforeach
-                        </div>
+                            </div>
+                        @endforeach
+                        <p class="addon-empty" id="addon-empty" hidden>No hay productos con ese nombre.</p>
 
-                        <button type="submit" class="addon-submit" id="addon-submit" disabled>Agregar al consumo</button>
+                        <div class="addon-bar">
+                            <span class="addon-total" id="addon-total">Nada seleccionado</span>
+                            <button type="submit" class="addon-submit" id="addon-submit" disabled>Agregar al consumo</button>
+                        </div>
                     </form>
 
                     <div class="addon-more">
@@ -693,6 +739,38 @@
                 box.querySelector('.q-plus').addEventListener('click', () => step(1));
             });
             refresh();
+
+            // Buscador, categorías y agotados: solo esconden, lo elegido no se pierde.
+            const search = document.getElementById('addon-search');
+            const chips = document.getElementById('addon-chips');
+            const showOut = document.getElementById('addon-show-out');
+            let cat = '';
+            function filter() {
+                const q = (search.value || '').trim().toLowerCase();
+                let visible = 0;
+                form.querySelectorAll('.addon-block').forEach((block) => {
+                    let any = false;
+                    block.querySelectorAll('.addon-tile').forEach((t) => {
+                        const ok = (!cat || block.dataset.cat === cat) && (!q || t.dataset.name.includes(q));
+                        t.classList.toggle('hide', !ok);
+                        if (ok && (!t.classList.contains('out') || form.classList.contains('show-out'))) any = true;
+                    });
+                    block.classList.toggle('hide', !any);
+                    if (any) visible++;
+                });
+                form.querySelectorAll('.addon-combo').forEach((c) => c.classList.toggle('hide', !!cat || (q && !c.dataset.name.includes(q))));
+                document.getElementById('addon-empty').hidden = visible > 0;
+            }
+            search.addEventListener('input', filter);
+            chips.addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (!b) return;
+                cat = b.dataset.cat;
+                chips.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+                filter();
+            });
+            if (showOut) showOut.addEventListener('change', () => { form.classList.toggle('show-out', showOut.checked); filter(); });
+            filter();
         })();
     </script>
 @include('partials.combo-choices')
