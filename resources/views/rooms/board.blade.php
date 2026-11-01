@@ -256,8 +256,10 @@
         .card a.bookings-btn.has-bookings:hover { border-color:#e8c76f; background:#463d20; }
         .bookings-btn.empty { background:transparent; border:1px dashed #333; color:#666; font-weight:500; }
         .bookings-btn.empty:hover { border-color:#555; color:#999; }
-        .copy-link-btn { display:block; width:100%; box-sizing:border-box; text-align:center; margin-top:8px; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; background:#1c2f3a; border:1px solid #3a5a72; color:#7fbcdc; }
-        .copy-link-btn:hover { border-color:#7fbcdc; background:#213847; }
+        .copy-link-btn { display:block; width:100%; box-sizing:border-box; text-align:center; margin-top:8px; padding:9px; border-radius:7px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; background:#ff7918; border:1px solid #ff7918; color:#21170e; }
+        .copy-link-btn:hover { background:#ee6909; border-color:#ee6909; }
+        #catalog-link-btn { background:#ff7918; border-color:#ff7918; color:#21170e; font-weight:700; }
+        #catalog-link-btn:hover { background:#ee6909; }
 
         /* Vista compacta — para cuando hay muchos Playrooms y hay que ver más de un vistazo. */
         .compact-toggle { background:#1c1c1c; border:1px solid #333; color:#ccc; border-radius:7px; padding:8px 13px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
@@ -326,6 +328,7 @@
         .compact .card .aseo-ready-btn { font-size:11px; padding:6px; }
         .compact .card .bookings-btn, .compact .card .copy-link-btn, .compact .card summary { display:inline-flex; align-items:center; justify-content:center; gap:3px; min-width:26px; height:26px; padding:0 6px !important; background:transparent !important; border:1px solid transparent !important; border-radius:6px; color:#7d7d7d !important; font-size:11px; font-weight:600; box-shadow:none; }
         .compact .card .bookings-btn:hover, .compact .card .copy-link-btn:hover, .compact .card summary:hover { background:#262626 !important; color:#e5e5e5 !important; }
+        .compact .card .copy-link-btn { color:#ff7918 !important; }
         .compact .card a.bookings-btn.has-bookings { color:#e8c76f !important; }
         .compact .card details[open] summary { color:#ff9a4d !important; }
         .compact .card .sm svg { width:14px; height:14px; display:block; }
