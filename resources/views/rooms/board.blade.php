@@ -404,6 +404,27 @@
         .page-grid.no-sidebar { grid-template-columns: minmax(0, 1fr); }
         .section { margin-bottom:22px; }
         .section-head { margin-bottom:10px; }
+        /* Monitor vertical (27" girado, zoom 100%): sobra alto y falta ancho, así que la vista
+           compacta usa menos columnas (hhSyncCompactWidth pide ~270px) y tarjetas más grandes y legibles. */
+        @media (orientation: portrait) and (min-width: 1000px) {
+            .compact .page-grid .main-col .grid, .compact .grid { gap: 12px; }
+            .compact .card, .compact .page-grid .main-col .card { padding:14px 16px 12px; gap:8px; border-left-width:4px; border-radius:12px; }
+            .compact .card-head b { font-size:19px; }
+            .compact .card .pill { font-size:11.5px; padding:3px 9px; }
+            .compact .card .cat { font-size:13.5px; gap:6px; }
+            .compact .card .cat::before { width:8px; height:8px; }
+            .compact .card .eta, .compact .card .eta.aseo-help { font-size:13.5px; }
+            .compact .card .code { font-size:12px; }
+            .compact .card a.reserve-btn { font-size:14px; padding:9px 10px; border-radius:8px; }
+            .compact .card a.consumo-btn, .compact .card a.checkout-btn, .compact .card .checkin-btn, .compact .card .aseo-ready-btn { font-size:13.5px; padding:9px; }
+            .compact .card .bookings-btn, .compact .card .copy-link-btn, .compact .card summary { min-width:36px; height:36px; font-size:13px; }
+            .compact .card .sm svg { width:19px; height:19px; }
+            .compact .aseo-cleaner-input { font-size:13px; padding:8px 9px; }
+            .compact details select, .compact details button { font-size:13px; padding:8px; }
+            .section-head h2 { font-size:16px; }
+            .section-head .count { font-size:14px; }
+            .cat-filter button { font-size:13.5px; padding:8px 15px; }
+        }
 </style>
     <script>
         // Tres niveles de densidad: normal → compacta → chips → normal.
@@ -656,7 +677,8 @@
             if (!root.classList.contains('compact') || !box) { root.style.removeProperty('--hh-card-w'); return; }
             const cs = getComputedStyle(box);
             const inner = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-            const gap = 10, min = 200;
+            const portrait = window.matchMedia('(orientation: portrait) and (min-width: 1000px)').matches;
+            const gap = portrait ? 12 : 10, min = portrait ? 270 : 200;
             const cols = Math.max(1, Math.floor((inner + gap) / (min + gap)));
             root.style.setProperty('--hh-card-w', Math.floor((inner - gap * (cols - 1)) / cols) + 'px');
         }
