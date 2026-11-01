@@ -1497,6 +1497,53 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame($customer->id, Booking::firstOrFail()->customer_id);
     }
 
+    public function test_a_planilla_sale_is_loaded_finished_and_paid_without_touching_the_room(): void
+    {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php', '2026_08_19_150001_add_inventory_to_products_table.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        $this->travelTo(Carbon::parse('2026-10-05 15:00', 'America/Santiago'));
+        $debit = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        $water = Product::create(['name' => 'Agua con gas', 'category' => 'bebida', 'price' => 1500, 'track_inventory' => true, 'stock' => 5, 'low_stock_threshold' => 1, 'display_order' => 1, 'is_active' => true]);
+        $this->room->update(['operational_status' => 'aseo']);
+        $sale = [
+            'room_id' => $this->room->id, 'date' => '2026-10-05', 'start_time' => '10:45', 'end_time' => '13:30',
+            'guests_count' => 2, 'customer_name' => 'Cliente Planilla', 'document_type' => 'rut', 'document_number' => '12.345.678-5',
+            'amount' => 45000, 'payment_method' => 'debito', 'voucher_number' => '11',
+        ];
+
+        // Una estadía que todavía no termina no es una venta pasada.
+        $this->post(route('admin.past_sales.store'), ['end_time' => '16:00'] + $sale)->assertSessionHasErrors('end_time');
+
+        $this->post(route('admin.past_sales.store'), $sale)->assertRedirect()->assertSessionHasNoErrors();
+        $booking = Booking::sole();
+        $this->assertSame('FINALIZADA', $booking->booking_status);
+        $this->assertSame('PAGADA', $booking->payment_status);
+        $this->assertSame(165, $booking->duration_minutes);
+        $this->assertNotNull($booking->review_requested_at);
+        $payment = Payment::sole();
+        $this->assertSame('11', $payment->voucher_number);
+        $this->assertSame($debit->id, $payment->payment_method_id);
+        $this->assertTrue($payment->created_at->eq(Carbon::parse('2026-10-05 10:45', 'America/Santiago')));
+        $this->assertSame('aseo', $this->room->fresh()->operational_status);
+
+        // Cargarla dos veces choca con la que ya está.
+        $this->post(route('admin.past_sales.store'), $sale)->assertSessionHasErrors('room_id');
+        $this->assertSame(1, Booking::count());
+
+        // El consumo va con su propio pago y no descuenta stock (el conteo del turno ya lo refleja).
+        $this->post(route('admin.past_sales.addon'), [
+            'booking_code' => $booking->code, 'product_id' => $water->id, 'quantity' => 1, 'sold_at' => '11:20',
+            'payment_method' => 'debito', 'voucher_number' => '12',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(46500, $booking->fresh()->paidAmount());
+        $this->assertSame(5, $water->fresh()->stock);
+
+        // Recepción no puede cargar ventas pasadas.
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->get(route('admin.past_sales.create'))->assertForbidden();
+    }
+
     public function test_walk_in_booking_goes_to_payment_then_check_in(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);

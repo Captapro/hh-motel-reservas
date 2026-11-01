@@ -343,6 +343,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
     Route::middleware('role:administrador')->group(function () {
         // Historial de la cuenta de Mercado Pago cruzado con el sistema.
         Route::get('/mercado-pago', [App\Http\Controllers\Admin\MercadoPagoController::class, 'index'])->name('mercadopago.index');
+        // Ventas que quedaron en la planilla en vez del sistema.
+        Route::get('/venta-pasada', [App\Http\Controllers\Admin\PastSaleController::class, 'create'])->name('past_sales.create');
+        Route::post('/venta-pasada', [App\Http\Controllers\Admin\PastSaleController::class, 'store'])->name('past_sales.store');
+        Route::post('/venta-pasada/consumo', [App\Http\Controllers\Admin\PastSaleController::class, 'storeAddon'])->name('past_sales.addon');
         Route::get('/personal', [StaffController::class, 'index'])->name('staff.index');
         Route::post('/personal', [StaffController::class, 'store'])->name('staff.store');
         Route::put('/personal/{staff}', [StaffController::class, 'update'])->name('staff.update');

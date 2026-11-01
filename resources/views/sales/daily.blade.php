@@ -98,7 +98,7 @@
     <div class="topline">
         <div>
             <h1>Venta del día — {{ ucfirst($day->locale('es')->isoFormat('dddd D [de] MMMM')) }}</h1>
-            <p class="sub" style="margin-bottom:0;">Estadías que empiezan este día, solo las pagadas completas cuentan como venta · <a href="{{ route('sales.monthly', $day->format('Y-m')) }}">ver el mes completo →</a> · <a href="{{ route('cash.show', $day->toDateString()) }}">ver la caja de este día →</a></p>
+            <p class="sub" style="margin-bottom:0;">Estadías que empiezan este día, solo las pagadas completas cuentan como venta · <a href="{{ route('sales.monthly', $day->format('Y-m')) }}">ver el mes completo →</a> · <a href="{{ route('cash.show', $day->toDateString()) }}">ver la caja de este día →</a>@if (auth()->user()?->isAdministrador()) · <a href="{{ route('admin.past_sales.create') }}">+ cargar venta de planilla</a>@endif</p>
         </div>
         <div class="nav-day">
             <a href="{{ route('sales.daily', $day->copy()->subDay()->toDateString()) }}">← Día anterior</a>
