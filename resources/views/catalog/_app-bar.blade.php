@@ -1,7 +1,7 @@
 @php
     $appBack = $appBack ?? null;
     $appTitle = $appTitle ?? null;
-    $appWa = 'https://wa.me/'.\App\Http\Controllers\CatalogController::WHATSAPP_NUMBER.'?text='.rawurlencode('Hola! Quiero reservar un Playroom en HH.');
+    $appWa = \App\Http\Controllers\CatalogController::whatsappUrl();
     $appHasOffers = $appHasOffers ?? false;
 @endphp
 <header class="app-bar">

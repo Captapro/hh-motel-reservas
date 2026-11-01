@@ -18,6 +18,14 @@ class CatalogController extends Controller
      */
     public const WHATSAPP_NUMBER = '56977683108';
 
+    /** Mensaje que ya va escrito al abrir WhatsApp desde el catálogo: el cliente completa y envía. */
+    public const WHATSAPP_MESSAGE = "Hola! 👋 Vengo del catálogo de HH Motel y quiero reservar un Playroom.\n\n📅 Día: \n🕐 Hora de llegada: \n⏱️ Por cuántas horas: \n\n¿Tienen disponibilidad?";
+
+    public static function whatsappUrl(?string $message = null): string
+    {
+        return 'https://wa.me/'.self::WHATSAPP_NUMBER.'?text='.rawurlencode($message ?? self::WHATSAPP_MESSAGE);
+    }
+
     public function index(): View
     {
         $today = Carbon::today();
@@ -99,14 +107,14 @@ class CatalogController extends Controller
                         'rooms' => $offer->rooms->filter(fn ($room) => $room->room_category_id === $category->id)->map(fn ($room) => ['id' => $room->id, 'name' => $room->name, 'photo' => collect($room->photos ?? [])->first() ?: $photos->first()])->values()->all(),
                     ] : null,
                     'salesTip' => $category->sales_tip ?: 'Conoce esta experiencia HH.',
-                    'whatsappUrl' => 'https://wa.me/'.self::WHATSAPP_NUMBER.'?text='.rawurlencode("Hola! Tengo una duda sobre el Playroom {$category->name} en HH."),
+                    'whatsappUrl' => self::whatsappUrl("Hola! 👋 Vi el Playroom {$category->name} en el catálogo de HH Motel y quiero reservarlo.\n\n📅 Día: \n🕐 Hora de llegada: \n⏱️ Por cuántas horas: \n\n¿Está disponible?"),
                 ];
             });
 
         return view('catalog.index', [
             'categories' => $categories,
             'coupons' => $coupons,
-            'whatsappUrl' => 'https://wa.me/'.self::WHATSAPP_NUMBER.'?text='.rawurlencode('Hola! Quiero reservar un Playroom en HH.'),
+            'whatsappUrl' => self::whatsappUrl(),
         ]);
     }
 
