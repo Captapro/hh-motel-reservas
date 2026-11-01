@@ -426,7 +426,7 @@
         </div>
         <div class="topline-toolbar">
             <a class="compact-toggle" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
-            <button type="button" class="compact-toggle" id="catalog-link-btn" data-room-link="{{ route('catalog.index') }}" data-room-text="Aquí puedes ver todos nuestros Playrooms con fotos y precios, elegir día y hora, y reservar pagando en línea al tiro 👇" onclick="hhCopyRoomLink(this)">Copiar link del catálogo</button>
+            <button type="button" class="compact-toggle" id="catalog-link-btn" data-room-link="{{ route('catalog.index') }}" data-room-text="Aquí puedes ver todos nuestros Playrooms con fotos y precios, elegir día y hora, y dejar tu reserva confirmada con pago en línea 👇" onclick="hhCopyRoomLink(this)">Copiar link del catálogo</button>
             <div class="wing-filter" id="wing-filter" role="group" aria-label="Filtrar por ala">
                 <button type="button" data-wing="todas" onclick="hhSetWing('todas')">Todas las alas</button>
                 <button type="button" data-wing="norte" onclick="hhSetWing('norte')">Ala norte</button>
