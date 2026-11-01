@@ -179,6 +179,11 @@
         .layout .row { padding:6px 0; font-size:14px; }
         @media (max-width: 1280px) { .layout { grid-template-columns: 1fr 1fr; } .layout > .col:nth-child(3) { grid-column: 1 / -1; } }
         @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+        /* Monitor vertical: datos y cobro arriba lado a lado; consumos abajo a todo el ancho, con más productos por fila. */
+        @media (orientation: portrait) and (min-width: 761px) {
+            .layout { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+            .layout > .col:nth-child(3) { grid-column: 1 / -1; }
+        }
     </style>
 </head>
 <body>
