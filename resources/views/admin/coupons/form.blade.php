@@ -105,6 +105,11 @@
             Acumulable con otras promociones
         </label>
 
+        <label style="display:flex; align-items:center; gap:8px; margin-top:16px;">
+            <input type="checkbox" name="internal_only" value="1" style="width:auto;" @checked(old('internal_only', $coupon->exists && ! $coupon->is_public))>
+            Uso interno: no mostrar en el catálogo público (solo recepción lo escribe)
+        </label>
+
         <label>Estado</label>
         <select name="is_active">
             <option value="1" @selected(old('is_active', $coupon->is_active ?? true))>Activo</option>

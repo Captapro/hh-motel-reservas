@@ -291,6 +291,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::post('/cupones', [CouponController::class, 'store'])->name('coupons.store');
         Route::get('/cupones/{coupon}/editar', [CouponController::class, 'edit'])->name('coupons.edit');
         Route::put('/cupones/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
+        Route::delete('/cupones/{coupon}', [CouponController::class, 'destroy'])->name('coupons.destroy');
     }); // fin role:administrador
 
     // Ver el stock queda para recepción (lo necesitan para saber qué ofrecer);

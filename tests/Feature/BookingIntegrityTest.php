@@ -1543,6 +1543,21 @@ class BookingIntegrityTest extends TestCase
             ->get(route('admin.past_sales.create'))->assertForbidden();
     }
 
+    public function test_an_unused_coupon_can_be_deleted_and_a_used_one_is_kept_for_history(): void
+    {
+        (require database_path('migrations/2026_11_01_030000_add_is_public_to_coupons.php'))->up();
+        $unused = Coupon::create(['code' => 'BORRAME', 'internal_name' => 'Sin uso', 'discount_type' => 'percentage', 'discount_value' => 10, 'is_active' => true]);
+        $used = Coupon::create(['code' => 'USADO', 'internal_name' => 'Con uso', 'discount_type' => 'percentage', 'discount_value' => 10, 'is_active' => true]);
+        $booking = $this->booking(['coupon_code' => 'USADO']);
+        $this->assertSame($used->id, $booking->coupon_id);
+
+        $this->delete(route('admin.coupons.destroy', $unused))->assertRedirect(route('admin.coupons.index'));
+        $this->assertNull(Coupon::find($unused->id));
+
+        $this->from(route('admin.coupons.index'))->delete(route('admin.coupons.destroy', $used))->assertSessionHasErrors('coupon');
+        $this->assertNotNull(Coupon::find($used->id));
+    }
+
     public function test_walk_in_booking_goes_to_payment_then_check_in(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);

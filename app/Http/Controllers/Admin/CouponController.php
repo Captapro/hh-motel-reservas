@@ -67,6 +67,7 @@ class CouponController extends Controller
         $validated['is_stackable'] = $request->boolean('is_stackable');
         $validated['requires_verification'] = $request->boolean('requires_verification');
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['is_public'] = ! $request->boolean('internal_only');
         $validated['allowed_weekdays'] = $request->filled('allowed_weekdays') ? $validated['allowed_weekdays'] : null;
 
         $old = $coupon->exists ? $coupon->toArray() : null;
@@ -74,5 +75,19 @@ class CouponController extends Controller
         AuditLog::record(auth()->id(), $old ? 'cupon.editar' : 'cupon.crear', 'Coupon', $coupon->id, $old, $coupon->toArray());
 
         return redirect()->route('admin.coupons.index')->with('status', 'Cupón guardado.');
+    }
+
+    /** Un cupón ya usado no se borra (queda en el historial de esas reservas): se desactiva. */
+    public function destroy(Coupon $coupon): RedirectResponse
+    {
+        abort_if($coupon->auto_apply, 404);
+        $uses = $coupon->redemptions()->count();
+        if ($uses > 0) {
+            return back()->withErrors(['coupon' => "{$coupon->code} ya se usó en {$uses} reserva(s), así que no se puede borrar del historial. Déjalo Inactivo y deja de aparecer en todos lados."]);
+        }
+        AuditLog::record(auth()->id(), 'cupon.eliminar', 'Coupon', $coupon->id, $coupon->toArray(), null);
+        $coupon->delete();
+
+        return redirect()->route('admin.coupons.index')->with('status', "Cupón {$coupon->code} eliminado.");
     }
 }
