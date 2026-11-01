@@ -119,6 +119,9 @@ class ShiftHandoverTest extends TestCase
         $this->login();
         $this->post('/turno/recibir', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]]);
 
+        // Al cerrar, los productos vienen con el stock del sistema para revisar más rápido.
+        $this->get('/turno/entregar')->assertOk()->assertSee('name="counts['.$this->beer->id.']" min="0" step="1" inputmode="numeric" value="10"', false);
+
         $this->post('/turno/entregar', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]])
             ->assertRedirect(route('login'));
 

@@ -65,10 +65,13 @@
             <p class="hint">Cuenta billetes y monedas. Escribe solo números, sin puntos.</p>
 
             <h2>Productos</h2>
+            @if ($kind === 'entregar' && $products->isNotEmpty())
+                <p class="hint" style="margin:0 0 6px;">Ya viene con lo que dice el sistema. Revisa cada uno y corrige solo si no calza con lo que ves.</p>
+            @endif
             @forelse ($products as $product)
                 <div class="prod">
                     <label class="name" for="p{{ $product->id }}">{{ $product->name }}</label>
-                    <input type="number" id="p{{ $product->id }}" name="counts[{{ $product->id }}]" min="0" step="1" inputmode="numeric" value="{{ old('counts.'.$product->id) }}" required>
+                    <input type="number" id="p{{ $product->id }}" name="counts[{{ $product->id }}]" min="0" step="1" inputmode="numeric" value="{{ old('counts.'.$product->id, $kind === 'entregar' ? $product->stock : null) }}" required>
                 </div>
             @empty
                 <p class="empty">No hay productos con control de stock.</p>
