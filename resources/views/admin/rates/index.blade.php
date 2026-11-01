@@ -19,6 +19,7 @@
                 </div>
                 <div>
                     Adicional por persona: <strong>${{ number_format($rule->extra_person_price, 0, ',', '.') }}</strong>
+                    · Hora adicional: <strong>${{ number_format((int) $rule->extra_hour_price, 0, ',', '.') }}</strong>
                     · <a class="link" href="{{ route('admin.rates.edit', $rule) }}">Editar precios</a>
                 </div>
             </div>
