@@ -426,7 +426,7 @@
         </div>
         <div class="topline-toolbar">
             <a class="compact-toggle" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
-            <button type="button" class="compact-toggle" id="catalog-link-btn" data-room-link="{{ route('catalog.index') }}" onclick="hhCopyRoomLink(this)">Copiar link del catálogo</button>
+            <button type="button" class="compact-toggle" id="catalog-link-btn" data-room-link="{{ route('catalog.index') }}" data-room-text="Aquí puedes ver todos nuestros Playrooms con fotos y precios, elegir día y hora, y reservar pagando en línea al tiro 👇" onclick="hhCopyRoomLink(this)">Copiar link del catálogo</button>
             <div class="wing-filter" id="wing-filter" role="group" aria-label="Filtrar por ala">
                 <button type="button" data-wing="todas" onclick="hhSetWing('todas')">Todas las alas</button>
                 <button type="button" data-wing="norte" onclick="hhSetWing('norte')">Ala norte</button>
@@ -662,15 +662,16 @@
         // lo que sacaba a recepción del flujo. navigator.clipboard falla
         // callado en algunos navegadores embebidos, así que hay respaldo
         // con execCommand('copy').
+        // Se copia con un mensaje listo para pegar después del saludo en WhatsApp.
         function hhCopyRoomLink(btn) {
-            const url = btn.dataset.roomLink;
+            const url = btn.dataset.roomText ? btn.dataset.roomText + '\n' + btn.dataset.roomLink : btn.dataset.roomLink;
             const original = btn.innerHTML;
             const show = (ok) => {
                 btn.textContent = ok ? '¡Copiado!' : 'No se pudo copiar';
                 setTimeout(() => { btn.innerHTML = original; }, 1800);
             };
             const fallback = () => {
-                const tmp = document.createElement('input');
+                const tmp = document.createElement('textarea');
                 tmp.value = url;
                 document.body.appendChild(tmp);
                 tmp.select();
