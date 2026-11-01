@@ -15,7 +15,21 @@ class ComboController extends Controller
 {
     public function index(): View
     {
-        return view('admin.combos.index', ['combos' => Combo::with('items.product')->orderBy('display_order')->get()]);
+        // Contador de ventas: packs (unidades) por día / mes / total, sin reservas canceladas ni expiradas.
+        // Los cortes son por día calendario en Chile, pasados a la zona en que se guardan las fechas.
+        $tz = 'America/Santiago';
+        $today = now($tz)->startOfDay()->setTimezone(config('app.timezone'));
+        $month = now($tz)->startOfMonth()->setTimezone(config('app.timezone'));
+        $sold = fn ($q) => $q->whereHas('booking', fn ($b) => $b->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA']));
+
+        $combos = Combo::with('items.product')
+            ->withSum(['bookingAddons as sold_today' => fn ($q) => $sold($q)->where('created_at', '>=', $today)], 'quantity')
+            ->withSum(['bookingAddons as sold_month' => fn ($q) => $sold($q)->where('created_at', '>=', $month)], 'quantity')
+            ->withSum(['bookingAddons as amount_month' => fn ($q) => $sold($q)->where('created_at', '>=', $month)], 'amount')
+            ->withSum(['bookingAddons as sold_total' => fn ($q) => $sold($q)], 'quantity')
+            ->orderBy('display_order')->get();
+
+        return view('admin.combos.index', ['combos' => $combos]);
     }
 
     public function create(): View

@@ -7,9 +7,25 @@
             <a class="btn" href="{{ route('admin.combos.create') }}">+ Nuevo combo</a>
         @endif
     </div>
+    @php
+        $monthName = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][now('America/Santiago')->month - 1];
+        $ranked = $combos->filter(fn ($c) => $c->sold_month > 0)->sortByDesc('sold_month');
+    @endphp
+    <div class="card" style="margin-bottom:16px;">
+        <h2 style="margin:0 0 10px;">Packs vendidos</h2>
+        <div style="display:flex; gap:28px; flex-wrap:wrap; font-size:13px; color:#999;">
+            <div><div style="font-size:26px; font-weight:700;">{{ (int) $combos->sum('sold_today') }}</div>hoy</div>
+            <div><div style="font-size:26px; font-weight:700;">{{ (int) $combos->sum('sold_month') }}</div>en {{ $monthName }}</div>
+            <div><div style="font-size:26px; font-weight:700;">${{ number_format((int) $combos->sum('amount_month'), 0, ',', '.') }}</div>vendido en {{ $monthName }}</div>
+            <div><div style="font-size:26px; font-weight:700;">{{ (int) $combos->sum('sold_total') }}</div>desde el inicio</div>
+        </div>
+        @if ($ranked->isNotEmpty())
+            <div style="margin-top:12px; font-size:13px; color:#888;">Más vendido en {{ $monthName }}: <b>{{ $ranked->first()->name }}</b> ({{ (int) $ranked->first()->sold_month }})</div>
+        @endif
+    </div>
     <div class="card">
         <table>
-            <thead><tr><th>Combo</th><th>Incluye</th><th>Precio</th><th>Stock</th><th>Estado</th><th>Catálogo</th>@if(auth()->user()->isAdministrador())<th></th>@endif</tr></thead>
+            <thead><tr><th>Combo</th><th>Incluye</th><th>Precio</th><th title="Packs vendidos (sin reservas canceladas ni expiradas)">Vendidos<br><span style="font-weight:400; font-size:11px;">hoy · mes · total</span></th><th>Stock</th><th>Estado</th><th>Catálogo</th>@if(auth()->user()->isAdministrador())<th></th>@endif</tr></thead>
             <tbody>
                 @forelse ($combos as $combo)
                     <tr>
@@ -22,6 +38,12 @@
                             @endforelse
                         </td>
                         <td>${{ number_format($combo->price, 0, ',', '.') }}</td>
+                        <td style="white-space:nowrap;">
+                            <b>{{ (int) $combo->sold_today }}</b> · <b>{{ (int) $combo->sold_month }}</b> · {{ (int) $combo->sold_total }}
+                            @if ($combo->amount_month)
+                                <div style="font-size:11.5px; color:#888;">${{ number_format((int) $combo->amount_month, 0, ',', '.') }} este mes</div>
+                            @endif
+                        </td>
                         <td>
                             @php $avail = $combo->availableCount(); @endphp
                             @if (is_null($avail))
@@ -58,7 +80,7 @@
                         @endif
                     </tr>
                 @empty
-                    <tr><td colspan="6" style="color:#666;">Todavía no hay combos creados.</td></tr>
+                    <tr><td colspan="8" style="color:#666;">Todavía no hay combos creados.</td></tr>
                 @endforelse
             </tbody>
         </table>

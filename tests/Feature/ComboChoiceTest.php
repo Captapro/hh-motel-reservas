@@ -191,4 +191,20 @@ class ComboChoiceTest extends TestCase
         $this->post(route('admin.combos.catalog', $this->combo));
         $this->assertFalse($this->combo->fresh()->show_in_catalog);
     }
+
+    public function test_combo_list_counts_packs_sold_leaving_out_cancelled_bookings(): void
+    {
+        $picks = [$this->choice->id => [$this->drinks['Coca-Cola']->id => 4]];
+        app(ConsumptionService::class)->addCombo($this->booking, $this->combo, 2, null, $picks);
+
+        $cancelled = $this->booking->replicate(['code'])->fill(['code' => 'HH-TEST-CANCEL', 'booking_status' => 'CANCELADA']);
+        $cancelled->save();
+        app(ConsumptionService::class)->addCombo($cancelled, $this->combo, 1, null, [$this->choice->id => [$this->drinks['Sprite']->id => 2]]);
+
+        $combo = $this->get(route('admin.combos.index'))->assertOk()->assertSee('Packs vendidos')->viewData('combos')->first();
+        $this->assertSame(2, (int) $combo->sold_today);
+        $this->assertSame(2, (int) $combo->sold_month);
+        $this->assertSame(2, (int) $combo->sold_total);
+        $this->assertSame(7000, (int) $combo->amount_month);
+    }
 }
