@@ -683,7 +683,7 @@
         // el Playroom (sus botones quedan ocultos por CSS en ese modo).
         document.querySelectorAll('.grid .card[data-href]').forEach(function (card) {
             card.addEventListener('click', function (event) {
-                if (event.target.closest('a, button, input, select, form')) return;
+                if (event.target.closest('a, button, input, select, form, details')) return;
                 if (hhCurrentDensity() === 'chips' || card.classList.contains('overdue-room') || card.querySelector('.pill-ocupada')) window.location.href = card.dataset.href;
             });
         });
