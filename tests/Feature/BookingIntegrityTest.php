@@ -1526,7 +1526,6 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame($debit->id, $payment->payment_method_id);
         $this->assertTrue($payment->created_at->eq(Carbon::parse('2026-10-05 10:45', 'America/Santiago')));
         $this->assertSame('aseo', $this->room->fresh()->operational_status);
-
         // Cargarla dos veces choca con la que ya está.
         $this->post(route('admin.past_sales.store'), $sale)->assertSessionHasErrors('room_id');
         $this->assertSame(1, Booking::count());

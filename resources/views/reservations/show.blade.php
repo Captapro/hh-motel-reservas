@@ -345,7 +345,12 @@
                         <span class="pill" style="margin-left:6px;">{{ strtoupper($custSegment['label']) }}</span>
                     </span>
                 </div>
-                <div class="row"><span class="muted">Teléfono</span><span>{{ $booking->customer->phone_e164 }}</span></div>
+                @php $cust = $booking->customer; @endphp
+                <div class="row"><span class="muted">{{ $cust->passport_number && ! $cust->rut ? 'Pasaporte' : 'RUT' }}</span><span>{{ $cust->rut ?: ($cust->passport_number ?: '—') }}</span></div>
+                <div class="row"><span class="muted">Teléfono</span><span>{{ $cust->phone_e164 ?: '—' }}</span></div>
+                <div class="row"><span class="muted">Email</span><span>{{ $cust->email ?: '—' }}</span></div>
+                <div class="row"><span class="muted">Nacionalidad / edad</span><span>{{ $cust->nationality ?: '—' }}@if ($cust->age()) · {{ $cust->age() }} años @endif</span></div>
+                <div class="row"><span class="muted">Personas</span><span>{{ $booking->guests_count }}</span></div>
                 <div class="row"><span class="muted">Fecha / hora de ingreso</span><span>{{ $booking->starts_at->timezone('America/Santiago')->format('d/m/Y H:i') }}</span></div>
                 <div class="row"><span class="muted">Hora de salida</span><span>{{ $booking->ends_at->timezone('America/Santiago')->format('d/m/Y H:i') }}@if ($booking->short_stay) <span class="pill" style="margin-left:6px; background:#2e2410; color:#ffcf6e; border-color:#c98a1b;">SALE AL CIERRE</span>@endif</span></div>
                 <div class="row"><span class="muted">Duración</span><span>@if ($booking->short_stay){{ \App\Support\TimeFormat::minutes((int) $booking->starts_at->diffInMinutes($booking->ends_at)) }} · estadía corta por cierre (tarifa de {{ $booking->duration_minutes / 60 }} h)@else{{ $booking->duration_minutes / 60 }} h @endif</span></div>
