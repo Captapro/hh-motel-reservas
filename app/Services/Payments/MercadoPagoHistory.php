@@ -46,7 +46,7 @@ class MercadoPagoHistory
         $raw = Cache::remember('mp-history:'.$from->format('Y-m'), 120, fn () => $this->fetch($from, $to));
 
         $codes = collect($raw)->pluck('external_reference')->filter()->unique();
-        $bookings = Booking::whereIn('code', $codes)->get(['id', 'code'])->keyBy('code');
+        $bookings = Booking::with('room:id,name')->whereIn('code', $codes)->get(['id', 'code', 'room_id'])->keyBy('code');
         $local = Payment::where('external_id', 'like', 'MP-%')->get(['id', 'booking_id', 'external_id', 'amount', 'status', 'created_at']);
         $localByMp = $local->keyBy(fn (Payment $p) => explode('-', $p->external_id)[1] ?? '');
         $rows = collect($raw)->map(function (array $mp) use ($tz, $bookings, $localByMp) {
@@ -75,6 +75,7 @@ class MercadoPagoHistory
                 'point' => $isPoint,
                 'code' => $code,
                 'booking' => $booking,
+                'rooms' => $booking?->room?->name,
                 'in_system' => $inSystem,
                 'auth' => (string) ($mp['authorization_code'] ?? ''),
                 'voucher' => null,
@@ -126,21 +127,44 @@ class MercadoPagoHistory
     }
 
     /**
-     * Cada cobro de la máquina se cruza con el pago de tarjeta que registró
-     * recepción: mismo monto y a menos de MATCH_MINUTES, el más cercano y cada
-     * uno una sola vez. El voucher del motel es un correlativo propio (01, 02…
-     * cada mes), no un número de Mercado Pago, así que se cruza por monto y hora.
+     * Cada cobro de la máquina se cruza con lo que registró recepción.
+     * Primero por N° de voucher (el correlativo del mes, 01, 02…): si los
+     * pagos con ese voucher suman lo mismo que el cobro, calzan, aunque se
+     * hayan anotado tarde o sea un solo cobro para dos piezas. Si no, por
+     * mismo monto y a menos de MATCH_MINUTES, el más cercano. Cada pago se
+     * usa una sola vez.
      */
     private function matchMachine(Collection $rows, Carbon $from, Carbon $to): Collection
     {
-        $cards = Payment::with('booking:id,code')->where('status', 'aprobado')
+        $cards = Payment::with('booking:id,code,room_id', 'booking.room:id,name')->where('status', 'aprobado')
             ->whereHas('paymentMethod', fn ($q) => $q->whereIn('code', ['debito', 'credito']))
             ->whereBetween('created_at', [$from->copy()->subHour(), $to->copy()->addHour()])
             ->get(['id', 'booking_id', 'voucher_number', 'amount', 'created_at']);
+        $byVoucher = $cards->filter(fn (Payment $p) => ctype_digit(ltrim((string) $p->voucher_number)) && (int) $p->voucher_number > 0
+                && $p->created_at->between($from, $to))
+            ->groupBy(fn (Payment $p) => (int) $p->voucher_number);
         $used = [];
+        $matched = function (array $r, Collection $payments) use (&$used) {
+            foreach ($payments as $p) {
+                $used[$p->id] = true;
+            }
+            $bookings = $payments->pluck('booking')->filter()->unique('id');
 
-        return $rows->map(function (array $r) use ($cards, &$used) {
-            if (! $r['point'] || $r['status'] !== 'approved') {
+            return ['in_system' => true, 'booking' => $bookings->first(), 'voucher' => $payments->first()->voucher_number,
+                'rooms' => $bookings->map(fn ($b) => $b->room?->name)->filter()->implode(' + ') ?: null] + $r;
+        };
+
+        $rows = $rows->map(function (array $r) use ($byVoucher, $matched) {
+            if (! $r['point'] || $r['status'] !== 'approved' || ! $r['correlative']) {
+                return $r;
+            }
+            $group = $byVoucher->get((int) $r['correlative']);
+
+            return $group && (int) $group->sum('amount') === $r['amount'] ? $matched($r, $group) : $r;
+        });
+
+        return $rows->map(function (array $r) use ($cards, &$used, $matched) {
+            if (! $r['point'] || $r['status'] !== 'approved' || $r['in_system']) {
                 return $r;
             }
             $match = $cards
@@ -148,12 +172,8 @@ class MercadoPagoHistory
                     && abs($p->created_at->diffInMinutes($r['at'], false)) <= self::MATCH_MINUTES)
                 ->sortBy(fn (Payment $p) => abs($p->created_at->diffInSeconds($r['at'], false)))
                 ->first();
-            if (! $match) {
-                return $r;
-            }
-            $used[$match->id] = true;
 
-            return ['in_system' => true, 'booking' => $match->booking, 'voucher' => $match->voucher_number] + $r;
+            return $match ? $matched($r, collect([$match])) : $r;
         });
     }
 

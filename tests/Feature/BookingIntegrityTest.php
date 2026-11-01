@@ -1558,6 +1558,35 @@ class BookingIntegrityTest extends TestCase
         $this->assertNotNull(Coupon::find($used->id));
     }
 
+    public function test_machine_charges_match_by_voucher_number_even_when_registered_late_or_shared_by_two_rooms(): void
+    {
+        Cache::flush();
+        $this->travelTo(Carbon::parse('2026-10-05 20:00'));
+        $debit = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        $second = Room::create(['name' => 'GO 102', 'room_category_id' => $this->room->room_category_id, 'operational_status' => 'activa', 'buffer_minutes' => 30]);
+        $a = $this->booking(['starts_at' => Carbon::parse('2026-10-05 21:00')]);
+        $b = $this->booking(['room' => $second, 'starts_at' => Carbon::parse('2026-10-05 21:00')]);
+        // Un solo cobro de máquina por las dos piezas, anotado una hora después y con voucher "08".
+        foreach ([$a, $b] as $booking) {
+            Payment::create(['booking_id' => $booking->id, 'payment_method_id' => $debit->id, 'amount' => 20000, 'status' => 'aprobado', 'voucher_number' => '8']);
+        }
+        $point = fn (int $i, string $at, int $amount) => ['id' => 900 + $i, 'status' => 'approved', 'transaction_amount' => $amount, 'date_approved' => $at,
+            'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'external_reference' => 'Venta presencial'];
+        $charges = [];
+        for ($i = 1; $i <= 7; $i++) {
+            $charges[] = $point($i, '2026-10-05T1'.$i.':00:00-03:00', 1000 + $i);
+        }
+        $charges[] = $point(8, '2026-10-05T18:50:00-03:00', 40000);
+        $this->mock(\App\Services\Payments\MercadoPagoClient::class, fn ($m) => $m->shouldReceive('searchPayments')->andReturn($charges, []));
+
+        $rows = app(\App\Services\Payments\MercadoPagoHistory::class)->month(\Illuminate\Support\Carbon::parse('2026-10-01', 'America/Santiago'))['rows'];
+        $eight = $rows->firstWhere('correlative', '08');
+
+        $this->assertTrue($eight['in_system']);
+        $this->assertSame('GO 101 + GO 102', $eight['rooms']);
+        $this->assertFalse($rows->firstWhere('correlative', '01')['in_system']);
+    }
+
     public function test_walk_in_booking_goes_to_payment_then_check_in(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
