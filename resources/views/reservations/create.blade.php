@@ -430,9 +430,10 @@
 
                     <label>Email</label>
                     <input type="email" name="customer_email" id="customer-email" value="{{ old('customer_email') }}" required>
-                    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px;">
-                        <input type="checkbox" name="marketing_opt_in" value="1" @checked(old('marketing_opt_in')) style="width:auto;margin:0;">
-                        El cliente acepta recibir promociones por WhatsApp o correo
+                    {{-- Bien visible: el permiso de marketing alimenta las campañas (tags hh_marketing_si/no en GHL). --}}
+                    <label style="display:flex;gap:12px;align-items:center;font-weight:600;margin-top:12px;padding:12px 14px;border:1.5px solid #ff7918;border-radius:10px;background:rgba(255,121,24,.10);color:#fff;cursor:pointer;text-transform:none;letter-spacing:0;font-size:14.5px;">
+                        <input type="checkbox" name="marketing_opt_in" value="1" @checked(old('marketing_opt_in')) style="width:22px;height:22px;margin:0;flex:none;accent-color:#ff7918;cursor:pointer;">
+                        <span>📲 ¿Acepta recibir promociones por WhatsApp o correo? <span style="font-weight:400;color:#cfcfcf;">Pregúntale y marca si dice que sí.</span></span>
                     </label>
 
                     <div class="sub-head">Identificación <span>— el documento es obligatorio; nacionalidad y fecha de nacimiento no, salvo para cupones que la exigen</span></div>
