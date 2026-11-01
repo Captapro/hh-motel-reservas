@@ -57,6 +57,7 @@
                 {{ match($room->operational_status) {
                     'activa' => '● Activa',
                     'aseo' => '◐ En aseo',
+                    'ocupada' => '● Ocupada',
                     'mantencion' => '✕ En mantención',
                     'inactiva' => '✕ Inactiva',
                     default => strtoupper($room->operational_status),

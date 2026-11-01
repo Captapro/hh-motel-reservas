@@ -95,7 +95,7 @@ class RoomController extends Controller
             'room_category_id' => ['required', 'exists:room_categories,id'],
             'name' => ['required', 'string', 'max:100', Rule::unique('rooms', 'name')->ignore($room->id)],
             'buffer_minutes' => ['required', 'integer', 'min:0'],
-            'operational_status' => ['required', 'in:activa,mantencion,inactiva,aseo'],
+            'operational_status' => ['required', 'in:activa,mantencion,inactiva,aseo,ocupada'],
             'operational_note' => ['nullable', 'string', 'max:255'],
             'photos' => ['nullable', 'array'],
             'photos.*' => ['max:500', function (string $attribute, mixed $value, \Closure $fail) {

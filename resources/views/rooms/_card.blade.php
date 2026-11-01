@@ -15,6 +15,8 @@
 
     @if ($room->operational_status === 'aseo')
         <span class="pill pill-aseo">EN ASEO</span>
+    @elseif ($room->operational_status === 'ocupada')
+        <span class="pill pill-ocupada">OCUPADA</span>
     @elseif ($room->operational_status !== 'activa')
         <span class="pill pill-{{ $room->operational_status }}">{{ strtoupper($room->operational_status) }}</span>
     @elseif ($status['occupancy'] === 'ocupada' && $status['current_booking'] && ! $status['current_booking']->checked_in_at)
@@ -51,6 +53,9 @@
         @else
             <div class="eta aseo-help" style="color:#e88a9a;">No hay mucamas activas cargadas en <a href="{{ route('admin.staff.index') }}" style="color:#e88a9a;">Personal</a> — agrega al menos una para poder marcar el aseo.</div>
         @endif
+    @elseif ($room->operational_status === 'ocupada')
+        <div class="eta">{{ $room->operational_note ?: 'Ocupada sin reserva en el sistema' }}</div>
+        <div class="eta" style="color:#ffcf6e;">Cuando salga: Cambiar estado → Aseo</div>
     @elseif ($room->operational_status !== 'activa')
         @if ($room->operational_note)
             <div class="eta">{{ $room->operational_note }}</div>
@@ -111,6 +116,7 @@
             @csrf
             <select name="operational_status">
                 <option value="activa" @selected($room->operational_status === 'activa') @disabled($room->operational_status === 'aseo')>Activa{{ $room->operational_status === 'aseo' ? ' — primero marcar aseo listo' : '' }}</option>
+                <option value="ocupada" @selected($room->operational_status === 'ocupada') @disabled($room->operational_status === 'aseo')>Ocupada (sin reserva)</option>
                 <option value="mantencion" @selected($room->operational_status === 'mantencion')>En mantención</option>
                 <option value="inactiva" @selected($room->operational_status === 'inactiva')>Inactiva</option>
                 @if ($room->operational_status === 'aseo')

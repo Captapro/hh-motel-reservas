@@ -907,6 +907,14 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame((int) $booking->price_final + 3000, (int) $totals['total']);
     }
 
+    public function test_room_marked_occupied_by_hand_is_not_sellable(): void
+    {
+        $this->post(route('rooms.status', $this->room), ['operational_status' => 'ocupada', 'operational_note' => 'Entró con la planilla'])
+            ->assertRedirect(route('rooms.board'));
+        $this->assertSame('ocupada', $this->room->fresh()->operational_status);
+        $this->assertFalse($this->room->fresh()->isOperational());
+    }
+
     /** Resumen del día del tablero (método privado): se lee directo para no depender de toda la vista. */
     private function boardDailySummary(): array
     {

@@ -35,6 +35,7 @@
                     <option value="mantencion" @selected(old('operational_status', $room->operational_status ?? '') === 'mantencion')>En mantención</option>
                     <option value="inactiva" @selected(old('operational_status', $room->operational_status ?? '') === 'inactiva')>Inactiva</option>
                     <option value="aseo" @selected(old('operational_status', $room->operational_status ?? '') === 'aseo')>En aseo</option>
+                    <option value="ocupada" @selected(old('operational_status', $room->operational_status ?? '') === 'ocupada')>Ocupada (sin reserva)</option>
                 </select>
             </div>
         </div>

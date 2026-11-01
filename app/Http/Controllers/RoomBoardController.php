@@ -48,8 +48,10 @@ class RoomBoardController extends Controller
         );
 
         $grouped = [
+            // "ocupada" a mano: un cliente adentro sin reserva en el sistema (p. ej. entró con la planilla).
             'ocupadas' => $entries->filter(
-                fn (array $e) => $e['room']->operational_status === 'activa' && $e['status']['occupancy'] === 'ocupada'
+                fn (array $e) => ($e['room']->operational_status === 'activa' && $e['status']['occupancy'] === 'ocupada')
+                    || $e['room']->operational_status === 'ocupada'
             )->values(),
             'en_aseo' => $entries->filter(
                 fn (array $e) => $e['room']->operational_status === 'aseo'
@@ -59,7 +61,7 @@ class RoomBoardController extends Controller
                 fn (array $e) => $e['room']->operational_status === 'activa' && $isProxima($e)
             )->sortBy(fn (array $e) => $e['status']['minutes_until_next'])->values(),
             'fuera_de_servicio' => $entries->filter(
-                fn (array $e) => ! in_array($e['room']->operational_status, ['activa', 'aseo'], true)
+                fn (array $e) => ! in_array($e['room']->operational_status, ['activa', 'aseo', 'ocupada'], true)
             )->values(),
         ];
 
@@ -270,7 +272,7 @@ class RoomBoardController extends Controller
         }
 
         $validated = $request->validate([
-            'operational_status' => ['required', 'in:activa,mantencion,inactiva,aseo'],
+            'operational_status' => ['required', 'in:activa,mantencion,inactiva,aseo,ocupada'],
             'operational_note' => ['nullable', 'string', 'max:255'],
         ]);
 
