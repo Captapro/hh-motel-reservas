@@ -143,8 +143,10 @@ class ReservationController extends Controller
             'guests_count' => ['required', 'integer', 'min:1', 'max:10'],
             'customer_first_name' => ['required', 'string', 'max:150'],
             'customer_last_name' => ['required', 'string', 'max:150'],
-            'customer_phone' => ['required', 'string', 'max:20'],
-            'customer_email' => ['required', 'email'],
+            // En el ingreso presencial teléfono y email son opcionales (hay clientes que no los entregan):
+            // la identidad mínima es el documento. Una reserva para más tarde los sigue exigiendo.
+            'customer_phone' => ['nullable', 'required_unless:walk_in,1', 'string', 'max:20'],
+            'customer_email' => ['nullable', 'required_unless:walk_in,1', 'email'],
             'document_type' => ['required', 'in:rut,pasaporte'],
             'document_number' => ['required', 'string', 'max:30', function ($attribute, $value, $fail) use ($request) {
                 if ($request->input('document_type') === 'rut' && $value && ! Rut::isValid($value)) {
@@ -221,19 +223,24 @@ class ReservationController extends Controller
         $passportNumber = $documentType === 'pasaporte' ? $documentNumber : null;
 
         // Buscar cliente por teléfono normalizado; crearlo si no existe (caché local — sección 08 del doc).
-        $phone = Phone::toE164($validated['customer_phone']);
-        $customer = Customer::firstOrCreate(
-            ['phone_e164' => $phone],
-            [
-                'name' => $customerName,
-                'email' => $validated['customer_email'],
-                'document_type' => $documentType,
-                'rut' => $rut,
-                'passport_number' => $passportNumber,
-                'nationality' => $validated['nationality'] ?? null,
-                'birth_date' => $validated['birth_date'] ?? null,
-            ]
-        );
+        // Si no entrega teléfono, se busca por su documento.
+        $phone = ! empty($validated['customer_phone']) ? Phone::toE164($validated['customer_phone']) : null;
+        $newCustomer = [
+            'name' => $customerName,
+            'email' => $validated['customer_email'] ?? null,
+            'document_type' => $documentType,
+            'rut' => $rut,
+            'passport_number' => $passportNumber,
+            'nationality' => $validated['nationality'] ?? null,
+            'birth_date' => $validated['birth_date'] ?? null,
+        ];
+        if ($phone) {
+            $customer = Customer::firstOrCreate(['phone_e164' => $phone], $newCustomer);
+        } else {
+            $customer = ($rut ? Customer::where('rut', $rut)->first() : null)
+                ?? ($passportNumber ? Customer::where('passport_number', $passportNumber)->first() : null)
+                ?? Customer::create($newCustomer);
+        }
 
         // Cliente ya conocido con datos distintos: actualizamos con lo último
         // que ingresó recepción (el teléfono manda como identidad, el resto
@@ -241,7 +248,7 @@ class ReservationController extends Controller
         if (! $customer->wasRecentlyCreated) {
             $customer->fill(array_filter([
                 'name' => $customerName,
-                'email' => $validated['customer_email'],
+                'email' => $validated['customer_email'] ?? null,
                 'document_type' => $documentType,
                 'rut' => $rut,
                 'passport_number' => $passportNumber,

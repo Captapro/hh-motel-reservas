@@ -278,7 +278,7 @@
         // mensaje armado arriba se copia aparte ("Copiar texto") y se pega a
         // mano, para poder revisarlo/editarlo dentro de WhatsApp antes de
         // mandarlo en vez de que salga prellenado.
-        $whatsappContactUrl = 'https://wa.me/'.preg_replace('/[^0-9]/', '', $booking->customer->phone_e164);
+        $whatsappContactUrl = 'https://wa.me/'.preg_replace('/[^0-9]/', '', (string) $booking->customer->phone_e164);
     @endphp
     @if ($booking->balanceDue() > 0)
         <textarea id="whatsapp-message-text" class="visually-hidden" readonly>{{ $whatsappMessage }}</textarea>

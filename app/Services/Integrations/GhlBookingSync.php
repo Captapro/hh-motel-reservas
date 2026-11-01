@@ -59,6 +59,11 @@ class GhlBookingSync
      */
     public function sync(Booking $booking): void
     {
+        // Cliente sin teléfono: no hay contacto que crear ni a quién escribirle.
+        if (! filled($booking->customer?->phone_e164)) {
+            return;
+        }
+
         try {
             $this->attemptSync($booking);
         } catch (Throwable $e) {
@@ -160,7 +165,7 @@ class GhlBookingSync
     {
         try {
             $customer = $booking->customer;
-            if (! $customer || ! $this->client->isConfigured()) {
+            if (! $customer || ! filled($customer->phone_e164) || ! $this->client->isConfigured()) {
                 return;
             }
 

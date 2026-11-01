@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('phone_e164', 20)->unique(); // identidad primaria
+            $table->string('phone_e164', 20)->nullable()->unique(); // identidad primaria (opcional desde 2026-11-01: sin teléfono manda el documento)
             $table->string('email')->nullable();
             $table->string('rut', 15)->nullable();
             $table->string('ghl_contact_id')->nullable()->index(); // vínculo con el contacto en GHL

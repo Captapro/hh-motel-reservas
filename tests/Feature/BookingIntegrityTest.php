@@ -1471,6 +1471,32 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, Booking::count());
     }
 
+    public function test_walk_in_without_phone_or_email_is_identified_by_document_but_a_reservation_still_needs_them(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-05 11:00'));
+        $data = [
+            'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 0,
+            'duration_minutes' => 60, 'guests_count' => 1, 'customer_first_name' => 'Sin',
+            'customer_last_name' => 'Telefono', 'customer_phone' => '', 'customer_email' => '',
+            'document_type' => 'rut', 'document_number' => '12.345.678-5', 'walk_in' => 1,
+        ];
+
+        // Una reserva para más tarde sigue exigiendo teléfono y email (con ellos se le avisa al cliente).
+        $this->post('/reservar', ['walk_in' => 0] + $data)->assertSessionHasErrors(['customer_phone', 'customer_email']);
+        $this->assertSame(0, Booking::count());
+
+        $this->post('/reservar', $data)->assertRedirect()->assertSessionHasNoErrors();
+        $customer = Booking::firstOrFail()->customer;
+        $this->assertNull($customer->phone_e164);
+        $this->assertNull($customer->email);
+        $this->assertSame('12345678-5', $customer->rut);
+
+        // Si vuelve sin teléfono, se reconoce por el RUT y no se duplica.
+        Booking::query()->delete();
+        $this->post('/reservar', ['time_hour' => 14] + $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($customer->id, Booking::firstOrFail()->customer_id);
+    }
+
     public function test_walk_in_booking_goes_to_payment_then_check_in(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
