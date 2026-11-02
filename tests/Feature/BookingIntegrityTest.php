@@ -870,22 +870,38 @@ class BookingIntegrityTest extends TestCase
         $again->assertSee('Voucher')->assertSee('4521');
     }
 
+    public function test_analytics_ranks_categories_by_number_of_bookings(): void
+    {
+        $other = RoomCategory::create(['name' => 'MAX', 'display_order' => 9, 'base_capacity' => 2, 'max_capacity' => 4, 'extra_guest_from' => 3]);
+        $maxRoom = Room::create(['room_category_id' => $other->id, 'name' => 'MAX 999', 'operational_status' => 'activa']);
+        $make = fn (Room $room, int $price) => (new Booking(['price_final' => $price]))->setRelation('room', $room->load('category'))->setRelation('addons', collect());
+        $current = collect([$make($this->room, 20000), $make($this->room, 20000), $make($maxRoom, 50000)]);
+        $previous = collect([$make($this->room, 20000), $make($maxRoom, 50000), $make($maxRoom, 50000)]);
+
+        $method = new \ReflectionMethod(\App\Http\Controllers\Admin\AnalyticsController::class, 'byCategory');
+        $rows = $method->invoke(app(\App\Http\Controllers\Admin\AnalyticsController::class), $current, $previous);
+
+        $this->assertSame([$this->room->category->name, 'MAX'], $rows->pluck('label')->all());
+        $this->assertSame([2, 1], $rows->pluck('count')->all());
+        $this->assertSame([1, 2], $rows->pluck('prev')->all());
+        $this->assertSame(40000, $rows->first()['value']);
+        $this->assertEqualsWithDelta(2 / 3, $rows->first()['share'], 0.001);
+    }
+
     public function test_month_end_projection_counts_only_closed_days_by_itself(): void
     {
         $this->travelTo(Carbon::parse('2026-11-04 15:00', 'America/Santiago'));
         $first = Carbon::parse('2026-11-01', 'America/Santiago');
         $sales = [1 => 300000, 2 => 100000, 3 => 100000, 4 => 999999]; // el 4 es hoy: no cuenta todavía
         $daily = collect(range(1, 30))->map(fn ($d) => ['date' => $first->copy()->day($d), 'total' => $sales[$d] ?? 0]);
-        $method = new \ReflectionMethod(\App\Http\Controllers\MonthlySalesController::class, 'projection');
-
-        $p = $method->invoke(app(\App\Http\Controllers\MonthlySalesController::class), $daily, $first);
+        $p = \App\Support\SalesProjection::forMonth($daily, $first);
         $this->assertSame(3, $p['closed_days']);
         $this->assertSame(5000000, $p['simple']); // 500.000 ÷ 3 × 30
         // Domingos a 300.000, lunes y martes a 100.000, el resto al promedio general.
         $this->assertSame(5066667, $p['by_weekday']);
 
         // Un mes que no es el actual no se proyecta.
-        $this->assertNull($method->invoke(app(\App\Http\Controllers\MonthlySalesController::class), $daily, Carbon::parse('2026-10-01', 'America/Santiago')));
+        $this->assertNull(\App\Support\SalesProjection::forMonth($daily, Carbon::parse('2026-10-01', 'America/Santiago')));
     }
 
     public function test_only_fully_paid_stays_count_as_sales(): void

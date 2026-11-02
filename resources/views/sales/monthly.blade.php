@@ -93,7 +93,7 @@
     <div class="cards" style="margin-top:14px;">
         <div class="card" tabindex="0" data-tip="Suma, de las estadías vendidas del mes (con su pago completo), del precio final con descuentos más los extras pagados. Se cuenta en el día de la estadía."><div class="label">Venta total del mes</div><div class="value">{{ $money($totals['total']) }}</div></div>
         @if ($projection)
-            <div class="card gold" tabindex="0" data-tip="Igual que en la planilla: venta de los días ya cerrados ÷ esos días × días del mes. El día de hoy no entra hasta que termina. Con pocos días cerrados la cifra varía mucho.">
+            <div class="card gold" tabindex="0" data-tip="Igual que en la planilla: venta de los días ya cerrados ÷ esos días × días del mes. El día de hoy no entra hasta que termina, y nunca baja de lo ya vendido del mes. Es la misma cifra de Analytics. Con pocos días cerrados varía mucho.">
                 <div class="label">Proyección fin de mes</div>
                 @if ($projection['closed_days'] > 0)
                     <div class="value">{{ $money($projection['simple']) }}</div>

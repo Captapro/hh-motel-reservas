@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Support\SalesProjection;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\RoomCategory;
@@ -59,6 +60,7 @@ class AnalyticsController extends Controller
 
             'kpis' => $this->kpis($current, $previous, $metric),
 
+            'byCategory' => $this->byCategory($current, $previous),
             'byRoom' => $this->rank($current, fn (Booking $b) => $b->room->name, $val, fn (Booking $b) => $b->room->category->name),
             'byWeekday' => $this->overlay($current, $previous, fn (Booking $b) => $weekdayNames[$b->starts_at->timezone('America/Santiago')->dayOfWeekIso - 1], $val, $weekdayNames),
             'byHour' => $this->buckets($current, fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->hour, $val, range(0, 23)),
@@ -204,6 +206,26 @@ class AnalyticsController extends Controller
         ];
     }
 
+    /**
+     * Categorías preferidas: cuántas reservas tuvo cada una en el rango, su parte del total,
+     * la venta y cuántas tuvo en el período anterior del mismo largo (para ver si sube o baja).
+     */
+    private function byCategory(Collection $current, Collection $previous): Collection
+    {
+        $total = max(1, $current->count());
+        $prev = $previous->groupBy(fn (Booking $b) => $b->room->room_category_id)->map->count();
+
+        return $current->groupBy(fn (Booking $b) => $b->room->room_category_id)
+            ->map(fn (Collection $g, $id) => [
+                'label' => $g->first()->room->category->name,
+                'count' => $g->count(),
+                'share' => $g->count() / $total,
+                'value' => (int) $g->sum(fn (Booking $b) => $b->price_final + $b->paidAddonsAmount()),
+                'prev' => (int) ($prev[$id] ?? 0),
+            ])
+            ->sortByDesc('count')->values();
+    }
+
     private function rank(Collection $rows, callable $key, callable $val, ?callable $sub = null): Collection
     {
         return $rows->groupBy($key)
@@ -320,18 +342,22 @@ class AnalyticsController extends Controller
         $soFar = (int) $bookings->filter(fn (Booking $b) => $b->starts_at->timezone($tz)->lte($now))->sum($rev);
         $bookedRest = (int) $bookings->filter(fn (Booking $b) => $b->starts_at->timezone($tz)->gt($now))->sum($rev);
 
-        $daysElapsed = max(1, (int) $monthStart->diffInDays($now) + 1);
-        $daysInMonth = $now->daysInMonth;
-        $runRate = $soFar / $daysElapsed;
-        $projected = max((int) round($runRate * $daysInMonth), $soFar + $bookedRest);
+        // Mismo cálculo que el resumen mensual (App\Support\SalesProjection): solo días cerrados.
+        $byDay = $bookings->groupBy(fn (Booking $b) => $b->starts_at->timezone($tz)->toDateString())->map(fn ($g) => (int) $g->sum($rev));
+        $daily = collect(range(1, $now->daysInMonth))->map(fn ($d) => ['date' => $monthStart->copy()->day($d), 'total' => $byDay[$monthStart->copy()->day($d)->toDateString()] ?? 0]);
+        $p = SalesProjection::forMonth($daily, $monthStart);
+        $base = $p['closed_days'] > 0 ? $p['simple'] : 0;
 
         return [
             'label' => ucfirst($monthStart->locale('es')->isoFormat('MMMM YYYY')),
             'so_far' => $soFar,
             'booked_rest' => $bookedRest,
-            'projected' => $projected,
-            'days_elapsed' => $daysElapsed,
-            'days_in_month' => $daysInMonth,
+            // Nunca baja de lo vendido más lo ya agendado para el resto del mes.
+            'projected' => max($base, $soFar + $bookedRest),
+            'by_weekday' => $p['closed_days'] > 0 ? max($p['by_weekday'], $soFar + $bookedRest) : null,
+            'per_day' => $p['per_day'] ?? 0,
+            'closed_days' => $p['closed_days'],
+            'days_in_month' => $p['days'],
         ];
     }
 

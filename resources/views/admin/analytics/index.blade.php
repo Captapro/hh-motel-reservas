@@ -67,14 +67,14 @@
         <div class="kpi" tabindex="0" data-tip="Clientes que hoy clasifican como «Frecuente» según las reglas de Clientes (visitas mínimas dentro de su ventana de análisis). No depende del rango elegido."><div class="k-label">Clientes por recurrencia</div><div class="k-value">{{ $segments['frecuente'] }}</div><div class="k-delta flat">Alta recurrencia</div></div>
     </div>
 
-    <div class="proj" tabindex="0" data-tip="Proyección = lo vendido hasta hoy ÷ días transcurridos del mes × días del mes. Nunca baja de lo vendido más lo ya agendado para el resto del mes.">
+    <div class="proj" tabindex="0" data-tip="Proyección = venta de los días ya cerrados ÷ esos días × días del mes (el día de hoy entra cuando termina). Nunca baja de lo vendido más lo ya agendado para el resto del mes. Es la misma cifra del resumen mensual.">
         <h3>Proyección a fin de mes — {{ $projection['label'] }}</h3>
         <div class="proj-grid">
             <div><span>Venta hasta hoy</span><b>{{ $money($projection['so_far']) }}</b></div>
             <div><span>Ya agendado (resto del mes)</span><b>{{ $money($projection['booked_rest']) }}</b></div>
             <div class="big"><span>Proyección fin de mes</span><b>{{ $money($projection['projected']) }}</b></div>
         </div>
-        <p class="hint">Ritmo actual: {{ $money((int) round($projection['so_far'] / $projection['days_elapsed'])) }}/día · día {{ $projection['days_elapsed'] }} de {{ $projection['days_in_month'] }}.</p>
+        <p class="hint">@if ($projection['closed_days'] > 0)Ritmo: {{ $money($projection['per_day']) }}/día · {{ $projection['closed_days'] }} de {{ $projection['days_in_month'] }} días cerrados · según día de la semana: {{ $money($projection['by_weekday']) }}.@else Aparece mañana, con el primer día cerrado.@endif</p>
     </div>
 
     <h2 class="an-title">Cuándo se vende</h2>
@@ -180,6 +180,25 @@
 
     <h2 class="an-title">Qué se vende</h2>
     <div class="an-grid">
+    <div class="card t-green">
+        <h3>Categorías preferidas (reservas)</h3>
+        @php $maxC = max(1, $byCategory->max('count')); @endphp
+        @forelse ($byCategory as $c)
+            <div class="bar-row">
+                <div>
+                    <div class="name">{{ $c['label'] }}</div>
+                    <div class="cat">{{ round($c['share'] * 100) }}% de las reservas</div>
+                </div>
+                <div class="bar-track"><div class="bar-fill" style="width: {{ round($c['count'] / $maxC * 100) }}%;"></div></div>
+                <div class="val">{{ $c['count'] }} {{ Str::plural('reserva', $c['count']) }}
+                    <small>· {{ $money($c['value']) }}@if ($c['prev'] > 0) · <span style="color:{{ $c['count'] >= $c['prev'] ? '#1f9d55' : '#d64545' }};">{{ $c['count'] >= $c['prev'] ? '▲' : '▼' }} antes {{ $c['prev'] }}</span>@endif</small>
+                </div>
+            </div>
+        @empty
+            <p class="empty">Sin reservas en el rango.</p>
+        @endforelse
+    </div>
+
     <div class="card t-green">
         <h3>Playrooms ({{ $metricLabel }})</h3>
         @php $maxR = max(1, $byRoom->max('value')); @endphp
