@@ -80,6 +80,8 @@ Route::get('/catalogo/reservar', [PublicBookingController::class, 'create'])->na
 Route::get('/catalogo/reservar/horarios', [PublicBookingController::class, 'times'])->middleware('throttle:30,1,catalog.reserve.times')->name('catalog.reserve.times');
 Route::get('/catalogo/reservar/disponibilidad', [PublicBookingController::class, 'checkAvailability'])->middleware('throttle:30,1,catalog.reserve.availability')->name('catalog.reserve.availability');
 Route::view('/privacidad', 'catalog.privacidad')->name('catalog.privacy');
+// Pantalla del TV de recepción (combos y QR en loop): pública, solo lectura.
+Route::get('/pantalla', [\App\Http\Controllers\TvScreenController::class, 'show'])->name('tv.show');
 Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->middleware('throttle:8,1,catalog.reserve.store')->name('catalog.reserve.store');
 // pass_token, no code -- el código es secuencial por día (fácil de
 // adivinar) y esta página muestra habitación, fecha, consumo y saldo sin

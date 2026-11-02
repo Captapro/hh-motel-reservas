@@ -207,4 +207,19 @@ class ComboChoiceTest extends TestCase
         $this->assertSame(2, (int) $combo->sold_total);
         $this->assertSame(7000, (int) $combo->amount_month);
     }
+
+    public function test_the_tv_screen_shows_active_combos_and_qr_codes_without_login(): void
+    {
+        auth()->logout();
+        Combo::create(['name' => 'Combo apagado', 'price' => 9000, 'is_active' => false]);
+
+        $this->get('/pantalla')->assertOk()
+            ->assertSee('2 Bebidas')
+            ->assertSee('$3.500')
+            ->assertSee('2 a elección (Coca-Cola, Fanta, Sprite)')
+            ->assertSee('Reserva desde tu celular')
+            ->assertSee('Danos tu opinión')
+            ->assertSee('data:image/png;base64', false)
+            ->assertDontSee('Combo apagado');
+    }
 }
