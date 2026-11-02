@@ -404,10 +404,10 @@
             <div class="panel step-panel" data-step="2">
                 <div class="form-col-head"><span class="step-num">2</span>El cliente<span class="step-tag"></span></div>
 
-                <label>Teléfono / WhatsApp @if ($walkInMode)<span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional)</span>@endif</label>
-                <input type="text" name="customer_phone" id="customer-phone" placeholder="Pega el número del cliente — +56 9 ..." value="{{ old('customer_phone') }}" autocomplete="off" @unless ($walkInMode) required @endunless>
+                <label>Teléfono / WhatsApp <span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional)</span></label>
+                <input type="text" name="customer_phone" id="customer-phone" placeholder="Pega el número del cliente — +56 9 ..." value="{{ old('customer_phone') }}" autocomplete="off">
                 <div class="cust-badge" id="cust-badge" hidden></div>
-                <div class="hint">Si ya vino antes, se completan solos el nombre y el email.@if ($walkInMode) Si no lo entrega, déjalo vacío: se identifica con su RUT o pasaporte (y no recibe WhatsApp).@endif</div>
+                <div class="hint">Si ya vino antes, se completan solos el nombre y el email. Si no lo entrega, déjalo vacío: se identifica con su RUT o pasaporte, pero no recibe WhatsApp (@if ($walkInMode)ni pedido de opinión ni promociones@else ni el pase, ni los datos para pagar, ni avisos@endif).</div>
 
                 <div class="cust-ficha" id="cust-ficha" hidden>
                     <div class="ficha-row"><span class="ficha-label">Nombre</span><span class="ficha-value" id="ficha-name"></span></div>
@@ -428,8 +428,8 @@
                         </div>
                     </div>
 
-                    <label>Email @if ($walkInMode)<span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional)</span>@endif</label>
-                    <input type="email" name="customer_email" id="customer-email" value="{{ old('customer_email') }}" @unless ($walkInMode) required @endunless>
+                    <label>Email <span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional)</span></label>
+                    <input type="email" name="customer_email" id="customer-email" value="{{ old('customer_email') }}">
                     {{-- Bien visible: el permiso de marketing alimenta las campañas (tags hh_marketing_si/no en GHL). --}}
                     <label style="display:flex;gap:12px;align-items:center;font-weight:600;margin-top:12px;padding:12px 14px;border:1.5px solid #ff7918;border-radius:10px;background:rgba(255,121,24,.10);color:#fff;cursor:pointer;text-transform:none;letter-spacing:0;font-size:14.5px;">
                         <input type="checkbox" name="marketing_opt_in" value="1" @checked(old('marketing_opt_in')) style="width:22px;height:22px;margin:0;flex:none;accent-color:#ff7918;cursor:pointer;">

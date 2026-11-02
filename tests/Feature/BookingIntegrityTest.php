@@ -1600,7 +1600,7 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, Booking::count());
     }
 
-    public function test_walk_in_without_phone_or_email_is_identified_by_document_but_a_reservation_still_needs_them(): void
+    public function test_without_phone_or_email_the_client_is_identified_by_document_in_walk_ins_and_reservations(): void
     {
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
         $data = [
@@ -1610,9 +1610,10 @@ class BookingIntegrityTest extends TestCase
             'document_type' => 'rut', 'document_number' => '12.345.678-5', 'walk_in' => 1,
         ];
 
-        // Una reserva para más tarde sigue exigiendo teléfono y email (con ellos se le avisa al cliente).
-        $this->post('/reservar', ['walk_in' => 0] + $data)->assertSessionHasErrors(['customer_phone', 'customer_email']);
-        $this->assertSame(0, Booking::count());
+        // Una reserva para más tarde tampoco los exige.
+        $this->post('/reservar', ['walk_in' => 0, 'time_hour' => 16] + $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(1, Booking::count());
+        Booking::query()->delete();
 
         $this->post('/reservar', $data)->assertRedirect()->assertSessionHasNoErrors();
         $customer = Booking::firstOrFail()->customer;

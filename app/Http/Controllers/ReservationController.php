@@ -143,10 +143,10 @@ class ReservationController extends Controller
             'guests_count' => ['required', 'integer', 'min:1', 'max:10'],
             'customer_first_name' => ['required', 'string', 'max:150'],
             'customer_last_name' => ['required', 'string', 'max:150'],
-            // En el ingreso presencial teléfono y email son opcionales (hay clientes que no los entregan):
-            // la identidad mínima es el documento. Una reserva para más tarde los sigue exigiendo.
-            'customer_phone' => ['nullable', 'required_unless:walk_in,1', 'string', 'max:20'],
-            'customer_email' => ['nullable', 'required_unless:walk_in,1', 'email'],
+            // Teléfono y email son opcionales (hay clientes que no los entregan): la identidad mínima
+            // es el documento. Sin teléfono el cliente no recibe WhatsApp (pase, pago, opinión).
+            'customer_phone' => ['nullable', 'string', 'max:20'],
+            'customer_email' => ['nullable', 'email'],
             'document_type' => ['required', 'in:rut,pasaporte'],
             'document_number' => ['required', 'string', 'max:30', function ($attribute, $value, $fail) use ($request) {
                 if ($request->input('document_type') === 'rut' && $value && ! Rut::isValid($value)) {
