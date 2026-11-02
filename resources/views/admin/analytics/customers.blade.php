@@ -37,8 +37,8 @@
 
     <div class="kpis kpis-all">
         <div class="kpi" data-tip="Personas distintas con al menos una estadía en el rango (sin canceladas ni expiradas)." tabindex="0"><div class="k-label">Clientes que vinieron</div><div class="k-value">{{ $kpis['active'] }}</div><div class="k-delta flat">personas distintas</div></div>
-        <div class="kpi" data-tip="Personas cuya primera estadía de todo su historial cae en este rango y que vinieron una sola vez en él." tabindex="0"><div class="k-label">Clientes nuevos</div><div class="k-value">{{ $kpis['new'] }}</div><div class="k-delta flat">primera vez en el rango</div></div>
-        <div class="kpi" data-tip="Personas que vinieron 2 o más veces en el rango, o que ya habían venido antes de él. El % es: los que repiten ÷ clientes que vinieron." tabindex="0"><div class="k-label">Clientes que repiten</div><div class="k-value">{{ $kpis['repeaters'] }}</div><div class="k-delta flat">{{ $kpis['repeat_rate'] }}% de los que vinieron</div></div>
+        <div class="kpi" data-tip="Personas cuya primera estadía de todo su historial cae en este rango y que vinieron una sola vez en él. El historial incluye la planilla anterior al sistema, cruzada por RUT: quien ya venía no cuenta como nuevo." tabindex="0"><div class="k-label">Clientes nuevos</div><div class="k-value">{{ $kpis['new'] }}</div><div class="k-delta flat">primera vez en el rango</div></div>
+        <div class="kpi" data-tip="Personas que vinieron 2 o más veces en el rango, o que ya habían venido antes de él (en el sistema o en la planilla anterior, por RUT). El % es: los que repiten ÷ clientes que vinieron." tabindex="0"><div class="k-label">Clientes que repiten</div><div class="k-value">{{ $kpis['repeaters'] }}</div><div class="k-delta flat">{{ $kpis['repeat_rate'] }}% de los que vinieron</div></div>
         <div class="kpi" data-tip="Clientes con 2 o más visitas que llevan sin volver más de 1,5 veces su frecuencia habitual (mínimo 30 días, máximo 180). La lista está más abajo." tabindex="0"><div class="k-label">En riesgo de perderse</div><div class="k-value">{{ $kpis['at_risk'] }}</div><div class="k-delta flat">venían seguido y se atrasaron</div></div>
         <div class="kpi" data-tip="Estadías del rango ÷ clientes que vinieron." tabindex="0"><div class="k-label">Visitas por cliente</div><div class="k-value">{{ str_replace('.', ',', $kpis['visits_per_customer']) }}</div><div class="k-delta flat">promedio en el rango</div></div>
         <div class="kpi" data-tip="Venta del rango (precio final de las estadías + extras) ÷ clientes que vinieron." tabindex="0"><div class="k-label">Gasto por cliente</div><div class="k-value">{{ $money($kpis['spend_per_customer']) }}</div><div class="k-delta flat">Playroom + extras</div></div>
@@ -72,7 +72,7 @@
                     </div>
                 @endforeach
             </div>
-            <p class="legend"><span class="dot-new"></span> Nuevos &nbsp; <span class="dot-ret"></span> Ya habían venido</p>
+            <p class="legend"><span class="dot-new"></span> Nuevos &nbsp; <span class="dot-ret"></span> Ya habían venido @if (collect($monthly)->contains('source', 'planilla')) &nbsp;· los meses antes del sistema salen de la planilla (por RUT)@endif</p>
         </div>
     </div>
 

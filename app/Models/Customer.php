@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Services\Historical\HistoricalCustomerAnalysis;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 #[Fillable([
     'name', 'phone_e164', 'email', 'rut', 'document_type', 'passport_number',
@@ -145,6 +148,7 @@ class Customer extends Model
             ->where('starts_at', '<=', now())
             ->orderBy('starts_at')
             ->pluck('starts_at');
+        $stays = $this->withPlanillaVisits($stays);
 
         $total = $stays->count();
 
@@ -207,5 +211,31 @@ class Customer extends Model
             'last_visit_at' => $lastVisit, 'days_since_last' => $daysSinceLast, 'avg_interval_days' => $avgInterval,
             'window_days' => $window, 'window_visits' => $windowVisits, 'stars' => (int) ($matched?->stars ?? 0),
         ];
+    }
+
+    /**
+     * Suma las visitas que este cliente tiene en la planilla histórica (antes del sistema),
+     * cruzando el RUT, sin repetir un día que ya está en el sistema: quien ya venía no es «nuevo».
+     */
+    private function withPlanillaVisits(Collection $stays): Collection
+    {
+        if (blank($this->rut)) {
+            return $stays;
+        }
+        // Una sola consulta por request para saber si existe la planilla (la lista de clientes llama esto por fila).
+        if (! app()->bound('hh.has_planilla')) {
+            app()->instance('hh.has_planilla', Schema::hasTable('historical_guests'));
+        }
+        if (! app('hh.has_planilla')) {
+            return $stays;
+        }
+        $old = app(HistoricalCustomerAnalysis::class)->visitDates([$this->rut])->first() ?? collect();
+        if ($old->isEmpty()) {
+            return $stays;
+        }
+        $known = $stays->map(fn ($d) => $d->copy()->timezone('America/Santiago')->toDateString())->all();
+
+        return $stays->concat($old->reject(fn ($d) => in_array($d->toDateString(), $known, true)))
+            ->sortBy(fn ($d) => $d->getTimestamp())->values();
     }
 }

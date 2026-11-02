@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Services\Analyst\HistoricalDataService;
+use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Integrations\CustomerActivityTags;
+use App\Support\Rut;
 use App\Support\TimeFormat;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -16,7 +18,8 @@ use Illuminate\View\View;
 /**
  * Estudio del comportamiento de los clientes dentro de Analytics: quiénes son, qué prefieren,
  * cómo reservan, cada cuánto vuelven y a quién conviene cuidar. Se calcula en PHP sobre las
- * estadías no canceladas, con las fechas en hora de Santiago.
+ * estadías no canceladas, con las fechas en hora de Santiago. Las visitas anteriores al sistema
+ * salen de la planilla histórica cruzando el RUT: así un cliente que ya venía no cuenta como nuevo.
  */
 class CustomerBehaviorController extends Controller
 {
@@ -37,13 +40,13 @@ class CustomerBehaviorController extends Controller
 
         // Todo el historial (no solo el período) de los clientes que vinieron: sirve para saber
         // si eran nuevos o ya habían venido, y cada cuánto vuelven.
-        $history = Booking::whereIn('customer_id', $customerIds)
+        $history = $this->withPlanilla(Booking::whereIn('customer_id', $customerIds)
             ->whereNotIn('booking_status', self::EXCLUDED)
             ->where('starts_at', '<=', now())
             ->orderBy('starts_at')
             ->get(['customer_id', 'starts_at'])
             ->groupBy('customer_id')
-            ->map(fn (Collection $rows) => $rows->map(fn ($b) => $b->starts_at->timezone(self::TZ))->values());
+            ->map(fn (Collection $rows) => $rows->map(fn ($b) => $b->starts_at->timezone(self::TZ))->values()));
 
         $value = fn (Booking $b) => (int) ($b->price_final + $b->addons->sum('amount'));
         $byCustomer = $inRange->groupBy('customer_id');
@@ -64,6 +67,8 @@ class CustomerBehaviorController extends Controller
         $segments = $this->segmentCounts($customerIds, $byCustomer, $value);
         $risk = $this->atRisk();
 
+        $historical = app(HistoricalDataService::class)->behavior();
+
         return view('admin.analytics.customers', [
             'from' => $start->toDateString(),
             'to' => $end->toDateString(),
@@ -79,9 +84,9 @@ class CustomerBehaviorController extends Controller
                 'median_gap' => $gaps->isEmpty() ? null : (int) $gaps->sort()->values()->get(intdiv($gaps->count(), 2)),
                 'at_risk' => $risk->count(),
             ],
-            'historical' => app(HistoricalDataService::class)->behavior(),
+            'historical' => $historical,
             'segments' => $segments,
-            'monthly' => $this->newVsReturning(),
+            'monthly' => $this->newVsReturning($historical['months'] ?? collect()),
             'categories' => $this->tally($inRange, fn (Booking $b) => $b->room?->category?->name ?? 'Sin categoría', $value),
             'durations' => $this->tally($inRange, fn (Booking $b) => TimeFormat::minutes($b->duration_minutes), $value, fn ($k, $rows) => $rows->first()->duration_minutes),
             'weekdays' => $this->weekdays($inRange),
@@ -101,6 +106,27 @@ class CustomerBehaviorController extends Controller
             'risk' => $risk->take(10),
             'activity' => app(CustomerActivityTags::class)->report(),
         ]);
+    }
+
+    /**
+     * Suma a las fechas de cada cliente (customer_id => fechas) las visitas que tiene en la
+     * planilla histórica por su RUT, sin repetir un día que ya está en el sistema.
+     */
+    private function withPlanilla(Collection $history): Collection
+    {
+        $ruts = Customer::whereIn('id', $history->keys())->whereNotNull('rut')->pluck('rut', 'id')
+            ->map(fn ($rut) => Rut::normalize((string) $rut))->filter();
+        $planilla = app(HistoricalCustomerAnalysis::class)->visitDates($ruts->values());
+        if ($planilla->isEmpty()) {
+            return $history;
+        }
+
+        return $history->map(function (Collection $dates, $id) use ($ruts, $planilla) {
+            $old = $planilla[$ruts[$id] ?? ''] ?? collect();
+
+            return $old->isEmpty() ? $dates : $dates->concat($old)
+                ->unique(fn (Carbon $d) => $d->toDateString())->sortBy(fn (Carbon $d) => $d->timestamp)->values();
+        });
     }
 
     /** @return array{0: Carbon, 1: Carbon, 2: bool} */
@@ -130,21 +156,30 @@ class CustomerBehaviorController extends Controller
         return collect($rows)->sortByDesc('count');
     }
 
-    /** Clientes nuevos vs que ya habían venido, en cada uno de los últimos 6 meses. */
-    private function newVsReturning(): Collection
+    /**
+     * Clientes nuevos vs que ya habían venido, en cada uno de los últimos 6 meses. Los meses que
+     * están en la planilla histórica (antes del sistema) se toman de ella, por RUT; los demás, del sistema.
+     */
+    private function newVsReturning(Collection $planillaMonths): Collection
     {
+        $planillaMonths = $planillaMonths->keyBy('label');
         $months = collect(range(5, 0))->map(fn ($i) => now(self::TZ)->startOfMonth()->subMonthsNoOverflow($i));
 
         $stays = Booking::whereNotIn('booking_status', self::EXCLUDED)->where('starts_at', '<=', now())
             ->orderBy('starts_at')->get(['customer_id', 'starts_at']);
-        $firstVisit = $stays->groupBy('customer_id')->map(fn ($rows) => $rows->first()->starts_at->timezone(self::TZ));
+        $firstVisit = $this->withPlanilla($stays->groupBy('customer_id')->map(fn ($rows) => $rows->map(fn ($b) => $b->starts_at->timezone(self::TZ))->values()))
+            ->map(fn (Collection $dates) => $dates->first());
 
-        return $months->map(function (Carbon $m) use ($stays, $firstVisit) {
+        return $months->map(function (Carbon $m) use ($stays, $firstVisit, $planillaMonths) {
+            $label = $m->locale('es')->isoFormat('MMM YY');
+            if (isset($planillaMonths[$label])) {
+                return ['label' => $label, 'new' => $planillaMonths[$label]['new'], 'returning' => $planillaMonths[$label]['returning'], 'source' => 'planilla'];
+            }
             $inMonth = $stays->filter(fn ($b) => $b->starts_at->timezone(self::TZ)->isSameMonth($m));
             $ids = $inMonth->pluck('customer_id')->unique();
             $new = $ids->filter(fn ($id) => $firstVisit[$id]->isSameMonth($m))->count();
 
-            return ['label' => $m->locale('es')->isoFormat('MMM YY'), 'new' => $new, 'returning' => $ids->count() - $new];
+            return ['label' => $label, 'new' => $new, 'returning' => $ids->count() - $new, 'source' => 'sistema'];
         });
     }
 
@@ -236,12 +271,12 @@ class CustomerBehaviorController extends Controller
      */
     private function atRisk(): Collection
     {
-        $stays = Booking::whereNotIn('booking_status', self::EXCLUDED)->where('starts_at', '<=', now())
-            ->orderBy('starts_at')->get(['customer_id', 'starts_at'])->groupBy('customer_id');
+        $stays = $this->withPlanilla(Booking::whereNotIn('booking_status', self::EXCLUDED)->where('starts_at', '<=', now())
+            ->orderBy('starts_at')->get(['customer_id', 'starts_at'])->groupBy('customer_id')
+            ->map(fn (Collection $rows) => $rows->map(fn ($b) => $b->starts_at->timezone(self::TZ))->values()));
         $customers = Customer::whereIn('id', $stays->keys())->get()->keyBy('id');
 
-        return $stays->map(function (Collection $rows, $id) use ($customers) {
-            $dates = $rows->map(fn ($b) => $b->starts_at->timezone(self::TZ))->values();
+        return $stays->map(function (Collection $dates, $id) use ($customers) {
             if ($dates->count() < 2 || ! isset($customers[$id]) || ($customers[$id]->blacklist_status ?? null) === 'blocked') {
                 return null;
             }

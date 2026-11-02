@@ -88,6 +88,25 @@ class HistoricalCustomerAnalysis
     }
 
     /**
+     * Días en que cada RUT vino según la planilla (como titular o acompañante), en hora de
+     * Santiago: sirve para que el comportamiento de clientes del sistema sepa si alguien
+     * «nuevo» en realidad ya venía antes del sistema.
+     *
+     * @return Collection<string, Collection<int, Carbon>> RUT normalizado => fechas ordenadas
+     */
+    public function visitDates(iterable $ruts): Collection
+    {
+        $wanted = collect($ruts)->map(fn ($r) => Rut::normalize((string) $r))->filter()->unique()->values();
+        if ($wanted->isEmpty()) {
+            return collect();
+        }
+
+        return $this->visits($wanted->all())->groupBy('doc')->map(fn (Collection $g) => $g
+            ->map(fn (array $v) => Carbon::parse($v['day']->toDateString(), 'America/Santiago'))
+            ->unique(fn (Carbon $d) => $d->toDateString())->sort()->values());
+    }
+
+    /**
      * Cuántas estadías hizo en cada tipo de playroom, de más a menos («PLUS» => 3).
      * Lo que la planilla no trae como tipo va aparte como «Sin tipo».
      *

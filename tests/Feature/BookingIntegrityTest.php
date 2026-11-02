@@ -780,6 +780,34 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('Ana Pérez | 12.345.678-5', GuestLine::format($guests[0]->name, $guests[0]->id_document));
     }
 
+    public function test_a_customer_found_in_the_old_planilla_by_rut_is_not_counted_as_new(): void
+    {
+        foreach (['2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        $known = Customer::create(['name' => 'Ya Venía', 'phone_e164' => '+56955555511', 'rut' => '12345678-5', 'document_type' => 'rut']);
+        $fresh = Customer::create(['name' => 'Primera Vez', 'phone_e164' => '+56955555512', 'rut' => '11111111-1', 'document_type' => 'rut']);
+        // En la planilla (antes del sistema) el primero vino en junio, con el RUT escrito con puntos.
+        $saleId = DB::table('historical_sales')->insertGetId(['source' => 'resumen-junio', 'source_row' => 1, 'sold_on' => '2026-06-12', 'sale_type' => 'ALOJAMIENTO', 'amount_main' => 30000]);
+        DB::table('historical_guests')->insert(['historical_sale_id' => $saleId, 'name' => 'Ya Venía', 'document' => \App\Support\Rut::normalize('12.345.678-5'), 'document_kind' => 'rut', 'is_holder' => true]);
+
+        $today = now();
+        $this->travelTo(Carbon::parse('2026-03-01 09:00'));
+        $this->booking(['customer' => $known, 'starts_at' => Carbon::parse('2026-08-03 12:00')]);
+        $this->booking(['customer' => $fresh, 'starts_at' => Carbon::parse('2026-08-10 12:00')]);
+        $this->travelTo($today);
+
+        $kpis = $this->get(route('admin.analytics.customers', ['from' => '2026-08-01', 'to' => '2026-08-31']))->assertOk()->viewData('kpis');
+        $this->assertSame(2, $kpis['active']);
+        $this->assertSame(1, $kpis['new']);       // solo el que nunca vino
+        $this->assertSame(1, $kpis['repeaters']); // el de la planilla ya había venido
+        // La etiqueta de la ficha (CLIENTE NUEVO) también cuenta la planilla.
+        $this->assertNotSame('nuevo', $known->segment()['type']);
+        $this->assertSame(2, $known->segment()['total_stays']);
+        $this->assertSame('nuevo', $fresh->segment()['type']);
+    }
+
     public function test_customer_behavior_page_counts_new_returning_and_at_risk_clients(): void
     {
         foreach (['2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
