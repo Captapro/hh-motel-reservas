@@ -7,7 +7,6 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\HistoricalSale;
 use App\Services\Customers\UnifiedCustomerData;
-use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Integrations\CustomerActivityTags;
 use App\Support\Rut;
 use App\Support\TimeFormat;
@@ -57,7 +56,8 @@ class CustomerBehaviorController extends Controller
 
         $staysIn = $stays->filter($in);
         $revenue = (int) $staysIn->sum('amount');
-        $risk = $this->atRisk();
+        $people360 = $this->peopleStatus($byPerson, $days);
+        $risk = $people360->filter(fn ($r) => $r['at_risk'])->sortByDesc('visits')->values();
 
         // ===== Solo existe en el sistema (canal, anticipación, pagos, cupones, extras) =====
         $system = Booking::with(['room.category', 'addons', 'payments.paymentMethod', 'customer', 'couponRedemption'])
@@ -104,8 +104,8 @@ class CustomerBehaviorController extends Controller
                 'extra_revenue' => (int) $system->sum(fn (Booking $b) => $b->addons->sum('amount')),
             ],
             'coupons' => ['used' => $system->filter(fn (Booking $b) => $b->coupon_id !== null || (float) $b->discount_amount > 0)->count(), 'bookings' => $system->count()],
-            'risk' => $risk->take(10),
-            'activity' => app(CustomerActivityTags::class)->report(),
+            'risk' => $risk->take(15),
+            'activity' => $this->activity($people360),
         ]);
     }
 
@@ -227,27 +227,6 @@ class CustomerBehaviorController extends Controller
         return $rows->map(fn ($r) => $r + ['link' => $r['customer_id'] ?? $byRut[$r['person']] ?? null]);
     }
 
-    /**
-     * Suma a las fechas de cada cliente (customer_id => fechas) las visitas que tiene en la
-     * planilla histórica por su RUT, sin repetir un día que ya está en el sistema.
-     */
-    private function withPlanilla(Collection $history): Collection
-    {
-        $ruts = Customer::whereIn('id', $history->keys())->whereNotNull('rut')->pluck('rut', 'id')
-            ->map(fn ($rut) => Rut::normalize((string) $rut))->filter();
-        $planilla = app(HistoricalCustomerAnalysis::class)->visitDates($ruts->values());
-        if ($planilla->isEmpty()) {
-            return $history;
-        }
-
-        return $history->map(function (Collection $dates, $id) use ($ruts, $planilla) {
-            $old = $planilla[$ruts[$id] ?? ''] ?? collect();
-
-            return $old->isEmpty() ? $dates : $dates->concat($old)
-                ->unique(fn (Carbon $d) => $d->toDateString())->sortBy(fn (Carbon $d) => $d->timestamp)->values();
-        });
-    }
-
     /** @return array{0: Carbon, 1: Carbon, 2: bool} */
     private function range(Request $request): array
     {
@@ -317,27 +296,64 @@ class CustomerBehaviorController extends Controller
     }
 
     /**
-     * Clientes que venían seguido y llevan más tiempo del habitual sin volver: a ellos
-     * conviene escribirles antes de perderlos. (No incluye los que ya están en lista negra.)
+     * Estado de cada persona en todo el historial (planilla + sistema): cuántas veces vino, cada
+     * cuánto, hace cuánto no viene y si está «en riesgo» (venía seguido y se atrasó: más de 1,5
+     * veces su frecuencia, mínimo 30 días y hasta 180). Se enlaza al cliente del sistema con el
+     * mismo RUT para poder escribirle; los de lista negra no cuentan como en riesgo.
      */
-    private function atRisk(): Collection
+    private function peopleStatus(Collection $byPerson, Collection $days): Collection
     {
-        $stays = $this->withPlanilla(Booking::whereNotIn('booking_status', self::EXCLUDED)->where('starts_at', '<=', now())
-            ->orderBy('starts_at')->get(['customer_id', 'starts_at'])->groupBy('customer_id')
-            ->map(fn (Collection $rows) => $rows->map(fn ($b) => $b->starts_at->timezone(self::TZ))->values()));
-        $customers = Customer::whereIn('id', $stays->keys())->get()->keyBy('id');
+        $today = now(self::TZ)->startOfDay();
+        $customers = Customer::query()->get();
+        $byId = $customers->keyBy('id');
+        $byRut = $customers->filter(fn ($c) => filled($c->rut))->keyBy(fn ($c) => Rut::normalize((string) $c->rut));
 
-        return $stays->map(function (Collection $dates, $id) use ($customers) {
-            if ($dates->count() < 2 || ! isset($customers[$id]) || ($customers[$id]->blacklist_status ?? null) === 'blocked') {
-                return null;
-            }
-            $avg = max(1, (int) round($dates->first()->diffInDays($dates->last()) / ($dates->count() - 1)));
-            $since = (int) $dates->last()->diffInDays(now(self::TZ));
-            $limit = max(30, (int) round($avg * 1.5));
+        return $byPerson->map(function (Collection $rows, $person) use ($days, $today, $byId, $byRut) {
+            $list = $days[$person];
+            $last = Carbon::parse($list->last(), self::TZ);
+            $since = (int) $last->diffInDays($today);
+            $avg = $list->count() >= 2 ? max(1, (int) round(Carbon::parse($list->first())->diffInDays($last) / ($list->count() - 1))) : null;
+            $customer = $byId[$rows->pluck('customer_id')->filter()->last()] ?? $byRut[$person] ?? null;
+            $named = $rows->filter(fn ($v) => filled($v['name']));
 
-            return ($since > $limit && $since <= 180)
-                ? ['customer' => $customers[$id], 'visits' => $dates->count(), 'avg' => $avg, 'since' => $since, 'last' => $dates->last()]
-                : null;
-        })->filter()->sortByDesc('visits')->values();
+            return [
+                'name' => $customer?->name ?? ($named->last()['name'] ?? 'Sin nombre'),
+                'customer' => $customer,
+                'visits' => $list->count(),
+                'avg' => $avg,
+                'since' => $since,
+                'last' => $last,
+                'at_risk' => $avg !== null && ($customer?->blacklist_status ?? null) !== 'blocked'
+                    && $since > max(30, (int) round($avg * 1.5)) && $since <= 180,
+            ];
+        });
+    }
+
+    /**
+     * Personas por tramo de días sin venir (planilla + sistema). Las etiquetas de GHL solo las
+     * llevan los clientes del sistema con teléfono: el resto se ve aquí pero no está en GHL.
+     */
+    private function activity(Collection $people): array
+    {
+        $labels = [
+            CustomerActivityTags::PAUSE => 'Vinieron hace menos de 15 días (en pausa)',
+            'sin_etiqueta' => '15 a 29 días sin venir',
+            'hh_inactivo_30' => '30 a 44 días sin venir',
+            'hh_inactivo_45' => '45 a 59 días sin venir',
+            'hh_inactivo_60' => '60 a 89 días sin venir',
+            'hh_inactivo_90' => '90 días o más sin venir',
+        ];
+        $grouped = $people->groupBy(fn ($r) => CustomerActivityTags::tagForDays($r['since']) ?? 'sin_etiqueta');
+
+        return collect($labels)->map(function ($label, $tag) use ($grouped) {
+            $rows = ($grouped[$tag] ?? collect())->sortByDesc('visits')->values();
+
+            return [
+                'label' => $label,
+                'tag' => $tag === 'sin_etiqueta' ? null : $tag,
+                'people' => $rows,
+                'in_ghl' => $rows->filter(fn ($r) => $r['customer']?->phone_e164)->count(),
+            ];
+        })->all();
     }
 }

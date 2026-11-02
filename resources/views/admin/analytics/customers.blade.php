@@ -113,7 +113,7 @@
                 <tbody>
                     @forelse ($top as $c)
                         <tr>
-                            <td>@if ($c['link'])<a class="link" href="{{ route('admin.customers.show', $c['link']) }}">{{ $c['name'] }}</a>@else{{ $c['name'] }}@endif</td>
+                            <td>@if ($c['link'])<a class="link" href="{{ route('admin.customers.show', $c['link']) }}">{{ $c['name'] }}</a>@elseif (auth()->user()?->isAdministrador()){{ $c['name'] }} <span style="font-size:10.5px;color:#9ca3af;">(planilla)</span>@else<span style="color:#6b7280;">Cliente de la planilla</span>@endif</td>
                             <td class="v">{{ $c['visits'] }}</td>
                             <td class="v">{{ $money($c['total']) }}</td>
                             <td class="v">{{ $c['last']->format('d/m/y') }}</td>
@@ -126,44 +126,47 @@
             </table>
         </div>
         <div class="card t-green">
-            <h3>En riesgo de perderse</h3>
-            <p class="legend">Clientes del sistema que venían seguido (también según la planilla) y llevan más tiempo del habitual sin volver (hasta 6 meses).</p>
+            <h3>En riesgo de perderse — {{ $kpis['at_risk'] }}</h3>
+            <p class="legend">Venían seguido y llevan más tiempo del habitual sin volver (más de 1,5 veces su frecuencia, mínimo 30 días y hasta 6 meses). Planilla y sistema juntos; los más fieles primero.</p>
             <table class="chart-table">
                 <tbody>
                     @forelse ($risk as $r)
                         <tr>
-                            <td><a class="link" href="{{ route('admin.customers.show', $r['customer']) }}">{{ $r['customer']->name }}</a><br><span style="font-size:11px;color:#6b7280;">{{ $r['visits'] }} visitas · suele volver cada {{ $r['avg'] }} d</span></td>
+                            <td>@include('admin.analytics._person', ['r' => $r])<br><span style="font-size:11px;color:#6b7280;">{{ $r['visits'] }} visitas · solía volver cada {{ $r['avg'] }} d</span></td>
                             <td class="v">hace {{ $r['since'] }} d</td>
-                            <td class="v">@if ($r['customer']->phone_e164)<a class="link" target="_blank" rel="noopener" href="https://wa.me/{{ preg_replace('/\D/', '', $r['customer']->phone_e164) }}">WhatsApp</a>@endif</td>
+                            <td class="v">@if ($r['customer']?->phone_e164)<a class="link" target="_blank" rel="noopener" href="https://wa.me/{{ preg_replace('/\D/', '', $r['customer']->phone_e164) }}">WhatsApp</a>@else<span style="font-size:11px;color:#9ca3af;">sin teléfono</span>@endif</td>
                         </tr>
                     @empty
                         <tr><td colspan="3" class="empty">Nadie en riesgo por ahora.</td></tr>
                     @endforelse
+                    @if ($kpis['at_risk'] > $risk->count())
+                        <tr><td colspan="3" class="empty">y {{ $kpis['at_risk'] - $risk->count() }} más</td></tr>
+                    @endif
                 </tbody>
             </table>
         </div>
     </div>
 
     <h2 class="an-title">Hace cuánto no vienen</h2>
-    <p class="sub">Según su última estadía finalizada. En GHL cada cliente lleva la etiqueta de su tramo (se actualiza sola): úsalas para campañas de «te extrañamos» o públicos de Meta.</p>
+    <p class="sub">Todas las personas según su última visita (planilla + sistema), las que más veces vinieron primero. Solo los clientes del sistema con teléfono llevan la etiqueta en GHL (se actualiza sola) para campañas de «te extrañamos» o públicos de Meta; el resto no tiene teléfono registrado.</p>
     <div class="an-grid">
-        @foreach ($activity as $tag => $group)
-            <div class="card {{ $tag === 'hh_pausa' ? 't-green' : 't-orange' }}">
-                <h3>{{ $group['label'] }} — {{ $group['customers']->count() }}</h3>
-                <p class="legend">Etiqueta en GHL: <code>{{ $tag }}</code></p>
+        @foreach ($activity as $group)
+            <div class="card {{ $group['tag'] === 'hh_pausa' ? 't-green' : 't-orange' }}">
+                <h3>{{ $group['label'] }} — {{ number_format($group['people']->count(), 0, ',', '.') }}</h3>
+                <p class="legend">@if ($group['tag'])Etiqueta en GHL: <code>{{ $group['tag'] }}</code> · {{ $group['in_ghl'] }} con teléfono @else Sin etiqueta en GHL @endif</p>
                 <table class="chart-table">
                     <tbody>
-                        @forelse ($group['customers']->take(15) as $r)
+                        @forelse ($group['people']->take(15) as $r)
                             <tr>
-                                <td><a class="link" href="{{ route('admin.customers.show', $r['customer']) }}">{{ $r['customer']->name }}</a></td>
-                                <td class="v">hace {{ $r['days'] }} d</td>
-                                <td class="v">@if ($r['customer']->phone_e164)<a class="link" target="_blank" rel="noopener" href="https://wa.me/{{ preg_replace('/\D/', '', $r['customer']->phone_e164) }}">WhatsApp</a>@endif</td>
+                                <td>@include('admin.analytics._person', ['r' => $r]) <span style="font-size:11px;color:#6b7280;">· {{ $r['visits'] }} {{ $r['visits'] === 1 ? 'visita' : 'visitas' }}</span></td>
+                                <td class="v">hace {{ $r['since'] }} d</td>
+                                <td class="v">@if ($r['customer']?->phone_e164)<a class="link" target="_blank" rel="noopener" href="https://wa.me/{{ preg_replace('/\D/', '', $r['customer']->phone_e164) }}">WhatsApp</a>@endif</td>
                             </tr>
                         @empty
                             <tr><td colspan="3" class="empty">Nadie en este tramo.</td></tr>
                         @endforelse
-                        @if ($group['customers']->count() > 15)
-                            <tr><td colspan="3" class="empty">y {{ $group['customers']->count() - 15 }} más</td></tr>
+                        @if ($group['people']->count() > 15)
+                            <tr><td colspan="3" class="empty">y {{ number_format($group['people']->count() - 15, 0, ',', '.') }} más</td></tr>
                         @endif
                     </tbody>
                 </table>
