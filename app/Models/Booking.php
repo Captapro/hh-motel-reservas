@@ -61,6 +61,17 @@ class Booking extends Model
      * Minutos de atraso respecto a la hora agendada — negativo si llegó antes.
      * Null si todavía no se marca el check-in.
      */
+    /**
+     * Recepción la registró después de que el pasajero entró ("¿Entró antes?"
+     * o una hora pasada en + Reserva): el check-in toma como entrada la hora
+     * registrada, sin descuento por atraso.
+     */
+    public function isLateRegistration(): bool
+    {
+        return $this->created_by && $this->created_at && $this->starts_at
+            && $this->created_at->gt($this->starts_at->copy()->addMinutes(5));
+    }
+
     public function checkInDelayMinutes(): ?int
     {
         if (! $this->checked_in_at) {

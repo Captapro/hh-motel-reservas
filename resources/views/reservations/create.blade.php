@@ -117,6 +117,8 @@
         .ficha-edit-btn:hover { border-color:#ff7918; color:#ff7918; }
         #cust-editable-fields[hidden] { display:none; }
         .price-box { margin-top:10px; padding:12px 14px; border-radius:8px; background:#1c1c1c; border:1px solid #333; font-size:13.5px; }
+        .aseo-opt { display:flex; gap:8px; align-items:flex-start; font-weight:normal; margin:4px 0; }
+        .aseo-opt input { width:auto; margin-top:3px; }
         .aseo-ready { margin-top:10px; padding:10px; border:1px solid #6b5a2a; background:#221d10; border-radius:8px; }
         .price-box.has-offer { background:#16201a; border-color:#2e6e45; }
         .price-box .p-sum { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; color:#bbb; }
@@ -316,7 +318,7 @@
                             $etaMin = $room->current_status['eta_minutes'];
                             $inAseo = $room->operational_status === 'aseo';
                             $statusLabel = match(true) {
-                                $inAseo => 'En aseo (se marca listo al ingresar)',
+                                $inAseo => 'En aseo',
                                 $room->operational_status === 'ocupada' => 'Marcada ocupada sin reserva (registrar ingreso)',
                                 $occ === 'ocupada' && $etaMin >= 0 => 'Ocupada, libera en '.$etaMin.' min',
                                 $occ === 'ocupada' => 'Ocupada (pasó su horario)',
@@ -329,7 +331,11 @@
                     @endforeach
                 </select>
                 <div id="aseo-ready" class="aseo-ready" hidden>
-                    <label for="aseo-cleaned-by">Este Playroom está en aseo. ¿Quién hizo el aseo?</label>
+                    <div style="font-weight:700; margin-bottom:6px;">Este Playroom está en aseo.</div>
+                    <label class="aseo-opt"><input type="radio" name="aseo_mode" value="limpia" @checked(old('aseo_mode', 'limpia') === 'limpia')> Ya está limpio: el cliente entra ahora</label>
+                    <label class="aseo-opt"><input type="radio" name="aseo_mode" value="ya_salieron" @checked(old('aseo_mode') === 'ya_salieron')> Estoy registrando a pasajeros que <strong>ya salieron</strong>: sigue en aseo</label>
+                    <div id="aseo-who-box">
+                    <label for="aseo-cleaned-by">¿Quién hizo el aseo?</label>
                     <select name="aseo_cleaned_by" id="aseo-cleaned-by">
                         <option value="">— Elige —</option>
                         @foreach ($cleaningStaff as $name)
@@ -337,6 +343,8 @@
                         @endforeach
                     </select>
                     <div class="hint">Al guardar queda marcado "aseo listo", igual que en el tablero.</div>
+                    </div>
+                    <div class="hint" id="aseo-past-hint" hidden>Usa "¿Entró antes? Cambiar hora" con la hora real de entrada. El Playroom no cambia: sigue en aseo hasta que lo marquen listo.</div>
                 </div>
                 <div class="hint">
                     @if ($walkInMode)
@@ -1048,11 +1056,15 @@
             const box = document.getElementById('aseo-ready');
             const who = document.getElementById('aseo-cleaned-by');
             const inAseo = !!(opt && opt.dataset.aseo);
+            const past = !!document.querySelector('input[name="aseo_mode"][value="ya_salieron"]:checked');
             box.hidden = !inAseo;
-            who.required = inAseo;
+            who.required = inAseo && !past;
+            document.getElementById('aseo-who-box').hidden = past;
+            document.getElementById('aseo-past-hint').hidden = !past;
             if (inAseo && !who.value && opt.dataset.reported) who.value = opt.dataset.reported;
         }
         document.getElementById('room-select').addEventListener('change', hhSyncAseo);
+        document.querySelectorAll('input[name="aseo_mode"]').forEach((r) => r.addEventListener('change', hhSyncAseo));
         hhSyncAseo();
 
         function hhSyncDurations(catOverride) {

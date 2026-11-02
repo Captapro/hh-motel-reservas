@@ -1660,7 +1660,7 @@ class BookingIntegrityTest extends TestCase
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
         \App\Models\Staff::create(['name' => 'Dubraska', 'role' => 'Mucama', 'is_active' => true]);
         $this->room->update(['operational_status' => 'aseo', 'aseo_started_at' => now()->subHour()]);
-        $this->assertStringContainsString('En aseo (se marca listo al ingresar)', $this->get('/reservar?modo=ingreso')->getContent());
+        $this->assertStringContainsString('Estoy registrando a pasajeros que', $this->get('/reservar?modo=ingreso')->getContent());
 
         $data = [
             'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 10, 'time_minute' => 30,
@@ -1691,6 +1691,40 @@ class BookingIntegrityTest extends TestCase
         $this->room->update(['operational_status' => 'mantencion']);
         $this->post('/reservar', $data)->assertSessionHasErrors();
         $this->assertSame(0, Booking::count());
+    }
+
+    public function test_registering_guests_who_already_left_keeps_the_room_in_aseo_and_checks_in_at_their_real_time(): void
+    {
+        (require database_path('migrations/2026_08_19_090003_add_consumption_offered_to_bookings_table.php'))->up();
+        // 12:55 entraron, 15:55 salieron; a las 16:25 recepción los registra.
+        $this->travelTo(Carbon::parse('2026-10-05 16:25'));
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+        $this->room->update(['operational_status' => 'aseo', 'aseo_started_at' => now()->subMinutes(20)]);
+        $data = [
+            'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 55,
+            'duration_minutes' => 60, 'guests_count' => 1, 'customer_first_name' => 'Ya', 'customer_last_name' => 'Salieron',
+            'document_type' => 'rut', 'document_number' => '12.345.678-5', 'nationality' => 'Chilena', 'walk_in' => 1, 'aseo_mode' => 'ya_salieron',
+        ];
+
+        // Con la hora de ahora no tiene sentido: pide la hora real de entrada.
+        $this->post('/reservar', ['time_hour' => 16, 'time_minute' => 30] + $data)->assertSessionHasErrors('aseo_mode');
+
+        $this->post('/reservar', $data)->assertRedirect()->assertSessionHasNoErrors();
+        $booking = Booking::firstOrFail();
+        $this->assertTrue($booking->isLateRegistration());
+        $this->assertSame('aseo', $this->room->fresh()->operational_status);
+        $this->assertSame(0, AuditLog::where('action', 'habitacion.aseo_listo')->count());
+
+        // El check-in no los da por atrasados ni bloquea por horario terminado: entraron a las 12:55.
+        $this->payRoom($booking)->get('/reservas/'.$booking->code.'/checkin')->assertOk()->assertDontSee('min tarde');
+        $this->post('/reservas/'.$booking->code.'/checkin')->assertRedirect(route('rooms.board'))->assertSessionHasNoErrors();
+        $booking->refresh();
+        $this->assertSame('12:55', $booking->checked_in_at->format('H:i'));
+        $this->assertSame('13:55', $booking->ends_at->format('H:i'));
+        // Ya salieron y está todo pagado: queda finalizada y el Playroom sigue en aseo.
+        $this->assertSame('FINALIZADA', $booking->booking_status);
+        $this->assertSame('16:25', $booking->checked_out_at->format('H:i'));
+        $this->assertSame('aseo', $this->room->fresh()->operational_status);
     }
 
     public function test_reservation_and_walk_in_forms_render_with_optional_phone_and_email(): void

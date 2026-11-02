@@ -176,6 +176,7 @@ class ReservationController extends Controller
             'accepted_upsells' => ['nullable', 'array'],
             'accepted_upsells.*' => ['integer', 'exists:upsell_offers,id'],
             'aseo_cleaned_by' => ['nullable', 'string', 'max:100'],
+            'aseo_mode' => ['nullable', 'in:limpia,ya_salieron'],
         ]);
         // Ingreso presencial: después de crear se cobra y se pasa directo al check-in.
         $walkIn = (bool) ($validated['walk_in'] ?? false);
@@ -184,7 +185,11 @@ class ReservationController extends Controller
         // Pieza en aseo sin marcar lista: se exige quién hizo el aseo (igual que
         // "Marcar aseo listo" en el tablero) y se reactiva al crear la reserva.
         $cleanedBy = null;
-        if ($room->operational_status === 'aseo') {
+        $staysInAseo = false;
+        if ($room->operational_status === 'aseo' && ($validated['aseo_mode'] ?? null) === 'ya_salieron') {
+            // Se registra una estadía que ya pasó: la pieza sigue en aseo por estos mismos pasajeros.
+            $staysInAseo = true;
+        } elseif ($room->operational_status === 'aseo') {
             $cleanedBy = ($validated['aseo_cleaned_by'] ?? null) ?: $room->aseo_reported_by;
             if (! $cleanedBy || ! Staff::activeMucamas()->where('name', $cleanedBy)->exists()) {
                 return back()->withInput()->withErrors(['aseo_cleaned_by' => $room->name.' está en aseo: indica quién hizo el aseo para marcarlo listo.']);
@@ -193,6 +198,9 @@ class ReservationController extends Controller
         $time = sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']);
         $startsAt = Carbon::parse($validated['date'].' '.$time);
         $baseDuration = (int) $validated['duration_minutes'];
+        if ($staysInAseo && $startsAt->gte(now())) {
+            return back()->withInput()->withErrors(['aseo_mode' => 'Para registrar a pasajeros que ya salieron, pon su hora real de entrada con "¿Entró antes? Cambiar hora".']);
+        }
 
         // Upsells aceptados en el modal — se resuelven de nuevo acá (autoridad
         // del servidor). La reserva se crea y cobra con la habitación y
@@ -285,7 +293,7 @@ class ReservationController extends Controller
         try {
             // Si la pieza estaba en aseo u ocupada sin reserva se reactiva en la misma
             // transacción: si la reserva no se puede crear, vuelve a quedar como estaba.
-            $booking = DB::transaction(function () use ($cleanedBy, $room, $bookingService, $customer, $startsAt, $baseDuration, $extraMinutes, $validated, $walkIn) {
+            $booking = DB::transaction(function () use ($cleanedBy, $staysInAseo, $room, $bookingService, $customer, $startsAt, $baseDuration, $extraMinutes, $validated, $walkIn) {
                 if ($room->operational_status === 'ocupada') {
                     $old = $room->only(['operational_status', 'operational_note']);
                     $room->update(['operational_status' => 'activa', 'operational_note' => null]);
@@ -316,6 +324,7 @@ class ReservationController extends Controller
                     'verified_by' => auth()->id(),
                     'notes' => null,
                     'guest_names' => preg_split('/\r\n|\r|\n/', $validated['guest_names'] ?? ''),
+                    'room_in_aseo_after_stay' => $staysInAseo,
                 ]);
             });
         } catch (RoomNotAvailableException|PricingException|InvalidCouponException $e) {

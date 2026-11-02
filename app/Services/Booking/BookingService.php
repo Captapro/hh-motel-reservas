@@ -86,7 +86,11 @@ class BookingService
             throw new RoomNotAvailableException('No se puede crear una reserva con fecha y hora en el pasado.');
         }
 
-        if (! $room->isOperational()) {
+        // Registro tardío de una estadía que ya terminó: la pieza quedó en aseo
+        // porque esos mismos pasajeros acaban de salir, y así se queda.
+        $pastStayInAseo = ! empty($data['room_in_aseo_after_stay']) && ! empty($data['created_by'])
+            && $room->operational_status === 'aseo' && $startsAt->lt(now());
+        if (! $room->isOperational() && ! $pastStayInAseo) {
             throw new RoomNotAvailableException("El Playroom {$room->name} no está operativa ahora mismo.");
         }
 

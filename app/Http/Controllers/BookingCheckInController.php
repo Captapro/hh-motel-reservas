@@ -96,7 +96,7 @@ class BookingCheckInController extends Controller
 
         // Vista previa de la regla de atrasos: recepción ve antes de confirmar
         // si tiene el tiempo completo o cuánto se le descuenta.
-        $late = $booking->starts_at->lt(now()) ? app(LateArrivalPolicy::class)->resolve($booking, now()) : null;
+        $late = $booking->starts_at->lt(now()) && ! $booking->isLateRegistration() ? app(LateArrivalPolicy::class)->resolve($booking, now()) : null;
         $proofRequired = $proofs->required($booking);
 
         return view('reservations.checkin', [
@@ -157,7 +157,11 @@ class BookingCheckInController extends Controller
         // La reserva pudo haberse hecho con la pieza disponible, pero si
         // después quedó en aseo/mantención (por ejemplo el huésped anterior
         // salió tarde) no se puede habilitar hasta reactivarla.
-        if ($booking->room->operational_status !== 'activa') {
+        // Excepción: registro tardío de pasajeros que ya salieron (la pieza quedó
+        // en aseo por ellos mismos).
+        $lateRegistration = $booking->isLateRegistration();
+        $roomInAseoAfterStay = $lateRegistration && $booking->room->operational_status === 'aseo';
+        if ($booking->room->operational_status !== 'activa' && ! $roomInAseoAfterStay) {
             return back()->withInput()->withErrors([
                 'booking' => 'El Playroom '.$booking->room->name.' está en estado "'.$booking->room->operational_status.'" — hay que reactivarlo antes de poder hacer el check-in.',
             ]);
@@ -204,7 +208,8 @@ class BookingCheckInController extends Controller
             return back()->withInput()->withErrors(['holder' => $holder]);
         }
 
-        $arrival = now();
+        // Registro tardío: entró a la hora que se registró, no ahora.
+        $arrival = $lateRegistration ? $booking->starts_at->copy() : now();
         if ($arrival->lt($booking->starts_at)
             && ! $availability->isAvailable($booking->room, $arrival, $booking->ends_at, $booking->id)) {
             return back()->withInput()->withErrors([
@@ -284,6 +289,29 @@ class BookingCheckInController extends Controller
         }
 
         $roomName = $booking->fresh()->room->name;
+
+        // Pasajeros que ya salieron (la pieza quedó en aseo por ellos): con todo
+        // pagado la estadía se cierra aquí mismo; si queda saldo, se cobra y se
+        // finaliza desde la reserva.
+        if ($roomInAseoAfterStay) {
+            $booking = $booking->fresh();
+            if ($booking->balanceDue() > 0) {
+                return redirect()->route('reservations.show', $booking->code)
+                    ->with('status', $status.' — '.$roomName.'. Ya salieron: cobra el saldo y finaliza la reserva. El Playroom sigue en aseo.');
+            }
+            $old = $booking->only(['booking_status', 'checked_out_at', 'ends_at']);
+            $booking->update([
+                'booking_status' => 'FINALIZADA',
+                'consumption_offered_at' => now(),
+                'consumption_offered_by' => auth()->id(),
+                'checked_out_at' => now(),
+                'ends_at' => $booking->ends_at->min(now()),
+            ]);
+            AuditLog::record(auth()->id(), 'reserva.finalizar', 'Booking', $booking->id, $old, $booking->fresh()->only(['booking_status', 'checked_out_at', 'ends_at']));
+
+            return redirect()->route('rooms.board')
+                ->with('status', '✓ Registrado · '.$booking->customer->name.' — '.$roomName.'. Ya salieron: la estadía queda finalizada y el Playroom sigue en aseo.');
+        }
 
         return redirect()->route('rooms.board')->with('status', $status.' — '.$roomName.'.');
     }
