@@ -216,6 +216,9 @@
         @media (prefers-reduced-motion: reduce) { .panel-summary.step-active button.submit { animation:none; } }
         .walkin-now { margin-top:14px; padding:10px 14px; border:1px solid #6b3a14; background:#2a1a0c; color:#ffb379; border-radius:9px; font-size:14px; }
         .walkin-now b { color:#ff7918; }
+        .walkin-now .walkin-late-toggle { background:none; border:none; color:#ffb379; text-decoration:underline; cursor:pointer; font-size:13px; padding:0; margin-left:8px; }
+        .walkin-late { margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13.5px; color:#ddd; }
+        .walkin-late input[type=time] { width:auto; padding:7px 10px; }
         /* Ingreso presencial: estadía | cliente + acompañantes | ofrecer consumo | resumen */
         .consumo-panel .cat-label { font-size:10.5px; color:#888; text-transform:uppercase; letter-spacing:.06em; margin:10px 0 4px; }
         .consumo-total { font-size:12.5px; font-family:ui-monospace,monospace; color:#888; margin:2px 0 6px; }
@@ -373,7 +376,15 @@
                 </div>
 
                 @if ($walkInMode)
-                    <div class="walkin-now">Ingresa <b>ahora</b> · <span id="walkin-clock"></span></div>
+                    <div class="walkin-now">
+                        <span id="walkin-now-text">Ingresa <b>ahora</b> · <span id="walkin-clock"></span></span>
+                        <button type="button" class="walkin-late-toggle" id="walkin-late-toggle">¿Entró antes? Cambiar hora</button>
+                        <div class="walkin-late" id="walkin-late" hidden>
+                            <label for="walkin-late-time" style="margin:0;">Hora real de llegada</label>
+                            <input type="time" id="walkin-late-time" step="300">
+                            <span class="hint" style="margin:0;">Hasta {{ \App\Services\Booking\BookingService::LATE_REGISTRATION_HOURS }} horas atrás. Si es una hora mayor a la actual, se toma como de ayer.</span>
+                        </div>
+                    </div>
                 @endif
 
                 <label>Duración <span class="hint" style="margin:0;">— según la categoría</span></label>
@@ -1619,8 +1630,8 @@
             function clientDone() {
                 const email = document.getElementById('customer-email');
                 const doc = document.getElementById('document-number');
-                // Solo el ingreso presencial acepta cliente sin teléfono ni email.
-                const optionalContact = @json($walkInMode);
+                // Teléfono y email son opcionales (el cliente se identifica por su documento).
+                const optionalContact = true;
                 const phoneDigits = val('customer-phone').replace(/\D/g, '').length;
                 return (phoneDigits >= 8 || (optionalContact && phoneDigits === 0))
                     && !!val('customer-first-name') && !!val('customer-last-name')
@@ -1750,7 +1761,30 @@
             const pad = (n) => String(n).padStart(2, '0');
             const tick = () => { if (clock) { const n = new Date(); clock.textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()); } };
             tick(); setInterval(tick, 20000);
+            // Si entró antes y se registra tarde: se usa la hora real de llegada (hoy, o ayer si es mayor a la actual).
+            const lateToggle = document.getElementById('walkin-late-toggle');
+            const lateBox = document.getElementById('walkin-late');
+            const lateTime = document.getElementById('walkin-late-time');
+            if (lateToggle) lateToggle.addEventListener('click', function () {
+                lateBox.hidden = false; lateToggle.hidden = true;
+                document.getElementById('walkin-now-text').innerHTML = 'Ingresó a la hora indicada';
+                const n = new Date(); lateTime.value = pad(n.getHours()) + ':' + pad(Math.floor(n.getMinutes() / 5) * 5);
+                lateTime.focus();
+            });
+            function applyLate() {
+                if (!lateBox || lateBox.hidden || !lateTime.value) return false;
+                const [h, m] = lateTime.value.split(':').map(Number);
+                const d = new Date(); d.setHours(h, m, 0, 0);
+                if (d.getTime() - Date.now() > 5 * 60000) d.setDate(d.getDate() - 1);
+                document.getElementById('date-input').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+                document.getElementById('time-hour').value = String(d.getHours());
+                document.getElementById('time-minute').value = String(d.getMinutes());
+                return true;
+            }
+            // El precio depende de la hora (tarifa HH/HOT, ofertas por horario): se recalcula con la hora real.
+            if (lateTime) lateTime.addEventListener('change', function () { if (applyLate() && typeof hhQuotePrice === 'function') hhQuotePrice(); });
             form.addEventListener('submit', function () {
+                if (applyLate()) return;
                 const n = new Date();
                 document.getElementById('date-input').value = n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
                 document.getElementById('time-hour').value = String(n.getHours());
