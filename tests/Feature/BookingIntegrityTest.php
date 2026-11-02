@@ -1655,7 +1655,7 @@ class BookingIntegrityTest extends TestCase
         }
     }
 
-    public function test_a_walk_in_can_use_a_room_still_marked_in_aseo_by_saying_who_cleaned_it(): void
+    public function test_a_walk_in_can_use_a_room_still_in_aseo_or_marked_occupied_without_booking(): void
     {
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
         \App\Models\Staff::create(['name' => 'Dubraska', 'role' => 'Mucama', 'is_active' => true]);
@@ -1676,6 +1676,15 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('activa', $this->room->fresh()->operational_status);
         $log = AuditLog::where('action', 'habitacion.aseo_listo')->firstOrFail();
         $this->assertSame('Dubraska', $log->new_value['cleaned_by']);
+
+        // Marcada "Ocupada (sin reserva)" para registrar después: se puede ingresar y vuelve a activa.
+        Booking::query()->delete();
+        $this->room->update(['operational_status' => 'ocupada', 'operational_note' => 'Registrar luego']);
+        $this->assertStringContainsString('Marcada ocupada sin reserva', $this->get('/reservar?modo=ingreso')->getContent());
+        $this->post('/reservar', $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(1, Booking::count());
+        $this->assertSame('activa', $this->room->fresh()->operational_status);
+        $this->assertNull($this->room->fresh()->operational_note);
 
         // Una pieza en mantención no se puede elegir.
         Booking::query()->delete();

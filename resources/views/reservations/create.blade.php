@@ -317,6 +317,7 @@
                             $inAseo = $room->operational_status === 'aseo';
                             $statusLabel = match(true) {
                                 $inAseo => 'En aseo (se marca listo al ingresar)',
+                                $room->operational_status === 'ocupada' => 'Marcada ocupada sin reserva (registrar ingreso)',
                                 $occ === 'ocupada' && $etaMin >= 0 => 'Ocupada, libera en '.$etaMin.' min',
                                 $occ === 'ocupada' => 'Ocupada (pasó su horario)',
                                 default => 'Libre ahora',

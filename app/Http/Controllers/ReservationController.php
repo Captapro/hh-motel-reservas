@@ -49,11 +49,12 @@ class ReservationController extends Controller
     public function create(Request $request, RoomBoardService $board, RateRuleResolver $rates): View
     {
         $operationalSetting = OperationalSetting::current();
-        // También las que están en aseo sin marcar listo: a veces el cliente ya
-        // entró a una pieza limpia que nadie reactivó. Al elegirla se pide quién
-        // hizo el aseo y se marca lista junto con el ingreso.
+        // También las que están en aseo sin marcar listo (el cliente ya entró a una
+        // pieza limpia que nadie reactivó: se pide quién hizo el aseo) y las marcadas
+        // "Ocupada (sin reserva)" para registrar después a quien ya está adentro.
+        // Las dos quedan activas junto con el ingreso.
         $rooms = Room::with('category')
-            ->whereIn('operational_status', ['activa', 'aseo'])
+            ->whereIn('operational_status', ['activa', 'aseo', 'ocupada'])
             ->categoryEnabled()
             ->floorWingEnabled($operationalSetting)
             ->orderBy('name')
@@ -282,9 +283,14 @@ class ReservationController extends Controller
         }
 
         try {
-            // Si la pieza estaba en aseo se marca lista en la misma transacción:
-            // si la reserva no se puede crear, vuelve a quedar en aseo.
+            // Si la pieza estaba en aseo u ocupada sin reserva se reactiva en la misma
+            // transacción: si la reserva no se puede crear, vuelve a quedar como estaba.
             $booking = DB::transaction(function () use ($cleanedBy, $room, $bookingService, $customer, $startsAt, $baseDuration, $extraMinutes, $validated, $walkIn) {
+                if ($room->operational_status === 'ocupada') {
+                    $old = $room->only(['operational_status', 'operational_note']);
+                    $room->update(['operational_status' => 'activa', 'operational_note' => null]);
+                    AuditLog::record(auth()->id(), 'habitacion.estado_operativo', 'Room', $room->id, $old, ['operational_status' => 'activa', 'operational_note' => null, 'al_ingresar' => true]);
+                }
                 if ($cleanedBy) {
                     $old = $room->only(['operational_status', 'aseo_reported_by', 'aseo_reported_at']);
                     $room->update(['operational_status' => 'activa', 'aseo_override_at' => now(), 'aseo_reported_by' => null, 'aseo_reported_at' => null]);
