@@ -86,7 +86,7 @@ class CustomerBehaviorController extends Controller
                 'median_gap' => $gaps->isEmpty() ? null : (int) $gaps->sort()->values()->get(intdiv($gaps->count(), 2)),
                 'at_risk' => $risk->count(),
             ],
-            'monthly' => $this->monthly($visits, $first, $start, $end),
+            'monthly' => $this->monthly($visits, $first, $days, $start, $end),
             'gapBuckets' => $this->gapBuckets($gaps),
             'retention' => $this->retention($days, $first, $startDay, $endDay),
             'frequency' => $this->frequency($days, $people, $endDay),
@@ -95,6 +95,8 @@ class CustomerBehaviorController extends Controller
             'dayparts' => $this->dayparts($staysIn->where('has_time', true)),
             'party' => $this->count($staysIn->whereNotNull('guests'), fn ($s) => $s['guests'] >= 3 ? '3 o más personas' : $s['guests'].' '.($s['guests'] === 1 ? 'persona' : 'personas')),
             'durations' => $this->count($staysIn->whereNotNull('minutes'), fn ($s) => TimeFormat::minutes((int) (round($s['minutes'] / 60) * 60) ?: 60), fn ($s) => $s['minutes']),
+            'added' => collect(['extra_person' => 'Persona adicional (goloso)', 'extra_hour' => 'Hora extra', 'consumos' => 'Consumos (bebidas, preservativos…)'])
+                ->map(fn ($label, $field) => ['label' => $label, 'count' => $staysIn->where($field, true)->count()])->values(),
             'top' => $this->topPeople($visitsIn),
             'segments' => $this->segmentCounts($system->pluck('customer_id')->unique()->values(), $system->groupBy('customer_id'), $value),
             'channel' => $this->tally($system, fn (Booking $b) => $b->origin ? $b->originLabel() : ($b->created_by ? 'Gestionada por el equipo (sin detalle)' : 'Reserva en línea'), $value),
@@ -113,17 +115,36 @@ class CustomerBehaviorController extends Controller
 
     /**
      * Mes a mes: personas distintas, cuántas venían por primera vez y cuántas ya habían venido
-     * (tasa de recurrencia). El primer mes cargado no tiene meses anteriores para comparar.
+     * alguna vez (esta tasa sube sola con los meses, porque cada mes hay más historia atrás).
+     * Por eso también la tasa con ventana fija: de las personas del mes, cuántas habían venido
+     * en los 30, 60 o 90 días anteriores a su visita. Una ventana solo se calcula si hay datos
+     * que la cubran entera desde el primer día del mes.
      */
-    private function monthly(Collection $visits, Collection $first, Carbon $start, Carbon $end): Collection
+    private function monthly(Collection $visits, Collection $first, Collection $days, Carbon $start, Carbon $end): Collection
     {
-        $oldestMonth = $first->min() ? substr($first->min(), 0, 7) : null;
+        $oldestDay = $first->min();
+        $oldestMonth = $oldestDay ? substr($oldestDay, 0, 7) : null;
 
         return $visits->filter(fn ($v) => $v['at']->between($start, $end))
             ->groupBy(fn ($v) => $v['at']->format('Y-m'))->sortKeys()
-            ->map(function (Collection $rows, string $ym) use ($first, $oldestMonth) {
+            ->map(function (Collection $rows, string $ym) use ($first, $days, $oldestDay, $oldestMonth) {
                 $persons = $rows->pluck('person')->unique();
                 $new = $persons->filter(fn ($p) => substr($first[$p], 0, 7) === $ym)->count();
+                $firstIn = $persons->mapWithKeys(fn ($p) => [$p => $days[$p]->first(fn ($d) => substr($d, 0, 7) === $ym)]);
+                $windows = [];
+                foreach ([30, 60, 90] as $n) {
+                    if (Carbon::parse($ym.'-01')->subDays($n)->toDateString() < $oldestDay) {
+                        $windows[$n] = null;
+
+                        continue;
+                    }
+                    $back = $firstIn->filter(function ($d, $p) use ($days, $n) {
+                        $from = Carbon::parse($d)->subDays($n)->toDateString();
+
+                        return $days[$p]->contains(fn ($day) => $day >= $from && $day < $d);
+                    })->count();
+                    $windows[$n] = ['back' => $back, 'pct' => $persons->count() ? (int) round($back / $persons->count() * 100) : 0];
+                }
 
                 return [
                     'month' => $ym,
@@ -133,6 +154,7 @@ class CustomerBehaviorController extends Controller
                     'returning' => $persons->count() - $new,
                     'rate' => $persons->count() ? (int) round(($persons->count() - $new) / $persons->count() * 100) : 0,
                     'comparable' => $ym !== $oldestMonth,
+                    'windows' => $windows,
                 ];
             })->values();
     }

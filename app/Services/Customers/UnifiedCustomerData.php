@@ -24,7 +24,7 @@ class UnifiedCustomerData
 
     /**
      * @return array{
-     *   stays: Collection<int, array{key: string, at: Carbon, source: string, category: string, amount: int, guests: ?int, minutes: ?int, has_time: bool}>,
+     *   stays: Collection<int, array{key: string, at: Carbon, source: string, category: string, amount: int, guests: ?int, minutes: ?int, has_time: bool, extra_person: bool, extra_hour: bool, consumos: bool}>,
      *   visits: Collection<int, array{person: string, at: Carbon, stay: string, holder: bool, amount: int, name: ?string, customer_id: ?int, category: string}>,
      *   cutoff: ?Carbon
      * }
@@ -37,16 +37,27 @@ class UnifiedCustomerData
         $visits = collect();
 
         if ($cutoff) {
-            foreach (HistoricalSale::with('guests')->where('sale_type', 'ALOJAMIENTO')->get() as $sale) {
+            $sales = HistoricalSale::with('guests')->orderBy('source')->orderBy('source_row')->get();
+            $added = $this->attachToStays($sales);
+            foreach ($sales->where('sale_type', 'ALOJAMIENTO') as $sale) {
                 $time = $this->time($sale->starts_time);
                 $at = Carbon::parse($sale->sold_on->toDateString().' '.($time ?? '00:00'), self::TZ);
                 $key = 'p'.$sale->id;
                 $category = $sale->categoryName() ?? 'Sin tipo';
+                $extra = $added[$sale->id] ?? ['amount' => 0, 'persons' => 0, 'hour' => false, 'consumos' => false];
+                $total = $sale->total() + $extra['amount'];
+                // El goloso va en su propia fila y el «N° de personas» de la estadía casi siempre
+                // queda en 2: cada goloso es una persona más sobre las 2 de base.
+                $guests = $sale->guests_count ?: null;
+                if ($extra['persons'] > 0) {
+                    $guests = max($guests ?? 2, 2 + $extra['persons']);
+                }
                 $stays->push([
-                    'key' => $key, 'at' => $at, 'source' => 'planilla', 'category' => $category, 'amount' => $sale->total(),
-                    'guests' => $sale->guests_count ?: null,
+                    'key' => $key, 'at' => $at, 'source' => 'planilla', 'category' => $category, 'amount' => $total,
+                    'guests' => $guests,
                     'minutes' => $sale->hours_paid ? $sale->hours_paid * 60 : ($sale->duration_minutes ?: null),
                     'has_time' => $time !== null,
+                    'extra_person' => $extra['persons'] > 0, 'extra_hour' => $extra['hour'], 'consumos' => $extra['consumos'],
                 ]);
                 $seen = [];
                 $paid = false;
@@ -59,7 +70,7 @@ class UnifiedCustomerData
                     $paid = $paid || $holder;
                     $visits->push([
                         'person' => $guest->document, 'at' => $at, 'stay' => $key, 'holder' => $holder,
-                        'amount' => $holder ? $sale->total() : 0, 'name' => $guest->name, 'customer_id' => null, 'category' => $category,
+                        'amount' => $holder ? $total : 0, 'name' => $guest->name, 'customer_id' => null, 'category' => $category,
                     ]);
                 }
             }
@@ -75,9 +86,13 @@ class UnifiedCustomerData
             $key = 'b'.$booking->id;
             $category = $booking->room?->category?->name ?? 'Sin tipo';
             $amount = (int) ($booking->price_final + $booking->addons->sum('amount'));
+            $hour = fn ($a) => str_contains(mb_strtolower((string) $a->description), 'hora extra') || str_contains(mb_strtolower((string) $a->description), 'hora adicional');
             $stays->push([
                 'key' => $key, 'at' => $at, 'source' => 'sistema', 'category' => $category, 'amount' => $amount,
                 'guests' => $booking->guests_count, 'minutes' => $booking->duration_minutes, 'has_time' => true,
+                'extra_person' => (int) $booking->guests_count > 2,
+                'extra_hour' => $booking->addons->contains($hour),
+                'consumos' => $booking->addons->reject($hour)->isNotEmpty(),
             ]);
             $holderKey = $this->personKey($booking->customer?->rut, $booking->customer_id);
             $seen = [$holderKey => true];
@@ -99,6 +114,40 @@ class UnifiedCustomerData
         }
 
         return ['stays' => $stays, 'visits' => $visits, 'cutoff' => $cutoff];
+    }
+
+    /**
+     * En la planilla el goloso (persona adicional), la hora extra, los consumos y los pagos
+     * fraccionados van en filas propias, debajo de la estadía a la que pertenecen. Cada una se
+     * suma a la última estadía anterior de la misma planilla y el mismo día.
+     *
+     * @return array<int, array{amount: int, persons: int, hour: bool, consumos: bool}>
+     */
+    private function attachToStays(Collection $sales): array
+    {
+        $added = [];
+        $stay = null;
+        foreach ($sales as $sale) {
+            if ($sale->sale_type === 'ALOJAMIENTO') {
+                $stay = $sale;
+
+                continue;
+            }
+            if ($stay === null || $stay->source !== $sale->source || ! $stay->sold_on->isSameDay($sale->sold_on)) {
+                continue;
+            }
+            $row = $added[$stay->id] ?? ['amount' => 0, 'persons' => 0, 'hour' => false, 'consumos' => false];
+            $row['amount'] += $sale->total();
+            match ($sale->concept()) {
+                'persona_adicional' => $row['persons'] += max(1, (int) $sale->quantity),
+                'hora_extra' => $row['hour'] = true,
+                'extras' => $row['consumos'] = true,
+                default => null,
+            };
+            $added[$stay->id] = $row;
+        }
+
+        return $added;
     }
 
     /** La persona es su RUT válido; sin RUT, el cliente del sistema cuenta aparte. */

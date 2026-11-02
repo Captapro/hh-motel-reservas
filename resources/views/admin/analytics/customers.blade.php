@@ -57,7 +57,7 @@
             <div class="stack-chart">
                 @foreach ($monthly as $m)
                     <div class="stack-col">
-                        <div class="stack-rate">{{ $m['comparable'] ? $m['rate'].'%' : '—' }}</div>
+                        <div class="stack-rate">{{ $m['windows'][30] !== null ? $m['windows'][30]['pct'].'%' : '—' }}</div>
                         <div class="stack-bar" title="{{ $m['label'] }}: {{ $m['people'] }} personas · {{ $m['new'] }} nuevas · {{ $m['returning'] }} ya habían venido">
                             <div class="seg-ret" style="height:{{ round($m['returning'] / $maxM * 100) }}%"></div>
                             <div class="seg-new" style="height:{{ round($m['new'] / $maxM * 100) }}%"></div>
@@ -67,16 +67,55 @@
                     </div>
                 @endforeach
             </div>
-            <p class="legend"><span class="dot-new"></span> Nuevas &nbsp; <span class="dot-ret"></span> Ya habían venido &nbsp;· arriba, % de recurrencia (ya habían venido ÷ personas del mes). El primer mes cargado no tiene con qué comparar.</p>
+            <p class="legend"><span class="dot-new"></span> Nuevas &nbsp; <span class="dot-ret"></span> Ya habían venido &nbsp;· arriba, % que había venido en los 30 días anteriores (tasa mensual). «Ya habían venido» cuenta toda la historia, por eso crece con los meses.</p>
         </div>
         <div class="card t-orange">
-            <h3>Meses con mayor recurrencia</h3>
-            @php $ranked = $monthly->where('comparable', true)->sortByDesc('rate')->values(); @endphp
+            <h3>Meses con mayor recurrencia (30 días)</h3>
+            @php $ranked = $monthly->filter(fn ($m) => $m['windows'][30] !== null)->sortByDesc(fn ($m) => $m['windows'][30]['pct'])->values(); @endphp
             @forelse ($ranked as $m)
-                <div class="bar-row"><div class="name" style="text-transform:capitalize;">{{ $m['label'] }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ $m['rate'] }}%"></div></div><div class="val">{{ $m['rate'] }}% <small>· {{ $m['returning'] }} de {{ $m['people'] }}</small></div></div>
+                <div class="bar-row"><div class="name" style="text-transform:capitalize;">{{ $m['label'] }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ $m['windows'][30]['pct'] }}%"></div></div><div class="val">{{ $m['windows'][30]['pct'] }}% <small>· {{ $m['windows'][30]['back'] }} de {{ $m['people'] }}</small></div></div>
             @empty
                 <p class="empty">Hace falta más de un mes de datos.</p>
             @endforelse
+            <p class="legend" style="margin-top:8px;">Personas del mes que ya habían venido en los 30 días anteriores. No se acumula: compara meses en igualdad de condiciones.</p>
+        </div>
+        <div class="card t-orange" style="grid-column:1 / -1;">
+            <h3>Tasa de recurrencia por mes: 30, 60 y 90 días</h3>
+            @php
+                $best = [];
+                foreach ([30, 60, 90] as $n) {
+                    $best[$n] = $monthly->pluck('windows')->pluck($n)->filter()->max('pct');
+                }
+            @endphp
+            <table class="chart-table">
+                <thead><tr>
+                    <td>Mes</td><td class="v">Personas</td>
+                    <td class="v" data-tip="Habían venido en los 30 días antes de su visita del mes (tasa mensual)." tabindex="0">30 días</td>
+                    <td class="v" data-tip="Habían venido en los 60 días antes de su visita del mes." tabindex="0">60 días</td>
+                    <td class="v" data-tip="Habían venido en los 90 días antes de su visita del mes." tabindex="0">90 días</td>
+                    <td class="v" data-tip="Habían venido alguna vez antes, en toda la historia cargada. Sube sola con los meses porque hay más historia atrás; no sirve para comparar meses." tabindex="0">Alguna vez</td>
+                </tr></thead>
+                <tbody>
+                    @foreach ($monthly as $m)
+                        <tr>
+                            <td style="text-transform:capitalize;">{{ $m['label'] }}</td>
+                            <td class="v">{{ number_format($m['people'], 0, ',', '.') }}</td>
+                            @foreach ([30, 60, 90] as $n)
+                                @php $w = $m['windows'][$n]; @endphp
+                                <td class="v">
+                                    @if ($w === null)
+                                        <span style="opacity:.5;" data-tip="No hay {{ $n }} días de datos antes de este mes para comparar." tabindex="0">—</span>
+                                    @else
+                                        @if ($w['pct'] === $best[$n])<b>{{ $w['pct'] }}%</b>@else{{ $w['pct'] }}%@endif <small>· {{ number_format($w['back'], 0, ',', '.') }}</small>
+                                    @endif
+                                </td>
+                            @endforeach
+                            <td class="v">{{ $m['comparable'] ? $m['rate'].'%' : '—' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            <p class="legend" style="margin-top:8px;">De las personas que vinieron ese mes, qué % ya había venido en los 30, 60 o 90 días anteriores a su visita. En negrita, el mejor mes de cada columna. «—» = no hay datos suficientes antes de ese mes.</p>
         </div>
     </div>
 
@@ -102,7 +141,15 @@
     <div class="an-grid">
         <div class="card t-green"><h3>Categoría (estadías)</h3>{!! $bars($categories) !!}</div>
         <div class="card t-green"><h3>Cuánto tiempo se quedan</h3>{!! $bars($durations) !!}</div>
-        <div class="card t-green"><h3>Cuántos van</h3>{!! $bars($party) !!}</div>
+        <div class="card t-green"><h3>Cuántos van</h3>{!! $bars($party) !!}<p class="legend" style="margin-top:8px;">En la planilla, cada goloso anotado en su fila suma una persona a la estadía.</p></div>
+        <div class="card t-green">
+            <h3>Qué agregan a la estadía</h3>
+            @php $maxA = max(1, $added->max('count')); @endphp
+            @foreach ($added as $a)
+                <div class="bar-row"><div class="name">{{ $a['label'] }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ round($a['count'] / $maxA * 100) }}%"></div></div><div class="val">{{ number_format($a['count'], 0, ',', '.') }} <small>· {{ $pct($a['count'], $kpis['stays']) }}% de las estadías</small></div></div>
+            @endforeach
+            <p class="legend" style="margin-top:8px;">Planilla + sistema. En la planilla cada extra va en su propia fila y se une a la estadía anotada justo arriba, el mismo día.</p>
+        </div>
         <div class="card t-green"><h3>Día de la semana que llegan</h3>{!! $bars($weekdays) !!}</div>
         <div class="card t-green"><h3>Momento del día en que llegan</h3>{!! $bars($dayparts) !!}</div>
     </div>

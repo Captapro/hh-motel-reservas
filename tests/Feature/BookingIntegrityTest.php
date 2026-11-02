@@ -780,6 +780,26 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('Ana Pérez | 12.345.678-5', GuestLine::format($guests[0]->name, $guests[0]->id_document));
     }
 
+    public function test_planilla_goloso_and_extras_on_their_own_rows_join_the_stay_above(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        $row = fn (int $n, string $type, int $amount, array $more = []) => DB::table('historical_sales')->insertGetId($more + ['source' => 'planilla-test', 'source_row' => $n, 'sold_on' => '2026-06-12', 'sale_type' => $type, 'amount_main' => $amount]);
+        $row(1, 'ALOJAMIENTO', 30000, ['guests_count' => 2, 'starts_time' => '20:00']);
+        $row(2, 'EXTRA CORE', 17500, ['detail' => 'GOLOSO', 'quantity' => 1]);
+        $row(3, 'EXTRAS', 7000, ['detail' => 'Cerveza']);
+        $row(4, 'ALOJAMIENTO', 36000, ['guests_count' => 2, 'starts_time' => '22:00']);
+        $row(5, 'EXTRA CORE', 15000, ['detail' => 'HORA EXTRA', 'quantity' => 1]);
+        // Otro día: no se une a la estadía de arriba.
+        $row(6, 'EXTRA CORE', 17500, ['detail' => 'GOLOSO', 'sold_on' => '2026-06-13']);
+
+        $page = $this->get(route('admin.analytics.customers'))->assertOk();
+        $this->assertSame(1, $page->viewData('party')->firstWhere('label', '3 o más personas')['count']);
+        $added = $page->viewData('added')->pluck('count', 'label');
+        $this->assertSame([1, 1, 1], [$added['Persona adicional (goloso)'], $added['Hora extra'], $added['Consumos (bebidas, preservativos…)']]);
+        // Venta por estadía: (30.000 + 17.500 + 7.000 + 36.000 + 15.000) / 2.
+        $this->assertSame(52750, $page->viewData('kpis')['ticket']);
+    }
+
     public function test_a_customer_found_in_the_old_planilla_by_rut_is_not_counted_as_new(): void
     {
         foreach (['2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
@@ -805,6 +825,10 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, $page->viewData('gapBuckets')->firstWhere('label', '31 a 60 días')['count']);
         $august = $page->viewData('monthly')->firstWhere('month', '2026-08');
         $this->assertSame([2, 1, 1, 50], [$august['people'], $august['new'], $august['returning'], $august['rate']]);
+        // Con ventana fija: en los 30 días previos nadie había venido; 60 y 90 días antes de agosto aún no había datos.
+        $this->assertSame(['back' => 0, 'pct' => 0], $august['windows'][30]);
+        $this->assertNull($august['windows'][60]);
+        $this->assertNull($august['windows'][90]);
         $this->assertSame(['days' => 15, 'eligible' => 1, 'back' => 0, 'pct' => 0], $page->viewData('retention')->first());
         $this->assertSame(2, $kpis['people']);
         $this->assertSame(1, $kpis['new']);       // solo el que nunca vino
