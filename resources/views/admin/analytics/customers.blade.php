@@ -129,7 +129,7 @@
             </table>
         </div>
         <div class="card t-green">
-            <h3>En riesgo de perderse — {{ $kpis['at_risk'] }}</h3>
+            <h3 tabindex="0" data-tip="Personas con 2 o más visitas que llevan sin volver más de 1,5 veces lo que solían tardar (mínimo 30 días y hasta 6 meses), contando hasta hoy. No depende del rango de fechas de arriba: es una foto de hoy con todo el historial (planilla + sistema).">En riesgo de perderse — {{ $kpis['at_risk'] }} <span class="tip-i">ⓘ</span></h3>
             <p class="legend">Venían seguido y llevan más tiempo del habitual sin volver (más de 1,5 veces su frecuencia, mínimo 30 días y hasta 6 meses). Planilla y sistema juntos; los más fieles primero.</p>
             <table class="chart-table">
                 <tbody>
@@ -150,12 +150,12 @@
         </div>
     </div>
 
-    <h2 class="an-title">Hace cuánto no vienen</h2>
+    <h2 class="an-title" tabindex="0" data-tip="Foto de hoy: cada persona va en el tramo según los días desde su última visita hasta hoy. No depende del rango de fechas de arriba: siempre incluye a todas las personas del historial (planilla + sistema).">Hace cuánto no vienen <span class="tip-i">ⓘ</span></h2>
     <p class="sub">Todas las personas según su última visita (planilla + sistema), las que más veces vinieron primero. Solo los clientes del sistema con teléfono llevan la etiqueta en GHL (se actualiza sola) para campañas de «te extrañamos» o públicos de Meta; el resto no tiene teléfono registrado.</p>
     <div class="an-grid">
         @foreach ($activity as $group)
             <div class="card {{ $group['tag'] === 'hh_pausa' ? 't-green' : 't-orange' }}">
-                <h3>{{ $group['label'] }} — {{ number_format($group['people']->count(), 0, ',', '.') }}</h3>
+                <h3 tabindex="0" data-tip="{{ $group['tip'] }} Contando hasta hoy, con todo el historial (planilla + sistema); no depende del rango de fechas de arriba.@if ($group['tag']) Los que tienen teléfono llevan en GHL la etiqueta {{ $group['tag'] }}.@endif">{{ $group['label'] }} — {{ number_format($group['people']->count(), 0, ',', '.') }} <span class="tip-i">ⓘ</span></h3>
                 <p class="legend">@if ($group['tag'])Etiqueta en GHL: <code>{{ $group['tag'] }}</code> · {{ $group['in_ghl'] }} con teléfono @else Sin etiqueta en GHL @endif</p>
                 <table class="chart-table">
                     <tbody>
@@ -203,6 +203,7 @@
 
     <style>
         .stack-chart { display:flex; align-items:flex-end; gap:12px; height:170px; margin-top:8px; }
+        .tip-i { font-size:11px; color:#9ca3af; font-weight:400; }
         .stack-rate { font-size:11px; font-weight:700; color:#1d4ed8; font-family:ui-monospace,monospace; }
         .stack-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
         .stack-bar { width:100%; max-width:56px; height:110px; display:flex; flex-direction:column-reverse; border-radius:6px; overflow:hidden; background:#eef0f3; }

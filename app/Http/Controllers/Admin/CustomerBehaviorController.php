@@ -345,13 +345,23 @@ class CustomerBehaviorController extends Controller
             'hh_inactivo_60' => '60 a 89 días sin venir',
             'hh_inactivo_90' => '90 días o más sin venir',
         ];
+        $today = now(self::TZ)->startOfDay();
+        $between = fn (int $from, ?int $to) => $to === null
+            ? 'Personas cuya última visita fue hace '.$from.' días o más (el '.$today->copy()->subDays($from)->format('d/m/Y').' o antes) y no han vuelto.'
+            : 'Personas cuya última visita fue hace '.$from.' a '.$to.' días (entre el '.$today->copy()->subDays($to)->format('d/m/Y').' y el '.$today->copy()->subDays($from)->format('d/m/Y').') y no han vuelto.';
+        $tips = [
+            CustomerActivityTags::PAUSE => 'Personas que vinieron en los últimos 14 días (desde el '.$today->copy()->subDays(14)->format('d/m/Y').').',
+            'sin_etiqueta' => $between(15, 29), 'hh_inactivo_30' => $between(30, 44), 'hh_inactivo_45' => $between(45, 59),
+            'hh_inactivo_60' => $between(60, 89), 'hh_inactivo_90' => $between(90, null),
+        ];
         $grouped = $people->groupBy(fn ($r) => CustomerActivityTags::tagForDays($r['since']) ?? 'sin_etiqueta');
 
-        return collect($labels)->map(function ($label, $tag) use ($grouped) {
+        return collect($labels)->map(function ($label, $tag) use ($grouped, $tips) {
             $rows = ($grouped[$tag] ?? collect())->sortByDesc('visits')->values();
 
             return [
                 'label' => $label,
+                'tip' => $tips[$tag],
                 'tag' => $tag === 'sin_etiqueta' ? null : $tag,
                 'people' => $rows,
                 'in_ghl' => $rows->filter(fn ($r) => $r['customer']?->phone_e164)->count(),
