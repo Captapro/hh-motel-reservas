@@ -75,7 +75,9 @@ class CustomerBehaviorController extends Controller
             'cutoff' => $cutoff,
             'kpis' => [
                 'people' => $people->count(),
-                'new' => $new,
+                // «Nuevas» solo tiene sentido si hay datos antes del rango; si el rango parte con los datos, todas lo serían.
+                'new' => $first->min() !== null && $startDay > $first->min() ? $new : null,
+                'once' => $people->count() - $repeaters,
                 'repeaters' => $repeaters,
                 'repeat_rate' => $people->count() ? (int) round($repeaters / $people->count() * 100) : 0,
                 'stays' => $staysIn->count(),
