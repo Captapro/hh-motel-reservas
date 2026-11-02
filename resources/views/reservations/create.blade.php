@@ -117,14 +117,14 @@
         .ficha-edit-btn:hover { border-color:#ff7918; color:#ff7918; }
         #cust-editable-fields[hidden] { display:none; }
         .price-box { margin-top:10px; padding:12px 14px; border-radius:8px; background:#1c1c1c; border:1px solid #333; font-size:13.5px; }
-        .price-box.has-offer { background:#241520; border-color:#7a3355; }
+        .price-box.has-offer { background:#16201a; border-color:#2e6e45; }
         .price-box .p-sum { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; color:#bbb; }
-        .price-box .p-sum.disc { color:#f5a3c7; }
+        .price-box .p-sum.disc { color:#7fd49b; }
         .price-box .p-sum.sub { color:#888; font-size:12.5px; }
         .price-box .p-sum.total { border-top:1px solid #333; margin-top:5px; padding-top:7px; color:#eee; }
         .price-box .p-sum.total span:first-child { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#999; }
         .price-box .p-sum.total span:last-child { font-family: ui-monospace, monospace; font-weight:700; font-size:18px; }
-        .price-box .p-sum.total span:last-child.offer { color:#f5a3c7; }
+        .price-box .p-sum.total span:last-child.offer { color:#7fd49b; }
         .price-box .p-note { font-size:11.5px; color:#e8c76f; margin-top:6px; }
         .price-box .p-note.err { color:#f3b8b8; }
         .price-box .p-err { color:#f3b8b8; font-size:13px; }

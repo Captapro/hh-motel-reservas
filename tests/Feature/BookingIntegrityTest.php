@@ -1600,6 +1600,29 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, Booking::count());
     }
 
+    public function test_reception_can_register_a_stay_that_started_up_to_12_hours_ago_but_the_catalog_cannot(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-05 15:00'));
+        $staff = User::factory()->create(['role' => 'recepcion']);
+
+        $late = $this->booking(['starts_at' => Carbon::parse('2026-10-05 13:00'), 'created_by' => $staff->id]);
+        $this->assertSame('2026-10-05 13:00', $late->starts_at->format('Y-m-d H:i'));
+
+        try {
+            $this->booking(['starts_at' => Carbon::parse('2026-10-05 02:00'), 'created_by' => $staff->id]);
+            $this->fail('Más de 12 horas atrás no debería registrarse.');
+        } catch (\App\Exceptions\RoomNotAvailableException $e) {
+            $this->assertStringContainsString('menos de 12 horas', $e->getMessage());
+        }
+
+        try {
+            $this->booking(['starts_at' => Carbon::parse('2026-10-05 17:00')->subHours(3)]);
+            $this->fail('El catálogo no debería aceptar una hora pasada.');
+        } catch (\App\Exceptions\RoomNotAvailableException $e) {
+            $this->assertStringContainsString('en el pasado', $e->getMessage());
+        }
+    }
+
     public function test_reservation_and_walk_in_forms_render_with_optional_phone_and_email(): void
     {
         foreach (['/reservar', '/reservar?presencial=1'] as $url) {

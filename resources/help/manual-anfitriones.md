@@ -77,7 +77,7 @@ Pasos:
 
 Errores comunes:
 - "Cliente bloqueado en lista negra. Revisar con administración antes de reservar." → no se vende; avisa al administrador.
-- "No se puede crear una reserva con fecha y hora en el pasado."
+- "Solo se puede registrar una estadía que empezó hace menos de 12 horas." → recepción puede registrar tarde a un pasajero que ya entró (elige la hora real de llegada), pero no más de 12 horas atrás.
 - "El Playroom X ya no está disponible en ese horario." → elige otro Playroom u hora.
 - "El Playroom X admite como máximo N personas."
 - "El horario solicitado no corresponde a ninguna tarifa vigente." → está fuera de horario.

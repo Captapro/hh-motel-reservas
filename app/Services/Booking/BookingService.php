@@ -26,6 +26,9 @@ use Illuminate\Support\Str;
 
 class BookingService
 {
+    /** Cuántas horas hacia atrás puede recepción registrar una estadía que ya empezó. */
+    public const LATE_REGISTRATION_HOURS = 12;
+
     public function __construct(
         private PriceCalculator $priceCalculator,
         private CouponValidator $couponValidator,
@@ -73,9 +76,13 @@ class BookingService
         $baseEndsAt = $startsAt->copy()->addMinutes($durationMinutes);
         $endsAt = $startsAt->copy()->addMinutes($durationMinutes + $extraMinutes);
 
-        // Tolerancia de 5 min por el tiempo que toma llenar el formulario —
-        // más que eso ya es intentar cargar una reserva con hora pasada.
-        if ($startsAt->lt(now()->subMinutes(5))) {
+        // Tolerancia de 5 min por el tiempo que toma llenar el formulario. Recepción
+        // además puede registrar tarde a un pasajero que ya entró (hasta 12 horas atrás).
+        if (! empty($data['created_by'])) {
+            if ($startsAt->lt(now()->subHours(self::LATE_REGISTRATION_HOURS))) {
+                throw new RoomNotAvailableException('Solo se puede registrar una estadía que empezó hace menos de '.self::LATE_REGISTRATION_HOURS.' horas.');
+            }
+        } elseif ($startsAt->lt(now()->subMinutes(5))) {
             throw new RoomNotAvailableException('No se puede crear una reserva con fecha y hora en el pasado.');
         }
 
