@@ -210,7 +210,9 @@ class ComboChoiceTest extends TestCase
 
     public function test_the_tv_screen_shows_active_combos_and_qr_codes_without_login(): void
     {
-        (require database_path('migrations/2026_11_02_200000_create_tv_screen_settings_table.php'))->up();
+        foreach (['2026_11_02_200000_create_tv_screen_settings_table.php', '2026_11_02_220000_add_playlist_to_tv_screen_settings.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
         auth()->logout();
         $this->combo->update(['show_in_catalog' => true]);
         Combo::create(['name' => 'Combo apagado', 'price' => 9000, 'is_active' => false, 'show_in_catalog' => true]);
@@ -227,37 +229,50 @@ class ComboChoiceTest extends TestCase
             ->assertDontSee('Combo solo recepción');
     }
 
-    public function test_the_admin_programs_the_tv_screen(): void
+    public function test_the_admin_chooses_each_slide_and_its_order_on_the_tv(): void
     {
-        (require database_path('migrations/2026_11_02_200000_create_tv_screen_settings_table.php'))->up();
+        foreach (['2026_11_02_200000_create_tv_screen_settings_table.php', '2026_11_02_220000_add_playlist_to_tv_screen_settings.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
         $this->combo->update(['show_in_catalog' => true]);
+        $other = Combo::create(['name' => 'Pack Oculto', 'price' => 5000, 'is_active' => true, 'show_in_catalog' => true]);
 
-        $this->get(route('admin.tv_screen.edit'))->assertOk()->assertSee('Pantalla TV');
+        // La lista trae cada combo, los dos QR y los mensajes con título.
         $this->put(route('admin.tv_screen.update'), [
-            'show_combos' => '1',
-            'combo_cta' => 'Pídelo en recepción',
-            'show_review_qr' => '1',
-            'combo_seconds' => 8,
-            'qr_seconds' => 20,
-            'messages' => [
-                ['title' => 'Lunes a jueves 10% off', 'text' => 'En todas las categorías', 'active' => '1'],
-                ['title' => 'Mensaje apagado', 'text' => ''],
-                ['title' => '', 'text' => ''],
+            'combo_seconds' => 8, 'qr_seconds' => 20, 'combo_cta' => 'Pídelo en recepción',
+            'messages' => [['title' => 'Lunes a jueves 10% off', 'text' => 'En todas las categorías']],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->get(route('admin.tv_screen.edit'))->assertOk()
+            ->assertSee('Combo · 2 Bebidas')->assertSee('Combo · Pack Oculto')
+            ->assertSee('QR · Reserva desde tu celular')->assertSee('QR · Danos tu opinión')
+            ->assertSee('Mensaje · Lunes a jueves 10% off');
+
+        // Opinión primero, luego el mensaje y el combo; Pack Oculto y el QR de reservar apagados.
+        $this->put(route('admin.tv_screen.update'), [
+            'combo_seconds' => 8, 'qr_seconds' => 20, 'combo_cta' => 'Pídelo en recepción',
+            'messages' => [['title' => 'Lunes a jueves 10% off', 'text' => 'En todas las categorías']],
+            'playlist' => [
+                ['key' => 'review', 'on' => '1'],
+                ['key' => 'message:0', 'on' => '1'],
+                ['key' => 'combo:'.$this->combo->id, 'on' => '1'],
+                ['key' => 'combo:'.$other->id],
+                ['key' => 'reserve'],
             ],
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         auth()->logout();
         $html = $this->get('/pantalla')->assertOk()
-            ->assertSee('2 Bebidas')
-            ->assertDontSee('2 a elegir')
+            ->assertSeeInOrder(['Danos tu opinión', 'Lunes a jueves 10% off', '2 Bebidas'])
             ->assertSee('Pídelo en recepción')
-            ->assertSee('Lunes a jueves 10% off')
-            ->assertDontSee('Mensaje apagado')
+            ->assertDontSee('Pack Oculto')
             ->assertDontSee('Reserva desde tu celular')
-            ->assertSee('Danos tu opinión')
             ->getContent();
         $this->assertStringContainsString('data-seconds="8"', $html);
         $this->assertStringContainsString('data-seconds="20"', $html);
+
+        // Un combo nuevo en el catálogo entra encendido al final.
+        Combo::create(['name' => 'Pack Nuevo', 'price' => 4000, 'is_active' => true, 'show_in_catalog' => true]);
+        $this->get('/pantalla')->assertSeeInOrder(['2 Bebidas', 'Pack Nuevo']);
 
         // Recepción no puede programarla.
         $this->actingAs(User::factory()->create(['role' => 'recepcion']))->get(route('admin.tv_screen.edit'))->assertForbidden();
