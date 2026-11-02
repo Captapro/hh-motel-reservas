@@ -136,6 +136,27 @@ class BookingIntegrityTest extends TestCase
         return Coupon::create(array_merge(['internal_name' => 'Oferta prueba', 'auto_apply' => true, 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20], $overrides));
     }
 
+    public function test_a_forgotten_discount_code_can_be_applied_to_an_open_booking(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+        Coupon::create(['code' => 'MORNING ESCAPE', 'internal_name' => 'Morning', 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20,
+            'allowed_time_start' => '10:30:00', 'allowed_time_end' => '13:00:00']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:40')]);
+        $original = (int) $booking->price_original;
+
+        $this->post(route('bookings.coupon.apply', $booking->code), ['coupon_code' => 'morning escape'])->assertRedirect(route('reservations.show', $booking->code));
+        $booking->refresh();
+        $this->assertSame((int) round($original * 0.2), (int) $booking->discount_amount);
+        $this->assertSame($original - (int) $booking->discount_amount, (int) $booking->price_final);
+        $this->assertSame(1, \App\Models\CouponRedemption::where('booking_id', $booking->id)->count());
+
+        // No se acumula una segunda promoción, y fuera de horario no aplica.
+        $this->post(route('bookings.coupon.apply', $booking->code), ['coupon_code' => 'MORNING ESCAPE'])->assertSessionHasErrors('coupon_code');
+        $late = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00')]);
+        $this->post(route('bookings.coupon.apply', $late->code), ['coupon_code' => 'MORNING ESCAPE'])->assertSessionHasErrors('coupon_code');
+        $this->assertSame(0, (int) $late->fresh()->discount_amount);
+    }
+
     public function test_pass_qr_verifies_on_the_phone_and_alerts_the_desktop_which_then_goes_to_what_is_pending(): void
     {
         Cache::flush();

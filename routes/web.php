@@ -205,6 +205,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/reservas/{code}/credencial/estado', [CouponProofController::class, 'status'])->name('bookings.coupon_proof.status');
     Route::get('/reservas/{code}/credencial/qr', [CouponProofController::class, 'qr'])->name('bookings.coupon_proof.qr');
     Route::get('/reservas/{code}/credencial/foto', [CouponProofController::class, 'show'])->name('bookings.coupon_proof.show');
+    Route::post('/reservas/{code}/cupon', [\App\Http\Controllers\BookingCouponController::class, 'store'])->name('bookings.coupon.apply');
     Route::post('/reservas/{code}/quitar-cupon', [CouponProofController::class, 'removeCoupon'])->name('bookings.coupon_proof.remove');
     Route::post('/reservas/{code}/cancelar', [BookingCancelController::class, 'store'])->name('bookings.cancel');
     Route::post('/reservas/{code}/mantener', [BookingHoldController::class, 'store'])->name('bookings.hold');

@@ -430,6 +430,18 @@
                         <div class="row"><span class="muted">Documento del cupón</span><a href="{{ route('bookings.coupon_proof.show', $booking->code) }}" target="_blank" rel="noopener" style="color:#ff7918;">Ver foto</a></div>
                     @endif
                 @endif
+                @if (! $booking->coupon_code_snapshot && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'], true))
+                    <details class="apply-coupon" @if ($errors->has('coupon_code')) open @endif style="margin:6px 0 8px;">
+                        <summary style="cursor:pointer; color:#ff7918; font-size:13px;">¿Se olvidó un código de descuento? Aplicarlo</summary>
+                        <form method="POST" action="{{ route('bookings.coupon.apply', $booking->code) }}" style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                            @csrf
+                            <input type="text" name="coupon_code" value="{{ old('coupon_code') }}" placeholder="Código (ej. MORNING ESCAPE)" required style="flex:1; min-width:160px;">
+                            <button type="submit" class="pay-btn" style="margin:0;">Aplicar</button>
+                        </form>
+                        @error('coupon_code')<p style="color:#ff6b6b; font-size:12.5px; margin:6px 0 0;">{{ $message }}</p>@enderror
+                        <p class="muted" style="font-size:12px; margin:6px 0 0;">Se valida como al reservar (días, horario y vigencia del cupón, con el horario de esta reserva). Queda registrado quién lo aplicó.</p>
+                    </details>
+                @endif
                 <div class="row total"><span>Precio final (Playroom)</span><span>${{ number_format($booking->price_final, 0, ',', '.') }}</span></div>
                 @if ($booking->addonsTotal() > 0)
                     <div class="row"><span class="muted">Consumo</span><span>${{ number_format($booking->addonsTotal(), 0, ',', '.') }}</span></div>
