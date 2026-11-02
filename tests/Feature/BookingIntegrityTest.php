@@ -798,8 +798,15 @@ class BookingIntegrityTest extends TestCase
         $this->booking(['customer' => $fresh, 'starts_at' => Carbon::parse('2026-08-10 12:00')]);
         $this->travelTo($today);
 
-        $kpis = $this->get(route('admin.analytics.customers', ['from' => '2026-08-01', 'to' => '2026-08-31']))->assertOk()->viewData('kpis');
-        $this->assertSame(2, $kpis['active']);
+        $page = $this->get(route('admin.analytics.customers', ['from' => '2026-08-01', 'to' => '2026-08-31']))->assertOk();
+        $kpis = $page->viewData('kpis');
+        // Un solo historial: la vuelta de junio (planilla) a agosto (sistema) son 52 días.
+        $this->assertSame(52, $kpis['median_gap']);
+        $this->assertSame(1, $page->viewData('gapBuckets')->firstWhere('label', '31 a 60 días')['count']);
+        $august = $page->viewData('monthly')->firstWhere('month', '2026-08');
+        $this->assertSame([2, 1, 1, 50], [$august['people'], $august['new'], $august['returning'], $august['rate']]);
+        $this->assertSame(['days' => 15, 'eligible' => 1, 'back' => 0, 'pct' => 0], $page->viewData('retention')->first());
+        $this->assertSame(2, $kpis['people']);
         $this->assertSame(1, $kpis['new']);       // solo el que nunca vino
         $this->assertSame(1, $kpis['repeaters']); // el de la planilla ya había venido
         // La etiqueta de la ficha (CLIENTE NUEVO) también cuenta la planilla.
@@ -833,7 +840,7 @@ class BookingIntegrityTest extends TestCase
         $page = $this->get(route('admin.analytics.customers', ['from' => '2026-08-01', 'to' => '2026-08-31']));
         $page->assertOk()->assertSee('Comportamiento de clientes');
         $data = $page->viewData('kpis');
-        $this->assertSame(2, $data['active']);      // newbie + returning vinieron en agosto
+        $this->assertSame(2, $data['people']);      // newbie + returning vinieron en agosto
         $this->assertSame(1, $data['new']);         // solo newbie es la primera vez
         $this->assertSame(1, $data['repeaters']);   // returning ya había venido antes
         $this->assertSame(50, $data['repeat_rate']);

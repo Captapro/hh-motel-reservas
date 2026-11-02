@@ -20,7 +20,7 @@
 
     @include('admin.analytics._nav', ['on' => 'customers'])
     <h1>Comportamiento de clientes</h1>
-    <p class="sub">{{ $rangeLabel }}. Solo estadías que ocurrieron o están confirmadas (sin canceladas ni expiradas). Las visitas anteriores al rango se usan para saber si ya habían venido.</p>
+    <p class="sub">{{ $rangeLabel }}. Planillas de recepción y sistema como <b>un solo historial</b>: cada persona es su RUT (titular o acompañante) y una visita cuenta igual venga de donde venga.@if ($cutoff) Hasta el {{ $cutoff->format('d/m/Y') }} los datos salen de la planilla; desde el día siguiente, del sistema.@endif Sin canceladas ni expiradas.</p>
 
     <form class="flt" method="GET" action="{{ route('admin.analytics.customers') }}">
         <div class="flt-row">
@@ -36,34 +36,26 @@
     </form>
 
     <div class="kpis kpis-all">
-        <div class="kpi" data-tip="Personas distintas con al menos una estadía en el rango (sin canceladas ni expiradas)." tabindex="0"><div class="k-label">Clientes que vinieron</div><div class="k-value">{{ $kpis['active'] }}</div><div class="k-delta flat">personas distintas</div></div>
-        <div class="kpi" data-tip="Personas cuya primera estadía de todo su historial cae en este rango y que vinieron una sola vez en él. El historial incluye la planilla anterior al sistema, cruzada por RUT: quien ya venía no cuenta como nuevo." tabindex="0"><div class="k-label">Clientes nuevos</div><div class="k-value">{{ $kpis['new'] }}</div><div class="k-delta flat">primera vez en el rango</div></div>
-        <div class="kpi" data-tip="Personas que vinieron 2 o más veces en el rango, o que ya habían venido antes de él (en el sistema o en la planilla anterior, por RUT). El % es: los que repiten ÷ clientes que vinieron." tabindex="0"><div class="k-label">Clientes que repiten</div><div class="k-value">{{ $kpis['repeaters'] }}</div><div class="k-delta flat">{{ $kpis['repeat_rate'] }}% de los que vinieron</div></div>
+        <div class="kpi" data-tip="Personas distintas (por RUT) que vinieron en el rango, como titular o acompañante." tabindex="0"><div class="k-label">Personas que vinieron</div><div class="k-value">{{ number_format($kpis['people'], 0, ',', '.') }}</div><div class="k-delta flat">por RUT, distintas</div></div>
+        <div class="kpi" data-tip="Personas cuya primera visita de toda su historia (planilla + sistema) cae en el rango." tabindex="0"><div class="k-label">Nuevas</div><div class="k-value">{{ number_format($kpis['new'], 0, ',', '.') }}</div><div class="k-delta flat">primera vez en el rango</div></div>
+        <div class="kpi" data-tip="Personas que ya habían venido antes del rango o que vinieron 2 o más días distintos dentro de él. El % es sobre las personas que vinieron." tabindex="0"><div class="k-label">Recurrentes</div><div class="k-value">{{ number_format($kpis['repeaters'], 0, ',', '.') }}</div><div class="k-delta flat">{{ $kpis['repeat_rate'] }}% de las personas</div></div>
+        <div class="kpi" data-tip="Mediana de los días entre una visita y la siguiente de la misma persona (vueltas dentro del rango). La mitad vuelve antes y la otra mitad después." tabindex="0"><div class="k-label">Vuelven cada</div><div class="k-value">{{ $kpis['median_gap'] !== null ? $kpis['median_gap'].' días' : '—' }}</div><div class="k-delta flat">típico entre una visita y otra</div></div>
+        <div class="kpi" data-tip="Estadías del rango (planilla + sistema)." tabindex="0"><div class="k-label">Estadías</div><div class="k-value">{{ number_format($kpis['stays'], 0, ',', '.') }}</div><div class="k-delta flat">en el rango</div></div>
+        <div class="kpi" data-tip="Visitas del rango ÷ personas que vinieron." tabindex="0"><div class="k-label">Visitas por persona</div><div class="k-value">{{ str_replace('.', ',', $kpis['visits_per_person']) }}</div><div class="k-delta flat">promedio en el rango</div></div>
+        <div class="kpi" data-tip="Venta del rango (Playroom + extras) ÷ estadías." tabindex="0"><div class="k-label">Venta por estadía</div><div class="k-value">{{ $money($kpis['ticket']) }}</div><div class="k-delta flat">Playroom + extras</div></div>
         <div class="kpi" data-tip="Clientes con 2 o más visitas que llevan sin volver más de 1,5 veces su frecuencia habitual (mínimo 30 días, máximo 180). La lista está más abajo." tabindex="0"><div class="k-label">En riesgo de perderse</div><div class="k-value">{{ $kpis['at_risk'] }}</div><div class="k-delta flat">venían seguido y se atrasaron</div></div>
-        <div class="kpi" data-tip="Estadías del rango ÷ clientes que vinieron." tabindex="0"><div class="k-label">Visitas por cliente</div><div class="k-value">{{ str_replace('.', ',', $kpis['visits_per_customer']) }}</div><div class="k-delta flat">promedio en el rango</div></div>
-        <div class="kpi" data-tip="Venta del rango (precio final de las estadías + extras) ÷ clientes que vinieron." tabindex="0"><div class="k-label">Gasto por cliente</div><div class="k-value">{{ $money($kpis['spend_per_customer']) }}</div><div class="k-delta flat">Playroom + extras</div></div>
-        <div class="kpi" data-tip="Mediana de los días entre una visita y la siguiente, tomando el historial completo de los clientes del rango. La mitad vuelve antes y la otra mitad después." tabindex="0"><div class="k-label">Vuelven cada</div><div class="k-value">{{ $kpis['median_gap'] !== null ? $kpis['median_gap'].' días' : '—' }}</div><div class="k-delta flat">típico entre una visita y otra</div></div>
-        <div class="kpi" data-tip="Reservas del rango que compraron al menos un extra ÷ todas las reservas del rango. Abajo, lo vendido en extras." tabindex="0"><div class="k-label">Reservas con extras</div><div class="k-value">{{ $extras['bookings'] ? round($extras['with_extras'] / $extras['bookings'] * 100) : 0 }}%</div><div class="k-delta flat">{{ $money($extras['extra_revenue']) }} en extras</div></div>
     </div>
 
-    <h2 class="an-title">Quiénes son</h2>
+    <h2 class="an-title">Recurrencia mes a mes</h2>
     <div class="an-grid">
-        <div class="card t-orange">
-            <h3>Tipo de cliente</h3>
-            @forelse ($segments as $seg)
-                <div class="bar-row"><div class="name">{{ $seg['label'] }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ round($seg['count'] / max(1, $segments->max('count')) * 100) }}%"></div></div><div class="val">{{ $seg['count'] }} <small>· {{ $money($seg['revenue']) }}</small></div></div>
-            @empty
-                <p class="empty">Sin clientes en el rango.</p>
-            @endforelse
-            <p class="legend" style="margin-top:8px;">Según las reglas de Clientes (nuevo, frecuente, ocasional, esporádico).</p>
-        </div>
         <div class="card t-orange span2">
-            <h3>Nuevos y que ya habían venido — últimos 6 meses</h3>
-            @php $maxM = max(1, collect($monthly)->max(fn ($m) => $m['new'] + $m['returning'])); @endphp
+            <h3>Nuevas y que ya habían venido, por mes</h3>
+            @php $maxM = max(1, $monthly->max('people')); @endphp
             <div class="stack-chart">
                 @foreach ($monthly as $m)
                     <div class="stack-col">
-                        <div class="stack-bar" title="{{ $m['label'] }}: {{ $m['new'] }} nuevos, {{ $m['returning'] }} que repiten">
+                        <div class="stack-rate">{{ $m['comparable'] ? $m['rate'].'%' : '—' }}</div>
+                        <div class="stack-bar" title="{{ $m['label'] }}: {{ $m['people'] }} personas · {{ $m['new'] }} nuevas · {{ $m['returning'] }} ya habían venido">
                             <div class="seg-ret" style="height:{{ round($m['returning'] / $maxM * 100) }}%"></div>
                             <div class="seg-new" style="height:{{ round($m['new'] / $maxM * 100) }}%"></div>
                         </div>
@@ -72,59 +64,70 @@
                     </div>
                 @endforeach
             </div>
-            <p class="legend"><span class="dot-new"></span> Nuevos &nbsp; <span class="dot-ret"></span> Ya habían venido @if (collect($monthly)->contains('source', 'planilla')) &nbsp;· los meses antes del sistema salen de la planilla (por RUT)@endif</p>
+            <p class="legend"><span class="dot-new"></span> Nuevas &nbsp; <span class="dot-ret"></span> Ya habían venido &nbsp;· arriba, % de recurrencia (ya habían venido ÷ personas del mes). El primer mes cargado no tiene con qué comparar.</p>
         </div>
+        <div class="card t-orange">
+            <h3>Meses con mayor recurrencia</h3>
+            @php $ranked = $monthly->where('comparable', true)->sortByDesc('rate')->values(); @endphp
+            @forelse ($ranked as $m)
+                <div class="bar-row"><div class="name" style="text-transform:capitalize;">{{ $m['label'] }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ $m['rate'] }}%"></div></div><div class="val">{{ $m['rate'] }}% <small>· {{ $m['returning'] }} de {{ $m['people'] }}</small></div></div>
+            @empty
+                <p class="empty">Hace falta más de un mes de datos.</p>
+            @endforelse
+        </div>
+    </div>
+
+    <h2 class="an-title">Cuándo vuelven</h2>
+    <div class="an-grid">
+        <div class="card t-blue"><h3>Cuánto tardan en volver</h3>{!! $bars($gapBuckets) !!}<p class="legend" style="margin-top:8px;">Cada vuelta del rango, según los días desde la visita anterior de esa persona.</p></div>
+        <div class="card t-blue">
+            <h3>De las personas nuevas, cuántas volvieron</h3>
+            <table class="chart-table">
+                <thead><tr><td>Dentro de</td><td class="v">Volvieron</td><td class="v">%</td></tr></thead>
+                <tbody>
+                    @foreach ($retention as $r)
+                        <tr><td>{{ $r['days'] }} días</td><td class="v">{{ number_format($r['back'], 0, ',', '.') }} de {{ number_format($r['eligible'], 0, ',', '.') }}</td><td class="v"><b>{{ $r['pct'] }}%</b></td></tr>
+                    @endforeach
+                </tbody>
+            </table>
+            <p class="legend" style="margin-top:8px;">Personas cuya primera visita fue en el rango. Solo cuenta a quienes ya tuvieron el plazo completo para volver.</p>
+        </div>
+        <div class="card t-blue"><h3>Cuántas veces vino cada persona</h3>{!! $bars($frequency) !!}<p class="legend" style="margin-top:8px;">Personas del rango, con todas sus visitas hasta el fin del rango.</p></div>
     </div>
 
     <h2 class="an-title">Qué prefieren</h2>
     <div class="an-grid">
-        <div class="card t-green"><h3>Categoría favorita (reservas)</h3>{!! $bars($categories) !!}</div>
+        <div class="card t-green"><h3>Categoría (estadías)</h3>{!! $bars($categories) !!}</div>
         <div class="card t-green"><h3>Cuánto tiempo se quedan</h3>{!! $bars($durations) !!}</div>
         <div class="card t-green"><h3>Cuántos van</h3>{!! $bars($party) !!}</div>
         <div class="card t-green"><h3>Día de la semana que llegan</h3>{!! $bars($weekdays) !!}</div>
         <div class="card t-green"><h3>Momento del día en que llegan</h3>{!! $bars($dayparts) !!}</div>
-        <div class="card t-green">
-            <h3>Cupones y extras</h3>
-            <div class="bar-row"><div class="name">Usan cupón u oferta</div><div class="bar-track"><div class="bar-fill alt" style="width:{{ $pct($coupons['used'], max(1, $coupons['bookings'])) }}%"></div></div><div class="val">{{ $coupons['used'] }} <small>· {{ $pct($coupons['used'], $coupons['bookings']) }}%</small></div></div>
-            <div class="bar-row"><div class="name">Piden extras</div><div class="bar-track"><div class="bar-fill alt" style="width:{{ $pct($extras['with_extras'], max(1, $extras['bookings'])) }}%"></div></div><div class="val">{{ $extras['with_extras'] }} <small>· {{ $pct($extras['with_extras'], $extras['bookings']) }}%</small></div></div>
-            <h3 style="margin-top:14px;">Cómo pagan</h3>
-            @php $payRows = $payments->map(fn ($amount, $method) => ['label' => $method, 'count' => $amount])->values(); @endphp
-            {!! $payRows->isEmpty() ? '<p class="empty">Sin pagos en el rango.</p>' : $bars($payRows, 'count', 'alt') !!}
-        </div>
-    </div>
-
-    <h2 class="an-title">Cómo reservan y cuándo vuelven</h2>
-    <div class="an-grid">
-        <div class="card t-blue"><h3>Por dónde reservan</h3>{!! $bars($channel) !!}</div>
-        <div class="card t-blue"><h3>Con cuánta anticipación</h3>{!! $bars($lead) !!}</div>
-        <div class="card t-blue"><h3>Días entre una visita y la siguiente</h3>{!! $bars($gapBuckets) !!}</div>
     </div>
 
     <h2 class="an-title">A quién cuidar</h2>
     <div class="an-grid">
         <div class="card t-orange span2">
-            <h3>Mejores clientes del rango (por gasto)</h3>
+            <h3>Las personas que más vinieron en el rango</h3>
             <table class="chart-table">
-                <thead><tr><td>Cliente</td><td class="v">Visitas</td><td class="v">Gasto</td><td class="v">Ticket</td><td class="v">Última</td><td>Prefiere</td></tr></thead>
+                <thead><tr><td>Persona</td><td class="v">Visitas</td><td class="v">Pagó como titular</td><td class="v">Última</td><td>Prefiere</td></tr></thead>
                 <tbody>
                     @forelse ($top as $c)
                         <tr>
-                            <td><a class="link" href="{{ route('admin.customers.show', $c['id']) }}">{{ $c['name'] }}</a></td>
+                            <td>@if ($c['link'])<a class="link" href="{{ route('admin.customers.show', $c['link']) }}">{{ $c['name'] }}</a>@else{{ $c['name'] }}@endif</td>
                             <td class="v">{{ $c['visits'] }}</td>
                             <td class="v">{{ $money($c['total']) }}</td>
-                            <td class="v">{{ $money($c['avg']) }}</td>
-                            <td class="v">{{ $c['last']->format('d/m') }}</td>
+                            <td class="v">{{ $c['last']->format('d/m/y') }}</td>
                             <td>{{ $c['favorite'] }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="empty">Sin clientes en el rango.</td></tr>
+                        <tr><td colspan="5" class="empty">Sin visitas en el rango.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
         <div class="card t-green">
             <h3>En riesgo de perderse</h3>
-            <p class="legend">Venían seguido y llevan más tiempo del habitual sin volver (hasta 6 meses).</p>
+            <p class="legend">Clientes del sistema que venían seguido (también según la planilla) y llevan más tiempo del habitual sin volver (hasta 6 meses).</p>
             <table class="chart-table">
                 <tbody>
                     @forelse ($risk as $r)
@@ -168,38 +171,33 @@
         @endforeach
     </div>
 
-    @if ($historical)
-        <h2 class="an-title">Con las planillas históricas</h2>
-        <p class="sub">Todo lo cargado de las planillas de recepción ({{ \Carbon\Carbon::parse($historical['coverage']['desde'])->format('d/m/Y') }} – {{ \Carbon\Carbon::parse($historical['coverage']['hasta'])->format('d/m/Y') }}), sin importar el rango de arriba. Son estadías anteriores al sistema: <b>no se mezclan</b> con las cifras de arriba. Personas contadas por RUT válido; {{ $historical['stays_with_rut'] }} de {{ $historical['stays'] }} estadías traen al menos un RUT válido. Mientras haya pocos meses cargados, «nuevas» está sobreestimado.</p>
-        <div class="kpis kpis-all">
-            <div class="kpi"><div class="k-label">Personas distintas</div><div class="k-value">{{ $historical['people'] }}</div><div class="k-delta flat">por RUT válido, titulares y acompañantes</div></div>
-            <div class="kpi"><div class="k-label">Volvieron</div><div class="k-value">{{ $historical['returned'] }}</div><div class="k-delta flat">{{ $historical['returned_pct'] }}% de las personas</div></div>
-            <div class="kpi"><div class="k-label">Estadías por persona</div><div class="k-value">{{ str_replace('.', ',', $historical['stays_per_person']) }}</div><div class="k-delta flat">promedio</div></div>
-            <div class="kpi"><div class="k-label">Vuelven cada</div><div class="k-value">{{ $historical['median_gap'] !== null ? $historical['median_gap'].' días' : '—' }}</div><div class="k-delta flat">típico entre una estadía y otra</div></div>
+    <h2 class="an-title">Lo que solo registra el sistema</h2>
+    <p class="sub">La planilla no anotaba el canal, la anticipación, los pagos ni los cupones: esto cuenta solo las reservas del sistema dentro del rango @if ($cutoff) (desde el {{ $cutoff->copy()->addDay()->format('d/m/Y') }})@endif.</p>
+    <div class="an-grid">
+        <div class="card t-orange">
+            <h3>Tipo de cliente</h3>
+            @forelse ($segments as $seg)
+                <div class="bar-row"><div class="name">{{ $seg['label'] }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ round($seg['count'] / max(1, $segments->max('count')) * 100) }}%"></div></div><div class="val">{{ $seg['count'] }} <small>· {{ $money($seg['revenue']) }}</small></div></div>
+            @empty
+                <p class="empty">Sin clientes en el rango.</p>
+            @endforelse
+            <p class="legend" style="margin-top:8px;">Según las reglas de Clientes (cuentan también las visitas de la planilla).</p>
         </div>
-        <div class="an-grid">
-            <div class="card t-blue"><h3>Cuántas veces vino cada persona</h3>{!! $bars($historical['frequency']) !!}</div>
-            <div class="card t-blue"><h3>Días entre una estadía y la siguiente</h3>{!! $bars($historical['gap_buckets']) !!}</div>
-            <div class="card t-green"><h3>Categoría (estadías)</h3>{!! $bars($historical['categories']) !!}</div>
-            <div class="card t-green"><h3>Horas pagadas</h3>{!! $bars($historical['hours']) !!}</div>
-            <div class="card t-green"><h3>Día de la semana</h3>{!! $bars($historical['weekdays']) !!}</div>
-            <div class="card t-green"><h3>Turno</h3>{!! $bars($historical['shifts']) !!}</div>
-            <div class="card t-orange span2">
-                <h3>Por mes: personas nuevas y que ya habían venido</h3>
-                <table class="chart-table">
-                    <thead><tr><td>Mes</td><td class="v">Personas</td><td class="v">Nuevas</td><td class="v">Ya habían venido</td><td class="v">% que volvió</td></tr></thead>
-                    <tbody>
-                        @foreach ($historical['months'] as $m)
-                            <tr><td style="text-transform:capitalize;">{{ $m['label'] }}</td><td class="v">{{ $m['people'] }}</td><td class="v">{{ $m['new'] }}</td><td class="v">{{ $m['returning'] }}</td><td class="v">{{ $pct($m['returning'], $m['people']) }}%</td></tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+        <div class="card t-blue"><h3>Por dónde reservan</h3>{!! $bars($channel) !!}</div>
+        <div class="card t-blue"><h3>Con cuánta anticipación</h3>{!! $bars($lead) !!}</div>
+        <div class="card t-green">
+            <h3>Cupones y extras</h3>
+            <div class="bar-row"><div class="name">Usan cupón u oferta</div><div class="bar-track"><div class="bar-fill alt" style="width:{{ $pct($coupons['used'], max(1, $coupons['bookings'])) }}%"></div></div><div class="val">{{ $coupons['used'] }} <small>· {{ $pct($coupons['used'], $coupons['bookings']) }}%</small></div></div>
+            <div class="bar-row"><div class="name">Piden extras</div><div class="bar-track"><div class="bar-fill alt" style="width:{{ $pct($extras['with_extras'], max(1, $extras['bookings'])) }}%"></div></div><div class="val">{{ $extras['with_extras'] }} <small>· {{ $pct($extras['with_extras'], $extras['bookings']) }}%</small></div></div>
+            <h3 style="margin-top:14px;">Cómo pagan</h3>
+            @php $payRows = $payments->map(fn ($amount, $method) => ['label' => $method, 'count' => $amount])->values(); @endphp
+            {!! $payRows->isEmpty() ? '<p class="empty">Sin pagos en el rango.</p>' : $bars($payRows, 'count', 'alt') !!}
         </div>
-    @endif
+    </div>
 
     <style>
-        .stack-chart { display:flex; align-items:flex-end; gap:12px; height:150px; margin-top:8px; }
+        .stack-chart { display:flex; align-items:flex-end; gap:12px; height:170px; margin-top:8px; }
+        .stack-rate { font-size:11px; font-weight:700; color:#1d4ed8; font-family:ui-monospace,monospace; }
         .stack-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
         .stack-bar { width:100%; max-width:56px; height:110px; display:flex; flex-direction:column-reverse; border-radius:6px; overflow:hidden; background:#eef0f3; }
         .seg-new { background:#ff7918; width:100%; }
