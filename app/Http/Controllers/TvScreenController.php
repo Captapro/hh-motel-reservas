@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\View\View;
 
 /**
- * Pantalla para el TV de recepción: pasa sola entre los combos activos y dos
+ * Pantalla para el TV de recepción: pasa sola entre los combos activos del catálogo y dos
  * QR (reservar la próxima visita y dejar opinión). Pública y de solo lectura:
  * muestra lo mismo que el catálogo. Se recarga sola para tomar cambios de
  * combos y precios sin tocar el TV.
@@ -21,6 +21,7 @@ class TvScreenController extends Controller
     {
         $combos = Combo::with('items.product')
             ->where('is_active', true)
+            ->where('show_in_catalog', true)
             ->orderBy('display_order')
             ->get()
             ->filter(fn (Combo $combo) => $combo->availableCount() !== 0)
@@ -48,9 +49,13 @@ class TvScreenController extends Controller
     {
         $qty = max(1, (int) $item->quantity);
         if ($item->isChoice()) {
+            // Muchas opciones no caben en el TV: "2 a elegir entre 7 bebidas".
             $names = $item->options()->pluck('name');
+            if ($names->isNotEmpty() && $names->count() <= 3) {
+                return $qty.' a elegir: '.$names->implode(' / ');
+            }
 
-            return $qty.' a elección'.($names->isNotEmpty() && $names->count() <= 4 ? ' ('.$names->implode(', ').')' : ($item->choice_category ? ' de '.$item->choice_category : ''));
+            return $qty.' a elegir'.($names->isNotEmpty() ? ' entre '.$names->count().' opciones' : '').($item->choice_category ? ' de '.mb_strtolower($item->choice_category) : '');
         }
 
         return $item->product ? ($qty > 1 ? $qty.' × ' : '').$item->product->name : null;

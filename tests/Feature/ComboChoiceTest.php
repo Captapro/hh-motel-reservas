@@ -211,15 +211,18 @@ class ComboChoiceTest extends TestCase
     public function test_the_tv_screen_shows_active_combos_and_qr_codes_without_login(): void
     {
         auth()->logout();
-        Combo::create(['name' => 'Combo apagado', 'price' => 9000, 'is_active' => false]);
+        $this->combo->update(['show_in_catalog' => true]);
+        Combo::create(['name' => 'Combo apagado', 'price' => 9000, 'is_active' => false, 'show_in_catalog' => true]);
+        Combo::create(['name' => 'Combo solo recepción', 'price' => 9000, 'is_active' => true, 'show_in_catalog' => false]);
 
         $this->get('/pantalla')->assertOk()
             ->assertSee('2 Bebidas')
             ->assertSee('$3.500')
-            ->assertSee('2 a elección (Coca-Cola, Fanta, Sprite)')
+            ->assertSee('2 a elegir: Coca-Cola / Fanta / Sprite')
             ->assertSee('Reserva desde tu celular')
             ->assertSee('Danos tu opinión')
             ->assertSee('data:image/png;base64', false)
-            ->assertDontSee('Combo apagado');
+            ->assertDontSee('Combo apagado')
+            ->assertDontSee('Combo solo recepción');
     }
 }

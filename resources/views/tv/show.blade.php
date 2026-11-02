@@ -55,7 +55,7 @@
                         </ul>
                     @endif
                     <div class="price">${{ number_format($combo['price'], 0, ',', '.') }}</div>
-                    <div class="cta">Pídelo en <strong>recepción</strong> y te lo llevamos al Playroom</div>
+                    <div class="cta">Agrégalo a tu estadía en <strong>recepción</strong></div>
                 </div>
             </div>
         </section>
