@@ -28,14 +28,6 @@
         .qr { flex:none; background:#fff; border-radius:2vw; padding:1.2vw; box-shadow:0 2vh 6vh rgba(0,0,0,.5); }
         .qr img { display:block; width:30vh; height:30vh; image-rendering:pixelated; }
         .qr-big img { width:44vh; height:44vh; }
-        /* Productos sin fondo flotando a la derecha del combo. */
-        .products { flex:none; width:40vw; height:70vh; display:flex; align-items:flex-end; justify-content:center; }
-        .products img { height:58vh; max-width:22vw; object-fit:contain; filter:drop-shadow(0 3vh 4vh rgba(0,0,0,.65)); margin:0 -2.2vw; animation:hh-float 6s ease-in-out infinite; }
-        .products.n3 img, .products.n4 img { height:44vh; max-width:15vw; }
-        .products img:nth-child(2) { animation-delay:-2s; transform:translateY(-3vh); }
-        .products img:nth-child(3) { animation-delay:-4s; }
-        .products img:nth-child(4) { animation-delay:-1s; }
-        @keyframes hh-float { 0%,100% { translate:0 0; } 50% { translate:0 -2vh; } }
         .dots { position:fixed; bottom:4vh; left:0; right:0; display:flex; justify-content:center; gap:1vw; z-index:5; }
         .dots i { width:1vw; height:1vw; max-width:14px; max-height:14px; border-radius:50%; background:#3a3c40; }
         .dots i.on { background:var(--accent); }
@@ -64,11 +56,6 @@
                         <div class="price">${{ number_format($slide['price'], 0, ',', '.') }}</div>
                         @if ($setting->combo_cta)<div class="cta">{{ $setting->combo_cta }}</div>@endif
                     </div>
-                    @if (! empty($slide['images']))
-                        <div class="products n{{ count($slide['images']) }}">
-                            @foreach ($slide['images'] as $url)<img src="{{ $url }}" alt="">@endforeach
-                        </div>
-                    @endif
                 </div>
             </section>
         @elseif ($slide['type'] === 'message')

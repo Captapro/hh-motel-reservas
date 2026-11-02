@@ -4,7 +4,7 @@
     <h1>{{ $product->exists ? 'Editar producto' : 'Nuevo producto' }}</h1>
     <p class="sub">{{ $product->exists ? $product->name : 'Agregar al catálogo de consumo' }}</p>
 
-    <form method="POST" action="{{ $product->exists ? route('admin.products.update', $product) : route('admin.products.store') }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ $product->exists ? route('admin.products.update', $product) : route('admin.products.store') }}">
         @csrf
         @if ($product->exists) @method('PUT') @endif
 
@@ -43,20 +43,6 @@
             <div>
                 <label>Avisar cuando quede igual o menos de</label>
                 <input type="number" name="low_stock_threshold" min="0" value="{{ old('low_stock_threshold', $product->low_stock_threshold ?? 5) }}">
-            </div>
-        </div>
-
-        <label for="image">Foto para la pantalla del TV (opcional)</label>
-        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
-            @if ($product->imageUrl())
-                <img src="{{ $product->imageUrl() }}" alt="" style="width:96px; height:96px; object-fit:contain; border-radius:8px; border:1px solid #333; background:repeating-conic-gradient(#2a2a2a 0 25%, #1c1c1c 0 50%) 0 0/16px 16px;">
-            @endif
-            <div style="flex:1; min-width:220px;">
-                <input type="file" id="image" name="image" accept="image/png,image/webp,image/jpeg">
-                <div style="color:#888; font-size:12px; margin-top:4px;">Ideal: PNG <strong>sin fondo</strong> (fondo transparente), el producto solo. Se ve flotando junto a su combo en el TV.</div>
-                @if ($product->imageUrl())
-                    <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-weight:normal;"><input type="checkbox" name="remove_image" value="1" style="width:auto;"> Quitar la foto</label>
-                @endif
             </div>
         </div>
 
