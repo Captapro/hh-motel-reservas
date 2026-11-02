@@ -290,6 +290,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::put('/estadia-corta', [ShortStaySettingController::class, 'update'])->name('short_stay.update');
         Route::get('/atrasos', [LateArrivalSettingController::class, 'edit'])->name('late_arrival.edit');
         Route::put('/atrasos', [LateArrivalSettingController::class, 'update'])->name('late_arrival.update');
+        Route::get('/pantalla-tv', [\App\Http\Controllers\Admin\TvScreenSettingController::class, 'edit'])->name('tv_screen.edit');
+        Route::put('/pantalla-tv', [\App\Http\Controllers\Admin\TvScreenSettingController::class, 'update'])->name('tv_screen.update');
 
         Route::get('/cupones', [CouponController::class, 'index'])->name('coupons.index');
         Route::get('/cupones/crear', [CouponController::class, 'create'])->name('coupons.create');

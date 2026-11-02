@@ -210,6 +210,7 @@ class ComboChoiceTest extends TestCase
 
     public function test_the_tv_screen_shows_active_combos_and_qr_codes_without_login(): void
     {
+        (require database_path('migrations/2026_11_02_200000_create_tv_screen_settings_table.php'))->up();
         auth()->logout();
         $this->combo->update(['show_in_catalog' => true]);
         Combo::create(['name' => 'Combo apagado', 'price' => 9000, 'is_active' => false, 'show_in_catalog' => true]);
@@ -224,5 +225,41 @@ class ComboChoiceTest extends TestCase
             ->assertSee('data:image/png;base64', false)
             ->assertDontSee('Combo apagado')
             ->assertDontSee('Combo solo recepción');
+    }
+
+    public function test_the_admin_programs_the_tv_screen(): void
+    {
+        (require database_path('migrations/2026_11_02_200000_create_tv_screen_settings_table.php'))->up();
+        $this->combo->update(['show_in_catalog' => true]);
+
+        $this->get(route('admin.tv_screen.edit'))->assertOk()->assertSee('Pantalla TV');
+        $this->put(route('admin.tv_screen.update'), [
+            'show_combos' => '1',
+            'combo_cta' => 'Pídelo en recepción',
+            'show_review_qr' => '1',
+            'combo_seconds' => 8,
+            'qr_seconds' => 20,
+            'messages' => [
+                ['title' => 'Lunes a jueves 10% off', 'text' => 'En todas las categorías', 'active' => '1'],
+                ['title' => 'Mensaje apagado', 'text' => ''],
+                ['title' => '', 'text' => ''],
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        auth()->logout();
+        $html = $this->get('/pantalla')->assertOk()
+            ->assertSee('2 Bebidas')
+            ->assertDontSee('2 a elegir')
+            ->assertSee('Pídelo en recepción')
+            ->assertSee('Lunes a jueves 10% off')
+            ->assertDontSee('Mensaje apagado')
+            ->assertDontSee('Reserva desde tu celular')
+            ->assertSee('Danos tu opinión')
+            ->getContent();
+        $this->assertStringContainsString('data-seconds="8"', $html);
+        $this->assertStringContainsString('data-seconds="20"', $html);
+
+        // Recepción no puede programarla.
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->get(route('admin.tv_screen.edit'))->assertForbidden();
     }
 }

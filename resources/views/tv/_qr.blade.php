@@ -1,5 +1,5 @@
 @if ($kind === 'reserve')
-    <section class="slide" data-seconds="15">
+    <section class="slide" data-seconds="{{ $setting->qr_seconds }}">
         @if ($photos->isNotEmpty()) <div class="bg" style="background-image:url('{{ $photos->last() }}')"></div> @endif
         <div class="content">
             <div class="text">
@@ -11,7 +11,7 @@
         </div>
     </section>
 @else
-    <section class="slide" data-seconds="15">
+    <section class="slide" data-seconds="{{ $setting->qr_seconds }}">
         @if ($photos->isNotEmpty()) <div class="bg" style="background-image:url('{{ $photos->first() }}')"></div> @endif
         <div class="content">
             <div class="text">

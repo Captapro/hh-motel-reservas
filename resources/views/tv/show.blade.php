@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
     <title>HH — Pantalla</title>
-    {{-- Se recarga cada 15 minutos para tomar combos y precios nuevos. --}}
-    <meta http-equiv="refresh" content="900">
     <style>
         :root { --accent:#ff7918; --accent-soft:#ffb078; --ink:#f4f4f2; --muted:#a7a9ae; --bg:#0e0f11; }
         * { box-sizing:border-box; }
@@ -41,32 +39,44 @@
 
     @php $photo = fn ($i) => $photos->isNotEmpty() ? $photos[$i % $photos->count()] : null; $n = 0; @endphp
 
-    @foreach ($combos as $combo)
-        <section class="slide" data-seconds="10">
-            @if ($photo($n)) <div class="bg" style="background-image:url('{{ $photo($n++) }}')"></div> @endif
-            <div class="content">
-                <div class="text">
-                    <span class="tag">Combo</span>
-                    <h1>{{ $combo['name'] }}</h1>
-                    @if ($combo['description'])<p class="desc">{{ $combo['description'] }}</p>@endif
-                    @if ($combo['items']->isNotEmpty())
-                        <ul>
-                            @foreach ($combo['items'] as $item)<li>{{ $item }}</li>@endforeach
-                        </ul>
-                    @endif
-                    <div class="price">${{ number_format($combo['price'], 0, ',', '.') }}</div>
-                    <div class="cta">Agrégalo a tu estadía en <strong>recepción</strong></div>
+    @forelse ($slides as $slide)
+        @if ($slide['type'] === 'combo')
+            <section class="slide" data-seconds="{{ $setting->combo_seconds }}">
+                @if ($photo($n)) <div class="bg" style="background-image:url('{{ $photo($n++) }}')"></div> @endif
+                <div class="content">
+                    <div class="text">
+                        <span class="tag">Combo</span>
+                        <h1>{{ $slide['name'] }}</h1>
+                        @if ($slide['description'])<p class="desc">{{ $slide['description'] }}</p>@endif
+                        @if ($slide['items']->isNotEmpty())
+                            <ul>
+                                @foreach ($slide['items'] as $item)<li>{{ $item }}</li>@endforeach
+                            </ul>
+                        @endif
+                        <div class="price">${{ number_format($slide['price'], 0, ',', '.') }}</div>
+                        @if ($setting->combo_cta)<div class="cta">{{ $setting->combo_cta }}</div>@endif
+                    </div>
                 </div>
-            </div>
-        </section>
-        {{-- Un QR cada dos combos, para que no pasen muchos segundos sin verlos. --}}
-        @if ($loop->iteration % 2 === 0 && ! $loop->last)
-            @include('tv._qr', ['kind' => $loop->iteration % 4 === 0 ? 'review' : 'reserve'])
+            </section>
+        @elseif ($slide['type'] === 'message')
+            <section class="slide" data-seconds="{{ $setting->combo_seconds }}">
+                @if ($photo($n)) <div class="bg" style="background-image:url('{{ $photo($n++) }}')"></div> @endif
+                <div class="content">
+                    <div class="text">
+                        <span class="tag">HH</span>
+                        <h1>{{ $slide['title'] }}</h1>
+                        @if ($slide['text'])<p class="desc">{{ $slide['text'] }}</p>@endif
+                    </div>
+                </div>
+            </section>
+        @else
+            @include('tv._qr', ['kind' => $slide['type']])
         @endif
-    @endforeach
-
-    @include('tv._qr', ['kind' => 'reserve'])
-    @include('tv._qr', ['kind' => 'review'])
+    @empty
+        <section class="slide" data-seconds="60">
+            <div class="content" style="justify-content:center;"><img src="{{ asset('images/hh-logo-wide.png') }}?v=2" alt="HH" style="height:30vh;"></div>
+        </section>
+    @endforelse
 
     <div class="dots" id="dots"></div>
     <div class="hint" id="hint">Toca la pantalla para verla completa</div>
@@ -76,9 +86,15 @@
         const dots = document.getElementById('dots');
         slides.forEach(() => dots.appendChild(document.createElement('i')));
         let i = -1;
+        const startedAt = Date.now();
+        // Respaldo por si una vuelta es muy larga.
+        setTimeout(() => location.reload(), 15 * 60 * 1000);
         function next() {
             if (i >= 0) { slides[i].classList.remove('on'); dots.children[i].classList.remove('on'); }
             i = (i + 1) % slides.length;
+            // Al terminar cada vuelta, si pasaron 2 minutos se recarga para tomar
+            // cambios de Administración → Pantalla TV, combos y precios.
+            if (i === 0 && Date.now() - startedAt > 120000) { location.reload(); return; }
             slides[i].classList.add('on'); dots.children[i].classList.add('on');
             setTimeout(next, (Number(slides[i].dataset.seconds) || 10) * 1000);
         }
