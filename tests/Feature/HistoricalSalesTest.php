@@ -116,6 +116,28 @@ class HistoricalSalesTest extends TestCase
         }
     }
 
+    public function test_reloading_a_renumbered_sheet_replaces_it_instead_of_duplicating(): void
+    {
+        $importer = app(HistoricalSalesImporter::class);
+        $importer->import($this->file, 'planilla-2026-10', 2026);
+        $this->assertSame(5, HistoricalSale::count());
+
+        // La misma planilla, ahora con otra numeración (N° de registro + 100) y una fila de otra planilla.
+        $other = HistoricalSale::query()->first()->replicate()->fill(['source' => 'otra-planilla']);
+        $other->save();
+        $lines = explode("\n", (string) file_get_contents($this->file));
+        $renumbered = array_map(fn ($l, $i) => $i === 0 || ! preg_match('/^(\d+),/', $l) ? $l : preg_replace_callback('/^(\d+),/', fn ($m) => ($m[1] + 100).',', $l), $lines, array_keys($lines));
+        $path = tempnam(sys_get_temp_dir(), 'planilla');
+        file_put_contents($path, implode("\n", $renumbered));
+        $importer->import($path, 'planilla-2026-10', 2026);
+        unlink($path);
+
+        $this->assertSame(5, HistoricalSale::where('source', 'planilla-2026-10')->count());
+        $this->assertSame(0, HistoricalSale::where('source', 'planilla-2026-10')->where('source_row', '<', 100)->count());
+        $this->assertSame(1, HistoricalSale::where('source', 'otra-planilla')->count());
+        $this->assertSame(5, HistoricalGuest::whereHas('sale', fn ($q) => $q->where('source', 'planilla-2026-10'))->count());
+    }
+
     public function test_extras_core_spelled_with_an_s_counts_as_extra_core(): void
     {
         $header = (string) strtok((string) file_get_contents($this->file), "\n");

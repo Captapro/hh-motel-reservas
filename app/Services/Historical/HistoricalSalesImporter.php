@@ -126,6 +126,14 @@ class HistoricalSalesImporter
                         $sale->guests()->create($guest);
                     }
                 }
+                // Recargar el mismo nombre reemplaza la planilla completa: las líneas que ya no
+                // vienen (la planilla se renumeró o se borraron filas) se quitan, para no duplicar.
+                HistoricalSale::where('source', $source)
+                    ->whereNotIn('source_row', array_column($lines, 'source_row'))
+                    ->get()->each(function (HistoricalSale $stale) {
+                        $stale->guests()->delete();
+                        $stale->delete();
+                    });
             });
         }
 
