@@ -407,7 +407,7 @@
                 <label>Teléfono / WhatsApp <span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional)</span></label>
                 <input type="text" name="customer_phone" id="customer-phone" placeholder="Pega el número del cliente — +56 9 ..." value="{{ old('customer_phone') }}" autocomplete="off">
                 <div class="cust-badge" id="cust-badge" hidden></div>
-                <div class="hint">Si ya vino antes, se completan solos el nombre y el email. Si no lo entrega, déjalo vacío: se identifica con su RUT o pasaporte, pero no recibe WhatsApp (@if ($walkInMode)ni pedido de opinión ni promociones@else ni el pase, ni los datos para pagar, ni avisos@endif).</div>
+                <div class="hint">Si ya vino antes, se completan solos el nombre y el email. Si no lo entrega, déjalo vacío: se identifica con su RUT o pasaporte, pero no recibe WhatsApp ({{ $walkInMode ? 'ni pedido de opinión ni promociones' : 'ni el pase, ni los datos para pagar, ni avisos' }}).</div>
 
                 <div class="cust-ficha" id="cust-ficha" hidden>
                     <div class="ficha-row"><span class="ficha-label">Nombre</span><span class="ficha-value" id="ficha-name"></span></div>

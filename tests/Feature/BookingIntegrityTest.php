@@ -1600,6 +1600,16 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, Booking::count());
     }
 
+    public function test_reservation_and_walk_in_forms_render_with_optional_phone_and_email(): void
+    {
+        foreach (['/reservar', '/reservar?presencial=1'] as $url) {
+            $html = $this->get($url)->assertOk()->getContent();
+            $this->assertStringContainsString('name="customer_phone"', $html);
+            $this->assertDoesNotMatchRegularExpression('/name="customer_phone"[^>]*required/', $html);
+            $this->assertDoesNotMatchRegularExpression('/name="customer_email"[^>]*required/', $html);
+        }
+    }
+
     public function test_without_phone_or_email_the_client_is_identified_by_document_in_walk_ins_and_reservations(): void
     {
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
