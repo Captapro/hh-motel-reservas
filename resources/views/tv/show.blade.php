@@ -28,7 +28,7 @@
         .cta strong { color:var(--accent-soft); }
         .text { flex:1; }
         .qr { flex:none; background:#fff; border-radius:2vw; padding:1.2vw; box-shadow:0 2vh 6vh rgba(0,0,0,.5); }
-        .qr img { display:block; width:30vh; height:30vh; }
+        .qr img { display:block; width:30vh; height:30vh; image-rendering:pixelated; }
         .qr-big img { width:44vh; height:44vh; }
         .dots { position:fixed; bottom:4vh; left:0; right:0; display:flex; justify-content:center; gap:1vw; z-index:5; }
         .dots i { width:1vw; height:1vw; max-width:14px; max-height:14px; border-radius:50%; background:#3a3c40; }

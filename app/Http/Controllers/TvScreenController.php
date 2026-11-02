@@ -63,7 +63,7 @@ class TvScreenController extends Controller
 
     private function qr(string $url): string
     {
-        $result = (new Builder(writer: new PngWriter, data: $url, size: 520, margin: 16))->build();
+        $result = (new Builder(writer: new PngWriter, data: $url, size: 1000, margin: 24))->build();
 
         return $result->getDataUri();
     }
