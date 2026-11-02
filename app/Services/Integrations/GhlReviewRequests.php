@@ -5,6 +5,7 @@ namespace App\Services\Integrations;
 use App\Models\Booking;
 use App\Models\Coupon;
 use App\Models\GuestReview;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -27,6 +28,8 @@ class GhlReviewRequests
     public const DISCOUNT_PERCENT = 10;
 
     public const VALID_DAYS = 60;
+
+    public const LAST_SENT_KEY_PREFIX = 'ghl:last-sent:';
 
     public const ORIGIN = 'opinion';
 
@@ -124,11 +127,15 @@ class GhlReviewRequests
     {
         try {
             $response = Http::timeout(6)->acceptJson()->post($url, $this->notifier->payload($booking) + $extra);
+            $result = 'GHL respondió '.$response->status();
             if (! $response->successful()) {
                 Log::warning('GHL: el webhook "'.$kind.'" respondió '.$response->status().' para la reserva '.$booking->code);
             }
         } catch (Throwable $e) {
+            $result = 'no se pudo enviar: '.$e->getMessage();
             Log::warning('GHL: no se pudo mandar "'.$kind.'" de la reserva '.$booking->code, ['error' => $e->getMessage()]);
         }
+        // Último envío de cada tipo, para el diagnóstico en Admin → Integración GHL.
+        Cache::put(self::LAST_SENT_KEY_PREFIX.$kind, ['at' => now()->toIso8601String(), 'booking' => $booking->code, 'result' => $result], now()->addDays(7));
     }
 }

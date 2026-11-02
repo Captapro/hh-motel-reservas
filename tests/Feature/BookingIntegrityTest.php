@@ -702,6 +702,34 @@ class BookingIntegrityTest extends TestCase
         app(CouponValidator::class)->validate($coupon, $this->room, Carbon::parse('2026-11-05 12:00'), 60, $other, 20000);
     }
 
+    public function test_the_ghl_page_shows_what_happened_to_each_checkout_and_a_failing_step_does_not_block_review_requests(): void
+    {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        config(['services.ghl.webhook_pedir_opinion' => 'https://services.leadconnectorhq.com/hooks/opinion', 'services.ghl.webhook_cupon_opinion' => null]);
+        Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        Carbon::setTestNow(Carbon::parse('2026-11-02 15:06'));
+        $booking->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 12:00'), 'checked_out_at' => Carbon::parse('2026-11-02 14:50')]);
+
+        // El rescate de reservas sin pagar falla: igual se pide la opinión y el error queda a la vista.
+        $this->mock(\App\Services\Integrations\GhlAbandonedBookings::class)->shouldReceive('run')->andThrow(new \RuntimeException('falla de prueba'));
+        $this->artisan('app:reservas-expirar')->assertSuccessful();
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/opinion'));
+
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+        $this->get(route('admin.ghl.index'))->assertOk()
+            ->assertSee('GHL_WEBHOOK_PEDIR_OPINION configurado')
+            ->assertSee('GHL_WEBHOOK_CUPON_OPINION vacío')
+            ->assertSee('Proceso automático corriendo')
+            ->assertSee('falla de prueba')
+            ->assertSee($booking->code)
+            ->assertSee('Enviado a GHL')
+            ->assertSee('GHL respondió 200')
+            ->assertDontSee('services.leadconnectorhq.com');
+    }
+
     public function test_customer_activity_tags_follow_days_since_last_visit_and_only_change_when_the_bucket_changes(): void
     {
         (require database_path('migrations/2026_10_31_140000_add_activity_tag_to_customers.php'))->up();

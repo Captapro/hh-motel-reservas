@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Console\Commands\ExpirarReservasPendientes;
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Integrations\GhlClient;
+use App\Services\Integrations\GhlReviewRequests;
 use App\Support\Phone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 use Throwable;
 
@@ -19,12 +24,54 @@ use Throwable;
  */
 class GhlTestController extends Controller
 {
-    public function index(GhlClient $client): View
+    public function index(GhlClient $client, GhlReviewRequests $reviews): View
     {
-        return view('admin.ghl.index', ['configured' => $client->isConfigured()]);
+        return view('admin.ghl.index', ['configured' => $client->isConfigured()] + $this->reviewDiagnostics($reviews));
     }
 
-    public function test(Request $request, GhlClient $client): View
+    /**
+     * Pedidos de opinión: si los webhooks están puestos (sin mostrar la URL), si
+     * el proceso automático está corriendo, el último error de cada paso, el último
+     * envío a GHL y qué pasó con cada salida de las últimas 24 horas.
+     */
+    private function reviewDiagnostics(GhlReviewRequests $reviews): array
+    {
+        $lastRun = Cache::get(ExpirarReservasPendientes::LAST_RUN_KEY);
+        $stepErrors = collect(ExpirarReservasPendientes::STEPS)
+            ->mapWithKeys(fn ($step) => [$step => Cache::get(ExpirarReservasPendientes::ERROR_KEY_PREFIX.$step)])
+            ->filter();
+
+        $checkouts = Booking::with(['customer', 'room'])
+            ->where('booking_status', 'FINALIZADA')
+            ->where('checked_out_at', '>=', now()->subDay())
+            ->orderByDesc('checked_out_at')
+            ->get()
+            ->map(function (Booking $booking) use ($reviews) {
+                $hasPhone = filled($booking->customer?->phone_e164);
+                $status = match (true) {
+                    ! $booking->review_requested_at && $booking->checked_out_at->gt(now()->subMinutes(GhlReviewRequests::MINUTES_AFTER_CHECKOUT)) => 'Esperando sus 15 minutos',
+                    ! $booking->review_requested_at => 'No se procesó',
+                    ! $hasPhone => 'Sin teléfono: no se envía',
+                    $reviews->alreadyReviewed($booking) => 'Ya había opinado: no se envía',
+                    default => 'Enviado a GHL',
+                };
+
+                return ['booking' => $booking, 'has_phone' => $hasPhone, 'status' => $status];
+            });
+
+        return [
+            'reviewWebhooks' => [
+                'GHL_WEBHOOK_PEDIR_OPINION' => filled(config('services.ghl.webhook_pedir_opinion')),
+                'GHL_WEBHOOK_CUPON_OPINION' => filled(config('services.ghl.webhook_cupon_opinion')),
+            ],
+            'jobLastRun' => $lastRun ? Carbon::parse($lastRun) : null,
+            'jobErrors' => $stepErrors,
+            'lastReviewSent' => Cache::get(GhlReviewRequests::LAST_SENT_KEY_PREFIX.'pedir_opinion'),
+            'recentCheckouts' => $checkouts,
+        ];
+    }
+
+    public function test(Request $request, GhlClient $client, GhlReviewRequests $reviews): View
     {
         $validated = $request->validate([
             'phone' => ['required', 'string', 'max:20'],
@@ -58,6 +105,6 @@ class GhlTestController extends Controller
             'log' => $log,
             'error' => $error,
             'testedPhone' => $phone,
-        ]);
+        ] + $this->reviewDiagnostics($reviews));
     }
 }

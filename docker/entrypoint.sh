@@ -46,8 +46,8 @@ php artisan view:cache || true
 chown -R www-data:www-data /app/storage /app/bootstrap/cache
 
 # Barrido de retenciones: cada 30 s libera las reservas del catálogo que no pagaron a tiempo
-# (además se libera al crear reservas y al abrir el tablero).
-( while true; do sleep 30; runuser -u www-data -- php artisan app:reservas-expirar >/dev/null 2>&1 || true; done ) &
+# (además se libera al crear reservas y al abrir el tablero). Los errores van a los logs de Render.
+( while true; do sleep 30; runuser -u www-data -- php artisan app:reservas-expirar >/dev/null 2>>/proc/1/fd/2 || true; done ) &
 
 # Prepara las fotos reducidas del catálogo en segundo plano, ya con el servidor arriba.
 ( sleep 25; runuser -u www-data -- php artisan app:catalogo-precalentar >/dev/null 2>&1 || true ) &
