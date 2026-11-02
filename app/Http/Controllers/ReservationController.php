@@ -6,6 +6,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Exceptions\InvalidCouponException;
 use App\Exceptions\PricingException;
 use App\Exceptions\RoomNotAvailableException;
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Coupon;
@@ -16,6 +17,7 @@ use App\Models\RateRulePrice;
 use App\Models\RateRuleWindow;
 use App\Models\Room;
 use App\Models\RoomCategory;
+use App\Models\Staff;
 use App\Models\UpsellOffer;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
@@ -38,6 +40,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -46,8 +49,11 @@ class ReservationController extends Controller
     public function create(Request $request, RoomBoardService $board, RateRuleResolver $rates): View
     {
         $operationalSetting = OperationalSetting::current();
+        // También las que están en aseo sin marcar listo: a veces el cliente ya
+        // entró a una pieza limpia que nadie reactivó. Al elegirla se pide quién
+        // hizo el aseo y se marca lista junto con el ingreso.
         $rooms = Room::with('category')
-            ->where('operational_status', 'activa')
+            ->whereIn('operational_status', ['activa', 'aseo'])
             ->categoryEnabled()
             ->floorWingEnabled($operationalSetting)
             ->orderBy('name')
@@ -106,6 +112,7 @@ class ReservationController extends Controller
             'products' => $products,
             'combos' => $combos,
             'categoryDurations' => $this->durationsByCategorySlug(),
+            'cleaningStaff' => Staff::activeMucamas()->orderBy('name')->pluck('name'),
         ]);
     }
 
@@ -167,11 +174,21 @@ class ReservationController extends Controller
             'combo_quantities.*' => ['nullable', 'integer', 'min:0', 'max:20'],
             'accepted_upsells' => ['nullable', 'array'],
             'accepted_upsells.*' => ['integer', 'exists:upsell_offers,id'],
+            'aseo_cleaned_by' => ['nullable', 'string', 'max:100'],
         ]);
         // Ingreso presencial: después de crear se cobra y se pasa directo al check-in.
         $walkIn = (bool) ($validated['walk_in'] ?? false);
 
         $room = Room::with('category')->findOrFail($validated['room_id']);
+        // Pieza en aseo sin marcar lista: se exige quién hizo el aseo (igual que
+        // "Marcar aseo listo" en el tablero) y se reactiva al crear la reserva.
+        $cleanedBy = null;
+        if ($room->operational_status === 'aseo') {
+            $cleanedBy = ($validated['aseo_cleaned_by'] ?? null) ?: $room->aseo_reported_by;
+            if (! $cleanedBy || ! Staff::activeMucamas()->where('name', $cleanedBy)->exists()) {
+                return back()->withInput()->withErrors(['aseo_cleaned_by' => $room->name.' está en aseo: indica quién hizo el aseo para marcarlo listo.']);
+            }
+        }
         $time = sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']);
         $startsAt = Carbon::parse($validated['date'].' '.$time);
         $baseDuration = (int) $validated['duration_minutes'];
@@ -265,22 +282,36 @@ class ReservationController extends Controller
         }
 
         try {
-            $booking = $bookingService->create([
-                'room' => $room,
-                'customer' => $customer,
-                'starts_at' => $startsAt,
-                'duration_minutes' => $baseDuration,
-                'extra_minutes' => $extraMinutes,
-                'guests_count' => (int) $validated['guests_count'],
-                'coupon_code' => $validated['coupon_code'] ?? null,
-                'deposit_amount' => (int) ($validated['deposit_amount'] ?? 0),
-                'walk_in' => $walkIn,
-                'short_stay' => (bool) ($validated['short_stay'] ?? false),
-                'created_by' => auth()->id(),
-                'verified_by' => auth()->id(),
-                'notes' => null,
-                'guest_names' => preg_split('/\r\n|\r|\n/', $validated['guest_names'] ?? ''),
-            ]);
+            // Si la pieza estaba en aseo se marca lista en la misma transacción:
+            // si la reserva no se puede crear, vuelve a quedar en aseo.
+            $booking = DB::transaction(function () use ($cleanedBy, $room, $bookingService, $customer, $startsAt, $baseDuration, $extraMinutes, $validated, $walkIn) {
+                if ($cleanedBy) {
+                    $old = $room->only(['operational_status', 'aseo_reported_by', 'aseo_reported_at']);
+                    $room->update(['operational_status' => 'activa', 'aseo_override_at' => now(), 'aseo_reported_by' => null, 'aseo_reported_at' => null]);
+                    AuditLog::record(auth()->id(), 'habitacion.aseo_listo', 'Room', $room->id, $old, [
+                        'operational_status' => 'activa',
+                        'cleaned_by' => $cleanedBy,
+                        'al_ingresar' => true,
+                    ]);
+                }
+
+                return $bookingService->create([
+                    'room' => $room,
+                    'customer' => $customer,
+                    'starts_at' => $startsAt,
+                    'duration_minutes' => $baseDuration,
+                    'extra_minutes' => $extraMinutes,
+                    'guests_count' => (int) $validated['guests_count'],
+                    'coupon_code' => $validated['coupon_code'] ?? null,
+                    'deposit_amount' => (int) ($validated['deposit_amount'] ?? 0),
+                    'walk_in' => $walkIn,
+                    'short_stay' => (bool) ($validated['short_stay'] ?? false),
+                    'created_by' => auth()->id(),
+                    'verified_by' => auth()->id(),
+                    'notes' => null,
+                    'guest_names' => preg_split('/\r\n|\r|\n/', $validated['guest_names'] ?? ''),
+                ]);
+            });
         } catch (RoomNotAvailableException|PricingException|InvalidCouponException $e) {
             return back()->withInput()->withErrors(['booking' => $e->getMessage()]);
         }

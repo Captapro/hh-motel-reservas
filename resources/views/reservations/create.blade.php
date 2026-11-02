@@ -117,6 +117,7 @@
         .ficha-edit-btn:hover { border-color:#ff7918; color:#ff7918; }
         #cust-editable-fields[hidden] { display:none; }
         .price-box { margin-top:10px; padding:12px 14px; border-radius:8px; background:#1c1c1c; border:1px solid #333; font-size:13.5px; }
+        .aseo-ready { margin-top:10px; padding:10px; border:1px solid #6b5a2a; background:#221d10; border-radius:8px; }
         .price-box.has-offer { background:#16201a; border-color:#2e6e45; }
         .price-box .p-sum { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; color:#bbb; }
         .price-box .p-sum.disc { color:#7fd49b; }
@@ -313,17 +314,29 @@
                         @php
                             $occ = $room->current_status['occupancy'];
                             $etaMin = $room->current_status['eta_minutes'];
+                            $inAseo = $room->operational_status === 'aseo';
                             $statusLabel = match(true) {
+                                $inAseo => 'En aseo (se marca listo al ingresar)',
                                 $occ === 'ocupada' && $etaMin >= 0 => 'Ocupada, libera en '.$etaMin.' min',
                                 $occ === 'ocupada' => 'Ocupada (pasó su horario)',
                                 default => 'Libre ahora',
                             };
                         @endphp
-                        <option value="{{ $room->id }}" data-cat="{{ Str::slug($room->category->name) }}" @selected($selectedRoomId == $room->id)>
+                        <option value="{{ $room->id }}" data-cat="{{ Str::slug($room->category->name) }}"@if ($inAseo) data-aseo="1" data-reported="{{ $room->aseo_reported_by }}"@endif @selected($selectedRoomId == $room->id)>
                             {{ $room->name }} — {{ $room->category->name }} · {{ $statusLabel }}
                         </option>
                     @endforeach
                 </select>
+                <div id="aseo-ready" class="aseo-ready" hidden>
+                    <label for="aseo-cleaned-by">Este Playroom está en aseo. ¿Quién hizo el aseo?</label>
+                    <select name="aseo_cleaned_by" id="aseo-cleaned-by">
+                        <option value="">— Elige —</option>
+                        @foreach ($cleaningStaff as $name)
+                            <option value="{{ $name }}" @selected(old('aseo_cleaned_by') === $name)>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="hint">Al guardar queda marcado "aseo listo", igual que en el tablero.</div>
+                </div>
                 <div class="hint">
                     @if ($walkInMode)
                         Así está cada Playroom en este momento.
@@ -1027,6 +1040,20 @@
         // Muestra solo las duraciones que tienen precio en la categoría de la
         // Playroom elegido (GO 1-2 h, LITE 3 h, PLUS/MAX 3-6-12 h).
         const HH_CAT_DURATIONS = @json($categoryDurations);
+        // Pieza en aseo: se pide quién hizo el aseo (si la mucama ya lo reportó, viene elegida).
+        function hhSyncAseo() {
+            const roomSel = document.getElementById('room-select');
+            const opt = roomSel.options[roomSel.selectedIndex];
+            const box = document.getElementById('aseo-ready');
+            const who = document.getElementById('aseo-cleaned-by');
+            const inAseo = !!(opt && opt.dataset.aseo);
+            box.hidden = !inAseo;
+            who.required = inAseo;
+            if (inAseo && !who.value && opt.dataset.reported) who.value = opt.dataset.reported;
+        }
+        document.getElementById('room-select').addEventListener('change', hhSyncAseo);
+        hhSyncAseo();
+
         function hhSyncDurations(catOverride) {
             const roomSel = document.getElementById('room-select');
             const opt = roomSel.options[roomSel.selectedIndex];

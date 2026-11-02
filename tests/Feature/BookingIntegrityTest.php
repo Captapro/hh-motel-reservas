@@ -78,6 +78,10 @@ class BookingIntegrityTest extends TestCase
             '2026_08_18_120009_create_coupon_rooms_table.php',
             '2026_08_18_120010_create_customers_table.php',
             '2026_09_11_090000_add_identity_fields_to_customers_table.php',
+            '2026_09_16_010000_create_staff_and_shifts_tables.php',
+            '2026_08_26_120001_add_aseo_override_to_rooms_table.php',
+            '2026_08_26_140001_add_aseo_started_to_rooms_table.php',
+            '2026_09_22_004138_add_aseo_report_to_rooms_table.php',
             '2026_08_18_120011_create_bookings_table.php',
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
@@ -1651,6 +1655,35 @@ class BookingIntegrityTest extends TestCase
         }
     }
 
+    public function test_a_walk_in_can_use_a_room_still_marked_in_aseo_by_saying_who_cleaned_it(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-05 11:00'));
+        \App\Models\Staff::create(['name' => 'Dubraska', 'role' => 'Mucama', 'is_active' => true]);
+        $this->room->update(['operational_status' => 'aseo', 'aseo_started_at' => now()->subHour()]);
+        $this->assertStringContainsString('En aseo (se marca listo al ingresar)', $this->get('/reservar?modo=ingreso')->getContent());
+
+        $data = [
+            'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 10, 'time_minute' => 30,
+            'duration_minutes' => 60, 'guests_count' => 2, 'customer_first_name' => 'Entro',
+            'customer_last_name' => 'Antes', 'document_type' => 'rut', 'document_number' => '12.345.678-5', 'walk_in' => 1,
+        ];
+        // Sin decir quién hizo el aseo no se registra.
+        $this->post('/reservar', $data)->assertSessionHasErrors('aseo_cleaned_by');
+        $this->assertSame(0, Booking::count());
+
+        $this->post('/reservar', $data + ['aseo_cleaned_by' => 'Dubraska'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(1, Booking::count());
+        $this->assertSame('activa', $this->room->fresh()->operational_status);
+        $log = AuditLog::where('action', 'habitacion.aseo_listo')->firstOrFail();
+        $this->assertSame('Dubraska', $log->new_value['cleaned_by']);
+
+        // Una pieza en mantención no se puede elegir.
+        Booking::query()->delete();
+        $this->room->update(['operational_status' => 'mantencion']);
+        $this->post('/reservar', $data)->assertSessionHasErrors();
+        $this->assertSame(0, Booking::count());
+    }
+
     public function test_reservation_and_walk_in_forms_render_with_optional_phone_and_email(): void
     {
         foreach (['/reservar', '/reservar?presencial=1'] as $url) {
@@ -2006,9 +2039,7 @@ class BookingIntegrityTest extends TestCase
 
     public function test_regression_early_departure_releases_actual_occupancy(): void
     {
-        foreach (['2026_08_19_090003_add_consumption_offered_to_bookings_table.php', '2026_08_26_120001_add_aseo_override_to_rooms_table.php', '2026_08_26_140001_add_aseo_started_to_rooms_table.php'] as $f) {
-            (require database_path('migrations/'.$f))->up();
-        }
+        (require database_path('migrations/2026_08_19_090003_add_consumption_offered_to_bookings_table.php'))->up();
         $b = $this->reserve('14:00');
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
         $this->payRoom($b)->post('/reservas/'.$b->code.'/checkin')->assertRedirect()->assertSessionHasNoErrors();
