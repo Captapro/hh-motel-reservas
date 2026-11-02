@@ -170,7 +170,7 @@
             <div class="bar-row">
                 <div class="name">{{ ucfirst($d['date']->locale('es')->isoFormat('ddd D/MM')) }}</div>
                 <div class="bar-track"><div class="bar-fill alt" style="width: {{ round($d['value'] / $maxTd * 100) }}%;"></div></div>
-                <div class="val">{{ $metricVal($d['value']) }} <small>· {{ $d['count'] }}r</small></div>
+                <div class="val">{{ $metricVal($d['value']) }} <small>· {{ $d['count'] }} {{ Str::plural('reserva', $d['count']) }}</small></div>
             </div>
         @empty
             <p class="empty">Sin reservas en el rango.</p>
@@ -190,7 +190,7 @@
                     <div class="cat">{{ $e['sub'] }}</div>
                 </div>
                 <div class="bar-track"><div class="bar-fill" style="width: {{ round($e['value'] / $maxR * 100) }}%;"></div></div>
-                <div class="val">{{ $metricVal($e['value']) }} <small>· {{ $e['count'] }}r</small></div>
+                <div class="val">{{ $metricVal($e['value']) }} <small>· {{ $e['count'] }} {{ Str::plural('reserva', $e['count']) }}</small></div>
             </div>
         @empty
             <p class="empty">Sin reservas en el rango.</p>
