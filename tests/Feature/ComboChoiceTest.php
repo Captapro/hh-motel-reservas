@@ -262,4 +262,34 @@ class ComboChoiceTest extends TestCase
         // Recepción no puede programarla.
         $this->actingAs(User::factory()->create(['role' => 'recepcion']))->get(route('admin.tv_screen.edit'))->assertForbidden();
     }
+
+    public function test_product_photos_are_resized_kept_in_the_database_and_float_next_to_their_combo_on_the_tv(): void
+    {
+        (require database_path('migrations/2026_11_02_200000_create_tv_screen_settings_table.php'))->up();
+        (require database_path('migrations/2026_11_02_210000_add_image_to_products_table.php'))->up();
+        $this->combo->update(['show_in_catalog' => true]);
+        $coca = $this->drinks['Coca-Cola'];
+
+        $this->put(route('admin.products.update', $coca), [
+            'name' => $coca->name, 'price' => 2000, 'display_order' => 0, 'is_active' => 1, 'track_inventory' => 1, 'stock' => 10, 'low_stock_threshold' => 2,
+            'image' => \Illuminate\Http\UploadedFile::fake()->image('coca.png', 1200, 1800),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $coca->refresh();
+        $this->assertNotNull($coca->image_updated_at);
+        $png = $this->get($coca->imageUrl())->assertOk()->assertHeader('Content-Type', 'image/png')->getContent();
+        [$w, $h] = getimagesizefromstring($png);
+        $this->assertSame(700, max($w, $h));
+        $this->assertArrayNotHasKey('data', $coca->toArray());
+
+        auth()->logout();
+        $this->get('/pantalla')->assertOk()->assertSee($coca->imageUrl(), false)->assertSee('class="products n1"', false);
+
+        // Quitar la foto.
+        $this->actingAs(User::first())->put(route('admin.products.update', $coca), [
+            'name' => $coca->name, 'price' => 2000, 'display_order' => 0, 'is_active' => 1, 'track_inventory' => 1, 'stock' => 10, 'low_stock_threshold' => 2, 'remove_image' => 1,
+        ])->assertRedirect();
+        $this->assertNull($coca->fresh()->image_updated_at);
+        $this->get(route('products.image', $coca))->assertNotFound();
+    }
 }

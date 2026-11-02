@@ -34,6 +34,7 @@ class TvScreenController extends Controller
                 'description' => $setting->show_combo_contents ? $combo->description : null,
                 'price' => (int) $combo->price,
                 'items' => $setting->show_combo_contents ? $combo->items->map(fn (ComboItem $item) => $this->itemLabel($item))->filter()->values() : collect(),
+                'images' => $setting->show_combo_contents ? $this->itemImages($combo) : [],
             ])
             ->values();
 
@@ -66,6 +67,30 @@ class TvScreenController extends Controller
             'reserveQr' => $this->qr(route('catalog.index')),
             'reviewQr' => $this->qr(route('reviews.create')),
         ]);
+    }
+
+    /**
+     * Fotos de los productos del combo (hasta 4). Un producto fijo sale tantas
+     * veces como unidades trae (2 cervezas = 2 latas, máx. 3); en las
+     * elecciones salen las primeras opciones que tengan foto.
+     *
+     * @return array<int, string>
+     */
+    private function itemImages(Combo $combo): array
+    {
+        $urls = [];
+        foreach ($combo->items as $item) {
+            if ($item->isChoice()) {
+                $withImage = $item->options()->filter(fn ($p) => $p->image_updated_at)->take(max(1, (int) $item->quantity));
+                foreach ($withImage as $product) {
+                    $urls[] = $product->imageUrl();
+                }
+            } elseif ($item->product?->image_updated_at) {
+                $urls = array_merge($urls, array_fill(0, min(3, max(1, (int) $item->quantity)), $item->product->imageUrl()));
+            }
+        }
+
+        return array_slice($urls, 0, 4);
     }
 
     private function itemLabel(ComboItem $item): ?string
