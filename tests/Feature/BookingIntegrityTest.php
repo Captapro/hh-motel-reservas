@@ -870,6 +870,24 @@ class BookingIntegrityTest extends TestCase
         $again->assertSee('Voucher')->assertSee('4521');
     }
 
+    public function test_month_end_projection_counts_only_closed_days_by_itself(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-04 15:00', 'America/Santiago'));
+        $first = Carbon::parse('2026-11-01', 'America/Santiago');
+        $sales = [1 => 300000, 2 => 100000, 3 => 100000, 4 => 999999]; // el 4 es hoy: no cuenta todavía
+        $daily = collect(range(1, 30))->map(fn ($d) => ['date' => $first->copy()->day($d), 'total' => $sales[$d] ?? 0]);
+        $method = new \ReflectionMethod(\App\Http\Controllers\MonthlySalesController::class, 'projection');
+
+        $p = $method->invoke(app(\App\Http\Controllers\MonthlySalesController::class), $daily, $first);
+        $this->assertSame(3, $p['closed_days']);
+        $this->assertSame(5000000, $p['simple']); // 500.000 ÷ 3 × 30
+        // Domingos a 300.000, lunes y martes a 100.000, el resto al promedio general.
+        $this->assertSame(5066667, $p['by_weekday']);
+
+        // Un mes que no es el actual no se proyecta.
+        $this->assertNull($method->invoke(app(\App\Http\Controllers\MonthlySalesController::class), $daily, Carbon::parse('2026-10-01', 'America/Santiago')));
+    }
+
     public function test_only_fully_paid_stays_count_as_sales(): void
     {
         $paid = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);

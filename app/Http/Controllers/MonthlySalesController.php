@@ -154,10 +154,42 @@ class MonthlySalesController extends Controller
             'byWeekday' => $byWeekday, 'byDuration' => $byDuration, 'byRoom' => $byRoom,
             'byMethod' => $byMethod, 'extras' => $extras, 'detail' => $detail, 'history' => $history,
             'planilla' => $planilla,
+            'projection' => $this->projection($daily, $first),
             'missingCount' => $detail->where('missing', '!=', [])->count(),
             'avgTicket' => $totals['rooms'] ? (int) round($totals['total'] / $totals['rooms']) : 0,
             'cancelled' => Booking::whereBetween('starts_at', [$first->copy(), $last->copy()])->where('booking_status', 'CANCELADA')->count(),
         ]);
+    }
+
+    /**
+     * Proyección de venta a fin de mes, como la de la planilla ("venta ÷ días × días del mes")
+     * pero con los días contados solos: solo días ya cerrados (hasta ayer), para que el día en
+     * curso a medio vender no la tire hacia abajo. La segunda cifra estima cada día que falta con
+     * el promedio de ese mismo día de la semana, porque viernes a domingo venden mucho más.
+     */
+    private function projection(Collection $daily, Carbon $first): ?array
+    {
+        $today = now(self::TZ)->startOfDay();
+        if (! $first->isSameMonth($today)) {
+            return null;
+        }
+        $closed = $daily->filter(fn (array $r) => $r['date']->lt($today));
+        if ($closed->isEmpty()) {
+            return ['closed_days' => 0, 'days' => $first->daysInMonth];
+        }
+        $closedSales = (int) $closed->sum('total');
+        $perDay = $closedSales / $closed->count();
+        $byWeekday = $closed->groupBy(fn (array $r) => $r['date']->dayOfWeekIso)->map(fn (Collection $g) => $g->avg('total'));
+        $rest = $daily->filter(fn (array $r) => $r['date']->gte($today))->sum(fn (array $r) => $byWeekday[$r['date']->dayOfWeekIso] ?? $perDay);
+
+        return [
+            'closed_days' => $closed->count(),
+            'days' => $first->daysInMonth,
+            'closed_sales' => $closedSales,
+            'per_day' => (int) round($perDay),
+            'simple' => (int) round($perDay * $first->daysInMonth),
+            'by_weekday' => (int) round($closedSales + $rest),
+        ];
     }
 
     /**

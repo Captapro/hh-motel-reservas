@@ -23,6 +23,7 @@
         .card { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:14px 16px; }
         .card .label { font-size:11px; color:#999; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
         .card .value { font-size:22px; font-family: ui-monospace, monospace; font-weight:600; }
+        .card .sub-note { font-size:11.5px; color:#999; margin-top:6px; line-height:1.45; }
         .card.green .value { color:#6fd39a; } .card.blue .value { color:#7fbcdc; } .card.gold .value { color:#e8c76f; }
         .table-wrap { overflow-x:auto; background:#1c1c1c; border:1px solid #333; border-radius:10px; margin-bottom:14px; }
         table { width:100%; border-collapse: collapse; font-size:13.5px; }
@@ -91,6 +92,18 @@
 
     <div class="cards" style="margin-top:14px;">
         <div class="card" tabindex="0" data-tip="Suma, de las estadías vendidas del mes (con su pago completo), del precio final con descuentos más los extras pagados. Se cuenta en el día de la estadía."><div class="label">Venta total del mes</div><div class="value">{{ $money($totals['total']) }}</div></div>
+        @if ($projection)
+            <div class="card gold" tabindex="0" data-tip="Igual que en la planilla: venta de los días ya cerrados ÷ esos días × días del mes. El día de hoy no entra hasta que termina. Con pocos días cerrados la cifra varía mucho.">
+                <div class="label">Proyección fin de mes</div>
+                @if ($projection['closed_days'] > 0)
+                    <div class="value">{{ $money($projection['simple']) }}</div>
+                    <div class="sub-note">{{ $projection['closed_days'] }} de {{ $projection['days'] }} días cerrados · {{ $money($projection['per_day']) }} por día<br>Según día de la semana: {{ $money($projection['by_weekday']) }}</div>
+                @else
+                    <div class="value">—</div>
+                    <div class="sub-note">Aparece mañana, con el primer día cerrado.</div>
+                @endif
+            </div>
+        @endif
         <div class="card blue" tabindex="0" data-tip="Estadías del mes con su pago completo. No cuenta canceladas, vencidas ni pendientes de pago."><div class="label">Playrooms vendidos</div><div class="value">{{ $totals['rooms'] }}</div></div>
         <div class="card gold" tabindex="0" data-tip="Venta total de las habitaciones del mes ÷ cantidad de habitaciones vendidas."><div class="label">Precio promedio por hab.</div><div class="value">{{ $money($avgTicket) }}</div></div>
         <div class="card green" tabindex="0" data-tip="Pagos aprobados recibidos durante el mes, según el día en que se cobraron (puede incluir pagos adelantados de estadías de otros días)."><div class="label">Cobrado en caja</div><div class="value">{{ $money($totals['cash_total']) }}</div></div>
