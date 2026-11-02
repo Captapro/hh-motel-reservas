@@ -130,6 +130,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/turno/entregar', [ShiftHandoverController::class, 'deliver'])->name('shift.deliver');
     Route::post('/turno/recibir/despues', [ShiftHandoverController::class, 'later'])->name('shift.later');
     Route::post('/turno/{kind}', [ShiftHandoverController::class, 'store'])->whereIn('kind', ['recibir', 'entregar'])->name('shift.store');
+    Route::get('/mi-cuenta/clave', [App\Http\Controllers\PasswordController::class, 'edit'])->name('account.password');
+    Route::put('/mi-cuenta/clave', [App\Http\Controllers\PasswordController::class, 'update'])->middleware('throttle:6,1,account.password')->name('account.password.update');
 });
 
 // Asistente de ayuda (botón "Ayuda" de todas las pantallas del equipo).

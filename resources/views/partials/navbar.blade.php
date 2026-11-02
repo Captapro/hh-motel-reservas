@@ -101,7 +101,7 @@
             @if (auth()->user()->isAdministrador() && ($hhShiftAlerts = \App\Models\ShiftHandover::pendingReviewCount()) > 0)
                 <a href="{{ route('cash.shifts') }}" style="background:#3a1c22; color:#e88a9a; font-weight:600;">⚠ Turnos con diferencias ({{ $hhShiftAlerts }})</a>
             @endif
-            <span style="color:#aaa; font-size:12.5px; padding:0 4px;">{{ auth()->user()->name }}</span>
+            <a href="{{ route('account.password') }}" title="Cambiar mi contraseña" style="color:#aaa; font-size:12.5px; padding:0 4px;">{{ auth()->user()->name }} · 🔑</a>
             @if (auth()->user()->isRecepcion())
                 {{-- El anfitrión sale entregando el turno: cuenta caja chica y stock. --}}
                 <a href="{{ route('shift.deliver') }}" class="hh-danger">Entregar turno y salir</a>
