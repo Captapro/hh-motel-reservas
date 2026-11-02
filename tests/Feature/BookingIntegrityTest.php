@@ -915,6 +915,21 @@ class BookingIntegrityTest extends TestCase
         $this->assertFalse($this->room->fresh()->isOperational());
     }
 
+    public function test_maintenance_needs_a_reason_that_is_cleared_when_the_room_is_back(): void
+    {
+        $this->from(route('rooms.board'))->post(route('rooms.status', $this->room), ['operational_status' => 'mantencion'])
+            ->assertSessionHasErrors('operational_note');
+        $this->assertSame('activa', $this->room->fresh()->operational_status);
+
+        $this->post(route('rooms.status', $this->room), ['operational_status' => 'mantencion', 'operational_note' => 'Aire acondicionado en reparación'])
+            ->assertRedirect(route('rooms.board'));
+        $this->assertSame('Aire acondicionado en reparación', $this->room->fresh()->operational_note);
+
+        $this->post(route('rooms.status', $this->room), ['operational_status' => 'activa']);
+        $this->assertSame('activa', $this->room->fresh()->operational_status);
+        $this->assertNull($this->room->fresh()->operational_note);
+    }
+
     /** Resumen del día del tablero (método privado): se lee directo para no depender de toda la vista. */
     private function boardDailySummary(): array
     {

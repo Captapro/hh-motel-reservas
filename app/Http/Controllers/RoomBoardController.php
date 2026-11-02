@@ -273,8 +273,14 @@ class RoomBoardController extends Controller
 
         $validated = $request->validate([
             'operational_status' => ['required', 'in:activa,mantencion,inactiva,aseo,ocupada'],
-            'operational_note' => ['nullable', 'string', 'max:255'],
+            'operational_note' => ['nullable', 'required_if:operational_status,mantencion', 'string', 'max:255'],
+        ], [
+            'operational_note.required_if' => 'Indica el motivo de la mantención.',
         ]);
+        // El motivo solo tiene sentido mientras la pieza está fuera de servicio.
+        if (! in_array($validated['operational_status'], ['mantencion', 'inactiva', 'ocupada'], true)) {
+            $validated['operational_note'] = null;
+        }
 
         $old = $room->only(['operational_status', 'operational_note']);
         $room->update($validated);

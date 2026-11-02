@@ -125,7 +125,7 @@
         <summary title="Cambiar estado de {{ $room->name }}"><span class="lg">Cambiar estado</span><span class="sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span></summary>
         <form method="POST" action="{{ route('rooms.status', $room) }}" onsubmit="return this.operational_status.value !== '__aseo' || confirm('¿Mandar {{ $room->name }} a aseo? Queda fuera de disponibles hasta que la marques como activa.');">
             @csrf
-            <select name="operational_status">
+            <select name="operational_status" onchange="var n=this.form.operational_note; n.hidden=n.disabled=!['mantencion','inactiva'].includes(this.value); n.required=this.value==='mantencion'; if(!n.hidden) n.focus();">
                 <option value="activa" @selected($room->operational_status === 'activa') @disabled($room->operational_status === 'aseo')>Activa{{ $room->operational_status === 'aseo' ? ' — primero marcar aseo listo' : '' }}</option>
                 <option value="ocupada" @selected($room->operational_status === 'ocupada') @disabled($room->operational_status === 'aseo')>Ocupada (sin reserva)</option>
                 <option value="mantencion" @selected($room->operational_status === 'mantencion')>En mantención</option>
@@ -136,6 +136,8 @@
                     <option value="__aseo">Aseo</option>
                 @endif
             </select>
+            @php $offline = in_array($room->operational_status, ['mantencion', 'inactiva'], true); @endphp
+            <input type="text" name="operational_note" maxlength="255" value="{{ $offline ? $room->operational_note : '' }}" placeholder="Motivo (ej. aire acondicionado en reparación)" @if (! $offline) hidden disabled @endif @required($room->operational_status === 'mantencion')>
             <button type="submit">Guardar</button>
         </form>
     </details>
