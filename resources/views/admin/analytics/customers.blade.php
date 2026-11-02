@@ -30,7 +30,7 @@
             <input type="date" name="to" value="{{ $to }}">
             <button class="go" type="submit">Aplicar</button>
             @if ($isCustom)
-                <a class="chip" href="{{ route('admin.analytics.customers') }}">Volver a los últimos 90 días</a>
+                <a class="chip" href="{{ route('admin.analytics.customers') }}">Volver a todo lo cargado</a>
             @endif
         </div>
     </form>

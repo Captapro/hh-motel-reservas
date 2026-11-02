@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\HistoricalSale;
 use App\Services\Analyst\HistoricalDataService;
 use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Integrations\CustomerActivityTags;
@@ -137,8 +138,13 @@ class CustomerBehaviorController extends Controller
         }
         $now = now(self::TZ);
 
-        // Para estudiar clientes un mes es muy poco: por defecto, los últimos 90 días.
-        return [$now->copy()->subDays(89)->startOfDay(), $now->copy()->endOfDay(), false];
+        // Por defecto, todo lo cargado: desde lo más antiguo (planilla histórica o primera reserva) hasta hoy.
+        $oldest = collect([
+            HistoricalSale::min('sold_on'),
+            Booking::whereNotIn('booking_status', self::EXCLUDED)->min('starts_at'),
+        ])->filter()->map(fn ($d) => Carbon::parse($d, self::TZ))->min();
+
+        return [($oldest ?? $now->copy()->subDays(89))->copy()->startOfDay(), $now->copy()->endOfDay(), false];
     }
 
     /** Segmento de cada cliente según las reglas ya configuradas en Clientes. */
