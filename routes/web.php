@@ -125,6 +125,9 @@ Route::get('/qr/mucamas/entrar', [MucamaAuthController::class, 'showLogin'])->na
 Route::post('/qr/mucamas/entrar', [MucamaAuthController::class, 'login'])->middleware('throttle:15,1,mucamas.login.store')->name('mucamas.login.store');
 Route::post('/qr/mucamas/salir', [MucamaAuthController::class, 'logout'])->name('mucamas.logout');
 
+// Foto de la credencial desde el celular: el QR del check-in lleva un enlace firmado y temporal, sin iniciar sesión.
+Route::get('/credencial/{code}', [CouponProofController::class, 'create'])->middleware(['signed', 'throttle:30,1,coupon_proof.phone'])->name('coupon_proof.phone');
+Route::post('/credencial/{code}', [CouponProofController::class, 'store'])->middleware(['signed', 'throttle:10,1,coupon_proof.phone.store'])->name('coupon_proof.phone.store');
 Route::get('/qr/habitacion/{room}', [RoomQrController::class, 'show'])->name('rooms.qr.show');
 Route::get('/qr/habitacion/{room}/imagen.png', [RoomQrController::class, 'image'])->name('rooms.qr.image');
 Route::post('/qr/habitacion/{room}/aseo', [RoomQrController::class, 'reportAseo'])->middleware(['throttle:20,1,rooms.qr.report_aseo', 'mucama'])->name('rooms.qr.report_aseo');

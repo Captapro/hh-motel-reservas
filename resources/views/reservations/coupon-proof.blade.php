@@ -44,7 +44,7 @@
             @if ($proof && ! session('status'))
                 <div class="ok">Ya hay una foto guardada ({{ $proof->created_at->timezone('America/Santiago')->format('H:i') }}). Puedes sacar otra si no se lee bien.</div>
             @endif
-            <form method="POST" action="{{ route('bookings.coupon_proof.store', $booking->code) }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ $action }}" enctype="multipart/form-data">
                 @csrf
                 <label class="shot" for="photo">📷 Sacar foto</label>
                 <input type="file" id="photo" name="photo" accept="image/*" capture="environment">

@@ -13,6 +13,7 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\CoreExtra;
 use App\Models\Coupon;
+use App\Models\CouponProof;
 use App\Models\CouponRedemption;
 use App\Models\Customer;
 use App\Models\GuestReview;
@@ -63,6 +64,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Tests\Concerns\PaysBookings;
 use Tests\TestCase;
@@ -552,6 +554,28 @@ class BookingIntegrityTest extends TestCase
         $board = $this->boardDailySummary();
         $this->assertSame([1, 1500, 15000], [$board['extras_count'], $board['extras_revenue'], $board['core_revenue']]);
         $this->get(route('sales.daily', '2026-11-02'))->assertOk()->assertSee('Extras core');
+    }
+
+    public function test_the_credential_qr_works_on_a_phone_without_login_and_expires(): void
+    {
+        (require database_path('migrations/2026_10_31_150000_create_coupon_proofs_table.php'))->up();
+        $coupon = $this->offer(['requires_verification' => true, 'verification_note' => 'Credencial de estudiante vigente']);
+        $booking = $this->booking();
+        $booking->update(['coupon_id' => $coupon->id, 'coupon_code_snapshot' => 'ESTUDIANTE']);
+        $staff = auth()->id();
+        $link = URL::temporarySignedRoute('coupon_proof.phone', now()->addHours(2), ['code' => $booking->code, 'por' => $staff]);
+        auth()->logout();
+
+        // Sin firma no entra nadie; con el enlace del QR, el celular sin sesión sube la foto.
+        $this->get('/credencial/'.$booking->code)->assertForbidden();
+        $this->get($link)->assertOk()->assertSee('Sacar foto')->assertSee('action="'.e($link).'"', false);
+        $this->post($link, ['photo' => UploadedFile::fake()->image('credencial.jpg', 800, 500)])->assertRedirect($link);
+        $this->get($link)->assertOk()->assertSee('Foto guardada');
+        $this->assertSame($staff, CouponProof::where('booking_id', $booking->id)->value('uploaded_by'));
+
+        // El enlace vence.
+        $this->travel(3)->hours();
+        $this->get($link)->assertForbidden();
     }
 
     public function test_attribution_names_the_channel_and_the_catalog_remembers_where_the_visitor_came_from(): void

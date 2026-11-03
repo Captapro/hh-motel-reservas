@@ -11,18 +11,21 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 
 /**
  * Foto del documento de un cupón con verificación (ej. credencial de
- * estudiante). El check-in del computador muestra un QR; recepción lo escanea
- * con su celular (ya logueado, como con los pases), saca la foto y el
- * check-in se actualiza solo.
+ * estudiante). El check-in del computador muestra un QR con un enlace firmado
+ * y temporal: recepción lo escanea con cualquier celular, sin iniciar sesión,
+ * saca la foto y el check-in se actualiza solo.
  */
 class CouponProofController extends Controller
 {
+    private const QR_LINK_HOURS = 2;
+
     /** Página del celular para sacar la foto. */
-    public function create(string $code, CouponProofs $proofs): View
+    public function create(Request $request, string $code, CouponProofs $proofs): View
     {
         $booking = Booking::with(['coupon', 'customer', 'room'])->where('code', $code)->firstOrFail();
 
@@ -30,6 +33,7 @@ class CouponProofController extends Controller
             'booking' => $booking,
             'required' => $proofs->required($booking),
             'proof' => $proofs->latest($booking),
+            'action' => $request->routeIs('coupon_proof.phone') ? $request->fullUrl() : route('bookings.coupon_proof.store', $booking->code),
         ]);
     }
 
@@ -42,9 +46,11 @@ class CouponProofController extends Controller
             ['photo' => ['required', 'image', 'max:12288']],
             ['photo.required' => 'Saca la foto del documento.', 'photo.image' => 'El archivo tiene que ser una foto.', 'photo.max' => 'La foto es muy pesada (máx. 12 MB).'],
         );
-        $proofs->store($booking, (string) file_get_contents($request->file('photo')->getRealPath()), auth()->id());
+        $phone = $request->routeIs('coupon_proof.phone.store');
+        $proofs->store($booking, (string) file_get_contents($request->file('photo')->getRealPath()), $phone ? (int) $request->query('por') ?: null : auth()->id());
 
-        return redirect()->route('bookings.coupon_proof.create', $booking->code)->with('status', 'Foto guardada. Ya puedes seguir con el check-in en el computador.');
+        return redirect()->to($phone ? $request->fullUrl() : route('bookings.coupon_proof.create', $booking->code))
+            ->with('status', 'Foto guardada. Ya puedes seguir con el check-in en el computador.');
     }
 
     /** Lo consulta el check-in del computador para saber cuándo llegó la foto. */
@@ -58,7 +64,8 @@ class CouponProofController extends Controller
     public function qr(string $code): Response
     {
         $booking = Booking::where('code', $code)->firstOrFail();
-        $result = (new Builder(writer: new PngWriter, data: route('bookings.coupon_proof.create', $booking->code), size: 260, margin: 10))->build();
+        $link = URL::temporarySignedRoute('coupon_proof.phone', now()->addHours(self::QR_LINK_HOURS), ['code' => $booking->code, 'por' => auth()->id()]);
+        $result = (new Builder(writer: new PngWriter, data: $link, size: 320, margin: 10))->build();
 
         return response($result->getString(), 200, ['Content-Type' => $result->getMimeType(), 'Cache-Control' => 'private, no-store']);
     }
