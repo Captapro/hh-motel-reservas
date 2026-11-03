@@ -333,7 +333,9 @@
                 <div id="aseo-ready" class="aseo-ready" hidden>
                     <div style="font-weight:700; margin-bottom:6px;">Este Playroom está en aseo.</div>
                     <label class="aseo-opt"><input type="radio" name="aseo_mode" value="limpia" @checked(old('aseo_mode', 'limpia') === 'limpia')> Ya está limpio: el cliente entra ahora</label>
-                    <label class="aseo-opt"><input type="radio" name="aseo_mode" value="ya_salieron" @checked(old('aseo_mode') === 'ya_salieron')> Estoy registrando a pasajeros que <strong>ya salieron</strong>: sigue en aseo</label>
+                    @if (auth()->user()->isAdministrador())
+                        <label class="aseo-opt"><input type="radio" name="aseo_mode" value="ya_salieron" @checked(old('aseo_mode') === 'ya_salieron')> Estoy registrando a pasajeros que <strong>ya salieron</strong>: sigue en aseo</label>
+                    @endif
                     <div id="aseo-who-box">
                     <label for="aseo-cleaned-by">¿Quién hizo el aseo?</label>
                     <select name="aseo_cleaned_by" id="aseo-cleaned-by">
@@ -344,7 +346,9 @@
                     </select>
                     <div class="hint">Al guardar queda marcado "aseo listo", igual que en el tablero.</div>
                     </div>
-                    <div class="hint" id="aseo-past-hint" hidden>Usa "¿Entró antes? Cambiar hora" con la hora real de entrada. El Playroom no cambia: sigue en aseo hasta que lo marquen listo.</div>
+                    @if (auth()->user()->isAdministrador())
+                        <div class="hint" id="aseo-past-hint" hidden>Usa "¿Entró antes? Cambiar hora" con la hora real de entrada. El Playroom no cambia: sigue en aseo hasta que lo marquen listo.</div>
+                    @endif
                 </div>
                 <div class="hint">
                     @if ($walkInMode)
@@ -400,12 +404,14 @@
                 @if ($walkInMode)
                     <div class="walkin-now">
                         <span id="walkin-now-text">Ingresa <b>ahora</b> · <span id="walkin-clock"></span></span>
-                        <button type="button" class="walkin-late-toggle" id="walkin-late-toggle">¿Entró antes? Cambiar hora</button>
-                        <div class="walkin-late" id="walkin-late" hidden>
-                            <label for="walkin-late-time" style="margin:0;">Hora real de llegada</label>
-                            <input type="time" id="walkin-late-time" step="300">
-                            <span class="hint" style="margin:0;">Hasta {{ \App\Services\Booking\BookingService::LATE_REGISTRATION_HOURS }} horas atrás. Si es una hora mayor a la actual, se toma como de ayer.</span>
-                        </div>
+                        @if (auth()->user()->isAdministrador())
+                            <button type="button" class="walkin-late-toggle" id="walkin-late-toggle">¿Entró antes? Cambiar hora</button>
+                            <div class="walkin-late" id="walkin-late" hidden>
+                                <label for="walkin-late-time" style="margin:0;">Hora real de llegada</label>
+                                <input type="time" id="walkin-late-time" step="300">
+                                <span class="hint" style="margin:0;">Hasta {{ \App\Services\Booking\BookingService::LATE_REGISTRATION_HOURS }} horas atrás. Si es una hora mayor a la actual, se toma como de ayer.</span>
+                            </div>
+                        @endif
                     </div>
                 @endif
 
@@ -1060,7 +1066,8 @@
             box.hidden = !inAseo;
             who.required = inAseo && !past;
             document.getElementById('aseo-who-box').hidden = past;
-            document.getElementById('aseo-past-hint').hidden = !past;
+            const pastHint = document.getElementById('aseo-past-hint');
+            if (pastHint) pastHint.hidden = !past;
             if (inAseo && !who.value && opt.dataset.reported) who.value = opt.dataset.reported;
         }
         document.getElementById('room-select').addEventListener('change', hhSyncAseo);

@@ -466,6 +466,38 @@ class BookingIntegrityTest extends TestCase
         $this->assertNull(Cache::get(GhlOpportunitySync::ERROR_KEY));
     }
 
+    public function test_the_host_can_not_register_an_entry_with_a_past_time_but_the_administrator_can(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-05 16:25'));
+        $data = [
+            'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 15, 'time_minute' => 0,
+            'duration_minutes' => 60, 'guests_count' => 1, 'customer_first_name' => 'Hora', 'customer_last_name' => 'Atrasada',
+            'document_type' => 'rut', 'document_number' => '12.345.678-5', 'nationality' => 'Chilena', 'walk_in' => 1,
+        ];
+        $admin = auth()->user();
+        $host = User::factory()->create(['role' => 'recepcion']);
+
+        $this->actingAs($host);
+        $this->get(route('reservations.create', ['modo' => 'ingreso']))->assertOk()->assertDontSee('¿Entró antes?')->assertDontSee('ya salieron');
+        // Tampoco se puede forzando el formulario, ni con la reserva normal, ni con "ya salieron".
+        $this->post('/reservar', $data)->assertSessionHasErrors('date');
+        $this->post('/reservar', ['walk_in' => 0] + $data)->assertSessionHasErrors('date');
+        $this->room->update(['operational_status' => 'aseo']);
+        $this->post('/reservar', ['time_hour' => 16, 'time_minute' => 25, 'aseo_mode' => 'ya_salieron'] + $data)->assertSessionHasErrors('date');
+        $this->room->update(['operational_status' => 'activa']);
+        $this->assertSame(0, Booking::count());
+
+        // En el momento sí.
+        $this->post('/reservar', ['time_hour' => 16, 'time_minute' => 25] + $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(1, Booking::count());
+        Booking::query()->delete();
+
+        $this->actingAs($admin);
+        $this->get(route('reservations.create', ['modo' => 'ingreso']))->assertOk()->assertSee('¿Entró antes?');
+        $this->post('/reservar', $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertTrue(Booking::firstOrFail()->isLateRegistration());
+    }
+
     public function test_attribution_names_the_channel_and_the_catalog_remembers_where_the_visitor_came_from(): void
     {
         $this->assertSame('Meta Ads · HH | MENSAJES', Attribution::labelFor(new TrackingData(['utm_source' => 'meta', 'utm_campaign' => 'HH | MENSAJES'])));
@@ -1837,7 +1869,6 @@ class BookingIntegrityTest extends TestCase
         (require database_path('migrations/2026_08_19_090003_add_consumption_offered_to_bookings_table.php'))->up();
         // 12:55 entraron, 15:55 salieron; a las 16:25 recepción los registra.
         $this->travelTo(Carbon::parse('2026-10-05 16:25'));
-        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
         $this->room->update(['operational_status' => 'aseo', 'aseo_started_at' => now()->subMinutes(20)]);
         $data = [
             'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 55,

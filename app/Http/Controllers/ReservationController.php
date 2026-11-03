@@ -198,6 +198,11 @@ class ReservationController extends Controller
         $time = sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']);
         $startsAt = Carbon::parse($validated['date'].' '.$time);
         $baseDuration = (int) $validated['duration_minutes'];
+        // El anfitrión registra los ingresos en el momento: la hora atrasada y
+        // "ya salieron" quedan solo para el administrador.
+        if (! $request->user()->isAdministrador() && ($staysInAseo || $startsAt->lt(now()->subMinutes(5)))) {
+            return back()->withInput()->withErrors(['date' => 'Los ingresos se registran en el momento. Para uno con hora atrasada, avisa al administrador.']);
+        }
         if ($staysInAseo && $startsAt->gte(now())) {
             return back()->withInput()->withErrors(['aseo_mode' => 'Para registrar a pasajeros que ya salieron, pon su hora real de entrada con "¿Entró antes? Cambiar hora".']);
         }
