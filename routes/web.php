@@ -41,6 +41,7 @@ use App\Http\Controllers\BookingHoldController;
 use App\Http\Controllers\BookingPassController;
 use App\Http\Controllers\BookingPaymentInstructionsController;
 use App\Http\Controllers\BookingReactivateController;
+use App\Http\Controllers\BookingRealTimesController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\CatalogController;
@@ -167,6 +168,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/ventas/reserva/{code}', [SaleDetailController::class, 'show'])->name('sales.detail');
     Route::get('/ventas/planilla/{sale}', [HistoricalSaleDetailController::class, 'show'])->name('sales.historical');
     Route::get('/ventas/{date?}', [DailySalesController::class, 'show'])->name('sales.daily');
+    Route::post('/reservas/{code}/horas-reales', [BookingRealTimesController::class, 'update'])->middleware('role:administrador')->name('bookings.real_times');
     Route::post('/reservas/{code}/pagos/{payment}/devolver', [PaymentRefundController::class, 'store'])->middleware('role:administrador')->name('payments.refund');
     Route::put('/pagos/{payment}/documento', [PaymentDocumentController::class, 'update'])->name('payments.document');
     Route::get('/resumen-mensual/{month?}', [MonthlySalesController::class, 'show'])->name('sales.monthly');

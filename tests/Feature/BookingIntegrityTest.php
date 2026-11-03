@@ -62,6 +62,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\Concerns\PaysBookings;
 use Tests\TestCase;
@@ -496,6 +497,44 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('reservations.create', ['modo' => 'ingreso']))->assertOk()->assertSee('¿Entró antes?');
         $this->post('/reservar', $data)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertTrue(Booking::firstOrFail()->isLateRegistration());
+    }
+
+    public function test_the_administrator_corrects_the_real_times_of_a_stay_without_touching_the_room(): void
+    {
+        foreach (['consumption_offered_at', 'consumption_offered_by', 'review_requested_at'] as $column) {
+            if (! Schema::hasColumn('bookings', $column)) {
+                Schema::table('bookings', fn ($t) => $t->string($column)->nullable());
+            }
+        }
+        $this->travelTo(Carbon::parse('2026-10-05 19:00'));
+        $url = fn (Booking $b) => route('bookings.real_times', $b->code);
+        $times = ['checked_in_at' => '2026-10-05T17:30', 'checked_out_at' => '2026-10-05T18:05'];
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 19:00'), 'created_by' => auth()->id()]);
+        $booking->update(['payment_status' => 'PAGADA', 'booking_status' => 'CONFIRMADA', 'price_final' => 0, 'price_original' => 0]);
+
+        // Solo administrador, y con salida posterior a la entrada y ya ocurrida.
+        $admin = auth()->user();
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+        $this->post($url($booking), $times)->assertForbidden();
+        $this->actingAs($admin);
+        $this->post($url($booking), ['checked_out_at' => '2026-10-05T17:00'] + $times)->assertSessionHasErrors('checked_out_at');
+        $this->post($url($booking), ['checked_out_at' => '2026-10-05T20:00'] + $times)->assertSessionHasErrors('checked_out_at');
+
+        // Nunca tuvo check-in: el horario se mueve a la entrada real, con su misma duración.
+        $this->post($url($booking), $times)->assertRedirect(route('reservations.show', $booking->code))->assertSessionHasNoErrors();
+        $booking->refresh();
+        $this->assertSame('FINALIZADA', $booking->booking_status);
+        $this->assertSame(['17:30', '18:05', '17:30', '18:05', '18:30'], [
+            $booking->checked_in_at->format('H:i'), $booking->checked_out_at->format('H:i'),
+            $booking->starts_at->format('H:i'), $booking->ends_at->format('H:i'), $booking->bookedEndsAt()->format('H:i'),
+        ]);
+        $this->assertNotNull($booking->review_requested_at);
+        $this->assertSame('activa', $this->room->fresh()->operational_status);
+        $this->assertSame(1, AuditLog::where('action', 'reserva.corregir_horas')->count());
+
+        // Una estadía ya cerrada: se corrige solo la salida, y el contratado no cambia.
+        $this->post($url($booking), ['checked_out_at' => '2026-10-05T18:50'] + $times)->assertSessionHasNoErrors();
+        $this->assertSame(['18:50', '18:30', '18:30'], [$booking->fresh()->checked_out_at->format('H:i'), $booking->fresh()->ends_at->format('H:i'), $booking->fresh()->bookedEndsAt()->format('H:i')]);
     }
 
     public function test_attribution_names_the_channel_and_the_catalog_remembers_where_the_visitor_came_from(): void

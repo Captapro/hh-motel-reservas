@@ -416,6 +416,23 @@
                 @endif
             </div>
 
+            @if (auth()->user()->isAdministrador() && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW'], true))
+                @php $tzReal = 'America/Santiago'; @endphp
+                <details style="margin:0 0 12px;" @if ($errors->has('checked_in_at') || $errors->has('checked_out_at')) open @endif>
+                    <summary style="cursor:pointer; color:#aaa; font-size:13px;">Corregir horas reales (administrador)</summary>
+                    <form method="POST" action="{{ route('bookings.real_times', $booking->code) }}" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-top:10px;">
+                        @csrf
+                        <label style="font-size:12px;">Entró<br><input type="datetime-local" name="checked_in_at" required value="{{ old('checked_in_at', ($booking->checked_in_at ?? $booking->starts_at)->copy()->timezone($tzReal)->format('Y-m-d\TH:i')) }}"></label>
+                        <label style="font-size:12px;">Salió<br><input type="datetime-local" name="checked_out_at" required value="{{ old('checked_out_at', ($booking->checked_out_at ?? $booking->ends_at)->copy()->timezone($tzReal)->format('Y-m-d\TH:i')) }}"></label>
+                        <button type="submit" class="col-btn">Guardar horas</button>
+                    </form>
+                    @foreach (['checked_in_at', 'checked_out_at'] as $field)
+                        @error($field)<div class="delay-late" style="font-size:12px; margin-top:6px;">{{ $message }}</div>@enderror
+                    @endforeach
+                    <div class="muted" style="font-size:12px; margin-top:6px;">Deja la reserva finalizada con estas horas. No cambia el estado del Playroom.</div>
+                </details>
+            @endif
+
             @if (! $booking->checked_in_at && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
                 <a class="checkin-btn" href="{{ route('bookings.checkin.show', $booking->code) }}">Marcar check-in — ofrecer consumo →</a>
             @endif
