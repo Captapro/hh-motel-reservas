@@ -67,6 +67,13 @@
                     <span class="pill">{{ $booking->booking_status }}</span>
                 </div>
                 <div class="meta">{{ $booking->customer->name }} · {{ $booking->duration_minutes / 60 }} h · <span class="code">{{ $booking->code }}</span></div>
+                @if ($booking->checked_in_at)
+                    @php $tz = 'America/Santiago'; $outDiff = $booking->checkOutDiffMinutes(); @endphp
+                    <div class="meta">
+                        Entró {{ $booking->checked_in_at->timezone($tz)->format('H:i') }}
+                        · @if ($booking->checked_out_at)Salió {{ $booking->checked_out_at->timezone($tz)->format('H:i') }} (contratada {{ $booking->bookedEndsAt()->timezone($tz)->format('H:i') }}@if ($outDiff) · {{ \App\Support\TimeFormat::minutes($outDiff) }} {{ $outDiff < 0 ? 'antes' : 'después' }}@endif)@else Sin salida registrada (contratada {{ $booking->bookedEndsAt()->timezone($tz)->format('H:i') }})@endif
+                    </div>
+                @endif
             </a>
         @endforeach
     @endif

@@ -2,16 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Exceptions\InvalidCouponException;
 use App\Exceptions\RoomNotAvailableException;
+use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\BookingCancelController;
 use App\Http\Controllers\RoomBoardController;
+use App\Http\Middleware\CaptureAttribution;
 use App\Models\AuditLog;
 use App\Models\Booking;
-use App\Models\TrackingData;
 use App\Models\CoreExtra;
 use App\Models\Coupon;
+use App\Models\CouponRedemption;
 use App\Models\Customer;
+use App\Models\GuestReview;
 use App\Models\HistoricalGuest;
 use App\Models\HistoricalSale;
 use App\Models\LateArrivalSetting;
@@ -22,31 +26,37 @@ use App\Models\Product;
 use App\Models\RateRule;
 use App\Models\Room;
 use App\Models\RoomCategory;
+use App\Models\Staff;
+use App\Models\TrackingData;
 use App\Models\UpsellOffer;
 use App\Models\User;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
-use App\Services\Booking\CouponProofs;
 use App\Services\Booking\ConsumptionService;
+use App\Services\Booking\CouponProofs;
 use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Historical\HistoricalSalesImporter;
 use App\Services\Integrations\CustomerActivityTags;
+use App\Services\Integrations\GhlAbandonedBookings;
 use App\Services\Integrations\GhlBookingSync;
-use App\Exceptions\InvalidCouponException;
-use App\Services\Pricing\CouponValidator;
-use App\Models\GuestReview;
-use App\Services\Integrations\GhlReviewRequests;
-use App\Services\Integrations\GhlMarketingConsent;
 use App\Services\Integrations\GhlClient;
-use App\Services\Payments\MercadoPagoPayments;
-use App\Support\GuestLine;
-use Carbon\Carbon;
-use App\Http\Middleware\CaptureAttribution;
+use App\Services\Integrations\GhlMarketingConsent;
 use App\Services\Integrations\GhlOpportunitySync;
+use App\Services\Integrations\GhlReviewRequests;
 use App\Services\Marketing\Attribution;
 use App\Services\Marketing\MetaConversions;
+use App\Services\Payments\MercadoPagoClient;
+use App\Services\Payments\MercadoPagoHistory;
+use App\Services\Payments\MercadoPagoPayments;
+use App\Services\Pricing\CouponValidator;
+use App\Services\Rooms\RoomClosingLog;
+use App\Services\Sales\WeekdayAverages;
+use App\Support\GuestLine;
+use App\Support\Rut;
+use App\Support\SalesProjection;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -121,6 +131,7 @@ class BookingIntegrityTest extends TestCase
             '2026_10_04_130000_add_max_capacity_to_room_categories.php',
             '2026_08_18_120020_create_tracking_data_table.php',
             '2026_11_03_000000_add_marketing_tracking.php',
+            '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
         ] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
@@ -159,7 +170,7 @@ class BookingIntegrityTest extends TestCase
         $booking->refresh();
         $this->assertSame((int) round($original * 0.2), (int) $booking->discount_amount);
         $this->assertSame($original - (int) $booking->discount_amount, (int) $booking->price_final);
-        $this->assertSame(1, \App\Models\CouponRedemption::where('booking_id', $booking->id)->count());
+        $this->assertSame(1, CouponRedemption::where('booking_id', $booking->id)->count());
 
         // No se acumula una segunda promoción, y fuera de horario no aplica.
         $this->post(route('bookings.coupon.apply', $booking->code), ['coupon_code' => 'MORNING ESCAPE'])->assertSessionHasErrors('coupon_code');
@@ -441,7 +452,7 @@ class BookingIntegrityTest extends TestCase
 
         $session = app('session')->driver('array');
         $visit = function (string $url, ?string $referrer = null) use ($session) {
-            $request = \Illuminate\Http\Request::create($url, 'GET', server: $referrer ? ['HTTP_REFERER' => $referrer] : []);
+            $request = Request::create($url, 'GET', server: $referrer ? ['HTTP_REFERER' => $referrer] : []);
             $request->setLaravelSession($session);
             (new CaptureAttribution)->handle($request, fn () => response('ok'));
         };
@@ -821,7 +832,7 @@ class BookingIntegrityTest extends TestCase
         $booking->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 12:00'), 'checked_out_at' => Carbon::parse('2026-11-02 14:50')]);
 
         // El rescate de reservas sin pagar falla: igual se pide la opinión y el error queda a la vista.
-        $this->mock(\App\Services\Integrations\GhlAbandonedBookings::class)->shouldReceive('run')->andThrow(new \RuntimeException('falla de prueba'));
+        $this->mock(GhlAbandonedBookings::class)->shouldReceive('run')->andThrow(new \RuntimeException('falla de prueba'));
         $this->artisan('app:reservas-expirar')->assertSuccessful();
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/opinion'));
 
@@ -966,7 +977,7 @@ class BookingIntegrityTest extends TestCase
         $fresh = Customer::create(['name' => 'Primera Vez', 'phone_e164' => '+56955555512', 'rut' => '11111111-1', 'document_type' => 'rut']);
         // En la planilla (antes del sistema) el primero vino en junio, con el RUT escrito con puntos.
         $saleId = DB::table('historical_sales')->insertGetId(['source' => 'resumen-junio', 'source_row' => 1, 'sold_on' => '2026-06-12', 'sale_type' => 'ALOJAMIENTO', 'amount_main' => 30000]);
-        DB::table('historical_guests')->insert(['historical_sale_id' => $saleId, 'name' => 'Ya Venía', 'document' => \App\Support\Rut::normalize('12.345.678-5'), 'document_kind' => 'rut', 'is_holder' => true]);
+        DB::table('historical_guests')->insert(['historical_sale_id' => $saleId, 'name' => 'Ya Venía', 'document' => Rut::normalize('12.345.678-5'), 'document_kind' => 'rut', 'is_holder' => true]);
 
         $today = now();
         $this->travelTo(Carbon::parse('2026-03-01 09:00'));
@@ -1093,8 +1104,8 @@ class BookingIntegrityTest extends TestCase
         $current = collect([$make($this->room, 20000), $make($this->room, 20000), $make($maxRoom, 50000)]);
         $previous = collect([$make($this->room, 20000), $make($maxRoom, 50000), $make($maxRoom, 50000)]);
 
-        $method = new \ReflectionMethod(\App\Http\Controllers\Admin\AnalyticsController::class, 'byCategory');
-        $rows = $method->invoke(app(\App\Http\Controllers\Admin\AnalyticsController::class), $current, $previous);
+        $method = new \ReflectionMethod(AnalyticsController::class, 'byCategory');
+        $rows = $method->invoke(app(AnalyticsController::class), $current, $previous);
 
         $this->assertSame([$this->room->category->name, 'MAX'], $rows->pluck('label')->all());
         $this->assertSame([2, 1], $rows->pluck('count')->all());
@@ -1109,14 +1120,14 @@ class BookingIntegrityTest extends TestCase
         $first = Carbon::parse('2026-11-01', 'America/Santiago');
         $sales = [1 => 300000, 2 => 100000, 3 => 100000, 4 => 999999]; // el 4 es hoy: no cuenta todavía
         $daily = collect(range(1, 30))->map(fn ($d) => ['date' => $first->copy()->day($d), 'total' => $sales[$d] ?? 0]);
-        $p = \App\Support\SalesProjection::forMonth($daily, $first);
+        $p = SalesProjection::forMonth($daily, $first);
         $this->assertSame(3, $p['closed_days']);
         $this->assertSame(5000000, $p['simple']); // 500.000 ÷ 3 × 30
         // Domingos a 300.000, lunes y martes a 100.000, el resto al promedio general.
         $this->assertSame(5066667, $p['by_weekday']);
 
         // Un mes que no es el actual no se proyecta.
-        $this->assertNull(\App\Support\SalesProjection::forMonth($daily, Carbon::parse('2026-10-01', 'America/Santiago')));
+        $this->assertNull(SalesProjection::forMonth($daily, Carbon::parse('2026-10-01', 'America/Santiago')));
     }
 
     public function test_only_fully_paid_stays_count_as_sales(): void
@@ -1746,14 +1757,14 @@ class BookingIntegrityTest extends TestCase
         try {
             $this->booking(['starts_at' => Carbon::parse('2026-10-05 02:00'), 'created_by' => $staff->id]);
             $this->fail('Más de 12 horas atrás no debería registrarse.');
-        } catch (\App\Exceptions\RoomNotAvailableException $e) {
+        } catch (RoomNotAvailableException $e) {
             $this->assertStringContainsString('menos de 12 horas', $e->getMessage());
         }
 
         try {
             $this->booking(['starts_at' => Carbon::parse('2026-10-05 17:00')->subHours(3)]);
             $this->fail('El catálogo no debería aceptar una hora pasada.');
-        } catch (\App\Exceptions\RoomNotAvailableException $e) {
+        } catch (RoomNotAvailableException $e) {
             $this->assertStringContainsString('en el pasado', $e->getMessage());
         }
     }
@@ -1761,7 +1772,7 @@ class BookingIntegrityTest extends TestCase
     public function test_a_walk_in_can_use_a_room_still_in_aseo_or_marked_occupied_without_booking(): void
     {
         $this->travelTo(Carbon::parse('2026-10-05 11:00'));
-        \App\Models\Staff::create(['name' => 'Dubraska', 'role' => 'Mucama', 'is_active' => true]);
+        Staff::create(['name' => 'Dubraska', 'role' => 'Mucama', 'is_active' => true]);
         $this->room->update(['operational_status' => 'aseo', 'aseo_started_at' => now()->subHour()]);
         $this->assertStringContainsString('Estoy registrando a pasajeros que', $this->get('/reservar?modo=ingreso')->getContent());
 
@@ -1959,9 +1970,9 @@ class BookingIntegrityTest extends TestCase
             $charges[] = $point($i, '2026-10-05T1'.$i.':00:00-03:00', 1000 + $i);
         }
         $charges[] = $point(8, '2026-10-05T18:50:00-03:00', 40000);
-        $this->mock(\App\Services\Payments\MercadoPagoClient::class, fn ($m) => $m->shouldReceive('searchPayments')->andReturn($charges, []));
+        $this->mock(MercadoPagoClient::class, fn ($m) => $m->shouldReceive('searchPayments')->andReturn($charges, []));
 
-        $rows = app(\App\Services\Payments\MercadoPagoHistory::class)->month(\Illuminate\Support\Carbon::parse('2026-10-01', 'America/Santiago'))['rows'];
+        $rows = app(MercadoPagoHistory::class)->month(\Illuminate\Support\Carbon::parse('2026-10-01', 'America/Santiago'))['rows'];
         $eight = $rows->firstWhere('correlative', '08');
 
         $this->assertTrue($eight['in_system']);
@@ -2317,5 +2328,80 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(24000, $booking->price_final);
         $this->assertSame(1, $offer->redemptions()->count());
         $this->assertSame(6000, $offer->redemptions()->first()->discount_amount);
+    }
+
+    public function test_an_early_check_out_keeps_the_booked_departure_and_shows_both_times(): void
+    {
+        $booking = $this->booking(['created_by' => auth()->id()]);
+        $booking->update(['booking_status' => 'CHECK_IN', 'checked_in_at' => Carbon::parse('2026-10-05 12:05')]);
+        // Como al finalizar: salieron 12:40 y ends_at se acorta para liberar el Playroom.
+        $booking->update(['booking_status' => 'FINALIZADA', 'checked_out_at' => Carbon::parse('2026-10-05 12:40'), 'ends_at' => Carbon::parse('2026-10-05 12:40')]);
+
+        $booking->refresh();
+        $this->assertSame('13:00', $booking->bookedEndsAt()->format('H:i'));
+        $this->assertSame('12:40', $booking->ends_at->format('H:i'));
+        $this->assertSame(-20, $booking->checkOutDiffMinutes());
+
+        $this->get(route('rooms.bookings', $this->room))->assertOk()
+            ->assertSee('Entró 12:05')->assertSee('Salió 12:40 (contratada 13:00 · 20 min antes)');
+    }
+
+    public function test_room_closing_snapshot_records_the_state_at_three_and_when_each_room_was_enabled_next_day(): void
+    {
+        $aseoRoom = Room::create(['name' => 'GO 102', 'room_category_id' => $this->room->room_category_id, 'operational_status' => 'activa', 'buffer_minutes' => 30]);
+        $closing = app(RoomClosingLog::class);
+
+        $this->travelTo(Carbon::parse('2026-11-02 20:00'));
+        $aseoRoom->update(['operational_status' => 'aseo']);
+        AuditLog::record(auth()->id(), 'habitacion.enviar_aseo', 'Room', $aseoRoom->id, ['operational_status' => 'activa'], ['operational_status' => 'aseo']);
+        $this->assertSame(0, $closing->takeDueSnapshot(), 'el 1/11 cerró hace horas: no se toma foto atrasada');
+
+        // Pasado el corte de las 03:00: foto del día 2/11, una sola vez.
+        $this->travelTo(Carbon::parse('2026-11-03 03:05'));
+        $this->assertSame(2, $closing->takeDueSnapshot());
+        $this->assertSame(0, $closing->takeDueSnapshot());
+
+        // En la mañana se habilita el que quedó en aseo, y se apaga un piso.
+        $this->travelTo(Carbon::parse('2026-11-03 11:15'));
+        $aseoRoom->update(['operational_status' => 'activa']);
+        AuditLog::record(auth()->id(), 'habitacion.aseo_listo', 'Room', $aseoRoom->id, ['operational_status' => 'aseo'], ['operational_status' => 'activa', 'cleaned_by' => 'Ana']);
+        $this->post(route('admin.floors.toggle', 'piso_2_sur_enabled'))->assertRedirect();
+
+        $this->travelTo(Carbon::parse('2026-11-04 09:00'));
+        $page = $this->get(route('aseo.closing', '2026-11-02'))->assertOk()->assertSee('Cierre del Lunes 2/11')->assertSee('Piso 2 Sur');
+        $report = $page->viewData('report');
+        $this->assertSame('foto', $report['source']);
+        $this->assertSame([1, 1, 1, '11:15'], [$report['summary']['ready'], $report['summary']['aseo'], $report['summary']['opened'], $report['summary']['first_opened']->format('H:i')]);
+        $row = $report['rows']->firstWhere('room.id', $aseoRoom->id);
+        $this->assertSame(['aseo', '11:15', 'Ana'], [$row['state']['status'], $row['opened_at']->format('H:i'), $row['cleaned_by']]);
+
+        // El 1/11 no tiene foto: se reconstruye (a esa hora el GO 102 todavía estaba lista).
+        $day = $closing->day(Carbon::parse('2026-11-01'));
+        $this->assertSame(['registro', 2, 0], [$day['source'], $day['summary']['ready'], $day['summary']['aseo']]);
+
+        // El 3/11 cerró a las 03:00 del 4/11 y ya pasaron más de 30 minutos: no hay foto en vivo.
+        $this->assertSame(0, $closing->takeDueSnapshot());
+        $this->assertSame(['2026-11-03', '2026-11-02'], $page->viewData('history')->map(fn ($h) => $h['date']->toDateString())->all());
+    }
+
+    public function test_weekday_average_divides_by_every_such_day_of_the_month_and_compares_with_previous_months(): void
+    {
+        $sale = fn (string $date, int $amount) => HistoricalSale::create(['source' => 'planilla-test', 'source_row' => random_int(1, 999999), 'sold_on' => $date, 'sale_type' => 'ALOJAMIENTO', 'amount_main' => $amount, 'amount_extras' => 0]);
+        $sale('2026-09-01', 10000);
+        $sale('2026-09-07', 40000);
+        $sale('2026-09-14', 20000);
+        $sale('2026-10-26', 100000);
+        $sale('2026-10-31', 10000);
+        $this->travelTo(Carbon::parse('2026-11-03 12:00'));
+
+        $result = app(WeekdayAverages::class)->forMonth(Carbon::parse('2026-10-01'), Carbon::parse('2026-10-31'));
+        $monday = $result['rows'][1];
+        // Octubre: 4 lunes, solo uno vendió. Septiembre: 4 lunes, $60.000.
+        $this->assertSame([4, 100000, 25000, 15000, 15000, 4], [$monday['days'], $monday['sales'], $monday['average'], $monday['last_month'], $monday['historical'], $monday['historical_days']]);
+        $this->assertEqualsWithDelta(0.6667, $monday['vs_historical'], 0.001);
+        $this->assertSame('planilla', $result['source']);
+        $this->assertSame(['2026-09'], $result['months']->map(fn ($m) => $m['month']->format('Y-m'))->all());
+
+        $this->get(route('sales.monthly', '2026-10'))->assertOk()->assertSee('Promedio por día de la semana vs. meses anteriores')->assertSee('+66,7%');
     }
 }

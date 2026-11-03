@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Services\Analyst\HistoricalDataService;
+use App\Services\Sales\WeekdayAverages;
 use App\Support\SalesProjection;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -118,6 +119,9 @@ class MonthlySalesController extends Controller
             return ['label' => $label, 'sales' => $sales, 'rooms' => $rows->count(), 'avg_per_day' => $days ? round($rows->count() / $days, 1) : 0, 'avg_price' => $rows->count() ? (int) round($sales / $rows->count()) : 0];
         });
 
+        // Promedio por día de la semana contra los meses anteriores (planilla + sistema).
+        $weekdayAvg = app(WeekdayAverages::class)->forMonth($first, $lastCounted);
+
         // ===== Por duración =====
         $byDuration = $bookings->groupBy('duration_minutes')->map(function (Collection $rows, $minutes) {
             $amount = $rows->sum('price_final');
@@ -152,7 +156,7 @@ class MonthlySalesController extends Controller
             'first' => $first, 'prev' => $first->copy()->subMonth(), 'next' => $first->copy()->addMonth(),
             'isCurrent' => $first->isSameMonth(now(self::TZ)),
             'daily' => $daily, 'totals' => $totals, 'groups' => $groups,
-            'byWeekday' => $byWeekday, 'byDuration' => $byDuration, 'byRoom' => $byRoom,
+            'byWeekday' => $byWeekday, 'weekdayAvg' => $weekdayAvg, 'byDuration' => $byDuration, 'byRoom' => $byRoom,
             'byMethod' => $byMethod, 'extras' => $extras, 'detail' => $detail, 'history' => $history,
             'planilla' => $planilla,
             'projection' => $this->projection($daily, $first, $totals['total']),

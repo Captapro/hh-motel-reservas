@@ -150,6 +150,41 @@
         </tbody>
     </table></div>
 
+    <div class="sec-label">Promedio por día de la semana vs. meses anteriores</div>
+    <p class="sec-note">Venta de todos los lunes del mes dividida por los lunes que tuvo (aunque alguno no haya vendido), y así cada día. Se compara con el mes anterior y con el promedio de ese mismo día en todos los meses anteriores (planilla + sistema).@if ($isCurrent) El mes en curso cuenta hasta hoy.@endif @if ($weekdayAvg['source'] === 'planilla') Este mes sale de la planilla de recepción.@endif</p>
+    <div class="table-wrap"><table>
+        <thead><tr><th>Día</th><th class="n">Días en el mes</th><th class="n">Venta</th><th class="n">Promedio por día</th><th class="n">Mes anterior</th><th class="n">Promedio histórico</th><th class="n">vs. histórico</th></tr></thead>
+        <tbody>
+        @foreach ($weekdayAvg['rows'] as $w)
+            <tr class="{{ $w['days'] === 0 ? 'zero' : '' }}">
+                <td>{{ $w['label'] }}</td>
+                <td class="n">{{ $w['days'] }}</td>
+                <td class="n">{{ $money($w['sales']) }}</td>
+                <td class="n"><b>{{ $w['average'] !== null ? $money($w['average']) : '—' }}</b></td>
+                <td class="n">{{ $w['last_month'] !== null ? $money($w['last_month']) : '—' }}</td>
+                <td class="n" title="{{ $w['historical_days'] }} {{ mb_strtolower($w['label']) }} en los meses anteriores">{{ $w['historical'] !== null ? $money($w['historical']) : '—' }}</td>
+                <td class="n" style="color:{{ $w['vs_historical'] === null ? '#777' : ($w['vs_historical'] >= 0 ? '#6fd39a' : '#ef7f7f') }}">{{ $w['vs_historical'] === null ? '—' : ($w['vs_historical'] >= 0 ? '+' : '').$pct($w['vs_historical']) }}</td>
+            </tr>
+        @endforeach
+        </tbody>
+    </table></div>
+    @if ($weekdayAvg['months']->isNotEmpty())
+        <details style="margin-top:10px;">
+            <summary style="cursor:pointer;color:#aaa;font-size:13px;">Promedio por día, mes a mes (últimos {{ $weekdayAvg['months']->count() }} meses)</summary>
+            <div class="table-wrap" style="margin-top:8px;"><table>
+                <thead><tr><th>Mes</th>@foreach (\App\Services\Sales\WeekdayAverages::WEEKDAYS as $label)<th class="n">{{ $label }}</th>@endforeach</tr></thead>
+                <tbody>
+                @foreach ($weekdayAvg['months'] as $m)
+                    <tr>
+                        <td><a href="{{ route('sales.monthly', $m['month']->format('Y-m')) }}" style="text-transform:capitalize;">{{ $m['month']->locale('es')->isoFormat('MMMM YYYY') }}</a>@if ($m['source'] === 'planilla') <span class="miss">planilla</span>@endif</td>
+                        @foreach ($m['averages'] as $avg)<td class="n">{{ $avg !== null ? $money($avg) : '—' }}</td>@endforeach
+                    </tr>
+                @endforeach
+                </tbody>
+            </table></div>
+        </details>
+    @endif
+
     <div class="grid2">
         <div>
             <div class="sec-label">Por día de la semana</div>

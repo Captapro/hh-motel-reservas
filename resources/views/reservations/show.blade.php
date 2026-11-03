@@ -378,7 +378,7 @@
                 <div class="row"><span class="muted">Nacionalidad / edad</span><span>{{ $cust->nationality ?: '—' }}@if ($cust->age()) · {{ $cust->age() }} años @endif</span></div>
                 <div class="row"><span class="muted">Personas</span><span>{{ $booking->guests_count }}</span></div>
                 <div class="row"><span class="muted">Fecha / hora de ingreso</span><span>{{ $booking->starts_at->timezone('America/Santiago')->format('d/m/Y H:i') }}</span></div>
-                <div class="row"><span class="muted">Hora de salida</span><span>{{ $booking->ends_at->timezone('America/Santiago')->format('d/m/Y H:i') }}@if ($booking->short_stay) <span class="pill" style="margin-left:6px; background:#2e2410; color:#ffcf6e; border-color:#c98a1b;">SALE AL CIERRE</span>@endif</span></div>
+                <div class="row"><span class="muted">{{ $booking->checked_out_at ? 'Salida contratada' : 'Hora de salida' }}</span><span>{{ $booking->bookedEndsAt()->timezone('America/Santiago')->format('d/m/Y H:i') }}@if ($booking->short_stay) <span class="pill" style="margin-left:6px; background:#2e2410; color:#ffcf6e; border-color:#c98a1b;">SALE AL CIERRE</span>@endif</span></div>
                 <div class="row"><span class="muted">Duración</span><span>@if ($booking->short_stay){{ \App\Support\TimeFormat::minutes((int) $booking->starts_at->diffInMinutes($booking->ends_at)) }} · estadía corta por cierre (tarifa de {{ $booking->duration_minutes / 60 }} h)@else{{ $booking->duration_minutes / 60 }} h @endif</span></div>
                 <div class="row"><span class="muted">Reservado el</span><span>{{ $booking->created_at->timezone('America/Santiago')->format('d/m/Y H:i') }}</span></div>
                 <div class="row"><span class="muted">Tarifa aplicada</span><span class="pill">{{ $booking->rate_rule_name_snapshot }}</span></div>
@@ -399,7 +399,20 @@
                     </div>
                 @endif
                 @if ($booking->checked_out_at)
-                    <div class="row"><span class="muted">Check-out real</span><span>{{ $booking->checked_out_at->timezone('America/Santiago')->format('H:i') }}</span></div>
+                    @php $outDiff = $booking->checkOutDiffMinutes(); @endphp
+                    <div class="row">
+                        <span class="muted">Salida real (check-out)</span>
+                        <span>
+                            {{ $booking->checked_out_at->timezone('America/Santiago')->format('d/m/Y H:i') }}
+                            @if ($outDiff > 0)
+                                <span class="delay-late">({{ \App\Support\TimeFormat::minutes($outDiff) }} después de la hora)</span>
+                            @elseif ($outDiff < 0)
+                                <span class="delay-early">({{ \App\Support\TimeFormat::minutes(abs($outDiff)) }} antes de la hora)</span>
+                            @else
+                                (a la hora)
+                            @endif
+                        </span>
+                    </div>
                 @endif
             </div>
 

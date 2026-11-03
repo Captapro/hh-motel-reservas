@@ -53,6 +53,7 @@ class CheckInOccupancyTest extends TestCase
             '2026_08_19_090001_create_products_table.php',
             '2026_08_19_090003_add_consumption_offered_to_bookings_table.php',
             '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
+            '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
             '2026_08_20_110001_create_combos_table.php',
             '2026_09_10_140000_create_upsell_offers_table.php',
         ] as $migration) {

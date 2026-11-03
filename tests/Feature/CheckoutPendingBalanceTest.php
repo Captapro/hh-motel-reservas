@@ -48,6 +48,7 @@ class CheckoutPendingBalanceTest extends TestCase
             '2026_08_19_090002_add_product_id_to_booking_addons_table.php',
             '2026_08_19_090003_add_consumption_offered_to_bookings_table.php',
             '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
+            '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
             '2026_08_26_120001_add_aseo_override_to_rooms_table.php',
             '2026_08_26_140001_add_aseo_started_to_rooms_table.php',
             '2026_09_15_233000_add_voucher_receipt_to_payments.php',

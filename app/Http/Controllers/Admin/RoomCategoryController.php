@@ -28,6 +28,8 @@ class RoomCategoryController extends Controller
     public function toggleCategory(RoomCategory $category): RedirectResponse
     {
         $category->update(['is_active' => ! $category->is_active]);
+        // Queda en el registro para el cierre de Playrooms (a qué hora se abre o se apaga).
+        AuditLog::record(auth()->id(), 'operacion.categoria', 'RoomCategory', $category->id, null, ['label' => 'Categoría '.$category->name, 'enabled' => $category->is_active]);
 
         return redirect()->route('admin.categories.index')->with('status', $category->is_active
             ? "{$category->name} habilitada — vuelve a ofrecerse en el tablero y el catálogo."
@@ -55,6 +57,7 @@ class RoomCategoryController extends Controller
 
         $setting = OperationalSetting::current();
         $setting->update([$field => ! $setting->$field]);
+        AuditLog::record(auth()->id(), 'operacion.piso', 'OperationalSetting', $setting->id, null, ['label' => $labels[$field], 'enabled' => (bool) $setting->$field]);
 
         return redirect()->route('admin.categories.index')->with('status', $setting->$field
             ? "{$labels[$field]} habilitado — vuelve a ofrecerse en el tablero."

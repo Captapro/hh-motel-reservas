@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\HistoricalCustomersController;
 use App\Http\Controllers\Admin\HistoricalImportController;
 use App\Http\Controllers\Admin\LateArrivalSettingController;
 use App\Http\Controllers\Admin\OfferController;
+use App\Http\Controllers\Admin\PastSaleController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RateRuleController;
 use App\Http\Controllers\Admin\RoomCategoryController;
@@ -26,13 +27,14 @@ use App\Http\Controllers\Admin\SalesRecordsController;
 use App\Http\Controllers\Admin\ShiftController;
 use App\Http\Controllers\Admin\ShortStaySettingController;
 use App\Http\Controllers\Admin\StaffController;
+use App\Http\Controllers\Admin\TvScreenSettingController;
 use App\Http\Controllers\Admin\UpsellController;
 use App\Http\Controllers\AseoSummaryController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BookingAddonController;
 use App\Http\Controllers\BookingCancelController;
 use App\Http\Controllers\BookingCheckInController;
-use App\Http\Controllers\CouponProofController;
+use App\Http\Controllers\BookingCouponController;
 use App\Http\Controllers\BookingDeleteController;
 use App\Http\Controllers\BookingFinalizeController;
 use App\Http\Controllers\BookingHoldController;
@@ -42,18 +44,20 @@ use App\Http\Controllers\BookingReactivateController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CouponProofController;
 use App\Http\Controllers\CustomerLoyaltyController;
 use App\Http\Controllers\DailyAseoController;
 use App\Http\Controllers\DailySalesController;
+use App\Http\Controllers\GhlWebhookController;
 use App\Http\Controllers\GuestReviewController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\HistoricalSaleDetailController;
 use App\Http\Controllers\ImageResizeController;
-use App\Http\Controllers\GhlWebhookController;
 use App\Http\Controllers\MercadoPagoController;
 use App\Http\Controllers\MonthlySalesController;
 use App\Http\Controllers\MucamaActivityController;
 use App\Http\Controllers\MucamaAuthController;
+use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentDocumentController;
 use App\Http\Controllers\PaymentRefundController;
@@ -61,11 +65,14 @@ use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ReservationSearchController;
 use App\Http\Controllers\RoomBoardController;
+use App\Http\Controllers\RoomClosingController;
 use App\Http\Controllers\RoomInspectionController;
 use App\Http\Controllers\RoomQrController;
 use App\Http\Controllers\SaleDetailController;
 use App\Http\Controllers\ShiftHandoverController;
 use App\Http\Controllers\ShiftRoundController;
+use App\Http\Controllers\TvScreenController;
+use App\Http\Middleware\CaptureAttribution;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -76,7 +83,7 @@ Route::get('/', function () {
 Route::get('/img', [ImageResizeController::class, 'show'])->middleware('throttle:240,1,img.resize')->name('img.resize');
 // Las páginas de entrada al catálogo guardan de dónde llegó el visitante (utm,
 // anuncio de Meta, página de origen) para atribuirle la reserva.
-Route::middleware(\App\Http\Middleware\CaptureAttribution::class)->group(function () {
+Route::middleware(CaptureAttribution::class)->group(function () {
     Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.index');
     Route::get('/catalogo/habitacion/{room}', [CatalogController::class, 'room'])->name('catalog.room');
     Route::get('/catalogo/reservar', [PublicBookingController::class, 'create'])->name('catalog.reserve');
@@ -85,7 +92,7 @@ Route::get('/catalogo/reservar/horarios', [PublicBookingController::class, 'time
 Route::get('/catalogo/reservar/disponibilidad', [PublicBookingController::class, 'checkAvailability'])->middleware('throttle:30,1,catalog.reserve.availability')->name('catalog.reserve.availability');
 Route::view('/privacidad', 'catalog.privacidad')->name('catalog.privacy');
 // Pantalla del TV de recepción (combos y QR en loop): pública, solo lectura.
-Route::get('/pantalla', [\App\Http\Controllers\TvScreenController::class, 'show'])->name('tv.show');
+Route::get('/pantalla', [TvScreenController::class, 'show'])->name('tv.show');
 Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->middleware('throttle:8,1,catalog.reserve.store')->name('catalog.reserve.store');
 // pass_token, no code -- el código es secuencial por día (fácil de
 // adivinar) y esta página muestra habitación, fecha, consumo y saldo sin
@@ -136,8 +143,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/turno/entregar', [ShiftHandoverController::class, 'deliver'])->name('shift.deliver');
     Route::post('/turno/recibir/despues', [ShiftHandoverController::class, 'later'])->name('shift.later');
     Route::post('/turno/{kind}', [ShiftHandoverController::class, 'store'])->whereIn('kind', ['recibir', 'entregar'])->name('shift.store');
-    Route::get('/mi-cuenta/clave', [App\Http\Controllers\PasswordController::class, 'edit'])->name('account.password');
-    Route::put('/mi-cuenta/clave', [App\Http\Controllers\PasswordController::class, 'update'])->middleware('throttle:6,1,account.password')->name('account.password.update');
+    Route::get('/mi-cuenta/clave', [PasswordController::class, 'edit'])->name('account.password');
+    Route::put('/mi-cuenta/clave', [PasswordController::class, 'update'])->middleware('throttle:6,1,account.password')->name('account.password.update');
 });
 
 // Asistente de ayuda (botón "Ayuda" de todas las pantallas del equipo).
@@ -178,6 +185,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/caja-turnos/{handover}/revisada', [ShiftHandoverController::class, 'review'])->middleware('role:administrador')->name('cash.shifts.review');
     Route::get('/aseo/semana/{date?}', [AseoSummaryController::class, 'week'])->name('aseo.week');
     Route::get('/aseo/mes/{date?}', [AseoSummaryController::class, 'month'])->name('aseo.month');
+    Route::get('/aseo/cierre/{date?}', [RoomClosingController::class, 'show'])->name('aseo.closing');
     Route::get('/aseo/{date?}', [DailyAseoController::class, 'show'])->name('aseo.daily');
 
     Route::get('/habitaciones', [RoomBoardController::class, 'index'])->name('rooms.board');
@@ -211,7 +219,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/reservas/{code}/credencial/estado', [CouponProofController::class, 'status'])->name('bookings.coupon_proof.status');
     Route::get('/reservas/{code}/credencial/qr', [CouponProofController::class, 'qr'])->name('bookings.coupon_proof.qr');
     Route::get('/reservas/{code}/credencial/foto', [CouponProofController::class, 'show'])->name('bookings.coupon_proof.show');
-    Route::post('/reservas/{code}/cupon', [\App\Http\Controllers\BookingCouponController::class, 'store'])->name('bookings.coupon.apply');
+    Route::post('/reservas/{code}/cupon', [BookingCouponController::class, 'store'])->name('bookings.coupon.apply');
     Route::post('/reservas/{code}/quitar-cupon', [CouponProofController::class, 'removeCoupon'])->name('bookings.coupon_proof.remove');
     Route::post('/reservas/{code}/cancelar', [BookingCancelController::class, 'store'])->name('bookings.cancel');
     Route::post('/reservas/{code}/mantener', [BookingHoldController::class, 'store'])->name('bookings.hold');
@@ -294,8 +302,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::put('/estadia-corta', [ShortStaySettingController::class, 'update'])->name('short_stay.update');
         Route::get('/atrasos', [LateArrivalSettingController::class, 'edit'])->name('late_arrival.edit');
         Route::put('/atrasos', [LateArrivalSettingController::class, 'update'])->name('late_arrival.update');
-        Route::get('/pantalla-tv', [\App\Http\Controllers\Admin\TvScreenSettingController::class, 'edit'])->name('tv_screen.edit');
-        Route::put('/pantalla-tv', [\App\Http\Controllers\Admin\TvScreenSettingController::class, 'update'])->name('tv_screen.update');
+        Route::get('/pantalla-tv', [TvScreenSettingController::class, 'edit'])->name('tv_screen.edit');
+        Route::put('/pantalla-tv', [TvScreenSettingController::class, 'update'])->name('tv_screen.update');
 
         Route::get('/cupones', [CouponController::class, 'index'])->name('coupons.index');
         Route::get('/cupones/crear', [CouponController::class, 'create'])->name('coupons.create');
@@ -356,9 +364,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         // Historial de la cuenta de Mercado Pago cruzado con el sistema.
         Route::get('/mercado-pago', [App\Http\Controllers\Admin\MercadoPagoController::class, 'index'])->name('mercadopago.index');
         // Ventas que quedaron en la planilla en vez del sistema.
-        Route::get('/venta-pasada', [App\Http\Controllers\Admin\PastSaleController::class, 'create'])->name('past_sales.create');
-        Route::post('/venta-pasada', [App\Http\Controllers\Admin\PastSaleController::class, 'store'])->name('past_sales.store');
-        Route::post('/venta-pasada/consumo', [App\Http\Controllers\Admin\PastSaleController::class, 'storeAddon'])->name('past_sales.addon');
+        Route::get('/venta-pasada', [PastSaleController::class, 'create'])->name('past_sales.create');
+        Route::post('/venta-pasada', [PastSaleController::class, 'store'])->name('past_sales.store');
+        Route::post('/venta-pasada/consumo', [PastSaleController::class, 'storeAddon'])->name('past_sales.addon');
         Route::get('/personal', [StaffController::class, 'index'])->name('staff.index');
         Route::post('/personal', [StaffController::class, 'store'])->name('staff.store');
         Route::put('/personal/{staff}', [StaffController::class, 'update'])->name('staff.update');

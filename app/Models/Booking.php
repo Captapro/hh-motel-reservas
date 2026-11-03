@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 #[Fillable([
@@ -22,7 +23,7 @@ use Illuminate\Support\Collection;
     'notes', 'expires_at', 'consumption_offered_at', 'consumption_offered_by',
     'checked_in_at', 'checked_out_at', 'payment_instructions_sent_at',
     'room_checked_at', 'room_checked_by', 'payment_reminder_sent_at', 'abandon_notified_at', 'review_requested_at',
-    'meta_purchase_sent_at', 'ghl_opportunity_id', 'ghl_opportunity_state',
+    'meta_purchase_sent_at', 'ghl_opportunity_id', 'ghl_opportunity_state', 'booked_ends_at',
 ])]
 class Booking extends Model
 {
@@ -30,6 +31,13 @@ class Booking extends Model
 
     protected static function booted(): void
     {
+        // Al cerrar la estadía se guarda la hora de salida contratada: si salen
+        // antes, ends_at se acorta a la salida real (para liberar el Playroom).
+        static::saving(function (Booking $booking) {
+            if ($booking->checked_out_at && ! $booking->booked_ends_at) {
+                $booking->booked_ends_at = $booking->getOriginal('ends_at') ?? $booking->ends_at;
+            }
+        });
         // Al cerrarse la estadía, GHL vuelve a tratar al cliente como contacto
         // nuevo para la bienvenida de WhatsApp (ver GhlBookingSync::releaseStay).
         static::updated(function (Booking $booking) {
@@ -56,6 +64,7 @@ class Booking extends Model
             'consumption_offered_at' => 'datetime',
             'checked_in_at' => 'datetime',
             'checked_out_at' => 'datetime',
+            'booked_ends_at' => 'datetime',
             'payment_instructions_sent_at' => 'datetime',
             'room_checked_at' => 'datetime',
             'payment_reminder_sent_at' => 'datetime',
@@ -87,6 +96,18 @@ class Booking extends Model
         }
 
         return (int) $this->starts_at->diffInMinutes($this->checked_in_at, false);
+    }
+
+    /** Hora de salida contratada (ends_at se acorta si salen antes). */
+    public function bookedEndsAt(): Carbon
+    {
+        return $this->booked_ends_at ?? $this->ends_at;
+    }
+
+    /** Minutos entre la salida contratada y la real: negativo = salieron antes. */
+    public function checkOutDiffMinutes(): ?int
+    {
+        return $this->checked_out_at ? (int) $this->bookedEndsAt()->diffInMinutes($this->checked_out_at, false) : null;
     }
 
     public function consumptionOfferedBy(): BelongsTo
