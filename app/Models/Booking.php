@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\Integrations\GhlBookingSync;
+use App\Services\Marketing\MetaConversions;
 use App\Services\Payments\MercadoPagoClient;
 use App\Services\Payments\MercadoPagoReconciler;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
 
 #[Fillable([
@@ -20,6 +22,7 @@ use Illuminate\Support\Collection;
     'notes', 'expires_at', 'consumption_offered_at', 'consumption_offered_by',
     'checked_in_at', 'checked_out_at', 'payment_instructions_sent_at',
     'room_checked_at', 'room_checked_by', 'payment_reminder_sent_at', 'abandon_notified_at', 'review_requested_at',
+    'meta_purchase_sent_at', 'ghl_opportunity_id', 'ghl_opportunity_state',
 ])]
 class Booking extends Model
 {
@@ -34,6 +37,10 @@ class Booking extends Model
                 && in_array($booking->booking_status, GhlBookingSync::CLOSED_STATUSES, true)
                 && ! in_array($booking->getOriginal('booking_status'), GhlBookingSync::CLOSED_STATUSES, true)) {
                 GhlBookingSync::releaseStayLater($booking);
+            }
+            // Venta pagada completa: se le avisa a Meta (una sola vez por reserva).
+            if ($booking->wasChanged('payment_status') && $booking->payment_status === 'PAGADA' && ! $booking->meta_purchase_sent_at) {
+                MetaConversions::purchaseLater($booking);
             }
         });
         static::deleted(fn (Booking $booking) => GhlBookingSync::releaseStayLater($booking));
@@ -54,6 +61,7 @@ class Booking extends Model
             'payment_reminder_sent_at' => 'datetime',
             'abandon_notified_at' => 'datetime',
             'review_requested_at' => 'datetime',
+            'meta_purchase_sent_at' => 'datetime',
         ];
     }
 
@@ -140,6 +148,12 @@ class Booking extends Model
     public function addons(): HasMany
     {
         return $this->hasMany(BookingAddon::class);
+    }
+
+    /** De dónde llegó la reserva (solo las del catálogo). */
+    public function trackingData(): HasOne
+    {
+        return $this->hasOne(TrackingData::class)->latestOfMany();
     }
 
     public function payments(): HasMany

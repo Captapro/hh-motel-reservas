@@ -147,6 +147,29 @@ class GhlClient
     }
 
     /**
+     * Embudos de la subcuenta con sus etapas.
+     *
+     * @return array<int, array{id: string, name: string, stages: array<int, array{id: string, name: string}>}>
+     */
+    public function pipelines(): array
+    {
+        return $this->http()->get('/opportunities/pipelines', ['locationId' => $this->locationId])->throw()->json('pipelines', []);
+    }
+
+    /** Crea una oportunidad y devuelve su ID. */
+    public function createOpportunity(array $data): string
+    {
+        $response = $this->http()->post('/opportunities/', ['locationId' => $this->locationId, ...$data])->throw();
+
+        return (string) $response->json('opportunity.id');
+    }
+
+    public function updateOpportunity(string $opportunityId, array $data): void
+    {
+        $this->http()->put("/opportunities/{$opportunityId}", $data)->throw();
+    }
+
+    /**
      * @return array{0: string, 1: ?string}
      */
     private function splitName(string $fullName): array

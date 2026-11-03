@@ -7,6 +7,7 @@ use App\Services\Booking\CouponProofs;
 use App\Services\Booking\InspectionPhotoStore;
 use App\Services\Integrations\CustomerActivityTags;
 use App\Services\Integrations\GhlAbandonedBookings;
+use App\Services\Integrations\GhlOpportunitySync;
 use App\Services\Integrations\GhlReviewRequests;
 use App\Services\Payments\MercadoPagoReconciler;
 use Illuminate\Console\Command;
@@ -24,9 +25,9 @@ class ExpirarReservasPendientes extends Command
 
     public const ERROR_KEY_PREFIX = 'jobs:reservas-expirar:error:';
 
-    public const STEPS = ['mercado_pago', 'expirar', 'rescate', 'opiniones', 'fotos', 'actividad'];
+    public const STEPS = ['mercado_pago', 'expirar', 'rescate', 'opiniones', 'fotos', 'actividad', 'embudo_ghl'];
 
-    public function handle(GhlAbandonedBookings $abandoned, GhlReviewRequests $reviews, InspectionPhotoStore $photos, CouponProofs $proofs, CustomerActivityTags $activity, MercadoPagoReconciler $mercadoPago): int
+    public function handle(GhlAbandonedBookings $abandoned, GhlReviewRequests $reviews, InspectionPhotoStore $photos, CouponProofs $proofs, CustomerActivityTags $activity, MercadoPagoReconciler $mercadoPago, GhlOpportunitySync $opportunities): int
     {
         // Cada paso va por separado: si uno falla, los demás igual corren (antes un
         // error al principio dejaba sin pedir las opiniones, sin dejar rastro).
@@ -53,6 +54,8 @@ class ExpirarReservasPendientes extends Command
         if (Cache::add('customer-activity-sync', true, 600)) {
             $this->step('actividad', fn () => $activity->sync());
         }
+        // Reservas al embudo de GHL (nuevas y cambios de estado), de a pocas por pasada.
+        $this->step('embudo_ghl', fn () => $opportunities->syncPending());
 
         Cache::put(self::LAST_RUN_KEY, now()->toIso8601String(), now()->addDays(2));
 

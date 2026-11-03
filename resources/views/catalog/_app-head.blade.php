@@ -10,6 +10,7 @@
 <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
 <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png').'?v=2' }}">
 <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/icon-192.png').'?v=2' }}">
+@include('catalog._meta-pixel')
 <style>
     @view-transition { navigation: auto; }
     ::view-transition-old(root) { animation: hh-vt-out .12s ease both; }

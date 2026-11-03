@@ -241,5 +241,18 @@
         document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeVideo(); });
     </script>
     @include('partials.photo-viewer')
+    @php
+        $fromPrice = $prices->map(fn ($p) => $p['hh'] ?? $p['hot'])->filter()->min();
+        $pixelView = array_filter([
+            'content_name' => $category->name,
+            'content_ids' => ['categoria-'.$category->id],
+            'content_type' => 'product',
+            'value' => $fromPrice,
+            'currency' => $fromPrice ? 'CLP' : null,
+        ]);
+    @endphp
+    <script>
+        if (window.fbq) fbq('track', 'ViewContent', {{ Js::from($pixelView) }});
+    </script>
 </body>
 </html>

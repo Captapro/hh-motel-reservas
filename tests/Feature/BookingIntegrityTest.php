@@ -8,6 +8,7 @@ use App\Http\Controllers\BookingCancelController;
 use App\Http\Controllers\RoomBoardController;
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Models\TrackingData;
 use App\Models\CoreExtra;
 use App\Models\Coupon;
 use App\Models\Customer;
@@ -42,6 +43,10 @@ use App\Services\Integrations\GhlClient;
 use App\Services\Payments\MercadoPagoPayments;
 use App\Support\GuestLine;
 use Carbon\Carbon;
+use App\Http\Middleware\CaptureAttribution;
+use App\Services\Integrations\GhlOpportunitySync;
+use App\Services\Marketing\Attribution;
+use App\Services\Marketing\MetaConversions;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -114,6 +119,8 @@ class BookingIntegrityTest extends TestCase
             '2026_09_28_120000_add_pass_token_to_bookings_table.php',
             '2026_09_29_100000_add_request_token_to_payments.php',
             '2026_10_04_130000_add_max_capacity_to_room_categories.php',
+            '2026_08_18_120020_create_tracking_data_table.php',
+            '2026_11_03_000000_add_marketing_tracking.php',
         ] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
@@ -373,6 +380,88 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('sales.detail', $booking->code))
             ->assertOk()->assertSee($booking->code)->assertSee('Débito')->assertSee('Voucher 4455')->assertSee('Abrir la reserva completa');
         $this->get(route('sales.detail', 'NO-EXISTE'))->assertNotFound();
+    }
+
+    public function test_each_booking_becomes_a_ghl_opportunity_that_follows_its_status_with_amount_and_source(): void
+    {
+        config(['services.ghl.private_token' => 'pit-prueba', 'services.ghl.location_id' => 'loc-prueba', 'services.ghl.opportunities_since' => '2026-09-01']);
+        $stages = collect(GhlOpportunitySync::STAGES)->map(fn ($s, $k) => ['id' => 'st-'.$k, 'name' => $s['name']])->values()->all();
+        Http::fake([
+            'services.leadconnectorhq.com/opportunities/pipelines*' => Http::response(['pipelines' => [
+                ['id' => 'p-otro', 'name' => 'REMATE 7 sep', 'stages' => []],
+                ['id' => 'p-hh', 'name' => 'Reservas HH', 'stages' => $stages],
+            ]]),
+            'services.leadconnectorhq.com/opportunities/' => Http::response(['opportunity' => ['id' => 'opp-1']]),
+            'services.leadconnectorhq.com/opportunities/opp-1' => Http::response(['ok' => true]),
+        ]);
+        $this->customer->update(['ghl_contact_id' => 'c-123']);
+        $sinTelefono = Customer::create(['name' => 'Sin teléfono', 'document_type' => 'rut', 'rut' => '22222222-2']);
+        $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00'), 'customer' => $sinTelefono]);
+
+        $online = $this->booking(['created_by' => null]);
+        TrackingData::create(['booking_id' => $online->id, 'utm_source' => 'ig', 'utm_campaign' => 'bio', 'source_label' => 'Instagram · bio']);
+        $sync = app(GhlOpportunitySync::class);
+
+        $this->assertSame(1, $sync->syncPending());
+        Http::assertSent(fn ($r) => $r->method() === 'POST' && str_ends_with($r->url(), '/opportunities/')
+            && $r['pipelineId'] === 'p-hh' && $r['pipelineStageId'] === 'st-reservo' && $r['status'] === 'open'
+            && $r['contactId'] === 'c-123' && $r['monetaryValue'] === 20000 && $r['source'] === 'Instagram · bio');
+        $this->assertSame('opp-1', $online->fresh()->ghl_opportunity_id);
+        // Ya al día: la pasada siguiente no vuelve a llamar a GHL.
+        $this->assertSame(0, $sync->syncPending());
+
+        $online->update(['booking_status' => 'FINALIZADA']);
+        $this->assertSame(1, $sync->syncPending());
+        Http::assertSent(fn ($r) => $r->method() === 'PUT' && str_ends_with($r->url(), '/opportunities/opp-1')
+            && $r['pipelineStageId'] === 'st-vino' && $r['status'] === 'won');
+    }
+
+    public function test_attribution_names_the_channel_and_the_catalog_remembers_where_the_visitor_came_from(): void
+    {
+        $this->assertSame('Meta Ads · HH | MENSAJES', Attribution::labelFor(new TrackingData(['utm_source' => 'meta', 'utm_campaign' => 'HH | MENSAJES'])));
+        $this->assertSame('Meta Ads', Attribution::labelFor(new TrackingData(['fbclid' => 'abc'])));
+        $this->assertSame('Instagram', Attribution::labelFor(new TrackingData(['referrer' => 'https://l.instagram.com/?u=x'])));
+        $this->assertSame('Sitio hhmotel.cl', Attribution::labelFor(new TrackingData(['referrer' => 'https://www.hhmotel.cl/playrooms'])));
+        $this->assertSame('Directo', Attribution::labelFor(new TrackingData));
+        $this->assertSame('Presencial', Attribution::sourceOf($this->booking(['walk_in' => true, 'created_by' => auth()->id()])));
+
+        $session = app('session')->driver('array');
+        $visit = function (string $url, ?string $referrer = null) use ($session) {
+            $request = \Illuminate\Http\Request::create($url, 'GET', server: $referrer ? ['HTTP_REFERER' => $referrer] : []);
+            $request->setLaravelSession($session);
+            (new CaptureAttribution)->handle($request, fn () => response('ok'));
+        };
+        $visit('https://app.hhmotel.cl/catalogo?utm_source=ig&utm_campaign=bio&fbclid=XYZ');
+        // Seguir navegando dentro del catálogo no borra el origen.
+        $visit('https://app.hhmotel.cl/catalogo/reservar', 'https://app.hhmotel.cl/catalogo');
+        $data = $session->get(CaptureAttribution::SESSION_KEY);
+        $this->assertSame('ig', $data['utm_source']);
+        $this->assertSame('bio', $data['utm_campaign']);
+        $this->assertStringStartsWith('fb.1.', $data['fbc']);
+        $this->assertStringEndsWith('.XYZ', $data['fbc']);
+    }
+
+    public function test_a_paid_sale_is_reported_to_meta_once_with_hashed_contact_data(): void
+    {
+        config(['services.meta.pixel_id' => '123', 'services.meta.capi_token' => 'token-prueba']);
+        Http::fake(['graph.facebook.com/*' => Http::response(['events_received' => 1])]);
+        $this->customer->update(['email' => 'Cliente@Correo.cl']);
+        $walkIn = $this->booking(['walk_in' => true, 'created_by' => auth()->id()]);
+        $meta = app(MetaConversions::class);
+
+        $this->assertTrue($meta->sendPurchase($walkIn->fresh()));
+        Http::assertSent(function ($r) use ($walkIn) {
+            $event = $r['data'][0];
+
+            return str_contains($r->url(), '/123/events') && $event['event_name'] === 'Purchase'
+                && $event['event_id'] === 'purchase-'.$walkIn->code && $event['action_source'] === 'physical_store'
+                && $event['custom_data']['value'] === 20000 && $event['custom_data']['currency'] === 'CLP'
+                && $event['user_data']['ph'] === [hash('sha256', '56911111111')]
+                && $event['user_data']['em'] === [hash('sha256', 'cliente@correo.cl')];
+        });
+        $this->assertNotNull($walkIn->fresh()->meta_purchase_sent_at);
+        $this->assertFalse($meta->sendPurchase($walkIn->fresh()));
+        Http::assertSentCount(1);
     }
 
     public function test_booking_remembers_how_it_was_born_walk_in_team_or_catalog(): void

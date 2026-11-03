@@ -227,5 +227,20 @@
         })();
         </script>
     @endif
+    @if ($booking->payment_status === 'PAGADA' && $booking->origin === 'catalogo')
+        @php
+            $pixelPurchase = [
+                'value' => $booking->price_final + $booking->addons->sum('amount'),
+                'currency' => 'CLP',
+                'content_name' => $booking->room?->category?->name,
+                'content_type' => 'product',
+            ];
+            $pixelEventId = \App\Services\Marketing\MetaConversions::purchaseEventId($booking);
+        @endphp
+        {{-- Mismo event_id que manda el servidor (MetaConversions): Meta cuenta una sola venta. --}}
+        <script>
+            if (window.fbq) fbq('track', 'Purchase', {{ Js::from($pixelPurchase) }}, { eventID: {{ Js::from($pixelEventId) }} });
+        </script>
+    @endif
 </body>
 </html>

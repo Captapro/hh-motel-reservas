@@ -74,9 +74,13 @@ Route::get('/', function () {
 
 // Público -- sin login, pensado para compartir el link con clientes.
 Route::get('/img', [ImageResizeController::class, 'show'])->middleware('throttle:240,1,img.resize')->name('img.resize');
-Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.index');
-Route::get('/catalogo/habitacion/{room}', [CatalogController::class, 'room'])->name('catalog.room');
-Route::get('/catalogo/reservar', [PublicBookingController::class, 'create'])->name('catalog.reserve');
+// Las páginas de entrada al catálogo guardan de dónde llegó el visitante (utm,
+// anuncio de Meta, página de origen) para atribuirle la reserva.
+Route::middleware(\App\Http\Middleware\CaptureAttribution::class)->group(function () {
+    Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.index');
+    Route::get('/catalogo/habitacion/{room}', [CatalogController::class, 'room'])->name('catalog.room');
+    Route::get('/catalogo/reservar', [PublicBookingController::class, 'create'])->name('catalog.reserve');
+});
 Route::get('/catalogo/reservar/horarios', [PublicBookingController::class, 'times'])->middleware('throttle:30,1,catalog.reserve.times')->name('catalog.reserve.times');
 Route::get('/catalogo/reservar/disponibilidad', [PublicBookingController::class, 'checkAvailability'])->middleware('throttle:30,1,catalog.reserve.availability')->name('catalog.reserve.availability');
 Route::view('/privacidad', 'catalog.privacidad')->name('catalog.privacy');

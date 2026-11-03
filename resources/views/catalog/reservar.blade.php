@@ -824,5 +824,12 @@
         })();
     </script>
 @include('partials.combo-choices')
+    <script>
+        if (window.fbq) fbq('track', 'InitiateCheckout');
+        // Al enviar el formulario: dejó sus datos para reservar.
+        document.querySelectorAll('form[action$="/catalogo/reservar"]').forEach((form) => form.addEventListener('submit', () => {
+            if (window.fbq) fbq('track', 'AddPaymentInfo');
+        }, { once: true }));
+    </script>
 </body>
 </html>

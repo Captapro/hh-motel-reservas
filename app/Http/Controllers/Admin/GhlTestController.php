@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Integrations\GhlClient;
+use App\Services\Integrations\GhlOpportunitySync;
 use App\Services\Integrations\GhlReviewRequests;
+use App\Services\Marketing\MetaConversions;
 use App\Support\Phone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -68,6 +70,19 @@ class GhlTestController extends Controller
             'jobErrors' => $stepErrors,
             'lastReviewSent' => Cache::get(GhlReviewRequests::LAST_SENT_KEY_PREFIX.'pedir_opinion'),
             'recentCheckouts' => $checkouts,
+            'funnel' => [
+                'since' => config('services.ghl.opportunities_since'),
+                'synced' => Booking::whereNotNull('ghl_opportunity_id')->count(),
+                'pending' => GhlOpportunitySync::pendingQuery()->count(),
+                'lastRun' => Cache::get(GhlOpportunitySync::LAST_RUN_KEY),
+                'error' => Cache::get(GhlOpportunitySync::ERROR_KEY),
+            ],
+            'meta' => [
+                'pixel' => filled(config('services.meta.pixel_id')),
+                'capi' => MetaConversions::enabled(),
+                'sent' => Booking::whereNotNull('meta_purchase_sent_at')->count(),
+                'last' => Cache::get(MetaConversions::LAST_RESULT_KEY),
+            ],
         ];
     }
 

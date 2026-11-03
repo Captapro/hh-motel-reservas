@@ -64,6 +64,19 @@ return [
         'webhook_cupon_opinion' => env('GHL_WEBHOOK_CUPON_OPINION'),
         // Token que GHL agrega a la URL al llamar al sistema (baja de publicidad).
         'inbound_secret' => env('GHL_INBOUND_SECRET'),
+        // Embudo de GHL donde cada reserva queda como oportunidad (con su monto).
+        'pipeline_name' => env('GHL_PIPELINE_RESERVAS', 'Reservas HH'),
+        // Desde cuándo se cargan reservas al embudo (las anteriores no se suben).
+        'opportunities_since' => env('GHL_OPPORTUNITIES_SINCE', '2026-11-01'),
+    ],
+
+    // Medición de Meta: el píxel (público, el mismo de hhmotel.cl) en el catálogo y
+    // la API de conversiones para avisar las ventas desde el servidor. El token
+    // se genera en el Administrador de eventos y va solo en Render (META_CAPI_TOKEN).
+    'meta' => [
+        'pixel_id' => env('META_PIXEL_ID', '1712431846730178'),
+        'capi_token' => env('META_CAPI_TOKEN'),
+        'test_event_code' => env('META_TEST_EVENT_CODE'),
     ],
 
     'hh_payment' => [

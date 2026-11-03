@@ -13,6 +13,20 @@
     </div>
 
     <div class="card">
+        <h2 style="font-size:14px; margin:0 0 4px;">Medición: embudo de GHL y ventas a Meta</h2>
+        <p class="sub" style="margin:0 0 10px;">Cada reserva con teléfono (desde el {{ \Illuminate\Support\Carbon::parse($funnel['since'])->format('d-m-Y') }}) queda como oportunidad en el embudo "{{ config('services.ghl.pipeline_name') }}" con su monto y su origen. Cada venta pagada se le avisa a Meta para medir qué anuncios venden.</p>
+        <p style="margin:2px 0; color:#c1c3c7;">Embudo GHL: {{ $funnel['synced'] }} reservas subidas · {{ $funnel['pending'] }} por subir o mover de etapa{{ $funnel['lastRun'] ? ' · última pasada '.\Illuminate\Support\Carbon::parse($funnel['lastRun']['at'])->timezone('America/Santiago')->format('H:i:s') : '' }}</p>
+        @if ($funnel['error'])
+            <p style="margin:2px 0; color:#f3b8b8;">✗ {{ \Illuminate\Support\Carbon::parse($funnel['error']['at'])->timezone('America/Santiago')->format('d-m H:i') }}: {{ $funnel['error']['message'] }} (se reintenta en 10 minutos)</p>
+        @endif
+        <p style="margin:6px 0 2px; color:{{ $meta['pixel'] ? '#6ee7b7' : '#f3b8b8' }};">{{ $meta['pixel'] ? '✓ Píxel de Meta en el catálogo' : '✗ Sin píxel de Meta (META_PIXEL_ID)' }}</p>
+        <p style="margin:2px 0; color:{{ $meta['capi'] ? '#6ee7b7' : '#f3b8b8' }};">{{ $meta['capi'] ? '✓ Ventas a Meta desde el servidor activas ('.$meta['sent'].' enviadas)' : '✗ Falta META_CAPI_TOKEN en Render: las ventas no se le avisan a Meta desde el servidor' }}</p>
+        @if ($meta['last'])
+            <p style="margin:2px 0; color:{{ $meta['last']['error'] ? '#f3b8b8' : '#c1c3c7' }};">Último aviso: {{ $meta['last']['booking'] }} a las {{ \Illuminate\Support\Carbon::parse($meta['last']['at'])->timezone('America/Santiago')->format('d-m H:i') }} — {{ $meta['last']['error'] ? 'Meta respondió '.$meta['last']['status'].': '.$meta['last']['error'] : 'recibido' }}</p>
+        @endif
+    </div>
+
+    <div class="card">
         <h2 style="font-size:14px; margin:0 0 4px;">Pedidos de opinión</h2>
         <p class="sub" style="margin:0 0 10px;">15 minutos después del check-out el sistema avisa a GHL para que mande el WhatsApp. Aquí se ve qué pasó con cada salida de las últimas 24 horas.</p>
         @foreach ($reviewWebhooks as $name => $set)

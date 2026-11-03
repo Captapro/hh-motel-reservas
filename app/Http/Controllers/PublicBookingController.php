@@ -21,6 +21,7 @@ use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
+use App\Services\Marketing\Attribution;
 use App\Services\Payments\MercadoPagoClient;
 use App\Services\Payments\MercadoPagoPayments;
 use App\Services\Pricing\RateRuleResolver;
@@ -251,6 +252,8 @@ class PublicBookingController extends Controller
             } catch (RoomNotAvailableException|PricingException|InvalidCouponException $e) {
                 return back()->withInput()->withErrors(['duration_minutes' => $e->getMessage()]);
             }
+
+            Attribution::recordForBooking($booking, $request);
 
             // Los extras se vuelven a resolver desde la base de datos: el navegador
             // solo envía IDs y cantidades, nunca precios. Se guardan como consumo
