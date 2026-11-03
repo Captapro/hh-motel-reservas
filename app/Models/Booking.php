@@ -354,6 +354,12 @@ class Booking extends Model
         return (int) $this->paidAddons()->sum('amount');
     }
 
+    /** Parte de lo pagado en consumos que es extra core (no producto ni combo). */
+    public function paidCoreExtrasAmount(): int
+    {
+        return (int) $this->paidAddons()->filter(fn ($addon) => $addon->isCoreExtra())->sum('amount');
+    }
+
     /** Total a cobrar: precio final de la habitación + consumo, menos lo ya pagado. */
     public function balanceDue(): int
     {

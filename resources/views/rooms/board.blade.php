@@ -76,7 +76,7 @@
         a.sales-btn { background:#1c1c1c; border-color:#333; color:#6ee7b7; font-weight:600; }
         a.sales-btn:hover { border-color:#34d399; color:#fff; }
 
-        .daily-summary { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:30px; }
+        .daily-summary { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin-bottom:30px; }
         @media (max-width: 760px) { .daily-summary { grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); } }
         .dsum-tile { display:flex; flex-direction:column; gap:3px; background:#1c1c1c; border:1px solid #333; border-radius:9px; padding:10px 12px; text-decoration:none; min-width:0; }
         .dsum-tile:hover { border-color:#666; }
@@ -533,9 +533,13 @@
             <span class="dsum-label">Venta extras</span>
             <span class="dsum-value">${{ number_format($dailySummary['extras_revenue'], 0, ',', '.') }}</span>
         </a>
+        <a href="{{ auth()->user()?->canAccess('ventas') ? route('sales.daily') : '#' }}" class="dsum-tile">
+            <span class="dsum-label">Extras core</span>
+            <span class="dsum-value">${{ number_format($dailySummary['core_revenue'], 0, ',', '.') }}</span>
+        </a>
         <a href="{{ auth()->user()?->canAccess('ventas') ? route('sales.daily') : '#' }}" class="dsum-tile total">
             <span class="dsum-label">Total del día</span>
-            <span class="dsum-value">${{ number_format($dailySummary['rooms_revenue'] + $dailySummary['extras_revenue'], 0, ',', '.') }}</span>
+            <span class="dsum-value">${{ number_format($dailySummary['rooms_revenue'] + $dailySummary['extras_revenue'] + $dailySummary['core_revenue'], 0, ',', '.') }}</span>
         </a>
     </div>
 

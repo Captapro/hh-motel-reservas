@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Caja: cuánto efectivo debería haber físicamente en el mesón ahora mismo
- * (saldo acumulado, no solo del día) más el detalle día a día de qué entró
+ * Caja: efectivo recibido que falta depositar (se va guardando en la caja
+ * fuerte y baja al registrar el depósito) más el detalle día a día de qué entró
  * y qué salió — pagos en efectivo de reservas + movimientos manuales de
  * caja chica (ingresos y egresos que no vienen de una reserva).
  */
@@ -94,6 +94,8 @@ class CashRegisterController extends Controller
             'totalEgresos' => $totalEgresos,
             'timeline' => $timeline,
             'dayCashIn' => $dayCashIn,
+            'dayCashSales' => (int) $dayPayments->sum('amount'),
+            'dayCashManual' => (int) $dayMovements->where('type', 'ingreso')->sum('amount'),
             'dayCashOut' => $dayCashOut,
         ]);
     }

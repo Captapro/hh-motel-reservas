@@ -107,7 +107,8 @@
         <div class="card blue" tabindex="0" data-tip="Estadías del mes con su pago completo. No cuenta canceladas, vencidas ni pendientes de pago."><div class="label">Playrooms vendidos</div><div class="value">{{ $totals['rooms'] }}</div></div>
         <div class="card gold" tabindex="0" data-tip="Venta total de las habitaciones del mes ÷ cantidad de habitaciones vendidas."><div class="label">Precio promedio por hab.</div><div class="value">{{ $money($avgTicket) }}</div></div>
         <div class="card green" tabindex="0" data-tip="Pagos aprobados recibidos durante el mes, según el día en que se cobraron (puede incluir pagos adelantados de estadías de otros días)."><div class="label">Cobrado en caja</div><div class="value">{{ $money($totals['cash_total']) }}</div></div>
-        <div class="card" tabindex="0" data-tip="Extras pagados (consumos y upsells) de las estadías del mes; ya están dentro de la venta total."><div class="label">Extras vendidos</div><div class="value">{{ $money($totals['extras']) }}</div></div>
+        <div class="card" tabindex="0" data-tip="Productos y combos pagados de las estadías del mes; ya están dentro de la venta total."><div class="label">Extras vendidos</div><div class="value">{{ $money($totals['extras']) }}</div></div>
+        <div class="card" tabindex="0" data-tip="Hora extra, persona adicional, lavandería y upsells pagados; ya están dentro de la venta total. Es la parte core de la columna de la planilla."><div class="label">Extras core</div><div class="value">{{ $money($totals['core']) }}</div></div>
         <div class="card" tabindex="0" data-tip="Cantidad de reservas del mes con estado Cancelada. No suman a ninguna venta."><div class="label">Canceladas</div><div class="value">{{ $cancelled }}</div></div>
     </div>
 
@@ -133,7 +134,7 @@
     <div class="sec-label">Registro diario</div>
     <p class="sec-note">La <b>venta</b> cuenta por el día de la estadía y solo si está pagada completa (las pendientes de pago o por llegar sin pagar no suman). Lo <b>cobrado</b> cuenta por el día en que entró el pago (puede ser un anticipo o el saldo de otro día). Toca una fecha para ver su detalle.</p>
     <div class="table-wrap"><table>
-        <thead><tr><th>Fecha</th><th class="n">Hab. vendidas</th><th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th><th class="n">Otro</th><th class="n">Cobrado</th></tr></thead>
+        <thead><tr><th>Fecha</th><th class="n">Hab. vendidas</th><th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Extras core</th><th class="n">Venta total</th><th class="n">Tarjeta</th><th class="n">Efectivo</th><th class="n">Transferencia</th><th class="n">Otro</th><th class="n">Cobrado</th></tr></thead>
         <tbody>
         @foreach ($daily as $r)
             <tr class="{{ $r['rooms'] === 0 && $r['cash_total'] === 0 ? 'zero' : '' }} {{ $r['date']->isWeekend() ? 'weekend' : '' }} {{ $r['date']->isToday() ? 'today' : '' }}">
@@ -141,12 +142,13 @@
                 <td class="n">{{ $r['rooms'] }}</td>
                 <td class="n">{{ $money($r['lodging']) }}</td>
                 <td class="n">{{ $money($r['extras']) }}</td>
+                <td class="n">{{ $money($r['core']) }}</td>
                 <td class="n"><b>{{ $money($r['total']) }}</b>@if($r['total'] > 0)<span class="bar" style="width:{{ max(2, round($r['total'] / $maxDaily * 60)) }}px"></span>@endif</td>
                 @foreach ($groups as $g)<td class="n">{{ $money($r['cash'][$g]) }}</td>@endforeach
                 <td class="n">{{ $money($r['cash_total']) }}</td>
             </tr>
         @endforeach
-            <tr class="total"><td>Total</td><td class="n">{{ $totals['rooms'] }}</td><td class="n">{{ $money($totals['lodging']) }}</td><td class="n">{{ $money($totals['extras']) }}</td><td class="n">{{ $money($totals['total']) }}</td>@foreach ($groups as $g)<td class="n">{{ $money($totals['cash'][$g]) }}</td>@endforeach<td class="n">{{ $money($totals['cash_total']) }}</td></tr>
+            <tr class="total"><td>Total</td><td class="n">{{ $totals['rooms'] }}</td><td class="n">{{ $money($totals['lodging']) }}</td><td class="n">{{ $money($totals['extras']) }}</td><td class="n">{{ $money($totals['core']) }}</td><td class="n">{{ $money($totals['total']) }}</td>@foreach ($groups as $g)<td class="n">{{ $money($totals['cash'][$g]) }}</td>@endforeach<td class="n">{{ $money($totals['cash_total']) }}</td></tr>
         </tbody>
     </table></div>
 

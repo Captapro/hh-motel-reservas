@@ -537,6 +537,23 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(['18:50', '18:30', '18:30'], [$booking->fresh()->checked_out_at->format('H:i'), $booking->fresh()->ends_at->format('H:i'), $booking->fresh()->bookedEndsAt()->format('H:i')]);
     }
 
+    public function test_core_extras_are_reported_apart_from_products_and_the_day_still_adds_up(): void
+    {
+        $method = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        $product = Product::create(['name' => 'Agua', 'category' => 'bebidas', 'price' => 1500, 'stock_quantity' => 5, 'is_active' => true]);
+        $this->travelTo(Carbon::parse('2026-11-02 11:00'));
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'created_by' => auth()->id()]);
+        $booking->addons()->create(['description' => 'Hora adicional', 'quantity' => 1, 'amount' => 15000]);
+        $booking->addons()->create(['product_id' => $product->id, 'description' => 'Agua', 'quantity' => 1, 'amount' => 1500]);
+        app(PaymentService::class)->register($booking->fresh(), $method, 36500, null, null, auth()->id());
+
+        $totals = $this->get(route('sales.monthly', '2026-11'))->assertOk()->viewData('totals');
+        $this->assertSame([20000, 1500, 15000, 36500], [(int) $totals['lodging'], (int) $totals['extras'], (int) $totals['core'], (int) $totals['total']]);
+        $board = $this->boardDailySummary();
+        $this->assertSame([1, 1500, 15000], [$board['extras_count'], $board['extras_revenue'], $board['core_revenue']]);
+        $this->get(route('sales.daily', '2026-11-02'))->assertOk()->assertSee('Extras core');
+    }
+
     public function test_attribution_names_the_channel_and_the_catalog_remembers_where_the_visitor_came_from(): void
     {
         $this->assertSame('Meta Ads · HH | MENSAJES', Attribution::labelFor(new TrackingData(['utm_source' => 'meta', 'utm_campaign' => 'HH | MENSAJES'])));
@@ -1259,7 +1276,7 @@ class BookingIntegrityTest extends TestCase
         app(PaymentService::class)->register($booking->fresh(), $method, 3000, null, null, auth()->id());
 
         $totals = $this->get(route('sales.monthly', '2026-10'))->viewData('totals');
-        $this->assertSame(3000, (int) $totals['extras']);
+        $this->assertSame(3000, (int) $totals['extras'] + (int) $totals['core']);
         $this->assertSame((int) $booking->price_final + 3000, (int) $totals['total']);
     }
 
@@ -1328,9 +1345,9 @@ class BookingIntegrityTest extends TestCase
         app(PaymentService::class)->register($booking->fresh(), $cash, 5000, null, null, auth()->id());
         $this->assertSame(0, $booking->fresh()->balanceDue());
         $totals = $this->get(route('sales.monthly', '2026-11'))->viewData('totals');
-        $this->assertSame([25000, 5000, 25000], [(int) $totals['total'], (int) $totals['extras'], (int) $totals['cash_total']]);
+        $this->assertSame([25000, 5000, 25000], [(int) $totals['total'], (int) $totals['extras'] + (int) $totals['core'], (int) $totals['cash_total']]);
         $board = $this->boardDailySummary();
-        $this->assertSame(5000, $board['extras_revenue']);
+        $this->assertSame(5000, $board['extras_revenue'] + $board['core_revenue']);
     }
 
     public function test_late_online_payment_after_hold_expired_is_cash_but_not_a_sale_and_frees_the_slot(): void

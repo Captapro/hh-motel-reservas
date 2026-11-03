@@ -92,7 +92,8 @@
         };
         $live = $sold;
         $lodging = $live->sum('price_final');
-        $extrasSum = $live->sum(fn ($b) => $b->paidAddonsAmount());
+        $coreSum = $live->sum(fn ($b) => $b->paidCoreExtrasAmount());
+        $extrasSum = $live->sum(fn ($b) => $b->paidAddonsAmount()) - $coreSum;
     @endphp
 
     <div class="topline">
@@ -122,7 +123,7 @@
             <thead>
                 <tr>
                     <th>Hora</th><th>Reserva</th><th>Hab.</th><th>Categoría</th><th>Cliente</th><th>Tarifa</th>
-                    <th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th>
+                    <th class="n">Alojamiento</th><th class="n">Extras</th><th class="n">Extras core</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th>
                     <th>Pago</th><th>Voucher / boleta</th><th>Estado</th><th>Origen</th>
                 </tr>
             </thead>
@@ -130,7 +131,8 @@
                 @foreach ($bookings as $booking)
                     @php
                         $cancelled = $booking->booking_status === 'CANCELADA';
-                        $extras = (int) $booking->addons->sum('amount');
+                        $core = (int) $booking->addons->filter(fn ($a) => $a->isCoreExtra())->sum('amount');
+                        $extras = (int) $booking->addons->sum('amount') - $core;
                         $docs = $booking->payments->where('status', 'aprobado')->map(fn ($p) => trim(($p->voucher_number ? 'V '.$p->voucher_number : '').' '.($p->receipt_number ? 'B '.$p->receipt_number : '')))->filter()->implode(' · ');
                         $methods = $booking->payments->where('status', 'aprobado')->map(fn ($p) => $groupOf($p->paymentMethod?->name))->unique()->implode(' + ');
                         $paid = $booking->paidAmount();
@@ -145,7 +147,8 @@
                         <td>{{ $booking->rate_rule_name_snapshot ?? '—' }}</td>
                         <td class="n">{{ $money($booking->price_final) }}</td>
                         <td class="n">{{ $money($extras) }}</td>
-                        <td class="n"><b>{{ $money($booking->price_final + $extras) }}</b></td>
+                        <td class="n">{{ $money($core) }}</td>
+                        <td class="n"><b>{{ $money($booking->price_final + $extras + $core) }}</b></td>
                         <td class="n">{{ $money($paid) }}</td>
                         <td class="n">{{ $balance > 0 && ! $cancelled ? $money($balance) : '—' }}</td>
                         <td>{{ $methods ?: '—' }}</td>
@@ -159,11 +162,11 @@
                 @endif
                 {{-- Filas en blanco para que se vea como hoja de cálculo --}}
                 @for ($i = max(0, 10 - max($bookings->count(), 1)); $i > 0; $i--)
-                    <tr class="blank">@for ($c = 0; $c < 15; $c++)<td>&nbsp;</td>@endfor</tr>
+                    <tr class="blank">@for ($c = 0; $c < 16; $c++)<td>&nbsp;</td>@endfor</tr>
                 @endfor
                 <tr class="total">
                     <td colspan="6">Total del día ({{ $live->count() }} {{ $live->count() === 1 ? 'Playroom' : 'Playrooms' }})</td>
-                    <td class="n">{{ $money($lodging) }}</td><td class="n">{{ $money($extrasSum) }}</td><td class="n">{{ $money($revenue) }}</td>
+                    <td class="n">{{ $money($lodging) }}</td><td class="n">{{ $money($extrasSum) }}</td><td class="n">{{ $money($coreSum) }}</td><td class="n">{{ $money($revenue) }}</td>
                     <td class="n">{{ $money($collected) }}</td><td class="n">{{ $money($pending) }}</td><td colspan="4"></td>
                 </tr>
             </tbody>

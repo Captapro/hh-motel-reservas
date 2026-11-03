@@ -69,10 +69,11 @@ class MonthlySalesController extends Controller
                 'date' => $d->copy(),
                 'rooms' => $dayBookings->count(),
                 'lodging' => $dayBookings->sum('price_final'),
-                'extras' => $dayBookings->sum(fn (Booking $b) => $b->paidAddonsAmount()),
+                'extras' => $dayBookings->sum(fn (Booking $b) => $b->paidAddonsAmount() - $b->paidCoreExtrasAmount()),
+                'core' => $dayBookings->sum(fn (Booking $b) => $b->paidCoreExtrasAmount()),
                 'cash_total' => $dayCash->sum('amount'),
             ];
-            $row['total'] = $row['lodging'] + $row['extras'];
+            $row['total'] = $row['lodging'] + $row['extras'] + $row['core'];
             foreach ($groups as $g) {
                 $row['cash'][$g] = $dayCash->filter(fn (Payment $p) => $this->methodGroup($p->paymentMethod?->code) === $g)->sum('amount');
             }
@@ -83,6 +84,7 @@ class MonthlySalesController extends Controller
             'rooms' => $daily->sum('rooms'),
             'lodging' => $daily->sum('lodging'),
             'extras' => $daily->sum('extras'),
+            'core' => $daily->sum('core'),
             'total' => $daily->sum('total'),
             'cash_total' => $daily->sum('cash_total'),
         ];
@@ -147,7 +149,7 @@ class MonthlySalesController extends Controller
         })->filter(fn ($r) => $r['count'] > 0)->values();
 
         // ===== Extras vendidos =====
-        $extrasTotal = max(1, $totals['extras']);
+        $extrasTotal = max(1, $totals['extras'] + $totals['core']);
         $extras = $bookings->flatMap(fn (Booking $b) => $b->paidAddons())->groupBy('description')->map(fn (Collection $rows, $name) => [
             'name' => $name, 'units' => $rows->count(), 'amount' => $rows->sum('amount'), 'pct' => $rows->sum('amount') / $extrasTotal,
         ])->sortByDesc('amount')->values();
@@ -275,7 +277,7 @@ class MonthlySalesController extends Controller
             ]);
             foreach ($b->paidAddons() as $a) {
                 $rows->push($base + [
-                    'n' => ++$n, 'doc_type' => '', 'voucher' => '', 'receipt' => '', 'kind' => 'EXTRAS', 'detail' => $a->description,
+                    'n' => ++$n, 'doc_type' => '', 'voucher' => '', 'receipt' => '', 'kind' => $a->isCoreExtra() ? 'EXTRA CORE' : 'EXTRAS', 'detail' => $a->description,
                     'qty' => $a->quantity ?? 1, 'price' => $a->amount, 'discount' => 0, 'missing' => [],
                 ]);
             }
@@ -304,11 +306,11 @@ class MonthlySalesController extends Controller
         return response()->streamDownload(function () use ($daily, $totals, $groups) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['Fecha', 'Playrooms vendidos', 'Alojamiento', 'Extras', 'Venta total', 'Cobrado '.$groups[0], 'Cobrado '.$groups[1], 'Cobrado '.$groups[2], 'Cobrado '.$groups[3], 'Cobrado total']);
+            fputcsv($out, ['Fecha', 'Playrooms vendidos', 'Alojamiento', 'Extras', 'Extras core', 'Venta total', 'Cobrado '.$groups[0], 'Cobrado '.$groups[1], 'Cobrado '.$groups[2], 'Cobrado '.$groups[3], 'Cobrado total']);
             foreach ($daily as $r) {
-                fputcsv($out, [$r['date']->format('d/m/Y'), $r['rooms'], $r['lodging'], $r['extras'], $r['total'], $r['cash']['Tarjeta'], $r['cash']['Efectivo'], $r['cash']['Transferencia'], $r['cash']['Otro'], $r['cash_total']]);
+                fputcsv($out, [$r['date']->format('d/m/Y'), $r['rooms'], $r['lodging'], $r['extras'], $r['core'], $r['total'], $r['cash']['Tarjeta'], $r['cash']['Efectivo'], $r['cash']['Transferencia'], $r['cash']['Otro'], $r['cash_total']]);
             }
-            fputcsv($out, ['TOTAL', $totals['rooms'], $totals['lodging'], $totals['extras'], $totals['total'], $totals['cash']['Tarjeta'], $totals['cash']['Efectivo'], $totals['cash']['Transferencia'], $totals['cash']['Otro'], $totals['cash_total']]);
+            fputcsv($out, ['TOTAL', $totals['rooms'], $totals['lodging'], $totals['extras'], $totals['core'], $totals['total'], $totals['cash']['Tarjeta'], $totals['cash']['Efectivo'], $totals['cash']['Transferencia'], $totals['cash']['Otro'], $totals['cash_total']]);
             fclose($out);
         }, $name, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }

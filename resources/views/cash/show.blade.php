@@ -20,7 +20,7 @@
         .banner { background:#14251c; border:1px solid #2e6e45; color:#8fe0ad; padding:10px 16px; border-radius:9px; margin-bottom:14px; font-size:14px; font-weight:600; }
 
         /* Cifras clave */
-        .kpis { display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+        .kpis { display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
         @media (max-width: 1000px) { .kpis { grid-template-columns: 1fr 1fr; } }
         .kpi { background:#1c1c1c; border:1px solid #333; border-radius:12px; padding:16px 20px; }
         .kpi .label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#999; margin-bottom:6px; }
@@ -99,24 +99,29 @@
 
     <div class="kpis">
         <div class="kpi saldo">
-            <div class="label">Saldo en caja — efectivo que debería haber ahora mismo</div>
+            <div class="label">Efectivo por depositar</div>
             <div class="value">{{ $m($saldoEnCaja) }}</div>
-            <div class="note">Efectivo de reservas (histórico) <b>{{ $m($totalCashFromSales) }}</b> · + ingresos manuales <b>{{ $m($totalIngresos) }}</b> · − egresos manuales <b>{{ $m($totalEgresos) }}</b></div>
+            <div class="note">Recibido en reservas <b>{{ $m($totalCashFromSales) }}</b> · + ingresos manuales <b>{{ $m($totalIngresos) }}</b> · − depósitos y egresos <b>{{ $m($totalEgresos) }}</b>. Se guarda en la caja fuerte y baja al registrar el depósito.</div>
         </div>
         <div class="kpi">
-            <div class="label">Cobrado este día</div>
-            <div class="value">{{ $m($collectedTotal) }}</div>
-            <div class="note">en todos los medios de pago</div>
+            <div class="label">Máquina Mercado Pago</div>
+            <div class="value">{{ $m($collectedByGroup['Tarjeta (máquina)']) }}</div>
+            <div class="note">débito y crédito de este día</div>
+        </div>
+        <div class="kpi">
+            <div class="label">Pagos online en reservas</div>
+            <div class="value">{{ $m($collectedByGroup['Mercado Pago (online)']) }}</div>
+            <div class="note">pagados por el catálogo este día</div>
         </div>
         <div class="kpi in">
-            <div class="label">Entró a la caja física</div>
+            <div class="label">Efectivo del día</div>
             <div class="value">{{ $m($dayCashIn) }}</div>
-            <div class="note">efectivo de reservas + ingresos manuales</div>
+            <div class="note">reservas <b>{{ $m($dayCashSales) }}</b> · ingresos manuales <b>{{ $m($dayCashManual) }}</b></div>
         </div>
         <div class="kpi out">
-            <div class="label">Salió de la caja física</div>
+            <div class="label">Depósitos y egresos</div>
             <div class="value">{{ $m($dayCashOut) }}</div>
-            <div class="note">egresos manuales del día</div>
+            <div class="note">efectivo que salió este día</div>
         </div>
     </div>
 
@@ -180,7 +185,7 @@
         <div class="col col-form">
             <div class="panel">
                 <h3>Registrar movimiento</h3>
-                <p class="hint">Ingresos y egresos de caja chica que no vienen de una reserva.</p>
+                <p class="hint">Depósitos del efectivo y movimientos de caja chica que no vienen de una reserva.</p>
 
                 @if ($errors->any())
                     <div class="errors">
@@ -196,7 +201,7 @@
                     <label>Tipo</label>
                     <div class="type-row">
                         <button type="button" data-type="ingreso" onclick="hhSetCashType('ingreso')">+ Ingreso (caja chica)</button>
-                        <button type="button" data-type="egreso" onclick="hhSetCashType('egreso')">− Egreso</button>
+                        <button type="button" data-type="egreso" onclick="hhSetCashType('egreso')">− Depósito / egreso</button>
                     </div>
 
                     <label>Monto (CLP)</label>

@@ -15,6 +15,12 @@ class BookingAddon extends Model
         return ['components' => 'array'];
     }
 
+    /** Extra core: lo que no es producto ni combo (hora extra, persona adicional, lavandería, upsells). */
+    public function isCoreExtra(): bool
+    {
+        return $this->product_id === null && $this->combo_id === null;
+    }
+
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);

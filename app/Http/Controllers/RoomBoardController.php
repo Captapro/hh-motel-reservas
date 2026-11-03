@@ -183,12 +183,14 @@ class RoomBoardController extends Controller
             ->filter(fn (Booking $b) => $b->isPaidSale());
 
         $addons = $bookings->flatMap(fn (Booking $b) => $b->paidAddons());
+        [$core, $products] = $addons->partition(fn ($addon) => $addon->isCoreExtra());
 
         return [
             'rooms_count' => $bookings->count(),
             'rooms_revenue' => (int) $bookings->sum('price_final'),
-            'extras_count' => (int) $addons->sum('quantity'),
-            'extras_revenue' => (int) $addons->sum('amount'),
+            'extras_count' => (int) $products->sum('quantity'),
+            'extras_revenue' => (int) $products->sum('amount'),
+            'core_revenue' => (int) $core->sum('amount'),
         ];
     }
 
