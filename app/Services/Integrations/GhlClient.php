@@ -156,12 +156,28 @@ class GhlClient
         return $this->http()->get('/opportunities/pipelines', ['locationId' => $this->locationId])->throw()->json('pipelines', []);
     }
 
-    /** Crea una oportunidad y devuelve su ID. */
-    public function createOpportunity(array $data): string
+    /**
+     * Crea una oportunidad y devuelve su ID, o null si GHL no la acepta porque
+     * el contacto ya tiene una en el embudo (la subcuenta no permite duplicadas).
+     */
+    public function createOpportunity(array $data): ?string
     {
-        $response = $this->http()->post('/opportunities/', ['locationId' => $this->locationId, ...$data])->throw();
+        $response = $this->http()->post('/opportunities/', ['locationId' => $this->locationId, ...$data]);
+        if ($response->status() === 400 && $response->json('code') === 'OPPORTUNITY_NO_DUPLICATE') {
+            return null;
+        }
 
-        return (string) $response->json('opportunity.id');
+        return (string) $response->throw()->json('opportunity.id');
+    }
+
+    /** La oportunidad que ya tiene el contacto en ese embudo, si hay. */
+    public function findOpportunity(string $contactId, string $pipelineId): ?string
+    {
+        $found = $this->http()->get('/opportunities/search', [
+            'location_id' => $this->locationId, 'pipeline_id' => $pipelineId, 'contact_id' => $contactId,
+        ])->throw()->json('opportunities.0.id');
+
+        return $found ? (string) $found : null;
     }
 
     public function updateOpportunity(string $opportunityId, array $data): void

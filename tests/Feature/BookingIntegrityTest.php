@@ -441,6 +441,31 @@ class BookingIntegrityTest extends TestCase
             && $r['pipelineStageId'] === 'st-vino' && $r['status'] === 'won');
     }
 
+    public function test_a_returning_customer_keeps_one_ghl_opportunity_that_follows_the_latest_booking(): void
+    {
+        config(['services.ghl.private_token' => 'pit-prueba', 'services.ghl.location_id' => 'loc-prueba', 'services.ghl.opportunities_since' => '2026-09-01']);
+        $stages = collect(GhlOpportunitySync::STAGES)->map(fn ($s, $k) => ['id' => 'st-'.$k, 'name' => $s['name']])->values()->all();
+        Http::fake([
+            'services.leadconnectorhq.com/opportunities/pipelines*' => Http::response(['pipelines' => [['id' => 'p-hh', 'name' => 'Reservas HH', 'stages' => $stages]]]),
+            'services.leadconnectorhq.com/opportunities/search*' => Http::response(['opportunities' => [['id' => 'opp-viejo']]]),
+            'services.leadconnectorhq.com/opportunities/' => Http::response(['statusCode' => 400, 'message' => 'Can not create duplicate opportunity for the contact.', 'code' => 'OPPORTUNITY_NO_DUPLICATE'], 400),
+            'services.leadconnectorhq.com/opportunities/opp-viejo' => Http::response(['ok' => true]),
+        ]);
+        $this->customer->update(['ghl_contact_id' => 'c-123']);
+        $first = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $first->update(['booking_status' => 'FINALIZADA']);
+        $second = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);
+
+        // Ninguna traba el embudo: las dos quedan en la oportunidad que el cliente ya tenía,
+        // y solo la reserva más nueva la actualiza (la vieja no la devuelve a "Vino").
+        $this->assertSame(2, app(GhlOpportunitySync::class)->syncPending());
+        $this->assertSame(['opp-viejo', 'opp-viejo'], [$first->fresh()->ghl_opportunity_id, $second->fresh()->ghl_opportunity_id]);
+        Http::assertSent(fn ($r) => str_contains($r->url(), '/opportunities/search') && $r['contact_id'] === 'c-123' && $r['pipeline_id'] === 'p-hh');
+        $updates = Http::recorded(fn ($r) => $r->method() === 'PUT')->map(fn ($pair) => $pair[0]['pipelineStageId'])->values()->all();
+        $this->assertSame(['st-reservo'], $updates);
+        $this->assertNull(Cache::get(GhlOpportunitySync::ERROR_KEY));
+    }
+
     public function test_attribution_names_the_channel_and_the_catalog_remembers_where_the_visitor_came_from(): void
     {
         $this->assertSame('Meta Ads · HH | MENSAJES', Attribution::labelFor(new TrackingData(['utm_source' => 'meta', 'utm_campaign' => 'HH | MENSAJES'])));

@@ -112,14 +112,30 @@ class GhlOpportunitySync
             'source' => Attribution::sourceOf($booking),
         ];
 
-        if ($booking->ghl_opportunity_id) {
-            $this->client->updateOpportunity($booking->ghl_opportunity_id, $data);
-            $id = $booking->ghl_opportunity_id;
-        } else {
+        $id = $booking->ghl_opportunity_id;
+        $created = false;
+        if (! $id) {
             $id = $this->client->createOpportunity(['contactId' => $contactId, ...$data]);
+            $created = $id !== null;
+            // GHL permite una oportunidad por contacto: el cliente que vuelve
+            // sigue en la suya, que pasa a mostrar su reserva más reciente.
+            $id ??= $this->client->findOpportunity($contactId, $pipeline['id'])
+                ?? throw new RuntimeException('GHL no dejó crear la oportunidad de '.$booking->code.' y el cliente no tiene otra en el embudo.');
+        }
+        if (! $created && ! $this->newerBookingShares($booking, $id)) {
+            $this->client->updateOpportunity($id, $data);
         }
 
         $booking->forceFill(['ghl_opportunity_id' => $id, 'ghl_opportunity_state' => $booking->booking_status])->saveQuietly();
+    }
+
+    /** Una reserva más nueva del mismo cliente ya usa (o usará) esa oportunidad: la vieja no la pisa. */
+    private function newerBookingShares(Booking $booking, string $opportunityId): bool
+    {
+        return Booking::where('customer_id', $booking->customer_id)->where('id', '>', $booking->id)
+            ->where(fn ($q) => $q->where('ghl_opportunity_id', $opportunityId)
+                ->orWhere(fn ($q) => $q->whereNull('ghl_opportunity_id')->where('created_at', '>=', config('services.ghl.opportunities_since'))))
+            ->exists();
     }
 
     private function name(Booking $booking): string
