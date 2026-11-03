@@ -93,6 +93,8 @@ class RoomBoardController extends Controller
      * Pases escaneados con el celular que esperan atención en este computador.
      * El tablero lo consulta cada pocos segundos y muestra el aviso.
      */
+    public const NEW_BOOKING_ALERT_MINUTES = 20;
+
     public function passScans(): JsonResponse
     {
         $recent = PassScans::recent();
@@ -132,7 +134,27 @@ class RoomBoardController extends Controller
             ] : null;
         })->filter()->sortByDesc('at')->values()->all();
 
-        return response()->json(array_merge($paid, $passes));
+        // Reservas nuevas hechas por clientes en el catálogo (últimos 20 minutos):
+        // el tablero las muestra y suena una campanita distinta, una vez por reserva.
+        $fresh = Booking::with(['customer', 'room.category'])
+            ->where('origin', 'catalogo')
+            ->where('created_at', '>=', now()->subMinutes(self::NEW_BOOKING_ALERT_MINUTES))
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
+            ->latest()
+            ->get()
+            ->map(fn ($b) => [
+                'type' => 'nueva',
+                'id' => 'nueva:'.$b->code,
+                'code' => $b->code,
+                'customer' => $b->customer->name,
+                'room' => $b->room->category?->name ?? $b->room->name,
+                'when' => $b->starts_at->timezone('America/Santiago')->locale('es')->isoFormat('ddd D [·] HH:mm'),
+                'paid' => $b->payment_status === 'PAGADA',
+                'amount' => $b->price_final,
+                'url' => route('reservations.show', $b->code),
+            ])->all();
+
+        return response()->json(array_merge($fresh, $paid, $passes));
     }
 
     private function pendingBookings(): Collection

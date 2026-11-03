@@ -168,11 +168,25 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(0, (int) $late->fresh()->discount_amount);
     }
 
+    public function test_a_new_catalog_booking_alerts_the_board_for_twenty_minutes_but_reception_bookings_do_not(): void
+    {
+        Cache::flush();
+        $online = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'created_by' => null]);
+        $this->booking(['starts_at' => Carbon::parse('2026-11-09 12:00'), 'created_by' => auth()->id()]);
+
+        $this->getJson(route('rooms.pass_scans'))->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['type' => 'nueva', 'id' => 'nueva:'.$online->code, 'customer' => 'Cliente de prueba', 'paid' => false, 'amount' => 20000]);
+
+        $this->travel(21)->minutes();
+        $this->getJson(route('rooms.pass_scans'))->assertExactJson([]);
+    }
+
     public function test_pass_qr_verifies_on_the_phone_and_alerts_the_desktop_which_then_goes_to_what_is_pending(): void
     {
         Cache::flush();
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
-        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'created_by' => auth()->id()]);
 
         // Celular: solo verifica el pase, no pide hacer nada ahí.
         $this->get(route('bookings.validate', $booking->code))

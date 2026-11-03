@@ -377,6 +377,8 @@
         .pass-scan.pay-alert .ps-main small { color:#9edaff; }
         .pass-scan.pay-alert.review { background:#3a2a12; border-color:#7a5a1f; border-left-color:#e8a23f; color:#ffe6bd; }
         .pass-scan.pay-alert.review .ps-main small { color:#ffd699; }
+        .pass-scan.new-alert { background:#2b1d0f; border-color:#8a5523; border-left-color:#ff7918; color:#ffe9d6; }
+        .pass-scan.new-alert .ps-main small { color:#ffc08a; }
         .pass-scan .pa-x { background:transparent; border:0; color:inherit; opacity:.7; cursor:pointer; font-size:16px; padding:6px; }
         .pass-scan .pa-x:hover { opacity:1; }
         @keyframes passPulse { 0%,100% { box-shadow:0 0 0 0 rgba(45,212,160,.5); } 50% { box-shadow:0 0 0 8px rgba(45,212,160,0); } }
@@ -835,6 +837,35 @@
                 try { sessionStorage.setItem('hh-dismissed-alerts', JSON.stringify(dismissed().concat(x.dataset.dismiss))); } catch (err) { /* sin almacenamiento */ }
                 x.closest('.pass-scan').remove();
             });
+            // Campanita propia de reserva nueva (do-mi-sol-do), una vez por reserva aunque el
+            // tablero se recargue. Si el navegador aún no deja sonar (nadie tocó la página),
+            // suena al primer toque o tecla.
+            function hhChimeForNewBookings(ids) {
+                let sounded = [];
+                try { sounded = JSON.parse(localStorage.getItem('hh-new-booking-chimed') || '[]'); } catch (e) {}
+                const fresh = ids.filter((id) => !sounded.includes(id));
+                if (!fresh.length) return;
+                try { localStorage.setItem('hh-new-booking-chimed', JSON.stringify(sounded.concat(fresh).slice(-200))); } catch (e) {}
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const play = () => [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+                        const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * 0.16;
+                        osc.type = 'triangle'; osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.0001, at);
+                        gain.gain.exponentialRampToValueAtTime(0.35, at + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, at + (i === 3 ? 0.9 : 0.35));
+                        osc.connect(gain); gain.connect(ctx.destination);
+                        osc.start(at); osc.stop(at + 1);
+                    });
+                    if (ctx.state === 'suspended') {
+                        const unlock = () => { ctx.resume().then(play); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };
+                        document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
+                        ctx.resume().then(() => { if (ctx.state === 'running') { document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); play(); } }).catch(() => {});
+                    } else {
+                        play();
+                    }
+                } catch (e) {}
+            }
             async function poll() {
                 try {
                     const r = await fetch('{{ route('rooms.pass_scans') }}', { headers: { 'Accept': 'application/json' } });
@@ -843,7 +874,10 @@
                     const sig = JSON.stringify(list);
                     if (sig === last) return;
                     last = sig;
-                    box.innerHTML = list.filter((p) => !dismissed().includes(p.id)).map((p) => p.type === 'pago'
+                    hhChimeForNewBookings(list.filter((p) => p.type === 'nueva').map((p) => p.id));
+                    box.innerHTML = list.filter((p) => !dismissed().includes(p.id)).map((p) => p.type === 'nueva'
+                        ? '<div class="pass-scan new-alert"><div class="ps-main"><b>🛎️ Nueva reserva del catálogo — ' + esc(p.customer) + '</b><small>' + esc(p.room) + ' · ' + esc(p.when) + ' · $' + Number(p.amount).toLocaleString('es-CL') + (p.paid ? ' · pagada' : ' · esperando el pago') + ' · ' + esc(p.code) + '</small></div><a href="' + esc(p.url) + '">Ver reserva →</a><button type="button" class="pa-x" data-dismiss="' + esc(p.id) + '" aria-label="Cerrar aviso">✕</button></div>'
+                        : p.type === 'pago'
                         ? '<div class="pass-scan pay-alert' + (p.review ? ' review' : '') + '"><div class="ps-main"><b>💳 Pago recibido — ' + esc(p.customer) + ' · $' + Number(p.amount).toLocaleString('es-CL') + '</b><small>' + esc(p.room) + ' · ' + esc(p.code) + (p.review ? ' · revisa esta reserva: pagó fuera de tiempo o de más' : ' · reserva confirmada') + '</small></div><a href="' + esc(p.url) + '">Ver reserva →</a><button type="button" class="pa-x" data-dismiss="' + esc(p.id) + '" aria-label="Cerrar aviso">✕</button></div>'
                         : '<div class="pass-scan"><div class="ps-main"><b>📲 Pase escaneado — ' + esc(p.customer) + '</b><small>' + esc(p.room) + ' · ' + esc(p.code) + (p.balance > 0 ? ' · falta cobrar $' + Number(p.balance).toLocaleString('es-CL') : ' · pagado') + '</small></div><a href="' + esc(p.url) + '">' + (p.balance > 0 ? 'Cobrar y hacer check-in →' : 'Hacer check-in →') + '</a></div>').join('');
                 } catch (e) { /* sin red: se reintenta */ }
