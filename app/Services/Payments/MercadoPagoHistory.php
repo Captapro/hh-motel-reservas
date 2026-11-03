@@ -87,7 +87,10 @@ class MercadoPagoHistory
         })->sortByDesc('at')->values();
         $rows = $this->matchMachine($this->numberMachine($rows), $from, $to);
 
-        $approved = $rows->where('status', 'approved');
+        // Canal "Otro": movimientos de la cuenta sin máquina ni reserva (no son del
+        // motel y no llegan a su saldo). Se muestran aparte, fuera de los totales.
+        $allApproved = $rows->where('status', 'approved');
+        $approved = $allApproved->where('channel', '!=', 'Otro');
         $mpIds = $rows->pluck('id')->all();
         $missingInMp = $local
             ->filter(fn (Payment $p) => $p->status === 'aprobado' && $p->created_at->between($from, $to) && ! str_contains($p->external_id, '-RESTO-'))
@@ -106,6 +109,8 @@ class MercadoPagoHistory
                 'online' => $approved->where('channel', 'Reserva online')->sum('amount'),
                 'point' => $approved->where('point', true)->sum('amount'),
                 'missing' => $rows->where('missing', true)->count(),
+                'other' => $allApproved->where('channel', 'Otro')->sum('amount'),
+                'other_count' => $allApproved->where('channel', 'Otro')->count(),
             ],
             'missing_in_mp' => $missingInMp,
             'days' => $this->days($rows, $from, $to, $tz),
@@ -193,7 +198,7 @@ class MercadoPagoHistory
 
         return $byDay->keys()->merge($cards->keys())->unique()->sortDesc()->values()
             ->map(function (string $day) use ($byDay, $cards, $tz) {
-                $approved = $byDay->get($day, collect())->where('status', 'approved');
+                $approved = $byDay->get($day, collect())->where('status', 'approved')->where('channel', '!=', 'Otro');
 
                 return [
                     'day' => Carbon::parse($day, $tz),

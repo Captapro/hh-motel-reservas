@@ -578,6 +578,21 @@ class BookingIntegrityTest extends TestCase
         $this->get($link)->assertForbidden();
     }
 
+    public function test_account_movements_without_machine_or_booking_stay_out_of_the_motel_totals(): void
+    {
+        config(['services.mercadopago.access_token' => 'tok']);
+        $this->travelTo(Carbon::parse('2026-11-03 20:00'));
+        Http::fake(['api.mercadopago.com/v1/payments/search*' => Http::response(['paging' => ['total' => 2], 'results' => [
+            ['id' => 1, 'status' => 'approved', 'transaction_amount' => 32000, 'date_approved' => '2026-11-03T18:31:00-03:00', 'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'fee_details' => [['amount' => 605]]],
+            ['id' => 2, 'status' => 'approved', 'transaction_amount' => 79944, 'date_approved' => '2026-11-03T05:17:00-03:00', 'payment_type_id' => 'credit_card', 'external_reference' => '2000015834486205'],
+        ]])]);
+
+        $data = $this->get(route('admin.mercadopago.index', ['mes' => '2026-11']))->assertOk()->assertSee('Otros movimientos de la cuenta')->viewData('data');
+        $this->assertSame([32000, 32000, 79944, 1], [$data['totals']['gross'], $data['totals']['point'], $data['totals']['other'], $data['totals']['other_count']]);
+        $this->assertSame(32000, $data['days']->first()['gross']);
+        $this->assertCount(2, $data['rows']);
+    }
+
     public function test_attribution_names_the_channel_and_the_catalog_remembers_where_the_visitor_came_from(): void
     {
         $this->assertSame('Meta Ads · HH | MENSAJES', Attribution::labelFor(new TrackingData(['utm_source' => 'meta', 'utm_campaign' => 'HH | MENSAJES'])));

@@ -42,11 +42,14 @@
         @endif
 
         <div class="mp-kpis">
-            <div class="card mp-kpi"><div class="k">Cobrado (aprobado)</div><div class="v">{{ $money($t['gross']) }}</div><div class="mp-muted">{{ $t['count'] }} pago(s)</div></div>
+            <div class="card mp-kpi"><div class="k">Cobrado del motel</div><div class="v">{{ $money($t['gross']) }}</div><div class="mp-muted">{{ $t['count'] }} pago(s)</div></div>
             <div class="card mp-kpi"><div class="k">Comisiones MP</div><div class="v">{{ $money($t['fees']) }}</div></div>
             <div class="card mp-kpi"><div class="k">Neto que recibes</div><div class="v">{{ $money($t['net']) }}</div></div>
             <div class="card mp-kpi"><div class="k">Reservas online</div><div class="v">{{ $money($t['online']) }}</div></div>
             <div class="card mp-kpi"><div class="k">Máquina (Point)</div><div class="v">{{ $money($t['point']) }}</div></div>
+            @if ($t['other_count'])
+                <div class="card mp-kpi"><div class="k">Otros movimientos de la cuenta</div><div class="v">{{ $money($t['other']) }}</div><div class="mp-muted">{{ $t['other_count'] }} · no son del motel, no suman arriba</div></div>
+            @endif
             <div class="card mp-kpi"><div class="k">Faltan en el sistema</div><div class="v {{ $t['missing'] ? 'bad' : '' }}">{{ $t['missing'] }}</div></div>
         </div>
 
@@ -63,7 +66,7 @@
                 </div>
             </div>
             @php $approvedRows = $data['rows']->where('status', 'approved'); @endphp
-            <p class="sub" style="margin:0 0 8px;">{{ $data['rows']->count() }} movimiento(s) · aprobado {{ $money($approvedRows->sum('amount')) }} · neto {{ $money($approvedRows->sum('net')) }} · <a class="link" href="{{ route('cash.show', $day->toDateString()) }}">ver caja del día</a></p>
+            <p class="sub" style="margin:0 0 8px;">{{ $data['rows']->count() }} movimiento(s) · motel {{ $money($approvedRows->where('channel', '!=', 'Otro')->sum('amount')) }} · neto {{ $money($approvedRows->where('channel', '!=', 'Otro')->sum('net')) }} · <a class="link" href="{{ route('cash.show', $day->toDateString()) }}">ver caja del día</a></p>
             @if ($data['rows']->isEmpty())
                 <p class="sub" style="margin:0;">No hay pagos ese día.</p>
             @else
