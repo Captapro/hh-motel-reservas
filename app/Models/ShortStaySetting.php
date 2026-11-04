@@ -15,7 +15,11 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class ShortStaySetting extends Model
 {
+    /** Minutos que quedan para el cierre (hasta) => % de descuento. Nunca más de 25%. */
+    public const TIERS = [90 => 25, 120 => 15, 151 => 10];
+
     public const MODES = [
+        'tramos' => 'Descuento por tramos (10%, 15% y 25%)',
         'proporcional' => 'Proporcional al tiempo que queda (con piso)',
         'porcentaje' => 'Porcentaje fijo del precio',
     ];
@@ -39,6 +43,17 @@ class ShortStaySetting extends Model
         // Recién creada solo trae el id: se recarga para tener los valores
         // por defecto de la tabla (si no, "enabled" queda null = apagada).
         return $setting->wasRecentlyCreated ? $setting->refresh() : $setting;
+    }
+
+    public function discountForMinutes(int $minutes): int
+    {
+        foreach (self::TIERS as $upTo => $percent) {
+            if ($minutes <= $upTo) {
+                return $percent;
+            }
+        }
+
+        return 0;
     }
 
     /** ¿Se ofrece por este canal ('recepcion' o 'catalogo')? */

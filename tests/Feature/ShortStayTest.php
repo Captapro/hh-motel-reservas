@@ -175,4 +175,20 @@ class ShortStayTest extends TestCase
         $this->assertNull($pricer->quote($this->room, $start, 180, 'catalogo'));
         $this->assertNull($pricer->quote($this->room, $start, 180, 'recepcion'));
     }
+
+    public function test_discount_tiers_by_time_left_to_closing(): void
+    {
+        ShortStaySetting::current()->update(['min_minutes' => 60, 'max_minutes' => 170, 'pricing_mode' => 'tramos']);
+        $quote = fn (string $at) => app(ShortStayPricer::class)->quote($this->room, Carbon::parse($at), 180);
+
+        // Cierre 03:00, mínimo 3 h a $20.000.
+        $this->assertSame(20000, $quote('2026-10-06 00:05')['price']);  // 2h55: sin descuento
+        $this->assertSame(18000, $quote('2026-10-06 00:29')['price']);  // 2h31: 10%
+        $this->assertSame(18000, $quote('2026-10-06 00:45')['price']);  // 2h15: 10%
+        $this->assertSame(17000, $quote('2026-10-06 01:00')['price']);  // 2h: 15%
+        $this->assertSame(17000, $quote('2026-10-06 01:15')['price']);  // 1h45: 15%
+        $this->assertSame(15000, $quote('2026-10-06 01:30')['price']);  // 1h30: 25%
+        $this->assertSame(15000, $quote('2026-10-06 02:00')['price']);  // 1h: 25%, el máximo
+        $this->assertNull($quote('2026-10-06 02:05'));                  // menos de 1 h: no se vende
+    }
 }

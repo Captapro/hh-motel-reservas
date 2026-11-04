@@ -122,7 +122,8 @@
         .cat-filter button[data-cat="max"]  { --dot:#f2994a; }
         .cat-filter button[data-cat="new-lite"] { --dot:#e8c76f; }
         .cat-filter button:hover { border-color:#9a9da3; color:#202124; }
-        .cat-filter button.active { background:#fff; border-color:#202124; color:#202124; box-shadow:0 1px 3px #10111214; }
+        /* Marcado de verdad: fondo oscuro y letra blanca, para que nadie deje un filtro puesto sin darse cuenta. */
+        .cat-filter button.active, .cat-filter button.active:hover { background:#202124; border-color:#202124; color:#fff; font-weight:700; box-shadow:0 0 0 2px #ff7918; }
         .cat-hidden { display:none !important; }
         .cat-filter .upcoming-filter svg { width:14px; height:14px; flex:none; }
 

@@ -73,7 +73,7 @@ Pasos:
 5. Botón "Crear reserva" o, en ingreso, "Crear, cobrar y hacer check-in →". En ingreso presencial, si no cargaste consumo, aparece "💡 ¿Le ofreciste algo al cliente?" con upsells (subir de categoría, más tiempo): "Agregar lo elegido y crear reserva" o "El cliente no quiere nada — crear igual".
 6. Si queda saldo, el sistema te lleva a "Registrar pago" (sección 7). En ingreso presencial, después sigue el check-in.
 
-**Estadía corta por cierre**: si la hora más la duración mínima pasa del cierre y quedan entre 30 y 90 minutos (valores por defecto), aparece "⏱ Estadía corta por cierre" con precio proporcional y salida al cierre. Hay que marcar "El cliente acepta salir a las HH:MM". No suma ofertas ni cupones y no admite tiempo extra.
+**Estadía corta por cierre**: si la hora más la duración mínima pasa del cierre, el sistema ofrece salir a la hora de cierre con descuento según lo que queda: hasta 2h 31min, 10%; hasta 2h, 15%; hasta 1h 30min, 25% (el máximo). Con más de 2h 31min se paga el precio completo. Con menos de 1 hora ya no se vende. En el Resumen hay que marcar "El cliente acepta salir a las HH:MM". No suma ofertas ni cupones y no admite tiempo extra.
 
 Errores comunes:
 - "Cliente bloqueado en lista negra. Revisar con administración antes de reservar." → no se vende; avisa al administrador.

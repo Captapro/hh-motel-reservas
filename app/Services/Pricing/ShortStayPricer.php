@@ -65,16 +65,19 @@ class ShortStayPricer
         if (! $shortest
             || (int) $shortest->duration_minutes !== $durationMinutes
             || $minutes < $settings->min_minutes
-            || $minutes > $settings->max_minutes
+            // Los tramos cubren todo el tiempo que no alcanza para la estadía completa.
+            || ($settings->pricing_mode !== 'tramos' && $minutes > $settings->max_minutes)
             || $minutes >= $durationMinutes) {
             return null;
         }
 
         $full = (int) $shortest->price;
         $byPercent = (int) (ceil($full * $settings->percent / 100 / 100) * 100);
-        $price = $settings->pricing_mode === 'porcentaje'
-            ? $byPercent
-            : max((int) (ceil($full * $minutes / $durationMinutes / 100) * 100), $byPercent);
+        $price = match ($settings->pricing_mode) {
+            'tramos' => (int) (ceil($full * (100 - $settings->discountForMinutes($minutes)) / 100 / 100) * 100),
+            'porcentaje' => $byPercent,
+            default => max((int) (ceil($full * $minutes / $durationMinutes / 100) * 100), $byPercent),
+        };
 
         return [
             'rate_rule' => $status['rate_rule'],

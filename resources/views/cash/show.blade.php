@@ -55,6 +55,10 @@
         .move-form { display:grid; grid-template-columns: 140px minmax(0,1fr) auto; gap:8px; margin:8px 0 6px; }
         @media (max-width: 560px) { .move-form { grid-template-columns: minmax(0,1fr); } }
         .move-form[hidden] { display:none; }
+        .pending-receipts { margin-bottom:14px; border-color:#c98a1b; }
+        .pending-row { display:grid; grid-template-columns: 90px 130px minmax(0,1fr) auto; gap:10px; padding:7px 0; border-top:1px solid #262626; color:inherit; text-decoration:none; font-size:13.5px; }
+        .pending-row:hover .code { text-decoration:underline; }
+        .pending-row .code { color:#ff7918; }
         .panel details.more { margin-top:10px; font-size:13px; border-top:1px solid #262626; padding-top:8px; }
         .panel details.more summary { cursor:pointer; color:#aaa; font-weight:600; }
         input, select { width:100%; box-sizing:border-box; background:#141414; border:1px solid #333; color:#fff; padding:10px 12px; border-radius:7px; font-size:14px; font-family:inherit; }
@@ -128,6 +132,20 @@
             <div class="note">efectivo que salió este día</div>
         </div>
     </div>
+
+    @if ($pendingReceipts->isNotEmpty())
+        <div class="panel pending-receipts">
+            <h3>Boletas por ingresar ({{ $pendingReceipts->count() }})</h3>
+            @foreach ($pendingReceipts as $payment)
+                <a class="pending-row" href="{{ route('reservations.show', $payment->booking->code) }}">
+                    <span>{{ $payment->created_at->timezone('America/Santiago')->format('d/m H:i') }}</span>
+                    <span>{{ $payment->booking->room->name ?? '—' }}</span>
+                    <span class="code">{{ $payment->booking->code }}</span>
+                    <b>{{ $m($payment->amount) }}</b>
+                </a>
+            @endforeach
+        </div>
+    @endif
 
     <div class="cols">
         <div class="col">

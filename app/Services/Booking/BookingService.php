@@ -98,7 +98,7 @@ class BookingService
         $this->assertCapacity($room, (int) $data['guests_count']);
 
         // Estadía corta por cierre (recepción o catálogo, según las reglas de Administración): sale a la hora de
-        // cierre con precio proporcional. Si con la hora elegida ya no hace
+        // cierre con precio rebajado. Si con la hora elegida ya no hace
         // falta (cabe completa), sigue como reserva normal.
         $short = ! empty($data['short_stay']) ? $this->shortStayPricer->quote($room, $startsAt, $durationMinutes, ($data['created_by'] ?? null) ? 'recepcion' : 'catalogo') : null;
         if ($short) {

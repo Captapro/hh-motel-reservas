@@ -66,6 +66,11 @@
             </div>
         </div>
 
+        <div class="ss-example" id="ss-tiers" hidden>
+            <b>Descuento por tramos</b>, según lo que queda para el cierre (categoría con mínimo de 3 h):
+            hasta 2h 31min: <b>10%</b> · hasta 2h: <b>15%</b> · hasta 1h 30min: <b>25%</b>, el máximo.
+            Con más de 2h 31min se cobra el precio completo y sale al cierre. Con menos del tiempo mínimo ya no se vende.
+        </div>
         <div class="ss-example" id="ss-example"></div>
 
         <div class="actions" style="margin-top:20px;">
@@ -83,6 +88,11 @@
                 const max = Number($('ss-max').value) || 0;
                 const pct = Number($('ss-percent').value) || 0;
                 const prop = $('ss-mode').value === 'proporcional';
+                const tiers = $('ss-mode').value === 'tramos';
+                $('ss-tiers').hidden = !tiers;
+                $('ss-example').hidden = tiers;
+                $('ss-percent').closest('div').style.display = tiers ? 'none' : '';
+                $('ss-max').closest('div').style.display = tiers ? 'none' : '';
                 $('ss-percent-label').textContent = prop ? 'Precio mínimo (% del precio)' : 'Precio (% del precio)';
                 $('ss-percent-hint').textContent = prop ? 'Piso: nunca cobra menos que este porcentaje.' : 'Siempre se cobra este porcentaje, quede el tiempo que quede.';
                 // Ejemplo con una tarifa mínima de 3 h a $30.000 y el máximo de tiempo configurado.

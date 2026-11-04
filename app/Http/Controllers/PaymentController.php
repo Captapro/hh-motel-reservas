@@ -48,9 +48,14 @@ class PaymentController extends Controller
         // Efectivo/transferencia solo traen boleta; débito/crédito solo
         // traen voucher -- no tiene sentido pedir el otro. Para medios sin
         // esta convención clara (Mercado Pago, Otro) basta con uno de los
-        // dos, como antes.
+        // dos, como antes. En efectivo la boleta puede venir después, porque
+        // el SII demora: queda en la lista de pendientes de la Caja.
         $referenceRules = match ($method->code) {
-            'efectivo', 'transferencia' => [
+            'efectivo' => [
+                'receipt_number' => ['nullable', 'string', 'max:100'],
+                'voucher_number' => ['nullable', 'string', 'max:100'],
+            ],
+            'transferencia' => [
                 'receipt_number' => ['required', 'string', 'max:100'],
                 'voucher_number' => ['nullable', 'string', 'max:100'],
             ],

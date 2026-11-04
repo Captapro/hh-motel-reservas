@@ -235,7 +235,8 @@
 
                 document.getElementById('doc-grid').classList.toggle('doc-single', cashLike || cardLike);
                 title.textContent = cashLike ? 'N° de boleta' : cardLike ? 'N° de voucher' : 'Comprobante';
-                hint.textContent = cashLike ? 'Es el número de la boleta que entregas al cliente.'
+                hint.textContent = code === 'efectivo' ? 'Si el SII aún no la entrega, déjalo vacío y agrégalo después: queda pendiente en la Caja.'
+                    : cashLike ? 'Es el número de la boleta que entregas al cliente.'
                     : cardLike ? 'Es el número que sale en el voucher del POS.'
                     : 'Escribe el N° de voucher o el de boleta: basta con uno.';
             }
