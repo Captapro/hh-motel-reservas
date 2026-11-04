@@ -419,7 +419,7 @@
             @if (auth()->user()->isAdministrador() && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW'], true))
                 @php $tzReal = 'America/Santiago'; @endphp
                 <details style="margin:0 0 12px;" @if ($errors->has('checked_in_at') || $errors->has('checked_out_at')) open @endif>
-                    <summary style="cursor:pointer; color:#aaa; font-size:13px;">Corregir horas reales (administrador)</summary>
+                    <summary style="display:inline-block; cursor:pointer; padding:8px 14px; border:1px solid #ff7918; border-radius:8px; background:#fff; color:#c2410c; font-size:13px; font-weight:700;">Corregir horas reales (administrador)</summary>
                     <form method="POST" action="{{ route('bookings.real_times', $booking->code) }}" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-top:10px;">
                         @csrf
                         <label style="font-size:12px;">Entró<br><input type="datetime-local" name="checked_in_at" required value="{{ old('checked_in_at', ($booking->checked_in_at ?? $booking->starts_at)->copy()->timezone($tzReal)->format('Y-m-d\TH:i')) }}"></label>
