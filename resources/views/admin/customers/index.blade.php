@@ -22,6 +22,9 @@
 
     <h1>Clientes</h1>
     <p class="sub">Historial de estadías y recurrencia — para identificar a quién vale la pena fidelizar o reactivar.</p>
+    @if ($idScans['total'])
+        <p class="sub">Lector de carnet, últimos 14 días: <b>{{ $idScans['total'] }}</b> lecturas · <b>{{ $idScans['known'] }}</b> con nombre automático ({{ round($idScans['known'] / $idScans['total'] * 100) }}%) · <b>{{ $idScans['new'] }}</b> personas nuevas para escribir.</p>
+    @endif
 
     <section class="card segment-guide">
         <h2>¿Cómo se clasifica cada cliente?</h2>

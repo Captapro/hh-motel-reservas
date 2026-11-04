@@ -1330,6 +1330,21 @@
                     if (!r.ok) return;
                     const d = await r.json();
                     if (d.found) {
+                        applyFound(d);
+                    } else {
+                        if (autofilled) {
+                            fn.value = ''; ln.value = ''; em.value = '';
+                            docType.value = ''; docNumber.value = ''; hhSyncDocField();
+                            hhSetNationality('Chilena'); hhSetBirthDate('');
+                            autofilled = false;
+                        }
+                        showBadge('nuevo', 'Cliente nuevo — no hay nadie con este número. Completa los datos.');
+                        showEditableFields();
+                    }
+                } catch (e) { /* silencioso: si falla la búsqueda, se carga a mano */ }
+            }
+
+            function applyFound(d) {
                         fn.value = d.first_name || fn.value;
                         ln.value = d.last_name || ln.value;
                         em.value = d.email || em.value;
@@ -1368,18 +1383,59 @@
                             html += ' · <a href="' + d.history_url + '" target="_blank" style="color:inherit;text-decoration:underline;">ver historial</a>';
                         }
                         showBadge('known' + (hot ? ' hot' : ''), html);
-                    } else {
-                        if (autofilled) {
-                            fn.value = ''; ln.value = ''; em.value = '';
-                            docType.value = ''; docNumber.value = ''; hhSyncDocField();
-                            hhSetNationality('Chilena'); hhSetBirthDate('');
-                            autofilled = false;
-                        }
-                        showBadge('nuevo', 'Cliente nuevo — no hay nadie con este número. Completa los datos.');
-                        showEditableFields();
-                    }
-                } catch (e) { /* silencioso: si falla la búsqueda, se carga a mano */ }
             }
+
+            // Lector de carnet: el QR trae RUN y fechas, no el nombre. Si el
+            // RUT ya está en la base se carga su ficha; si no, se escribe a mano.
+            function fillFromCard(card) {
+                hhDocTypeTouched = true;
+                docType.value = 'rut';
+                hhSyncDocField();
+                docNumber.value = hhRutFormat(card.rut);
+                hhValidateDocNumber();
+                if (!card.foreigner) hhSetNationality('Chilena');
+                if (card.birthDate) { hhSetBirthDate(card.birthDate); hhQuotePrice(); }
+            }
+            let holderFromCard = false;
+            document.addEventListener('hh:id-scan', async function (e) {
+                const card = e.detail;
+                const rut = card.rut.replace('-', '');
+                const previousDoc = docNumber.value.replace(/[^0-9kK]/g, '').toUpperCase();
+
+                // En el ingreso presencial, con el titular listo, el que sigue es acompañante.
+                if ({{ $walkInMode ? 'true' : 'false' }} && previousDoc && previousDoc !== rut && hhRutIsValid(docNumber.value)) {
+                    hhIdScan.addGuest(card, await hhIdScan.lookup(card.rut), hhAddGuestRow);
+                    return;
+                }
+
+                // Otra persona: no dejar los datos de la ficha anterior.
+                const otherPerson = previousDoc ? (autofilled || holderFromCard) && previousDoc !== rut : holderFromCard;
+                if (otherPerson) {
+                    fn.value = ''; ln.value = ''; em.value = ''; phone.value = '';
+                    lastQuery = ''; badge.hidden = true; autofilled = false;
+                }
+                holderFromCard = true;
+                fillFromCard(card);
+
+                const d = await hhIdScan.lookup(card.rut);
+                if (d && d.found) {
+                    if (d.phone) { phone.value = d.phone; lastQuery = d.phone; }
+                    applyFound(d);
+                    fillFromCard(card); // lo que dice el carnet manda sobre la ficha
+                    hhIdScan.report(card);
+                    return;
+                }
+                showEditableFields();
+                if (d && d.first_name) {
+                    fn.value = d.first_name;
+                    ln.value = d.last_name || '';
+                    if (!phone.value) phone.focus();
+                    hhIdScan.report(card, 'Revisa el nombre y agrega el teléfono.');
+                    return;
+                }
+                if (!fn.value) fn.focus();
+                hhIdScan.report(card, 'Cliente nuevo: escribe nombre, apellido y teléfono.');
+            });
 
             phone.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(lookup, 400); });
             phone.addEventListener('change', lookup);
@@ -1840,5 +1896,6 @@
         })();
     </script>
 @include('partials.combo-choices')
+    @include('partials.name-suggest')
 </body>
 </html>

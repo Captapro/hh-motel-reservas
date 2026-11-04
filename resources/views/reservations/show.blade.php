@@ -437,7 +437,7 @@
                 <a class="checkin-btn" href="{{ route('bookings.checkin.show', $booking->code) }}">Marcar check-in — ofrecer consumo →</a>
             @endif
 
-            @if ($booking->guests->isNotEmpty())
+            @if ($booking->guests->isNotEmpty() && $booking->guestsVisibleTo(auth()->user()))
                 <div class="card">
                     <div class="row" style="border-bottom:none; padding-bottom:4px;"><span class="muted">Acompañantes</span><span></span></div>
                     <ul class="guests">

@@ -54,7 +54,17 @@ class CustomerController extends Controller
             ? app(HistoricalCustomerAnalysis::class)->forDocuments($customers->pluck('rut'))
             : collect();
 
-        return view('admin.customers.index', ['historical' => $historical, 'customers' => $customers, 'query' => $query, 'segmentFilter' => $segmentFilter, 'segmentRules' => CustomerSegmentRule::orderBy('display_order')->get()]);
+        return view('admin.customers.index', ['idScans' => $this->idScanStats(), 'historical' => $historical, 'customers' => $customers, 'query' => $query, 'segmentFilter' => $segmentFilter, 'segmentRules' => CustomerSegmentRule::orderBy('display_order')->get()]);
+    }
+
+    /** Lecturas de carnet de los últimos 14 días: cuántas traen el nombre y cuántas hay que escribir. */
+    private function idScanStats(): array
+    {
+        $sources = AuditLog::where('action', 'carnet.escaneo')->where('created_at', '>=', now()->subDays(14))
+            ->get(['new_value'])->countBy(fn (AuditLog $log) => $log->new_value['source'] ?? 'nuevo');
+        $total = $sources->sum();
+
+        return ['total' => $total, 'known' => $total - ($sources['nuevo'] ?? 0), 'new' => $sources['nuevo'] ?? 0];
     }
 
     public function updateRules(Request $request): RedirectResponse

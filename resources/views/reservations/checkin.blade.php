@@ -580,5 +580,31 @@
             }, 3000);
         })();
     </script>
+    <script>
+        // Lector de carnet: el primero completa el documento del titular si le
+        // falta; el carnet de otra persona va a la lista de acompañantes.
+        document.addEventListener('hh:id-scan', async function (e) {
+            const card = e.detail;
+            const holderRut = @json($booking->customer->rut);
+            const number = document.querySelector('[name="holder_document_number"]');
+            const person = await hhIdScan.lookup(card.rut);
+
+            if (number && !number.value.trim()) {
+                document.querySelector('[name="holder_document_type"]').value = 'rut';
+                number.value = card.rut;
+                const nationality = document.querySelector('[name="holder_nationality"]');
+                if (nationality && !card.foreigner) nationality.value = 'Chilena';
+                hhIdScan.report(card);
+                return;
+            }
+            if (card.rut === holderRut || (number && number.value.replace(/\./g, '').toUpperCase() === card.rut)) {
+                hhIdScan.report(card, 'Es el titular de la reserva.');
+                return;
+            }
+            hhIdScan.addGuest(card, person, null);
+            hhSyncGuestNames();
+        });
+    </script>
+    @include('partials.name-suggest')
 </body>
 </html>

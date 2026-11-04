@@ -38,7 +38,7 @@
     <dt>{{ $docLabel }}</dt><dd>{{ $c->documentNumber() ?: '—' }}</dd>
     <dt>Nacionalidad</dt><dd>{{ $c->nationality ?: '—' }}</dd>
 </dl>
-@if ($booking->guests->isNotEmpty())
+@if ($booking->guests->isNotEmpty() && $booking->guestsVisibleTo(auth()->user()))
     <div class="sd-sec">Acompañantes</div>
     <ul class="sd-list">
         @foreach ($booking->guests as $g)

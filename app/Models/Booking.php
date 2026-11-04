@@ -166,6 +166,19 @@ class Booking extends Model
         return $this->hasMany(BookingGuest::class);
     }
 
+    /**
+     * Discreción: recepción ve a los acompañantes solo mientras dura la estadía.
+     * Con quién vino alguien antes lo ve únicamente administración.
+     */
+    public function guestsVisibleTo(?User $user): bool
+    {
+        if ($user?->isAdministrador()) {
+            return true;
+        }
+
+        return ! $this->checked_out_at && ! in_array($this->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'], true);
+    }
+
     public function addons(): HasMany
     {
         return $this->hasMany(BookingAddon::class);

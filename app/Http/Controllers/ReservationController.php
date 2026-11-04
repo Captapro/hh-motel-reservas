@@ -7,6 +7,8 @@ use App\Exceptions\InvalidCouponException;
 use App\Exceptions\PricingException;
 use App\Exceptions\RoomNotAvailableException;
 use App\Models\AuditLog;
+use App\Models\BookingGuest;
+use App\Models\HistoricalGuest;
 use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Coupon;
@@ -592,11 +594,30 @@ class ReservationController extends Controller
     {
         $raw = (string) $request->query('phone', '');
 
-        if (! Phone::looksComplete($raw)) {
+        $rut = (string) $request->query('rut', '');
+
+        if ($rut !== '') {
+            $rut = Rut::isValid($rut) ? Rut::normalize($rut) : '';
+            $customer = $rut !== '' ? Customer::where('rut', $rut)->first() : null;
+
+            if (! $customer) {
+                // El QR del carnet no trae el nombre: se busca en visitas anteriores.
+                $known = $rut !== '' ? $this->nameFromPastVisits($rut) : null;
+                $this->countIdScan($request, $known['source'] ?? 'nuevo');
+
+                if (! $known) {
+                    return response()->json(['found' => false]);
+                }
+                $parts = preg_split('/\s+/', trim($known['name']), 2);
+
+                return response()->json(['found' => false, 'first_name' => $parts[0] ?? '', 'last_name' => $parts[1] ?? '']);
+            }
+            $this->countIdScan($request, 'cliente');
+        } elseif (Phone::looksComplete($raw)) {
+            $customer = Customer::where('phone_e164', Phone::toE164($raw))->first();
+        } else {
             return response()->json(['found' => false]);
         }
-
-        $customer = Customer::where('phone_e164', Phone::toE164($raw))->first();
 
         if (! $customer) {
             return response()->json(['found' => false]);
@@ -607,6 +628,7 @@ class ReservationController extends Controller
 
         return response()->json([
             'found' => true,
+            'phone' => $customer->phone_e164,
             'first_name' => $parts[0] ?? '',
             'last_name' => $parts[1] ?? '',
             'email' => $customer->email,
@@ -621,6 +643,40 @@ class ReservationController extends Controller
             'nationality' => $customer->nationality,
             'birth_date' => $customer->birth_date?->toDateString(),
         ]);
+    }
+
+    /**
+     * Nombre de quien vino antes sin ficha de cliente: como acompañante en el
+     * sistema o en las planillas. Solo el nombre, nada de su historial.
+     *
+     * @return array{name: string, source: string}|null
+     */
+    private function nameFromPastVisits(string $rut): ?array
+    {
+        $guest = BookingGuest::whereRaw("replace(replace(upper(id_document), '.', ''), ' ', '') = ?", [$rut])->latest('id')->value('name');
+        if ($guest) {
+            return ['name' => $guest, 'source' => 'acompanante'];
+        }
+
+        $planilla = HistoricalGuest::where('document', $rut)->where('document_kind', 'rut')
+            ->whereNotNull('name')->where('name', '!=', '')->latest('id')->value('name');
+        if (! $planilla) {
+            return null;
+        }
+
+        // Las planillas a veces vienen en mayúsculas.
+        return [
+            'name' => $planilla === mb_strtoupper($planilla) ? mb_convert_case(mb_strtolower($planilla), MB_CASE_TITLE) : $planilla,
+            'source' => 'planilla',
+        ];
+    }
+
+    /** Cuenta la lectura para medir cuántos carnets se reconocen; sin guardar el RUT. */
+    private function countIdScan(Request $request, string $source): void
+    {
+        if ($request->boolean('scan')) {
+            AuditLog::record(auth()->id(), 'carnet.escaneo', 'IdScan', 0, null, ['source' => $source]);
+        }
     }
 
     public function show(string $code): View

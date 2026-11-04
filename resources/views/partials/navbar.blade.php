@@ -159,3 +159,6 @@
     @endif
 </div>
 @include('partials.help-widget')
+@auth
+    @include('partials.id-scanner')
+@endauth

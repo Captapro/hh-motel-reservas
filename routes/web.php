@@ -74,6 +74,7 @@ use App\Http\Controllers\ShiftHandoverController;
 use App\Http\Controllers\ShiftRoundController;
 use App\Http\Controllers\TvScreenController;
 use App\Http\Middleware\CaptureAttribution;
+use App\Services\Customers\NameSuggestions;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -158,6 +159,7 @@ Route::middleware(['auth', 'section'])->group(function () {
 
     Route::get('/reservar', [ReservationController::class, 'create'])->name('reservations.create');
     Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1,customers.lookup')->name('customers.lookup');
+    Route::get('/clientes/nombres', fn (NameSuggestions $names) => response()->json($names->lists())->header('Cache-Control', 'private, max-age=3600'))->name('customers.names');
     Route::get('/reservar/precio', [ReservationController::class, 'priceQuote'])->middleware('throttle:80,1,reservations.price')->name('reservations.price');
     Route::get('/buscar', [ReservationSearchController::class, 'index'])->name('reservations.search');
     Route::get('/calendario', [CalendarController::class, 'index'])->name('calendar.index');

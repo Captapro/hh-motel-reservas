@@ -11,6 +11,7 @@ use App\Http\Controllers\RoomBoardController;
 use App\Http\Middleware\CaptureAttribution;
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Models\BookingGuest;
 use App\Models\CoreExtra;
 use App\Models\Coupon;
 use App\Models\CouponProof;
@@ -38,6 +39,7 @@ use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\CouponProofs;
 use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
+use App\Services\Customers\NameSuggestions;
 use App\Services\Historical\HistoricalSalesImporter;
 use App\Services\Integrations\CustomerActivityTags;
 use App\Services\Integrations\GhlAbandonedBookings;
@@ -2554,5 +2556,69 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(['2026-09'], $result['months']->map(fn ($m) => $m['month']->format('Y-m'))->all());
 
         $this->get(route('sales.monthly', '2026-10'))->assertOk()->assertSee('Promedio por día de la semana vs. meses anteriores')->assertSee('+66,7%');
+    }
+
+    public function test_customer_lookup_by_rut_for_the_id_scanner(): void
+    {
+        $this->createSegmentRulesTable();
+
+        $this->get(route('customers.lookup', ['rut' => '11.111.111-1']))
+            ->assertOk()
+            ->assertJson(['found' => true, 'phone' => '+56911111111', 'first_name' => 'Cliente']);
+
+        $this->get(route('customers.lookup', ['rut' => '22222222-2']))->assertOk()->assertJson(['found' => false]);
+        $this->get(route('customers.lookup', ['rut' => '11111111-2']))->assertOk()->assertJson(['found' => false]);
+        $this->get(route('customers.lookup', ['phone' => '+56911111111']))->assertOk()->assertJson(['found' => true]);
+
+        // Sin ficha: el nombre sale de las planillas (solo el nombre) y la lectura se cuenta sin guardar el RUT.
+        $saleId = DB::table('historical_sales')->insertGetId(['source' => 'resumen-junio', 'source_row' => 1, 'sold_on' => '2026-06-12', 'sale_type' => 'ALOJAMIENTO', 'amount_main' => 30000]);
+        DB::table('historical_guests')->insert(['historical_sale_id' => $saleId, 'name' => 'ANA MARÍA SOTO', 'document' => '12345678-5', 'document_kind' => 'rut']);
+
+        $this->get(route('customers.lookup', ['rut' => '12.345.678-5', 'scan' => 1]))
+            ->assertOk()
+            ->assertExactJson(['found' => false, 'first_name' => 'Ana', 'last_name' => 'María Soto']);
+        $this->get(route('customers.lookup', ['rut' => '22222222-2', 'scan' => 1]))->assertExactJson(['found' => false]);
+
+        $this->assertSame(['planilla', 'nuevo'], AuditLog::where('action', 'carnet.escaneo')->orderBy('id')->get()->map(fn ($log) => $log->new_value['source'])->all());
+        $this->assertStringNotContainsString('12345678', AuditLog::where('action', 'carnet.escaneo')->get()->toJson());
+    }
+
+    public function test_name_suggestions_are_loose_words_seen_more_than_once(): void
+    {
+        $lists = app(NameSuggestions::class)->build(collect([
+            'MARÍA GONZALEZ', 'María Soto', 'Juan Carlos González Rojas', 'Juan Soto Rojas', 'Ana De La Fuente', 'X', 'Pedro 123',
+        ]));
+
+        $this->assertSame(['María', 'Juan'], $lists['first']);
+        $this->assertSame(['González', 'Soto', 'Rojas'], $lists['last']);
+
+        $this->get(route('customers.names'))->assertOk()->assertJsonStructure(['first', 'last']);
+    }
+
+    private function createSegmentRulesTable(): void
+    {
+        Schema::create('customer_segment_rules', function ($t) {
+            $t->id();
+            $t->string('segment');
+            $t->integer('minimum_stays')->default(0);
+            $t->integer('stars')->default(0);
+        });
+    }
+
+    public function test_reception_only_sees_companions_during_the_stay(): void
+    {
+        $this->createSegmentRulesTable();
+        $booking = $this->booking();
+        BookingGuest::create(['booking_id' => $booking->id, 'name' => 'Persona Reservada', 'id_document' => '22222222-2']);
+        $host = User::factory()->create(['role' => 'recepcion']);
+        $admin = User::factory()->create(['role' => 'administrador']);
+
+        $this->actingAs($host)->get(route('reservations.show', $booking->code))->assertOk()->assertSee('Persona Reservada');
+
+        $booking->update(['booking_status' => 'FINALIZADA', 'checked_out_at' => now()]);
+
+        $this->actingAs($host)->get(route('reservations.show', $booking->code))->assertOk()
+            ->assertDontSee('Persona Reservada')->assertDontSee('22222222-2');
+        $this->actingAs($admin)->get(route('reservations.show', $booking->code))->assertOk()->assertSee('Persona Reservada');
     }
 }
