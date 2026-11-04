@@ -635,6 +635,7 @@
                 <div class="section-head"><h2>Fuera de servicio</h2><span class="count">{{ $grouped['fuera_de_servicio']->count() }}</span></div>
                 <div class="sidebar-empty panel-empty" @if ($grouped['fuera_de_servicio']->isNotEmpty()) hidden @endif>Ningún Playroom fuera de servicio.</div>
                 @if ($grouped['fuera_de_servicio']->isNotEmpty())
+                    <p class="section-empty" style="margin-bottom:8px;">No se ofrecen hasta volver a activarlos.</p>
                     <div class="grid">
                         @foreach ($grouped['fuera_de_servicio'] as $entry)
                             @include('rooms._card', ['entry' => $entry])
