@@ -173,6 +173,7 @@ Route::post('/vista-anfitrion/salir', function (Request $request) {
 Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::get('/panel', [AdminAppController::class, 'index'])->name('admin_app.index');
     Route::get('/panel/pulso', [AdminAppController::class, 'pulse'])->name('admin_app.pulse');
+    Route::post('/panel/push', [AdminAppController::class, 'subscribe'])->middleware('throttle:10,1,admin_app.push')->name('admin_app.push');
     Route::post('/panel/avisos', [AdminAppController::class, 'notify'])->middleware('throttle:20,1,admin_app.notify')->name('admin_app.notify');
 });
 

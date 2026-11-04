@@ -107,6 +107,12 @@ return [
     ],
 
     // Analista de ventas (IA). Sin ANTHROPIC_API_KEY la sección avisa que falta configurarla.
+    'webpush' => [
+        'public_key' => env('WEBPUSH_PUBLIC_KEY'),
+        'private_key' => env('WEBPUSH_PRIVATE_KEY'),
+        'subject' => env('WEBPUSH_SUBJECT', 'mailto:hhmotel334@gmail.com'),
+    ],
+
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY', ''),
         'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),

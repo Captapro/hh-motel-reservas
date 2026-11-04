@@ -58,6 +58,7 @@ class RoomAseoReactivationTest extends TestCase
             '2026_11_04_130000_add_room_cleanings_and_note_staff.php',
             '2026_11_04_140000_add_ronda_pin_to_users.php',
             '2026_11_04_150000_create_staff_notices_tables.php',
+            '2026_11_04_160000_create_push_subscriptions_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
@@ -458,5 +459,29 @@ class RoomAseoReactivationTest extends TestCase
         Booking::query()->update(['origin' => 'presencial']);
         $this->getJson(route('admin_app.pulse', ['desde' => 0]))->assertJsonCount(1, 'new')
             ->assertJsonPath('new.0.room', 'GO 101')->assertJsonPath('new.0.origin', Booking::sole()->originLabel())->assertJsonPath('new.0.amount', 20000);
+    }
+
+    public function test_admin_phone_can_subscribe_to_notifications(): void
+    {
+        $payload = ['endpoint' => 'https://push.example.com/abc', 'keys' => ['p256dh' => 'clave', 'auth' => 'token']];
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->postJson(route('admin_app.push'), $payload)->assertForbidden();
+
+        $admin = User::factory()->create(['role' => 'administrador']);
+        $this->actingAs($admin)->postJson(route('admin_app.push'), $payload)->assertOk();
+        $this->actingAs($admin)->postJson(route('admin_app.push'), $payload)->assertOk();
+
+        $this->assertSame($admin->id, \App\Models\PushSubscription::sole()->user_id);
+    }
+
+    public function test_notification_problems_never_stop_a_sale(): void
+    {
+        config(['services.webpush.public_key' => 'mala', 'services.webpush.private_key' => 'mala']);
+        \App\Models\PushSubscription::create(['user_id' => User::factory()->create()->id, 'endpoint' => 'https://push.example.com/abc', 'public_key' => 'x', 'auth_token' => 'y']);
+
+        \App\Services\Notifications\AdminPush::send('Prueba', 'Con claves inválidas');
+        app(\Illuminate\Support\Defer\DeferredCallbackCollection::class)->invoke();
+
+        $this->assertSame(1, \App\Models\PushSubscription::count());
     }
 }

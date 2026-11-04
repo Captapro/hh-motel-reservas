@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\PushSubscription;
 use App\Models\ShiftNote;
 use App\Models\StaffNotice;
 use App\Services\Booking\RoomBoardService;
@@ -73,6 +74,24 @@ class AdminAppController extends Controller
             'booking' => (int) Booking::max('id'),
             'payment' => (int) Payment::where('status', 'aprobado')->max('id'),
         ];
+    }
+
+    /** Guarda este celular para recibir notificaciones. */
+    public function subscribe(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'endpoint' => ['required', 'url', 'max:500'],
+            'keys.p256dh' => ['required', 'string', 'max:255'],
+            'keys.auth' => ['required', 'string', 'max:255'],
+        ]);
+
+        PushSubscription::updateOrCreate(['endpoint' => $validated['endpoint']], [
+            'user_id' => $request->user()->id,
+            'public_key' => $validated['keys']['p256dh'],
+            'auth_token' => $validated['keys']['auth'],
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 
     public function notify(Request $request): RedirectResponse

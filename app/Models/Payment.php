@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Notifications\AdminPush;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['request_token', 'booking_id', 'payment_method_id', 'amount', 'status', 'external_id', 'voucher_number', 'receipt_number', 'raw_payload', 'registered_by', 'notes'])]
 class Payment extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(function (Payment $payment) {
+            if ($payment->status === 'aprobado' && ($payment->wasRecentlyCreated || $payment->wasChanged('status'))) {
+                AdminPush::newPayment($payment);
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [

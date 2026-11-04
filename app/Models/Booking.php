@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Notifications\AdminPush;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Marketing\MetaConversions;
 use App\Services\Payments\MercadoPagoClient;
@@ -31,6 +32,7 @@ class Booking extends Model
 
     protected static function booted(): void
     {
+        static::created(fn (Booking $booking) => AdminPush::newBooking($booking));
         // Al cerrar la estadía se guarda la hora de salida contratada: si salen
         // antes, ends_at se acorta a la salida real (para liberar el Playroom).
         static::saving(function (Booking $booking) {

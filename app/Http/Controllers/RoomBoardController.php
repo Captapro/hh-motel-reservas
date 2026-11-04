@@ -8,6 +8,7 @@ use App\Models\Coupon;
 use App\Models\OperationalSetting;
 use App\Models\Room;
 use App\Models\StaffNotice;
+use App\Services\Notifications\AdminPush;
 use App\Models\RoomCategory;
 use App\Models\Staff;
 use App\Services\Booking\RoomBoardService;
@@ -333,6 +334,7 @@ class RoomBoardController extends Controller
                 'urgent' => true,
                 'body' => $room->name.' quedó en mantención. Motivo: '.$validated['operational_note'],
             ]);
+            AdminPush::send($room->name.' en mantención', 'Motivo: '.$validated['operational_note']);
         }
 
         return redirect()->route('rooms.board');

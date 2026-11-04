@@ -64,6 +64,9 @@
         .toast-box { position:fixed; left:12px; right:12px; top:56px; z-index:50; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
         .toast { max-width:440px; margin:0 auto; width:100%; padding:11px 14px; border-radius:12px; background:#111; color:#fff; font-size:14px; box-shadow:0 6px 20px rgba(0,0,0,.28); }
         .toast b { display:block; color:#ffb379; font-size:12.5px; }
+        .push { max-width:1100px; margin:10px auto 0; padding:0 16px; }
+        .push button { width:100%; min-height:46px; border:1px solid #d1d5db; border-radius:11px; background:#fff; color:#1f2937; font:700 15px -apple-system,'Segoe UI',sans-serif; cursor:pointer; }
+        .push p { margin:0; padding:10px 12px; border-radius:10px; background:#fff3e6; color:#9a3412; font-size:13px; font-weight:600; }
         .link { display:inline-block; margin-top:9px; color:#c2410c; font-size:13px; font-weight:700; text-decoration:none; }
     </style>
 </head>
@@ -85,6 +88,7 @@
             <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Salir</button></form>
         </div>
     </div>
+    <div class="push" id="push" hidden></div>
     <div class="wrap">
         <h1>Hoy en el motel</h1>
 
@@ -310,6 +314,62 @@
                         if (fresh) { cash(); refresh(); }
                     }).catch(function () {});
             };
+
+            // Notificaciones con el celular bloqueado. En iPhone solo existen con la app instalada.
+            const pushKey = @json(config('services.webpush.public_key'));
+            const pushBox = document.getElementById('push');
+            const message = function (text) {
+                const p = document.createElement('p');
+                p.textContent = text;
+                pushBox.replaceChildren(p);
+                pushBox.hidden = false;
+            };
+            const keyBytes = function (key) {
+                const raw = atob((key + '='.repeat((4 - key.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+                return Uint8Array.from(raw, function (c) { return c.charCodeAt(0); });
+            };
+            const save = function (subscription) {
+                return fetch(@json(route('admin_app.push')), {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+                    body: JSON.stringify(subscription.toJSON()),
+                });
+            };
+            if (pushKey) {
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    message('Para recibir notificaciones, instala HH Admin en la pantalla de inicio y ábrela desde su ícono.');
+                } else {
+                    navigator.serviceWorker.register('/sw-admin.js', { scope: '/panel' }).then(function () {
+                        return navigator.serviceWorker.ready;
+                    }).then(function (registration) {
+                        return registration.pushManager.getSubscription().then(function (current) {
+                            if (current) { save(current); return; }
+                            if (Notification.permission === 'denied') {
+                                message('Las notificaciones están bloqueadas. Actívalas en los ajustes del celular.');
+                                return;
+                            }
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.textContent = 'Activar notificaciones';
+                            button.addEventListener('click', function () {
+                                Notification.requestPermission().then(function (answer) {
+                                    if (answer !== 'granted') { message('No se activaron las notificaciones.'); return null; }
+                                    return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pushKey) });
+                                }).then(function (subscription) {
+                                    if (!subscription) return;
+                                    return save(subscription).then(function () {
+                                        message('Notificaciones activadas en este celular.');
+                                        setTimeout(function () { pushBox.hidden = true; }, 4000);
+                                    });
+                                }).catch(function () { message('No se pudieron activar. Inténtalo de nuevo.'); });
+                            });
+                            pushBox.replaceChildren(button);
+                            pushBox.hidden = false;
+                        });
+                    }).catch(function () {});
+                }
+            }
 
             setInterval(pulse, 20000);
             setInterval(refresh, 60000);
