@@ -335,6 +335,22 @@
         .compact .card a.bookings-btn.has-bookings { color:#e8c76f !important; }
         .compact .card details[open] summary { color:#ff9a4d !important; }
         .compact .card .sm svg { width:14px; height:14px; display:block; }
+        /* En aseo y Fuera de servicio: la sección ya dice el estado y el nombre
+           ya trae la categoría. Queda el nombre con sus atajos y, debajo, lo
+           único que hay que hacer o saber. */
+        .compact .section.aseo .card .brk, .compact .section.fuera .card .brk,
+        .compact .section.aseo .card .cat, .compact .section.fuera .card .cat,
+        .compact .section.aseo .card .pill { display:none; }
+        .compact .section.aseo .card, .compact .section.fuera .card { gap:6px 2px; }
+        .compact .section.aseo .card .bookings-btn, .compact .section.aseo .card .copy-link-btn, .compact .section.aseo .card details,
+        .compact .section.fuera .card .bookings-btn, .compact .section.fuera .card .copy-link-btn, .compact .section.fuera .card details { order:2; }
+        .compact .section.aseo .card details[open], .compact .section.fuera .card details[open] { order:9; }
+        .compact .section.aseo .card .eta, .compact .section.fuera .card .eta { order:3; flex:1 1 100%; text-align:left; }
+        .compact .section.fuera .card .pill { order:3; margin:0; }
+        .compact .section.aseo .card .aseo-ready-form { order:4; display:flex; gap:6px; margin:0; }
+        .compact .section.aseo .card .aseo-cleaner-input { flex:1 1 0; min-width:0; width:auto; height:30px; min-height:0; margin:0; padding:0 7px; font-size:11.5px; }
+        .compact .section.aseo .card .aseo-ready-btn { flex:0 0 auto; width:auto; height:30px; margin:0; padding:0 9px; white-space:nowrap; }
+        .compact .section.aseo .card .aseo-ready-form button:only-child { flex:1 1 100%; }
         /* Vista chips — máxima densidad: solo categoría, número y estado.
            El resto (botones, código, detalle de estado) se oculta; la
            tarjeta entera pasa a ser clickeable hacia el detalle de la
@@ -596,7 +612,7 @@
                 <div class="section-head"><h2>En aseo</h2><span class="count">{{ $grouped['en_aseo']->count() }}</span></div>
                 <div class="sidebar-empty panel-empty" @if ($grouped['en_aseo']->isNotEmpty()) hidden @endif>Ningún Playroom en aseo ahora.</div>
                 @if ($grouped['en_aseo']->isNotEmpty())
-                    <p class="section-empty" style="margin-bottom:10px;">No vuelven a disponibles hasta que recepción marque "aseo listo" en cada uno.</p>
+                    <p class="section-empty" style="margin-bottom:8px;">Vuelven a disponibles al marcar "Aseo listo".</p>
                     <div class="grid">
                         @foreach ($grouped['en_aseo'] as $entry)
                             @include('rooms._card', ['entry' => $entry])

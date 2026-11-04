@@ -11,12 +11,13 @@ use Illuminate\Support\Str;
 
 /**
  * Nombres y apellidos sueltos, de más a menos frecuentes, para sugerirlos
- * mientras recepción escribe. Son palabras separadas y repetidas al menos dos
- * veces: la lista no permite saber quién vino.
+ * mientras recepción escribe. Primero los de quienes vinieron, repetidos al
+ * menos dos veces, y después la lista base de resources/data. Son palabras
+ * separadas: la lista no permite saber quién vino.
  */
 class NameSuggestions
 {
-    private const MAX_PER_LIST = 1500;
+    private const MAX_PER_LIST = 4000;
 
     private const MIN_TIMES = 2;
 
@@ -25,7 +26,14 @@ class NameSuggestions
     /** @return array{first: list<string>, last: list<string>} */
     public function lists(): array
     {
-        return Cache::remember('customers.name_suggestions', now()->addDay(), fn () => $this->build($this->allNames()));
+        return Cache::remember('customers.name_suggestions.v2', now()->addDay(), function () {
+            $lists = $this->build($this->allNames());
+
+            return [
+                'first' => $this->withBase($lists['first'], 'nombres.txt'),
+                'last' => $this->withBase($lists['last'], 'apellidos.txt'),
+            ];
+        });
     }
 
     /** @return array{first: list<string>, last: list<string>} */
@@ -51,6 +59,38 @@ class NameSuggestions
         }
 
         return ['first' => $this->ranked($first), 'last' => $this->ranked($last)];
+    }
+
+    /** Agrega la lista base detrás de lo propio, sin repetir ("Gonzalez" = "González"). */
+    public function withBase(array $own, string $file): array
+    {
+        $base = preg_split('/\s+/u', trim((string) file_get_contents(resource_path('data/'.$file))), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $base = array_filter($base, fn (string $w) => preg_match('/^\p{L}{2,}$/u', $w) && ! in_array(mb_strtolower($w), self::PARTICLES, true));
+
+        $seen = [];
+        foreach ($own as $word) {
+            $seen[Str::ascii($word)] = true;
+        }
+
+        // Si la base trae la forma con tilde, corrige la que se escribió sin ella.
+        $accented = [];
+        foreach ($base as $word) {
+            if ($word !== Str::ascii($word)) {
+                $accented[Str::ascii($word)] = $word;
+            }
+        }
+        $own = array_map(fn (string $w) => $accented[$w] ?? $w, $own);
+
+        $merged = $own;
+        foreach ($base as $word) {
+            $key = Str::ascii($word);
+            if (! isset($seen[$key])) {
+                $seen[$key] = true;
+                $merged[] = $accented[$key] ?? $word;
+            }
+        }
+
+        return array_slice($merged, 0, self::MAX_PER_LIST);
     }
 
     private function allNames(): Collection

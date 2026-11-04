@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\BookingCancelController;
 use App\Http\Controllers\RoomBoardController;
 use App\Http\Middleware\CaptureAttribution;
+use App\Http\Middleware\ApplyHostView;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\BookingGuest;
@@ -2593,6 +2594,14 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(['González', 'Soto', 'Rojas'], $lists['last']);
 
         $this->get(route('customers.names'))->assertOk()->assertJsonStructure(['first', 'last']);
+
+        // La lista base va detrás de lo propio, sin repetir y con su tilde.
+        $merged = app(NameSuggestions::class)->withBase(['Gonzalez', 'Fuentealba'], 'apellidos.txt');
+        $this->assertSame(['González', 'Fuentealba'], array_slice($merged, 0, 2));
+        $this->assertSame(1, count(array_keys($merged, 'González', true)));
+        $this->assertContains('Huenchumilla', $merged);
+        $this->assertContains('Quispe', $merged);
+        $this->assertNotContains('Gonzalez', $merged);
     }
 
     private function createSegmentRulesTable(): void
@@ -2620,5 +2629,42 @@ class BookingIntegrityTest extends TestCase
         $this->actingAs($host)->get(route('reservations.show', $booking->code))->assertOk()
             ->assertDontSee('Persona Reservada')->assertDontSee('22222222-2');
         $this->actingAs($admin)->get(route('reservations.show', $booking->code))->assertOk()->assertSee('Persona Reservada');
+    }
+
+    public function test_support_can_look_as_host_without_changing_anything(): void
+    {
+        $this->createSegmentRulesTable();
+        Schema::create('staff_shift_logs', function ($t) {
+            $t->id();
+            $t->foreignId('user_id');
+            $t->timestamp('started_at')->nullable();
+            $t->timestamp('ended_at')->nullable();
+            $t->timestamps();
+        });
+        $support = User::factory()->create(['role' => 'soporte']);
+        $booking = $this->booking();
+        $booking->update(['booking_status' => 'FINALIZADA', 'checked_out_at' => now()]);
+        BookingGuest::create(['booking_id' => $booking->id, 'name' => 'Persona Reservada']);
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->post(route('host_view.start'))->assertForbidden();
+
+        $this->actingAs($support)->get(route('reservations.show', $booking->code))->assertSee('Persona Reservada');
+        $this->post(route('host_view.start'))->assertRedirect(route('rooms.board'));
+
+        // Cada petición real carga la cuenta de nuevo; acá hay que hacerlo a mano.
+        $asHost = fn () => $this->actingAs($support->fresh())->withSession([ApplyHostView::SESSION_KEY => true]);
+
+        $asHost()->get(route('reservations.show', $booking->code))->assertOk()->assertDontSee('Persona Reservada')->assertSee('Vista de anfitrión');
+        $asHost()->get(route('admin.mercadopago.index'))->assertForbidden();
+
+        // Solo mirar: no guarda, no abre turno y la cuenta sigue siendo soporte.
+        $asHost()->from(route('reservations.show', $booking->code))
+            ->post(route('bookings.real_times', $booking->code), [])
+            ->assertRedirect(route('reservations.show', $booking->code))->assertSessionHas('host_view_blocked');
+        $this->assertSame('soporte', $support->fresh()->role);
+        $this->assertSame(0, DB::table('staff_shift_logs')->where('user_id', $support->id)->count());
+
+        $asHost()->post(route('host_view.stop'))->assertRedirect(route('rooms.board'));
+        $this->assertFalse(session()->has(ApplyHostView::SESSION_KEY));
     }
 }

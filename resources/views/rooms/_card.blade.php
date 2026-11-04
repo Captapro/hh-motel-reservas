@@ -35,8 +35,6 @@
     @if ($room->operational_status === 'aseo')
         @if ($room->aseo_reported_at)
             <div class="eta" style="color:#34d399;">✓ {{ $room->aseo_reported_by }} reportó aseo listo a las {{ $room->aseo_reported_at->timezone('America/Santiago')->format('H:i') }} — falta tu confirmación</div>
-        @else
-            <div class="eta">Esperando aseo — no vuelve a disponibles hasta que recepción lo marque</div>
         @endif
         @if (($cleaningStaff ?? collect())->isNotEmpty())
             @php $reportedBy = $room->aseo_reported_at && $cleaningStaff->contains($room->aseo_reported_by) ? $room->aseo_reported_by : null; @endphp
@@ -44,15 +42,15 @@
                 @csrf
                 @if ($reportedBy)
                     {{-- La mucama ya se identificó con su PIN al reportar: solo se confirma. --}}
-                    <button type="submit" class="aseo-ready-btn">Confirmar aseo de {{ $reportedBy }} — reactivar</button>
+                    <button type="submit" class="aseo-ready-btn">Confirmar aseo de {{ $reportedBy }}</button>
                 @else
                     <select name="cleaned_by" class="aseo-cleaner-input" required>
-                        <option value="" selected disabled>¿Quién hizo el aseo?</option>
+                        <option value="" selected disabled>¿Quién limpió?</option>
                         @foreach ($cleaningStaff as $name)
                             <option value="{{ $name }}">{{ $name }}</option>
                         @endforeach
                     </select>
-                    <button type="submit" class="aseo-ready-btn">Marcar aseo listo — reactivar</button>
+                    <button type="submit" class="aseo-ready-btn">Aseo listo</button>
                 @endif
             </form>
         @else

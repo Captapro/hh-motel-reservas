@@ -73,8 +73,10 @@ use App\Http\Controllers\SaleDetailController;
 use App\Http\Controllers\ShiftHandoverController;
 use App\Http\Controllers\ShiftRoundController;
 use App\Http\Controllers\TvScreenController;
+use App\Http\Middleware\ApplyHostView;
 use App\Http\Middleware\CaptureAttribution;
 use App\Services\Customers\NameSuggestions;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -140,6 +142,18 @@ Route::get('/qr/ronda-de-turno/imagen.png', [RoomQrController::class, 'shiftRoun
 Route::get('/login', [LoginController::class, 'create'])->middleware('guest')->name('login');
 Route::post('/login', [LoginController::class, 'store'])->middleware(['guest', 'throttle:8,1,login.store'])->name('login.store');
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
+
+// Vista de anfitrión: ver ApplyHostView. Entrar exige ser soporte; salir solo devuelve a la cuenta real.
+Route::post('/vista-anfitrion', function (Request $request) {
+    $request->session()->put(ApplyHostView::SESSION_KEY, true);
+
+    return redirect()->route('rooms.board');
+})->middleware(['auth', 'role:soporte'])->name('host_view.start');
+Route::post('/vista-anfitrion/salir', function (Request $request) {
+    $request->session()->forget(ApplyHostView::SESSION_KEY);
+
+    return redirect()->route('rooms.board');
+})->middleware('auth')->name('host_view.stop');
 
 // Entrega de turno del anfitrión (caja chica + stock). Fuera de 'section':
 // tiene que poder hacerla aunque su perfil no vea Caja ni Productos.

@@ -102,7 +102,15 @@
                 <a href="{{ route('cash.shifts') }}" style="background:#3a1c22; color:#e88a9a; font-weight:600;">⚠ Turnos con diferencias ({{ $hhShiftAlerts }})</a>
             @endif
             <a href="{{ route('account.password') }}" title="Cambiar mi contraseña" style="color:#aaa; font-size:12.5px; padding:0 4px;">{{ auth()->user()->name }} · 🔑</a>
-            @if (auth()->user()->isRecepcion())
+            @if (auth()->user()->isSoporte())
+                <form method="POST" action="{{ route('host_view.start') }}" style="display:inline;">
+                    @csrf
+                    <button type="submit" style="background:none; border:1px solid #444; border-radius:6px; color:#aaa; cursor:pointer; font:inherit; font-size:12.5px; padding:6px 10px;">Ver como anfitrión</button>
+                </form>
+            @endif
+            @if ($hostView ?? false)
+                {{-- Nada de entregar turno: es soporte mirando, no un turno real. --}}
+            @elseif (auth()->user()->isRecepcion())
                 {{-- El anfitrión sale entregando el turno: cuenta caja chica y stock. --}}
                 <a href="{{ route('shift.deliver') }}" class="hh-danger">Entregar turno y salir</a>
             @else
@@ -158,6 +166,15 @@
         </div>
     @endif
 </div>
+@if ($hostView ?? false)
+    <div style="position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:9990; display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:center; background:#3a2a12; border:1px solid #ff7918; color:#ffd2ad; padding:10px 16px; border-radius:10px; font:13.5px -apple-system,'Segoe UI',sans-serif; box-shadow:0 6px 24px rgba(0,0,0,.5); max-width:calc(100vw - 32px);">
+        <span><b>Vista de anfitrión</b> · {{ session('host_view_blocked') ? 'no se guardó: solo es para mirar' : 'solo para mirar, no guarda cambios' }}</span>
+        <form method="POST" action="{{ route('host_view.stop') }}" style="margin:0;">
+            @csrf
+            <button type="submit" style="background:#ff7918; color:#fff; border:none; border-radius:6px; padding:7px 12px; font:inherit; font-weight:600; cursor:pointer;">Volver a soporte</button>
+        </form>
+    </div>
+@endif
 @include('partials.help-widget')
 @auth
     @include('partials.id-scanner')

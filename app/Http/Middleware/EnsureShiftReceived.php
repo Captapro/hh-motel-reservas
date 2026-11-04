@@ -24,7 +24,8 @@ class EnsureShiftReceived
         $user = $request->user();
         $route = $request->route();
 
-        if (! $user?->isRecepcion() || ! $route
+        // En la vista de anfitrión de soporte no hay turno real que recibir.
+        if ($request->session()->get(ApplyHostView::SESSION_KEY) || ! $user?->isRecepcion() || ! $route
             || ! in_array('auth', $route->gatherMiddleware(), true)
             || $request->routeIs('shift.*', 'logout', 'help.ask')) {
             return $next($request);
