@@ -58,6 +58,9 @@
         .go { width:100%; min-height:50px; border:none; border-radius:11px; background:#ff7918; color:#21170e; font:800 16px -apple-system,'Segoe UI',sans-serif; cursor:pointer; }
         .sent { margin-top:12px; }
         .sent h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#6b7280; }
+        .notify { margin-top:14px; border-radius:14px; overflow:hidden; background:#fff; border:1px solid #e5e7eb; }
+        .notify summary { display:flex; align-items:center; justify-content:center; min-height:50px; background:#ff7918; color:#21170e; font-size:16px; font-weight:800; cursor:pointer; list-style:none; }
+        .notify summary::-webkit-details-marker { display:none; }
         .link { display:inline-block; margin-top:9px; color:#c2410c; font-size:13px; font-weight:700; text-decoration:none; }
     </style>
 </head>
@@ -91,8 +94,8 @@
             <div class="stat"><b>{{ $freeCount }}</b><span>listas</span></div>
         </div>
 
-        <section class="mod mod-orange">
-            <div class="mod-h"><span>Avisar al personal</span></div>
+        <details class="notify" id="notify" @if ($errors->any()) open @endif>
+            <summary>Avisar al personal</summary>
             <div class="mod-b">
                 <form method="POST" action="{{ route('admin_app.notify') }}">
                     @csrf
@@ -124,7 +127,7 @@
                     </div>
                 @endif
             </div>
-        </section>
+        </details>
 
         <section class="mod mod-blue">
             <div class="mod-h"><span>Ocupadas</span><b>{{ $occupied->count() }}</b></div>
@@ -229,7 +232,7 @@
     @include('partials.staff-notice-alert')
     <script>
         setInterval(function () {
-            if (document.getElementById('body').value || document.querySelector('.hh-notice')) return;
+            if (document.getElementById('notify').open || document.querySelector('.hh-notice')) return;
             window.location.reload();
         }, 60000);
     </script>
