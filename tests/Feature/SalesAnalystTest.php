@@ -134,14 +134,20 @@ class SalesAnalystTest extends TestCase
         $support = User::factory()->create(['role' => 'soporte']);
         $this->actingAs($support)->get(route('admin.analyst.index'))->assertOk()->assertSee('Analista de ventas');
 
-        // Un anfitrión autorizado entra, pero solo ve sus conversaciones y no edita el contexto.
-        $authorizedHost = User::factory()->create(['role' => 'recepcion', 'can_use_analyst' => true]);
+        // Un anfitrión nunca entra, aunque tenga el permiso marcado en Personal.
+        $host = User::factory()->create(['role' => 'recepcion', 'can_use_analyst' => true]);
+        $this->assertFalse($host->canUseAi('analista'));
+        $this->actingAs($host)->get(route('admin.analyst.index'))->assertForbidden();
+        $this->actingAs($host)->postJson(route('admin.analyst.ask'), ['question' => 'Ventas', 'thread' => (string) Str::uuid()])->assertForbidden();
+
+        // Otro perfil autorizado solo ve sus conversaciones y no edita el contexto.
+        $authorized = User::factory()->create(['role' => 'marketing', 'can_use_analyst' => true]);
         $other = (string) Str::uuid();
         AnalystRun::create(['user_id' => $this->admin->id, 'thread' => $other, 'question' => 'Pregunta del admin', 'status' => 'listo', 'answer' => 'R']);
-        $this->actingAs($authorizedHost)->get(route('admin.analyst.index', ['conversacion' => $other]))
+        $this->actingAs($authorized)->get(route('admin.analyst.index', ['conversacion' => $other]))
             ->assertOk()->assertDontSee('Pregunta del admin')->assertDontSee('Notas del negocio');
-        $this->actingAs($authorizedHost)->put(route('admin.analyst.context'), ['business_context' => 'x'])->assertForbidden();
-        $this->actingAs($authorizedHost)->getJson(route('admin.analyst.show', AnalystRun::first()))->assertForbidden();
+        $this->actingAs($authorized)->put(route('admin.analyst.context'), ['business_context' => 'x'])->assertForbidden();
+        $this->actingAs($authorized)->getJson(route('admin.analyst.show', AnalystRun::first()))->assertForbidden();
     }
 
     public function test_without_api_key_the_page_warns_and_questions_are_rejected(): void

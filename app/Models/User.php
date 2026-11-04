@@ -58,7 +58,8 @@ class User extends Authenticatable
         }
 
         return match ($tool) {
-            'analista' => (bool) $this->can_use_analyst,
+            // El analista ve las ventas del negocio: nunca para el anfitrión, aunque tenga el permiso marcado.
+            'analista' => ! $this->isRecepcion() && $this->can_use_analyst,
             'ayuda' => (bool) $this->can_use_help,
             default => false,
         };

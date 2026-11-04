@@ -35,7 +35,7 @@
                 </div>
                 <div style="flex:1 1 100%; display:flex; gap:16px; font-size:13px;">
                     <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_help" value="1" style="width:auto;"> Puede usar Ayuda IA</label>
-                    <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_analyst" value="1" style="width:auto;"> Puede usar Analista IA</label>
+                    <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_analyst" value="1" style="width:auto;"> Puede usar Analista IA <span style="color:#888;">(nunca para anfitriones)</span></label>
                 </div>
                 <button class="btn" type="submit">+ Crear</button>
             </form>
@@ -87,7 +87,7 @@
                                             <div><label>Nueva contraseña</label><input type="password" name="password" placeholder="Opcional" autocomplete="new-password"></div>
                                             <div class="full" style="display:flex; gap:16px; font-size:13px;">
                                                 <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_help" value="1" style="width:auto;" @checked($account->can_use_help) @disabled($account->isSoporte())> Ayuda IA</label>
-                                                <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_analyst" value="1" style="width:auto;" @checked($account->can_use_analyst) @disabled($account->isSoporte())> Analista IA</label>
+                                                <label style="display:flex; gap:6px; align-items:center; margin:0;"><input type="checkbox" name="can_use_analyst" value="1" style="width:auto;" @checked($account->can_use_analyst) @disabled($account->isSoporte())> Analista IA <span style="color:#888;">(nunca para anfitriones)</span></label>
                                             </div>
                                             <div class="full"><button class="btn" type="submit" style="padding:7px 14px; font-size:13px;">Guardar</button></div>
                                         </form>

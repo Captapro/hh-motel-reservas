@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 #[Fillable(['room_category_id', 'name', 'wing', 'photos', 'videos', 'buffer_minutes', 'operational_status', 'operational_note', 'aseo_override_at', 'aseo_started_at', 'aseo_reported_by', 'aseo_reported_at'])]
 class Room extends Model
@@ -69,6 +70,24 @@ class Room extends Model
     public function rentOrder(): array
     {
         return [$this->wingPriority(), $this->floor ?? 9, $this->name];
+    }
+
+    /**
+     * De los Playrooms libres, los que se ofrecen ahora: todo el primer piso y
+     * el ala norte. El ala sur entra de a uno por categoría, solo cuando esa
+     * categoría ya no tiene nada libre en el primer piso ni en el norte.
+     *
+     * @param  Collection<int, Room>  $rooms
+     * @return list<int>
+     */
+    public static function offeredNow(Collection $rooms): array
+    {
+        return $rooms->groupBy('room_category_id')->flatMap(function (Collection $group) {
+            $sorted = $group->sortBy(fn (Room $room) => $room->rentOrder())->values();
+            $front = $sorted->reject(fn (Room $room) => $room->wing === 'sur');
+
+            return $front->isNotEmpty() ? $front : $sorted->take(1);
+        })->pluck('id')->all();
     }
 
     public function isOperational(): bool

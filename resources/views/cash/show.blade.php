@@ -20,22 +20,21 @@
         .banner { background:#14251c; border:1px solid #2e6e45; color:#8fe0ad; padding:10px 16px; border-radius:9px; margin-bottom:14px; font-size:14px; font-weight:600; }
 
         /* Cifras clave */
-        .kpis { display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+        .kpis { display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:12px; margin-bottom:14px; }
         @media (max-width: 1000px) { .kpis { grid-template-columns: 1fr 1fr; } }
-        .kpi { background:#1c1c1c; border:1px solid #333; border-radius:12px; padding:16px 20px; }
+        .kpi { background:#1c1c1c; border:1px solid #333; border-radius:12px; padding:13px 16px; }
         .kpi .label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#999; margin-bottom:6px; }
-        .kpi .value { font-size:26px; font-family: ui-monospace, monospace; font-weight:700; }
-        .kpi .note { font-size:12px; color:#888; margin-top:6px; line-height:1.5; }
+        .kpi .value { font-size:24px; font-family: ui-monospace, monospace; font-weight:700; }
+        .kpi .note { font-size:12px; color:#888; margin-top:4px; line-height:1.4; }
         .kpi .note b { color:#ddd; font-family: ui-monospace, monospace; font-weight:600; }
         .kpi.saldo { background:#14211a; border-color:#2e6e45; }
-        .kpi.saldo .value { font-size:36px; color:#8fe0ad; }
+        .kpi.saldo .value { color:#8fe0ad; }
         .kpi.in .value { color:#8fe0ad; }
         .kpi.out .value { color:#e88a9a; }
 
-        /* Tres columnas: cobros | movimientos | registrar */
-        .cols { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(300px,.8fr); gap:16px; align-items:start; }
-        @media (max-width: 1200px) { .cols { grid-template-columns: 1fr 1fr; } .cols > .col-form { grid-column: 1 / -1; } }
-        @media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+        /* Dos columnas: la plata del día | los movimientos */
+        .cols { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1.5fr); gap:14px; align-items:start; }
+        @media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
         .panel { background:#1c1c1c; border:1px solid #333; border-radius:12px; padding:16px 18px; }
         .panel h3 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#999; margin:0 0 4px; }
         .panel .hint { font-size:12px; color:#777; margin:0 0 10px; }
@@ -47,14 +46,19 @@
         table.g tr.zero td { color:#7d7d7d; }
         table.g tr.total td { font-weight:700; color:#fff; background:#2e2e2e; border-top:2px solid #555; }
 
-        label { display:block; font-size: 12px; color:#bbb; margin: 14px 0 6px; }
-        label:first-of-type { margin-top:0; }
+        .head-row { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+        .head-row h3 { margin:0; }
+        .move-btns { display:flex; gap:8px; }
+        .move-btns button { background:#141414; border:1.5px solid #333; color:#bbb; padding:7px 12px; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
+        .move-btns button.active[data-type="ingreso"] { background:#14251c; border-color:#2e6e45; color:#8fe0ad; }
+        .move-btns button.active[data-type="egreso"] { background:#2a1416; border-color:#7a2d2d; color:#e88a9a; }
+        .move-form { display:grid; grid-template-columns: 140px minmax(0,1fr) auto; gap:8px; margin:8px 0 6px; }
+        @media (max-width: 560px) { .move-form { grid-template-columns: minmax(0,1fr); } }
+        .move-form[hidden] { display:none; }
+        .panel details.more { margin-top:10px; font-size:13px; border-top:1px solid #262626; padding-top:8px; }
+        .panel details.more summary { cursor:pointer; color:#aaa; font-weight:600; }
         input, select { width:100%; box-sizing:border-box; background:#141414; border:1px solid #333; color:#fff; padding:10px 12px; border-radius:7px; font-size:14px; font-family:inherit; }
-        .type-row { display:flex; gap:8px; }
-        .type-row button { flex:1; background:#141414; border:1.5px solid #333; color:#999; padding:10px; border-radius:7px; font-size:13px; font-weight:700; cursor:pointer; }
-        .type-row button.active[data-type="ingreso"] { background:#14251c; border-color:#2e6e45; color:#8fe0ad; }
-        .type-row button.active[data-type="egreso"] { background:#2a1416; border-color:#7a2d2d; color:#e88a9a; }
-        button.submit { width:100%; margin-top:16px; background:#ff7918; color:#fff; border:none; padding:12px; border-radius:7px; font-size:14px; font-weight:600; cursor:pointer; }
+        button.submit { background:#ff7918; color:#fff; border:none; padding:0 18px; border-radius:7px; font-size:14px; font-weight:600; cursor:pointer; min-height:40px; }
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:10px 12px; border-radius:8px; margin-bottom: 14px; font-size:13px; }
 
         .row1 { display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-top:1px solid #262626; gap:12px; }
@@ -101,22 +105,22 @@
         <div class="kpi saldo">
             <div class="label">Efectivo por depositar</div>
             <div class="value">{{ $m($saldoEnCaja) }}</div>
-            <div class="note">Recibido en reservas <b>{{ $m($totalCashFromSales) }}</b> · + ingresos manuales <b>{{ $m($totalIngresos) }}</b> · − depósitos y egresos <b>{{ $m($totalEgresos) }}</b>. Se guarda en la caja fuerte y baja al registrar el depósito.</div>
+            <div class="note">acumulado en caja fuerte</div>
         </div>
         <div class="kpi">
             <div class="label">Máquina Mercado Pago</div>
             <div class="value">{{ $m($collectedByGroup['Tarjeta (máquina)']) }}</div>
-            <div class="note">débito y crédito de este día</div>
+            <div class="note">débito y crédito del día</div>
         </div>
         <div class="kpi">
             <div class="label">Pagos online en reservas</div>
             <div class="value">{{ $m($collectedByGroup['Mercado Pago (online)']) }}</div>
-            <div class="note">pagados por el catálogo este día</div>
+            <div class="note">pagados por el catálogo</div>
         </div>
         <div class="kpi in">
             <div class="label">Efectivo del día</div>
             <div class="value">{{ $m($dayCashIn) }}</div>
-            <div class="note">reservas <b>{{ $m($dayCashSales) }}</b> · ingresos manuales <b>{{ $m($dayCashManual) }}</b></div>
+            <div class="note">reservas {{ $m($dayCashSales) }} · manual {{ $m($dayCashManual) }}</div>
         </div>
         <div class="kpi out">
             <div class="label">Depósitos y egresos</div>
@@ -129,22 +133,36 @@
         <div class="col">
             <div class="panel">
                 <h3>Cobros del día</h3>
-                <p class="hint">Plata que entró este día, sin importar de qué reserva es.</p>
-                <table class="g">
-                    @foreach ($collectedByGroup as $label => $amount)
-                        <tr class="{{ $amount === 0 ? 'zero' : '' }}"><td>{{ $label }}</td><td class="n">{{ $m($amount) }}</td></tr>
-                    @endforeach
-                    <tr class="total"><td>Total cobrado</td><td class="n">{{ $m($collectedTotal) }}</td></tr>
-                </table>
-            </div>
-            <div class="panel">
-                <h3>De dónde viene</h3>
-                <table class="g">
-                    <tr class="{{ $collectedSameDay === 0 ? 'zero' : '' }}"><td>De reservas de este día</td><td class="n">{{ $m($collectedSameDay) }}</td></tr>
-                    <tr class="{{ $collectedAdvance === 0 ? 'zero' : '' }}"><td>Anticipos de reservas futuras</td><td class="n">{{ $m($collectedAdvance) }}</td></tr>
-                    <tr class="{{ $collectedLate === 0 ? 'zero' : '' }}"><td>Saldos de estadías anteriores</td><td class="n">{{ $m($collectedLate) }}</td></tr>
-                    <tr class="total"><td>Total</td><td class="n">{{ $m($collectedTotal) }}</td></tr>
-                </table>
+                @if ($collectedTotal === 0)
+                    <p class="empty">Sin cobros este día.</p>
+                @else
+                    <table class="g">
+                        @foreach ($collectedByGroup as $label => $amount)
+                            @if ($amount !== 0)
+                                <tr><td>{{ $label }}</td><td class="n">{{ $m($amount) }}</td></tr>
+                            @endif
+                        @endforeach
+                        <tr class="total"><td>Total cobrado</td><td class="n">{{ $m($collectedTotal) }}</td></tr>
+                    </table>
+                @endif
+
+                <details class="more">
+                    <summary>Cómo se calcula el efectivo por depositar</summary>
+                    <table class="g">
+                        <tr><td>Recibido en reservas</td><td class="n">{{ $m($totalCashFromSales) }}</td></tr>
+                        <tr><td>+ Ingresos manuales</td><td class="n">{{ $m($totalIngresos) }}</td></tr>
+                        <tr><td>− Depósitos y egresos</td><td class="n">{{ $m($totalEgresos) }}</td></tr>
+                        <tr class="total"><td>Por depositar</td><td class="n">{{ $m($saldoEnCaja) }}</td></tr>
+                    </table>
+                </details>
+
+                <details class="more">
+                    <summary>De qué reservas viene lo cobrado</summary>
+                    <table class="g">
+                        <tr class="{{ $collectedSameDay === 0 ? 'zero' : '' }}"><td>De reservas de este día</td><td class="n">{{ $m($collectedSameDay) }}</td></tr>
+                        <tr class="{{ $collectedAdvance === 0 ? 'zero' : '' }}"><td>Anticipos de reservas futuras</td><td class="n">{{ $m($collectedAdvance) }}</td></tr>
+                        <tr class="{{ $collectedLate === 0 ? 'zero' : '' }}"><td>Saldos de estadías anteriores</td><td class="n">{{ $m($collectedLate) }}</td></tr>
+                    </table>
                 @if ($advancePayments->isNotEmpty())
                     <details class="adv">
                         <summary>Anticipos de este día ({{ $advancePayments->count() }}) — a qué estadía corresponde cada uno</summary>
@@ -156,13 +174,36 @@
                         @endforeach
                     </details>
                 @endif
+                </details>
             </div>
         </div>
 
         <div class="col">
             <div class="panel">
-                <h3>Movimientos del día</h3>
-                <p class="hint">Efectivo de reservas y movimientos de caja chica, en orden.</p>
+                <div class="head-row">
+                    <h3>Movimientos del día</h3>
+                    <div class="move-btns">
+                        <button type="button" data-type="ingreso" onclick="hhSetCashType('ingreso')">+ Ingreso</button>
+                        <button type="button" data-type="egreso" onclick="hhSetCashType('egreso')">− Depósito / egreso</button>
+                    </div>
+                </div>
+
+                @if ($errors->any())
+                    <div class="errors">
+                        @foreach ($errors->all() as $error)
+                            <div>{{ $error }}</div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('cash.store') }}" id="cash-form" class="move-form" hidden>
+                    @csrf
+                    <input type="hidden" name="type" id="cash-type" value="{{ old('type', 'ingreso') }}">
+                    <input type="number" name="amount" id="cash-amount" min="1" value="{{ old('amount') }}" placeholder="Monto" aria-label="Monto en pesos" required>
+                    <input type="text" name="description" id="cash-description" value="{{ old('description') }}" aria-label="Descripción">
+                    <button class="submit" type="submit">Registrar</button>
+                </form>
+
                 <div class="timeline">
                     @forelse ($timeline as $item)
                         <div class="row1 {{ $item['kind'] }}">
@@ -181,47 +222,23 @@
                 </div>
             </div>
         </div>
-
-        <div class="col col-form">
-            <div class="panel">
-                <h3>Registrar movimiento</h3>
-                <p class="hint">Depósitos del efectivo y movimientos de caja chica que no vienen de una reserva.</p>
-
-                @if ($errors->any())
-                    <div class="errors">
-                        @foreach ($errors->all() as $error)
-                            <div>{{ $error }}</div>
-                        @endforeach
-                    </div>
-                @endif
-
-                <form method="POST" action="{{ route('cash.store') }}" id="cash-form">
-                    @csrf
-                    <input type="hidden" name="type" id="cash-type" value="{{ old('type', 'ingreso') }}">
-                    <label>Tipo</label>
-                    <div class="type-row">
-                        <button type="button" data-type="ingreso" onclick="hhSetCashType('ingreso')">+ Ingreso (caja chica)</button>
-                        <button type="button" data-type="egreso" onclick="hhSetCashType('egreso')">− Depósito / egreso</button>
-                    </div>
-
-                    <label>Monto (CLP)</label>
-                    <input type="number" name="amount" min="1" value="{{ old('amount') }}" required>
-
-                    <label>Descripción (opcional)</label>
-                    <input type="text" name="description" placeholder="Ej: apertura de caja, compra insumos, retiro a banco" value="{{ old('description') }}">
-
-                    <button class="submit" type="submit">Registrar</button>
-                </form>
-            </div>
-        </div>
     </div>
     </div>
     <script>
+        // El formulario aparece al elegir qué se va a registrar; otro toque al mismo botón lo cierra.
         function hhSetCashType(type) {
-            document.getElementById('cash-type').value = type;
-            document.querySelectorAll('.type-row button').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+            const form = document.getElementById('cash-form');
+            const input = document.getElementById('cash-type');
+            const closing = !form.hidden && input.value === type;
+            form.hidden = closing;
+            input.value = type;
+            document.querySelectorAll('.move-btns button').forEach(b => b.classList.toggle('active', !closing && b.dataset.type === type));
+            document.getElementById('cash-description').placeholder = type === 'egreso' ? 'Ej: depósito en banco, compra de insumos' : 'Ej: apertura de caja';
+            if (!closing) document.getElementById('cash-amount').focus();
         }
-        hhSetCashType(document.getElementById('cash-type').value);
+        @if ($errors->any() || old('amount'))
+            hhSetCashType(document.getElementById('cash-type').value);
+        @endif
     </script>
 </body>
 </html>

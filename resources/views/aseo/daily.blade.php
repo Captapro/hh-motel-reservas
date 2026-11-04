@@ -42,13 +42,15 @@
         .period-tabs a:hover { border-color:#ff7918; color:#ff7918; }
 
         .linen-panel { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:16px 18px; margin-bottom:24px; }
-        .linen-panel .topline2 { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
         .linen-panel h3 { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#999; margin:0; }
-        .linen-panel .total { font-family: ui-monospace, monospace; font-size:20px; font-weight:600; color:#7fbcdc; }
         .linen-panel .hint { font-size:11.5px; color:#777; margin-top:10px; }
-        .linen-chips { display:flex; gap:10px; flex-wrap:wrap; }
-        .linen-chip { background:#111; border:1px solid #333; border-radius:8px; padding:8px 14px; font-size:13px; }
-        .linen-chip b { color:#7fbcdc; font-family: ui-monospace, monospace; }
+        .linen-table { width:100%; max-width:640px; border-collapse:collapse; font-size:13.5px; margin-top:10px; }
+        .linen-table th { text-align:left; color:#888; font-size:10.5px; font-weight:500; text-transform:uppercase; padding:6px 10px; border-bottom:1px solid #333; }
+        .linen-table td { padding:6px 10px; border-bottom:1px solid #2a2a2a; }
+        .linen-table .n { text-align:right; font-variant-numeric:tabular-nums; }
+        .linen-table tfoot td { font-weight:700; border-bottom:none; border-top:2px solid #444; }
+        .linen-more { margin-top:10px; font-size:12.5px; }
+        .linen-more summary { cursor:pointer; color:#aaa; font-weight:600; }
         .pill.no-cama { background:#242424; color:#777; }
     </style>
 </head>
@@ -82,20 +84,42 @@
         <div class="card manual"><div class="label">Aseo pendiente</div><div class="value">{{ $rows->where('pending', true)->count() }}</div></div>
     </div>
 
+    @php
+        $towelsOf = fn (array $row) => 2 + max(0, $row['booking']->guests_count - 2);
+        $linenSummary = $rows->groupBy(fn (array $row) => $row['room']->id)
+            ->map(fn ($group) => [
+                'room' => $group->first()['room'],
+                'exits' => $group->count(),
+                'sets' => $group->first()['room']->category->name === 'GO' ? 0 : $group->count(),
+                'towels' => $group->sum($towelsOf),
+            ])
+            ->sortBy(fn ($entry) => $entry['room']->name)->values();
+    @endphp
     <div class="linen-panel">
-        <div class="topline2">
-            <h3>Carga de ropa de cama del día</h3>
-            <span class="total">{{ $linenTotal }} {{ Str::plural('juego', $linenTotal) }}</span>
-        </div>
-        <div class="linen-chips">
-            @forelse ($linenByRoom as $entry)
-                <div class="linen-chip">{{ $entry['room']->name }} <b>× {{ $entry['count'] }}</b></div>
-            @empty
-                <div class="linen-chip">Sin salidas con cama este día</div>
-            @endforelse
-        </div>
-        <p class="hint">Un juego por cada salida de LITE, PLUS o MAX, siempre asociado al Playroom puntual — las GO (201, 301) son cápsulas sin cama y solo llevan toallas.</p>
+        <h3>Carga de ropa de cama del día</h3>
+        @if ($linenSummary->isEmpty())
+            <p class="hint">Sin salidas este día.</p>
+        @else
+            <table class="linen-table">
+                <thead><tr><th>Playroom</th><th class="n">Salidas</th><th class="n">Juegos de sábanas</th><th class="n">Toallas</th></tr></thead>
+                <tbody>
+                    @foreach ($linenSummary as $entry)
+                        <tr>
+                            <td>{{ $entry['room']->name }}</td>
+                            <td class="n">{{ $entry['exits'] }}</td>
+                            <td class="n">{{ $entry['sets'] ?: 'Sin cama' }}</td>
+                            <td class="n">{{ $entry['towels'] }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                <tfoot><tr><td>Total</td><td class="n">{{ $linenSummary->sum('exits') }}</td><td class="n">{{ $linenTotal }}</td><td class="n">{{ $linenSummary->sum('towels') }}</td></tr></tfoot>
+            </table>
+        @endif
+        <details class="linen-more">
+            <summary>Qué incluye cada juego y cómo se cuenta</summary>
+            <p class="hint">Un juego por cada salida de LITE, PLUS o MAX, siempre asociado al Playroom puntual — las GO (201, 301) son cápsulas sin cama y solo llevan toallas.</p>
         <p class="hint">Un juego de sábanas = bajera + sábana encimera + dúvet (cubrecama) + 2 cabeceras. Las frazadas no se cambian en cada salida — la mucama revisa si están ocupadas/sucias y decide si van a lavar. Toallas = 2 grandes + 1 por cada persona adicional sobre 2 (todas las categorías, incluida GO).</p>
+        </details>
     </div>
 
     <div class="table-wrap">

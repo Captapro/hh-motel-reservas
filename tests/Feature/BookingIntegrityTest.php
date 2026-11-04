@@ -2679,4 +2679,21 @@ class BookingIntegrityTest extends TestCase
 
         $this->assertSame(['PLUS 101', 'PLUS 202', 'PLUS 302', 'PLUS 207', 'PLUS 311'], $order);
     }
+
+    public function test_south_wing_only_enters_when_the_category_runs_out_of_first_floor_and_north(): void
+    {
+        $room = function (int $id, int $category, string $name, ?string $wing) {
+            $model = new Room(['room_category_id' => $category, 'name' => $name, 'wing' => $wing]);
+            $model->id = $id;
+
+            return $model;
+        };
+
+        $offered = Room::offeredNow(collect([
+            $room(1, 1, 'PLUS 101', null), $room(2, 1, 'PLUS 202', 'norte'), $room(3, 1, 'PLUS 207', 'sur'),
+            $room(4, 2, 'MAX 310', 'sur'), $room(5, 2, 'MAX 210', 'sur'),
+        ]));
+
+        $this->assertEqualsCanonicalizing([1, 2, 5], $offered);
+    }
 }

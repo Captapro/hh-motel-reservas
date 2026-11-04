@@ -26,8 +26,8 @@
         <p class="sub">Lector de carnet, últimos 14 días: <b>{{ $idScans['total'] }}</b> lecturas · <b>{{ $idScans['known'] }}</b> con nombre automático ({{ round($idScans['known'] / $idScans['total'] * 100) }}%) · <b>{{ $idScans['new'] }}</b> personas nuevas para escribir.</p>
     @endif
 
-    <section class="card segment-guide">
-        <h2>¿Cómo se clasifica cada cliente?</h2>
+    <details class="card segment-guide segment-fold" style="margin:10px 0 14px;">
+        <summary>¿Cómo se clasifica cada cliente?</summary>
         <p>La categoría se calcula automáticamente con las reservas finalizadas de los últimos 12 meses. Las canceladas, expiradas y no-show no cuentan.</p>
         <div class="segment-rules">
             <div><strong class="rule-new">Cliente nuevo</strong><span>0 o 1 estadía registrada</span></div>
@@ -36,7 +36,7 @@
             <div><strong class="rule-sporadic">Esporádico</strong><span>Su última visita fue hace más de 120 días</span></div>
         </div>
         <small>La clasificación puede cambiar automáticamente después de cada estadía. Las notas y preferencias se registran aparte y no alteran esta medición.</small>
-    </section>
+    </details>
 
     <form class="search-form" method="GET" action="{{ route('admin.customers.index') }}">
         @if ($segmentFilter !== '')<input type="hidden" name="segment" value="{{ $segmentFilter }}">@endif
@@ -107,6 +107,7 @@
         </table>
     </div>
     <style>
+        .segment-fold{padding:10px 14px !important}.segment-fold summary{cursor:pointer;font-weight:700;font-size:13.5px}.segment-fold[open] summary{margin-bottom:8px}
         .segment-guide{margin:18px 0 20px;background:#272727;border-color:#3d3d3d}.segment-guide h2{margin:0 0 6px;font-size:16px;color:#fff}.segment-guide p,.segment-guide small{display:block;color:#aaa;font-size:12.5px;line-height:1.45}.segment-rules{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.segment-rules div{display:flex;flex-direction:column;gap:5px;padding:11px 12px;border:1px solid #444;border-radius:8px;background:#202020}.segment-rules span{font-size:12px;color:#ccc}.rule-new{color:#7fbcdc}.rule-occasional{color:#e8c76f}.rule-frequent{color:#6fd39a}.rule-sporadic{color:#e88a9a}@media(max-width:800px){.segment-rules{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>
 @endsection
