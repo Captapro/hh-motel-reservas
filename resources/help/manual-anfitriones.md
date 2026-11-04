@@ -9,7 +9,7 @@ Los textos entre comillas son los nombres exactos de botones, pantallas y mensaj
 
 ## 1. Tablero ("HH MOTEL — Tablero de Playrooms")
 - Se recarga solo cada 30 segundos ("actualizar ahora" para forzarlo). No se recarga mientras el chat de Ayuda está abierto.
-- Herramientas: "Ver catálogo ↗", "Copiar link del catálogo", filtro "Todas las alas" / "Ala norte" / "Ala sur", botón de vista ("Vista compacta" / "Vista chips" / "Vista normal") y el QR "Validador de tickets" (escanéalo con el celular para abrir la cámara que lee los pases).
+- Herramientas: "Ver catálogo ↗", "Copiar link del catálogo", filtro "Todas las alas" / "Ala norte" / "Ala sur", botón de vista ("Vista compacta" / "Vista chips" / "Vista normal").
 - Avisos en vivo: "📲 Pase escaneado — <cliente>" con "Cobrar y hacer check-in →" o "Hacer check-in →"; "💳 Pago recibido — <cliente> · $monto" (pago por Mercado Pago) con "Ver reserva →".
 - "⚠ Pendientes de gestionar": reservas que todavía no tienen ningún pago. Detalle completo en la sección 1.1.
 - Contadores: Ocupadas, En aseo, Disponibles, Por llegar, Fuera de servicio. Resumen del día: Playrooms vendidos hoy, Extras vendidos hoy, Venta Playrooms, Venta extras, Total del día (solo estadías de hoy pagadas completas).
@@ -106,8 +106,8 @@ Errores comunes:
 
 ## 5. Check-in
 Formas de iniciarlo:
-1. El cliente muestra el QR de su pase: escanea el "Validador de tickets" del tablero con tu celular y apunta al pase. Aparece "Pase válido" con cliente, Playroom, horario y saldo, y en el computador el aviso "📲 Pase escaneado". Si no hay computador cerca: "No tengo computador cerca: hacerlo desde este celular".
-2. Sin cámara o si el QR no lee: "No tengo cámara disponible -- buscar a mano" y busca por código, nombre o teléfono. Revisa permisos de cámara y brillo de la pantalla del cliente. No crees otra reserva para solucionar el escaneo.
+1. El cliente muestra el QR de su pase: pásalo por el lector de recepción en cualquier pantalla del sistema y se abre su reserva para cobrar o hacer el check-in. "No tengo computador cerca: hacerlo desde este celular".
+2. Si el QR no lee: sube el brillo de la pantalla del cliente, o busca la reserva por código, nombre o teléfono. No crees otra reserva para solucionar el escaneo.
 3. Botones manuales: "Marcar check-in" (Por llegar), "Falta check-in — marcar ahora" (tarjeta) o "Marcar check-in — ofrecer consumo →" (ficha).
 
 Pantalla "Check-in":

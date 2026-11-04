@@ -10,10 +10,6 @@
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
         .page-inner { max-width: 1700px; width:100%; margin: 0; padding: 24px 24px 60px; }
-        .scan-bridge { flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:8px 12px; }
-        .scan-bridge .label { font-size:10px; font-weight:700; color:#bbb; text-transform:uppercase; letter-spacing:.04em; text-align:center; white-space:nowrap; }
-        .scan-bridge img { width:110px; height:110px; border-radius:6px; display:block; }
-        @media print, (max-width: 720px) { .scan-bridge { display:none; } }
         .flash-status { background:#0f2b22; border:1px solid #1c9169; color:#6ee7b7; padding:12px 16px; border-radius:9px; font-size:14px; font-weight:600; margin-bottom:20px; }
         .topline { margin-bottom: 14px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
         .topline-toolbar { display:flex; gap:8px; flex-wrap:wrap; min-width:0; }
@@ -32,9 +28,6 @@
              el tono claro de una vez, no en el oscuro que "parece" el resto
              de este <style>. --}}
         .pending-row-wrap.no-pending { justify-content:flex-end; margin-bottom:12px; }
-        .pending-row-wrap.no-pending .scan-bridge { flex-direction:row-reverse; gap:10px; padding:6px 12px; }
-        .pending-row-wrap.no-pending .scan-bridge img { width:56px; height:56px; }
-        .pending-row-wrap.no-pending .scan-bridge .label { text-align:right; }
         .pending-row-wrap { display:flex; align-items:stretch; gap:16px; margin-bottom: 26px; }
         .pending-panel { flex:1; min-width:0; background:#fff; border:1px solid #f0d9b8; border-left:4px solid #e8a23f; border-radius:11px; padding:16px 18px; box-shadow: 0 3px 10px #1011120b; }
         .pending-head { display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
@@ -426,9 +419,6 @@
         .topline h1 { font-size:20px; }
         .topline .sub { margin:2px 0 0; font-size:12px; }
         .topline-toolbar { align-items:center; }
-        .topline-toolbar .scan-bridge { flex-direction:row-reverse; gap:10px; padding:5px 10px; }
-        .topline-toolbar .scan-bridge img { width:54px; height:54px; }
-        .topline-toolbar .scan-bridge .label { text-align:right; max-width:70px; white-space:normal; }
         .wing-filter { display:inline-flex; border:1px solid #333; border-radius:8px; overflow:hidden; background:#1c1c1c; }
         .wing-filter button { background:transparent; border:0; border-right:1px solid #333; color:#999; padding:7px 13px; font-size:12.5px; font-weight:600; cursor:pointer; }
         .wing-filter button:last-child { border-right:0; }
@@ -502,13 +492,6 @@
                 <button type="button" data-wing="sur" onclick="hhSetWing('sur')">Ala sur</button>
             </div>
             <button type="button" class="compact-toggle" id="compact-toggle-btn" onclick="hhToggleCompact()">⊟ Vista compacta</button>
-        {{-- Puente PC → celular: la cámara para escanear el pase de un huésped
-         está en el celular, no en este monitor -- recepción escanea este QR
-         con su celular y ahí se le abre directo /reservas/escanear. --}}
-    <div class="scan-bridge">
-        <span class="label">Validador de tickets</span>
-        <img src="{{ route('reservations.scan_qr_image') }}" alt="Escaneá con el celular para abrir la cámara de reservas">
-    </div>
         </div>
     </div>
 
