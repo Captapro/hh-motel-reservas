@@ -10,7 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
  * Vista de anfitrión: soporte recorre el sistema con los permisos de
  * recepción para ver lo mismo que ella. El perfil cambia solo en memoria y
  * durante esta petición (nunca se guarda en la cuenta), y es solo para mirar:
- * no deja hacer cambios, porque quedarían como reales y a nombre de soporte.
+ * no deja hacer cambios, porque quedarían como reales y a nombre de soporte. La
+ * única excepción es escribir una novedad.
  */
 class ApplyHostView
 {
@@ -29,7 +30,8 @@ class ApplyHostView
         $user->syncOriginalAttribute('role');
         view()->share('hostView', true);
 
-        if (! $request->isMethodSafe() && ! $request->routeIs('host_view.stop', 'logout')) {
+        // Escribir una novedad se permite: queda a nombre de soporte y sirve para probar la aleta.
+        if (! $request->isMethodSafe() && ! $request->routeIs('host_view.stop', 'logout', 'shift_notes.store')) {
             $message = 'Estás en vista de anfitrión: es solo para mirar y no guarda cambios.';
 
             return $request->expectsJson()

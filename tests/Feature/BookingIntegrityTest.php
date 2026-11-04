@@ -2746,6 +2746,13 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('shift_notes.index', ['q' => 'monedas', 'desde' => now()->toDateString()]))->assertOk()->assertSee('Faltan monedas');
         $this->get(route('shift_notes.index', ['q' => 'ampolleta']))->assertOk()->assertDontSee('Faltan monedas');
 
+        // En vista de anfitrión soporte sí puede escribir una novedad.
+        $support = User::factory()->create(['role' => 'soporte']);
+        $this->actingAs($support)->withSession([ApplyHostView::SESSION_KEY => true])
+            ->post(route('shift_notes.store'), ['category' => 'Otro', 'body' => 'Prueba desde soporte'])->assertSessionHasNoErrors();
+        $this->assertSame($support->id, ShiftNote::where('body', 'Prueba desde soporte')->value('user_id'));
+        ShiftNote::where('body', 'Prueba desde soporte')->delete();
+
         // Soporte en vista de anfitrión ve lo mismo que ella, aunque haya escrito la novedad.
         $this->assertSame([$note->id], ShiftNote::previewAlert()->pluck('id')->all());
 

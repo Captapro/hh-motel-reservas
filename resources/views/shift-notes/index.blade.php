@@ -7,8 +7,8 @@
     <style>
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
-        body { background:#111; color:#eee; font-family:-apple-system, "Segoe UI", sans-serif; margin:0; }
-        .page-inner { max-width:1100px; margin:0; padding:18px 24px 40px; }
+        body { background:#111; color:#eee; font-family:-apple-system, "Segoe UI", sans-serif; margin:0; min-height:100vh; }
+        .page-inner { max-width:1500px; margin:0; padding:18px 24px 40px; }
         h1 { font-size:22px; margin:0 0 14px; }
         .banner { background:#2a1a0c; border:1px solid #ff7918; color:#ffd2ad; padding:10px 16px; border-radius:9px; margin-bottom:14px; font-size:14px; font-weight:600; }
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:10px 12px; border-radius:8px; margin-bottom:14px; font-size:13px; }
@@ -25,16 +25,22 @@
         .tabs { display:flex; gap:6px; margin-bottom:12px; }
         .tabs a { color:#ccc; text-decoration:none; background:#1c1c1c; border:1px solid #333; padding:7px 13px; border-radius:7px; font-size:13px; font-weight:600; }
         .tabs a.on { background:#ff7918; border-color:#ff7918; color:#21170e; }
-        .note { background:#1c1c1c; border:1px solid #333; border-left:4px solid #555; border-radius:10px; padding:11px 14px; margin-bottom:9px; }
-        .note.urgent { border-left-color:#ff7918; }
-        .note.open { background:#241a10; }
-        .note .meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12px; color:#999; margin-bottom:5px; }
-        .note .pill { padding:1px 8px; border-radius:999px; background:#2c2c2c; color:#ccc; font-weight:700; }
-        .note .pill.hot { background:#ff7918; color:#21170e; }
-        .note .body { font-size:14.5px; line-height:1.45; white-space:pre-wrap; }
-        .note .sub { font-size:12px; color:#999; margin-top:6px; }
-        .resolve { display:flex; gap:8px; margin-top:8px; }
-        .resolve button { background:#2c2c2c; color:#fff; border:1px solid #444; border-radius:7px; padding:0 12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .sheet-wrap { overflow:auto; border:1px solid #e5e7eb; border-radius:8px; }
+        table.sheet { width:100%; border-collapse:collapse; font-size:12.5px; }
+        table.sheet th { position:sticky; top:0; z-index:1; background:#f3f4f6; color:#4b5563; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; text-align:left; padding:8px 9px; border:1px solid #e5e7eb; white-space:nowrap; }
+        table.sheet td { padding:6px 9px; border:1px solid #e5e7eb; white-space:nowrap; background:#fff; color:#1f2937; vertical-align:top; }
+        table.sheet td.text { white-space:normal; min-width:280px; max-width:520px; line-height:1.4; }
+        .note-text { white-space:pre-wrap; }
+        table.sheet td.readers { white-space:normal; min-width:140px; color:#6b7280; }
+        table.sheet tr.open td { background:#fff7ed; }
+        table.sheet tr.zero td { color:#9ca3af; text-align:center; padding:14px; }
+        .tag { display:inline-block; padding:1px 8px; border-radius:999px; background:#f3f4f6; color:#4b5563; font-size:11px; font-weight:700; }
+        .tag.hot { background:#ff7918; color:#21170e; }
+        .sub { font-size:12px; color:#6b7280; margin-top:4px; white-space:normal; }
+        .resolve-box summary { cursor:pointer; color:#c2410c; font-weight:700; }
+        .resolve { display:flex; gap:6px; margin-top:6px; }
+        .resolve input { width:180px; padding:6px 8px; background:#fff; color:#1f2937; border:1px solid #d1d5db; font-size:12.5px; }
+        .resolve button { background:#ff7918; color:#21170e; border:none; border-radius:7px; padding:0 10px; font-weight:700; cursor:pointer; }
         .book-title { font-size:15px; margin:18px 0 8px; }
         .search { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
         .search input[type=text] { flex:1 1 220px; width:auto; }
@@ -101,35 +107,52 @@
             <button type="submit">Buscar</button>
         </form>
 
-        @forelse ($notes as $note)
-            <div class="note {{ $note->urgent ? 'urgent' : '' }} {{ $note->isOpen() ? 'open' : '' }}">
-                <div class="meta">
-                    @if ($note->urgent)<span class="pill hot">Urgente</span>@endif
-                    <span class="pill">{{ $note->category }}</span>
-                    @if ($note->room)<span class="pill">{{ $note->room->name }}</span>@endif
-                    @if ($note->isOpen())<span class="pill hot">Pendiente</span>@endif
-                    <span>{{ $note->user->name }} · {{ $note->created_at->timezone($tz)->format('d/m H:i') }}</span>
-                </div>
-                <div class="body">{{ $note->body }}</div>
-                @if ($note->resolved_at)
-                    <div class="sub">Resuelta por {{ $note->resolver?->name ?? '—' }} el {{ $note->resolved_at->timezone($tz)->format('d/m H:i') }}: {{ $note->resolution }}</div>
-                @endif
-                @if ($note->readers->isNotEmpty() || auth()->user()->isAdministrador())
-                    <div class="sub">
-                        Leída por: {{ $note->readers->isEmpty() ? 'nadie todavía' : $note->readers->map(fn ($r) => $r->name.' '.\Illuminate\Support\Carbon::parse($r->pivot->read_at)->timezone($tz)->format('d/m H:i'))->implode(' · ') }}
-                    </div>
-                @endif
-                @if ($note->isOpen())
-                    <form method="POST" action="{{ route('shift_notes.resolve', $note) }}" class="resolve">
-                        @csrf
-                        <input type="text" name="resolution" maxlength="500" placeholder="Qué se hizo" aria-label="Qué se hizo" required>
-                        <button type="submit">Marcar resuelta</button>
-                    </form>
-                @endif
-            </div>
-        @empty
-            <p class="empty">No hay novedades.</p>
-        @endforelse
+        <div class="sheet-wrap">
+            <table class="sheet">
+                <thead>
+                    <tr><th>Fecha</th><th>Hora</th><th>Categoría</th><th>Playroom</th><th>Novedad</th><th>Registró</th><th>Estado</th><th>Leída por</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @forelse ($notes as $note)
+                        @php $at = $note->created_at->copy()->timezone($tz); @endphp
+                        <tr class="{{ $note->isOpen() ? 'open' : '' }}">
+                            <td>{{ $at->format('d/m/Y') }}</td>
+                            <td>{{ $at->format('H:i') }}</td>
+                            <td>{{ $note->category }}</td>
+                            <td>{{ $note->room?->name ?? '—' }}</td>
+                            <td class="text">
+                                @if ($note->urgent)<span class="tag hot">Urgente</span>@endif
+                                <span class="note-text">{{ $note->body }}</span>
+                                @if ($note->resolved_at)
+                                    <div class="sub">Resuelta por {{ $note->resolver?->name ?? '—' }} el {{ $note->resolved_at->timezone($tz)->format('d/m H:i') }}: {{ $note->resolution }}</div>
+                                @endif
+                            </td>
+                            <td>{{ $note->user->name }}</td>
+                            <td>
+                                @if ($note->isOpen())<span class="tag hot">Pendiente</span>
+                                @elseif ($note->resolved_at)<span class="tag">Resuelta</span>
+                                @else<span class="tag">Informada</span>@endif
+                            </td>
+                            <td class="readers">{{ $note->readers->isEmpty() ? '—' : $note->readers->map(fn ($r) => $r->name.' '.\Illuminate\Support\Carbon::parse($r->pivot->read_at)->timezone($tz)->format('d/m H:i'))->implode(' · ') }}</td>
+                            <td>
+                                @if ($note->isOpen())
+                                    <details class="resolve-box">
+                                        <summary>Resolver</summary>
+                                        <form method="POST" action="{{ route('shift_notes.resolve', $note) }}" class="resolve">
+                                            @csrf
+                                            <input type="text" name="resolution" maxlength="500" placeholder="Qué se hizo" aria-label="Qué se hizo" required>
+                                            <button type="submit">Guardar</button>
+                                        </form>
+                                    </details>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr class="zero"><td colspan="9">No hay novedades.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
 
         @if ($notes->hasPages())
             <div class="pages">
