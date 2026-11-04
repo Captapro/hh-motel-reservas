@@ -9,6 +9,7 @@ use App\Models\ShiftNote;
 use App\Models\StaffNotice;
 use App\Services\Booking\RoomBoardService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -32,6 +33,7 @@ class AdminAppController extends Controller
                 'Esta semana' => $this->sales($today->copy()->startOfWeek(), $tonight),
                 'Este mes' => $this->sales($today->copy()->startOfMonth(), $tonight),
             ],
+            'pulse' => $this->pulseMark(),
             'cashToday' => (int) Payment::where('status', 'aprobado')->whereBetween('created_at', [$today, $tonight])->sum('amount'),
             'occupied' => $groups['occupied'],
             'aseo' => $groups['aseo'],
@@ -45,6 +47,20 @@ class AdminAppController extends Controller
             'notes' => ShiftNote::today(),
             'notices' => StaffNotice::with('reads')->where('audience', '!=', 'administracion')->latest()->take(5)->get(),
         ]);
+    }
+
+    /** Última reserva y último pago: la app los compara para sonar cuando entra algo nuevo. */
+    public function pulse(): JsonResponse
+    {
+        return response()->json($this->pulseMark());
+    }
+
+    private function pulseMark(): array
+    {
+        return [
+            'booking' => (int) Booking::max('id'),
+            'payment' => (int) Payment::where('status', 'aprobado')->max('id'),
+        ];
     }
 
     public function notify(Request $request): RedirectResponse

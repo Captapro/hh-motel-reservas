@@ -77,6 +77,7 @@
     <div class="top">
         <span>HH Admin</span>
         <div>
+            <button type="button" id="sound-test">Sonido</button>
             <a href="{{ route('rooms.board') }}">Sistema</a>
             <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Salir</button></form>
         </div>
@@ -231,10 +232,69 @@
     </div>
     @include('partials.staff-notice-alert')
     <script>
-        setInterval(function () {
-            if (document.getElementById('notify').open || document.querySelector('.hh-notice')) return;
-            window.location.reload();
-        }, 60000);
+        (function () {
+            const pulseUrl = @json(route('admin_app.pulse'));
+            let mark = @json($pulse);
+            let audio = null;
+
+            // El celular solo deja sonar después de un primer toque en la app.
+            const unlock = function () {
+                if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+                if (audio.state === 'suspended') audio.resume();
+            };
+            document.addEventListener('pointerdown', unlock);
+            document.addEventListener('keydown', unlock);
+
+            let sound = null;
+            fetch(@json(asset('sounds/cha-ching.mp3'))).then(function (response) { return response.arrayBuffer(); }).then(function (data) { sound = data; }).catch(function () {});
+
+            let decoded = null;
+            const cash = function () {
+                if (!audio || audio.state !== 'running' || !sound) return;
+                const play = function (buffer) {
+                    decoded = buffer;
+                    const source = audio.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audio.destination);
+                    source.start();
+                };
+                if (decoded) { play(decoded); return; }
+                audio.decodeAudioData(sound.slice(0), play);
+            };
+
+            document.getElementById('sound-test').addEventListener('click', function () {
+                unlock();
+                setTimeout(cash, 60);
+            });
+
+            // Actualiza sin recargar la página: recargar volvería a silenciar el celular.
+            const refresh = function () {
+                const notify = document.getElementById('notify');
+                if ((notify && notify.open) || document.querySelector('.hh-notice')) return;
+                fetch(window.location.href, { credentials: 'same-origin' }).then(function (response) {
+                    if (response.redirected || !response.ok) { window.location.reload(); return null; }
+                    return response.text();
+                }).then(function (html) {
+                    if (!html) return;
+                    const next = new DOMParser().parseFromString(html, 'text/html').querySelector('.wrap');
+                    if (next) document.querySelector('.wrap').innerHTML = next.innerHTML;
+                }).catch(function () {});
+            };
+
+            const pulse = function () {
+                fetch(pulseUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+                    .then(function (response) { return response.ok ? response.json() : null; })
+                    .then(function (latest) {
+                        if (!latest) return;
+                        const fresh = latest.booking > mark.booking || latest.payment > mark.payment;
+                        mark = latest;
+                        if (fresh) { cash(); refresh(); }
+                    }).catch(function () {});
+            };
+
+            setInterval(pulse, 20000);
+            setInterval(refresh, 60000);
+        })();
     </script>
 </body>
 </html>

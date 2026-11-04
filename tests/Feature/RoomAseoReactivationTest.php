@@ -452,5 +452,7 @@ class RoomAseoReactivationTest extends TestCase
 
         $this->actingAs(User::factory()->create(['role' => 'administrador']))
             ->get(route('admin_app.index'))->assertOk()->assertSeeInOrder(['Próximas reservas', 'GO 101', 'Cliente Lejano']);
+
+        $this->getJson(route('admin_app.pulse'))->assertExactJson(['booking' => Booking::max('id'), 'payment' => 0]);
     }
 }

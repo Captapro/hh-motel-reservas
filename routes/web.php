@@ -172,6 +172,7 @@ Route::post('/vista-anfitrion/salir', function (Request $request) {
 // tiene que poder hacerla aunque su perfil no vea Caja ni Productos.
 Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::get('/panel', [AdminAppController::class, 'index'])->name('admin_app.index');
+    Route::get('/panel/pulso', [AdminAppController::class, 'pulse'])->name('admin_app.pulse');
     Route::post('/panel/avisos', [AdminAppController::class, 'notify'])->middleware('throttle:20,1,admin_app.notify')->name('admin_app.notify');
 });
 
