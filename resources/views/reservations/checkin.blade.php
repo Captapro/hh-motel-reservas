@@ -375,7 +375,7 @@
             lastInput.value = last || '';
             const docInput = document.createElement('input');
             docInput.type = 'text';
-            docInput.placeholder = 'RUT (opcional)';
+            docInput.placeholder = 'RUT (opcional) — pasa el carnet o escríbelo';
             docInput.className = 'guest-doc';
             docInput.maxLength = 20;
             docInput.value = doc || '';
@@ -387,10 +387,10 @@
             removeBtn.textContent = '✕';
             removeBtn.addEventListener('click', function () { row.remove(); hhSyncGuestNames(); });
             [firstInput, lastInput, docInput].forEach(function (inp) { inp.addEventListener('input', hhSyncGuestNames); });
+            row.appendChild(docInput);
             row.appendChild(firstInput);
             row.appendChild(lastInput);
             row.appendChild(removeBtn);
-            row.appendChild(docInput);
             container.appendChild(row);
         }
         (function () {

@@ -130,6 +130,26 @@
             }
         }
 
+        // RUT de acompañante escrito a mano: trae solo el nombre de esa persona, nunca su historial.
+        let guestTimer = null;
+        document.addEventListener('input', function (e) {
+            const doc = e.target;
+            if (!doc.matches || !doc.matches('.guest-doc') || !e.isTrusted) return;
+            clearTimeout(guestTimer);
+            const clean = doc.value.replace(/[^0-9kK]/g, '').toUpperCase();
+            if (clean.length < 7 || rutDv(clean.slice(0, -1)) !== clean.slice(-1)) return;
+            guestTimer = setTimeout(async function () {
+                const person = await fetch('{{ route('customers.lookup') }}?rut=' + encodeURIComponent(clean.slice(0, -1) + '-' + clean.slice(-1)), { headers: { 'Accept': 'application/json' } })
+                    .then(r => (r.ok ? r.json() : null)).catch(() => null);
+                const row = doc.closest('.guest-row');
+                const first = row && row.querySelector('.guest-first');
+                if (!person || !person.first_name || !first || first.value.trim()) return;
+                first.value = person.first_name;
+                row.querySelector('.guest-last').value = person.last_name || '';
+                first.dispatchEvent(new Event('input', { bubbles: true }));
+            }, 400);
+        });
+
         let buffer = '', lastKey = 0, target = null, targetValue = null, timer = null, swallowUntil = 0;
 
         function finish() {

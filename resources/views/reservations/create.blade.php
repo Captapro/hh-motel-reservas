@@ -257,14 +257,25 @@
         .consumo-sum .p-sum { display:flex; justify-content:space-between; padding:2px 0; color:#bbb; }
         .consumo-sum .p-sum.total { border-top:1px solid #333; margin-top:4px; padding-top:6px; color:#eee; font-weight:700; }
         .consumo-sum .p-sum.total span:last-child { font-family:ui-monospace,monospace; font-size:18px; }
-        @media (min-width: 1500px) { .form-grid.walkin-grid { grid-template-columns: minmax(0,.95fr) minmax(0,1.15fr) minmax(0,1.45fr) minmax(235px,.65fr); } .form-grid.walkin-grid .panel .row > div { flex:1 1 130px; min-width:0; } .form-grid.walkin-grid .panel .row-id > div { min-width:0; } }
+        /* Tres columnas: estadía | cliente | consumo con el resumen debajo. Se llena de izquierda a derecha y el resumen queda ancho. */
+        @media (min-width: 1300px) {
+            .form-grid.walkin-grid { grid-template-columns: minmax(0,.85fr) minmax(0,1fr) minmax(0,1.45fr); grid-template-rows:auto 1fr; gap:14px 16px; }
+            .form-grid.walkin-grid > [data-step="1"] { grid-column:1; grid-row:1 / span 2; }
+            .form-grid.walkin-grid > [data-step="2"] { grid-column:2; grid-row:1 / span 2; }
+            .form-grid.walkin-grid > [data-step="3"] { grid-column:3; grid-row:1; }
+            .form-grid.walkin-grid > [data-step="4"] { grid-column:3; grid-row:2; position:static; margin-top:0; }
+            .form-grid.walkin-grid .summary-cols { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; }
+            .form-grid.walkin-grid .summary-cols .price-box { margin-top:6px; }
+            .form-grid.walkin-grid .panel .row > div { flex:1 1 130px; min-width:0; }
+            .form-grid.walkin-grid .panel .row-id > div { min-width:0; }
+        }
         .form-grid.walkin-grid .panel input:not([type=checkbox]), .form-grid.walkin-grid .panel select { padding:7px 11px; font-size:14px; }
         .form-grid.walkin-grid .panel label { margin:9px 0 4px; }
         .form-grid.walkin-grid .sub-head { margin:12px 0 2px; padding-top:10px; }
         .form-grid.walkin-grid .sub-head span { display:none; }
         .form-grid.walkin-grid .panel .hint { font-size:11.5px; margin-top:3px; }
         .form-grid.walkin-grid .guest-row input { padding:7px 11px; }
-        @media (max-width: 1499px) and (min-width: 701px) { .form-grid.walkin-grid { grid-template-columns: 1fr 1fr; gap:16px; } .form-grid.walkin-grid .panel-summary { grid-column:auto; position:static; margin-top:0; } }
+        @media (max-width: 1299px) and (min-width: 701px) { .form-grid.walkin-grid { grid-template-columns: 1fr 1fr; gap:16px; } .form-grid.walkin-grid .panel-summary { grid-column:auto; position:static; margin-top:0; } }
         @media (max-width: 700px) { .consumo-panel .prod-cols { column-count:1; } }
         @media (max-width: 1280px) { .form-grid { grid-template-columns: 1fr 1fr; } .panel-summary { grid-column: 1 / -1; position:static; margin-top:16px; } }
         @media (max-width: 700px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
@@ -443,10 +454,20 @@
             <div class="panel step-panel" data-step="2">
                 <div class="form-col-head"><span class="step-num">2</span>El cliente<span class="step-tag"></span></div>
 
-                <label>Teléfono / WhatsApp <span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional)</span></label>
-                <input type="text" name="customer_phone" id="customer-phone" placeholder="Pega el número del cliente — +56 9 ..." value="{{ old('customer_phone') }}" autocomplete="off">
+                <div id="cust-document-fields">
+                    <div class="doc-missing-warn" id="doc-missing-warn" hidden>⚠ A este cliente le falta el RUT o pasaporte — hay que cargarlo.</div>
+                    <label>Documento de identidad <span style="text-transform:none;font-weight:400;color:#9a9a9a;">— pasa el carnet por el lector o escribe el RUT</span></label>
+                    <div class="doc-row">
+                        <select name="document_type" id="document-type" required>
+                            <option value="" @selected(old('document_type', '') === '')>— Tipo —</option>
+                            <option value="rut" @selected(old('document_type') === 'rut')>RUT</option>
+                            <option value="pasaporte" @selected(old('document_type') === 'pasaporte')>Pasaporte</option>
+                        </select>
+                        <input type="text" name="document_number" id="document-number" placeholder="Elige el tipo primero" value="{{ old('document_number') }}" disabled required>
+                    </div>
+                    <div class="hint" id="document-hint">&nbsp;</div>
+                </div>
                 <div class="cust-badge" id="cust-badge" hidden></div>
-                <div class="hint">Si ya vino antes, se completan solos el nombre y el email. Si no lo entrega, déjalo vacío: se identifica con su RUT o pasaporte, pero no recibe WhatsApp ({{ $walkInMode ? 'ni pedido de opinión ni promociones' : 'ni el pase, ni los datos para pagar, ni avisos' }}).</div>
 
                 <div class="cust-ficha" id="cust-ficha" hidden>
                     <div class="ficha-row"><span class="ficha-label">Nombre</span><span class="ficha-value" id="ficha-name"></span></div>
@@ -467,6 +488,10 @@
                         </div>
                     </div>
 
+                    <label>Teléfono / WhatsApp <span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional)</span></label>
+                    <input type="text" name="customer_phone" id="customer-phone" placeholder="Pega el número del cliente — +56 9 ..." value="{{ old('customer_phone') }}" autocomplete="off">
+                    <div class="hint">Para mantener una comunicación fluida con el cliente durante su estadía.</div>
+
                     <label>Email <span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional)</span></label>
                     <input type="email" name="customer_email" id="customer-email" value="{{ old('customer_email') }}">
                     {{-- Bien visible: el permiso de marketing alimenta las campañas (tags hh_marketing_si/no en GHL). --}}
@@ -475,7 +500,7 @@
                         <span>📲 ¿Acepta recibir promociones por WhatsApp o correo? <span style="font-weight:400;color:#cfcfcf;">Pregúntale y marca si dice que sí.</span></span>
                     </label>
 
-                    <div class="sub-head">Identificación <span>— el documento es obligatorio; nacionalidad y fecha de nacimiento no, salvo para cupones que la exigen</span></div>
+                    <div class="sub-head">Identificación <span>— nacionalidad y fecha de nacimiento: opcionales, salvo para cupones que la exigen</span></div>
 
                     <div class="row row-id">
                         <div>
@@ -522,20 +547,6 @@
                     <input type="hidden" name="birth_date" id="customer-birth-date" value="{{ old('birth_date') }}">
                         </div>
                     </div>
-                </div>
-
-                <div id="cust-document-fields">
-                    <div class="doc-missing-warn" id="doc-missing-warn" hidden>⚠ A este cliente le falta el RUT o pasaporte — hay que cargarlo.</div>
-                    <label>Documento de identidad</label>
-                    <div class="doc-row">
-                        <select name="document_type" id="document-type" required>
-                            <option value="" @selected(old('document_type', '') === '')>— Tipo —</option>
-                            <option value="rut" @selected(old('document_type') === 'rut')>RUT</option>
-                            <option value="pasaporte" @selected(old('document_type') === 'pasaporte')>Pasaporte</option>
-                        </select>
-                        <input type="text" name="document_number" id="document-number" placeholder="Elige el tipo primero" value="{{ old('document_number') }}" disabled required>
-                    </div>
-                    <div class="hint" id="document-hint">&nbsp;</div>
                 </div>
 
                 @if ($walkInMode)
@@ -605,11 +616,15 @@
             <div class="panel panel-summary step-panel" data-step="{{ $walkInMode ? 4 : 3 }}">
                 <div class="form-col-head"><span class="step-num">{{ $walkInMode ? 4 : 3 }}</span>Resumen<span class="step-tag"></span></div>
 
+                <div class="summary-cols">
+                <div>
                 <div class="price-box" id="price-box" hidden></div>
                 @if ($walkInMode)
                     <div class="consumo-sum" id="consumo-sum" hidden></div>
                 @endif
+                </div>
 
+                <div>
                 <label>Código promocional (opcional)</label>
                 <select name="coupon_code" id="coupon-select" onchange="hhQuotePrice()">
                     <option value="" @selected(old('coupon_code', '') === '')>Sin cupón</option>
@@ -625,6 +640,8 @@
                     @endforeach
                 </select>
                 <div class="hint">Si exige cédula o credencial, verifícala antes de aplicarlo. Los que piden edad mínima no quedan activos si falta la fecha de nacimiento del cliente.</div>
+                </div>
+                </div>
 
                 @unless ($walkInMode)
                 <div hidden>{{-- acompañantes y consumo se piden en el check-in --}}
@@ -905,7 +922,7 @@
             lastInput.value = last || '';
             const docInput = document.createElement('input');
             docInput.type = 'text';
-            docInput.placeholder = 'RUT (opcional)';
+            docInput.placeholder = 'RUT (opcional) — pasa el carnet o escríbelo';
             docInput.className = 'guest-doc';
             docInput.maxLength = 20;
             docInput.value = doc || '';
@@ -921,10 +938,10 @@
                 hhSetPersonas(hhGuestRowCount() + 1);
             });
             [firstInput, lastInput, docInput].forEach(function (inp) { inp.addEventListener('input', hhSyncGuestNames); });
+            row.appendChild(docInput);
             row.appendChild(firstInput);
             row.appendChild(lastInput);
             row.appendChild(removeBtn);
-            row.appendChild(docInput);
             container.appendChild(row);
         }
         // Único punto que decide cuántas filas hay que mostrar — todo lo
@@ -1289,19 +1306,15 @@
                     extra += '<div class="ficha-row"><span class="ficha-label">Nacimiento</span><span class="ficha-value">' + birthDate.value.split('-').reverse().join('/') + '</span></div>';
                 }
                 const hasDoc = docType.value && docNumber.value;
-                if (hasDoc) {
-                    extra += '<div class="ficha-row"><span class="ficha-label">' + DOC_LABELS[docType.value] + '</span><span class="ficha-value">' + docNumber.value + '</span></div>';
+                if (phone.value) {
+                    extra += '<div class="ficha-row"><span class="ficha-label">Teléfono</span><span class="ficha-value">' + phone.value.replace(/</g, '&lt;') + '</span></div>';
                 }
                 fichaExtra.innerHTML = extra;
                 ficha.hidden = false;
                 editableFields.hidden = true;
-                // El documento es obligatorio — si este cliente conocido no
-                // tiene uno cargado, no se puede esconder detrás de la ficha
-                // sin más: hay que dejarlo a la vista con una advertencia,
-                // si no recepción nunca se entera de que falta.
-                const docFields = document.getElementById('cust-document-fields');
+                // El documento va siempre a la vista, arriba; si este cliente
+                // conocido no lo tiene cargado, se avisa que falta.
                 const docWarn = document.getElementById('doc-missing-warn');
-                if (docFields) docFields.hidden = hasDoc;
                 if (docWarn) docWarn.hidden = hasDoc;
             }
 
@@ -1309,9 +1322,7 @@
                 editing = true;
                 ficha.hidden = true;
                 editableFields.hidden = false;
-                const docFields = document.getElementById('cust-document-fields');
                 const docWarn = document.getElementById('doc-missing-warn');
-                if (docFields) docFields.hidden = false;
                 if (docWarn) docWarn.hidden = true;
             }
 
@@ -1396,6 +1407,34 @@
                 if (!card.foreigner) hhSetNationality('Chilena');
                 if (card.birthDate) { hhSetBirthDate(card.birthDate); hhQuotePrice(); }
             }
+            function useFoundByRut(d) {
+                if (d.phone) { phone.value = d.phone; lastQuery = d.phone; }
+                applyFound(d);
+                if (!phone.value) showEditableFields(); // sin teléfono: que se pueda agregar
+            }
+
+            // RUT escrito a mano: misma búsqueda que el lector, apenas el RUT es válido.
+            let rutTimer, lastRut = '';
+            docNumber.addEventListener('input', function () {
+                clearTimeout(rutTimer);
+                const rut = docNumber.value.trim();
+                if (docType.value !== 'rut' || !hhRutIsValid(rut) || rut === lastRut) return;
+                rutTimer = setTimeout(async function () {
+                    lastRut = rut;
+                    const r = await fetch('{{ route('customers.lookup') }}?rut=' + encodeURIComponent(rut), { headers: { 'Accept': 'application/json' } }).catch(() => null);
+                    const d = r && r.ok ? await r.json() : null;
+                    if (!d || docNumber.value.trim() !== rut) return;
+                    if (d.found) {
+                        useFoundByRut(d);
+                        docNumber.value = rut;
+                        hhValidateDocNumber();
+                    } else if (d.first_name && !fn.value) {
+                        fn.value = d.first_name;
+                        ln.value = d.last_name || '';
+                    }
+                }, 400);
+            });
+
             let holderFromCard = false;
             document.addEventListener('hh:id-scan', async function (e) {
                 const card = e.detail;
@@ -1419,8 +1458,7 @@
 
                 const d = await hhIdScan.lookup(card.rut);
                 if (d && d.found) {
-                    if (d.phone) { phone.value = d.phone; lastQuery = d.phone; }
-                    applyFound(d);
+                    useFoundByRut(d);
                     fillFromCard(card); // lo que dice el carnet manda sobre la ficha
                     hhIdScan.report(card);
                     return;
