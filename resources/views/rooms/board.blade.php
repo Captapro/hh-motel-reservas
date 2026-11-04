@@ -103,17 +103,10 @@
         .section.fuera .section-head h2 { color:#aaa; }
         .section-empty { color:#666; font-size:13px; }
 
-        .cat-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+        .cat-filter { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
         /* Sin relleno y con un punto del color de la categoría (el mismo del
            borde de la tarjeta); el filtro activo queda blanco con borde oscuro. */
         .cat-filter button { display:inline-flex; align-items:center; gap:7px; background:transparent; border:1px solid #d1d3d8; color:#42464e; border-radius:7px; padding:6px 13px; font-size:12px; font-weight:600; cursor:pointer; --dot:#888; }
-        .cat-filter button[data-cat]::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--dot); flex:none; }
-        .cat-filter button[data-cat="todas"] { --dot:#6fd39a; }
-        .cat-filter button[data-cat="go"]   { --dot:#5b9dd9; }
-        .cat-filter button[data-cat="lite"] { --dot:#4ecdc4; }
-        .cat-filter button[data-cat="plus"] { --dot:#b088e8; }
-        .cat-filter button[data-cat="max"]  { --dot:#f2994a; }
-        .cat-filter button[data-cat="new-lite"] { --dot:#e8c76f; }
         .cat-filter button:hover { border-color:#9a9da3; color:#202124; }
         /* Marcado de verdad: fondo oscuro y letra blanca, para que nadie deje un filtro puesto sin darse cuenta. */
         .cat-filter button.active, .cat-filter button.active:hover { background:#202124; border-color:#202124; color:#fff; font-weight:700; box-shadow:0 0 0 2px #ff7918; }
@@ -339,9 +332,9 @@
         html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.pending-balance)::after { content:'Falta cobrar'; order:3; flex:1 1 100%; color:#ffb379; font-size:11px; font-weight:700; }
         html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.checkin-btn)::after { content:'Falta check-in'; order:3; flex:1 1 100%; color:#ffb379; font-size:11px; font-weight:700; }
         /* Siguiente en fila: lo que toca arrendar; Ver todas muestra todos los disponibles. */
-        .next-switch { display:inline-flex; margin:0 0 10px; border:1px solid #d7d7d7; border-radius:9px; overflow:hidden; background:#fff; }
-        .next-switch button { background:none; border:none; margin:0; width:auto; padding:8px 14px; font-size:13px; font-weight:700; color:#555; cursor:pointer; white-space:nowrap; }
-        .next-switch button.active { background:#ff7918; color:#21170e; }
+        .next-switch { display:inline-flex; border:1px solid #d7d7d7; border-radius:9px; overflow:hidden; background:#fff; }
+        .cat-filter .next-switch button { background:none; border:none; border-radius:0; box-shadow:none; margin:0; width:auto; padding:8px 14px; font-size:13px; font-weight:700; color:#555; cursor:pointer; white-space:nowrap; }
+        .cat-filter .next-switch button.active, .cat-filter .next-switch button.active:hover { background:#ff7918; color:#21170e; box-shadow:none; }
         /* En aseo y Fuera de servicio: tarjetas iguales, de dos líneas. Arriba
            el nombre con sus atajos; abajo lo que hay que hacer o saber. El
            nombre ya trae la categoría y la sección dice el estado. */
@@ -585,23 +578,12 @@
 
             <div class="section disponibles">
                 <div class="section-head"><h2>Disponibles</h2><span class="count" id="disponibles-count">{{ $grouped['disponibles']->count() }}</span><span class="bar"></span></div>
-                @php
-                    $boardCategories = collect()
-                        ->concat($grouped['ocupadas'])->concat($grouped['en_aseo'])->concat($grouped['disponibles'])
-                        ->concat($grouped['proximas'])->concat($grouped['fuera_de_servicio'])
-                        ->pluck('room.category')->unique('id')->sortBy('display_order')->values();
-                @endphp
-                @if ($grouped['disponibles']->isNotEmpty())
-                    <div class="next-switch" id="next-switch">
-                        <button type="button" data-next="1" onclick="hhSetNextOnly(true)" title="Piso 1 y Ala Norte a la vista; el Ala Sur entra cuando se acaban los de esa categoría.">Siguiente en fila</button>
-                        <button type="button" data-next="0" onclick="hhSetNextOnly(false)">Ver todas</button>
-                    </div>
-                @endif
                 <div class="cat-filter" id="cat-filter">
-                    @if ($boardCategories->count() > 1)
-                        @foreach ($boardCategories as $cat)
-                            <button type="button" data-cat="{{ Str::slug($cat->name) }}" onclick="hhFilterCategory('{{ Str::slug($cat->name) }}')">{{ $cat->name }}</button>
-                        @endforeach
+                    @if ($grouped['disponibles']->isNotEmpty())
+                        <div class="next-switch" id="next-switch">
+                            <button type="button" data-next="1" onclick="hhSetNextOnly(true)" title="Piso 1 y Ala Norte a la vista; el Ala Sur entra cuando se acaban los de esa categoría.">Siguiente en fila</button>
+                            <button type="button" data-next="0" onclick="hhSetNextOnly(false)">Ver todas</button>
+                        </div>
                     @endif
                     <button type="button" class="upcoming-filter" id="upcoming-filter-btn" onclick="hhToggleUpcomingFilter()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.8 21H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M16 3v4M8 3v4M4 11h10"/><circle cx="18" cy="18" r="4"/><path d="M18 16.5V18l1 1"/></svg>Con reservas futuras</button>
                 </div>
@@ -770,12 +752,6 @@
         // Filtro de categoría — solo afecta la sección "Disponibles". Las
         // ocupadas y las "por llegar" quedan siempre visibles. La elección
         // se guarda y se re-aplica en cada refresco automático (cada 30s).
-        // Tocar de nuevo la categoría marcada la desmarca (no hay botón "Todas" en esta fila).
-        function hhFilterCategory(cat) {
-            const current = localStorage.getItem('hh-board-category');
-            localStorage.setItem('hh-board-category', current === cat ? 'todas' : cat);
-            hhApplyCategoryFilter();
-        }
         // Segundo filtro, independiente de la categoría: mostrar solo las
         // disponibles que YA tienen una reserva futura encima -- para no
         // ofrecérselas de largada a un walk-in sin fijarse.
@@ -787,12 +763,6 @@
             const grid = document.getElementById('disponibles-grid');
             const filterBar = document.getElementById('cat-filter');
             if (!filterBar) return;
-            let cat = localStorage.getItem('hh-board-category') || 'todas';
-            if (cat !== 'todas' && !filterBar.querySelector('button[data-cat="' + cat + '"]')) {
-                cat = 'todas';
-            }
-            filterBar.querySelectorAll('button[data-cat]').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-
             const onlyUpcoming = localStorage.getItem('hh-board-only-upcoming') === '1';
             // Al elegir un ala arriba se ven todos los de esa ala, por si un cliente pide uno puntual.
             const wing = localStorage.getItem('hh-board-wing') || 'todas';
@@ -807,15 +777,14 @@
 
             let shown = 0;
             grid.querySelectorAll('.card').forEach(card => {
-                const match = (cat === 'todas' || card.classList.contains('cat-' + cat))
-                    && (!onlyUpcoming || card.classList.contains('has-upcoming'))
+                const match = (!onlyUpcoming || card.classList.contains('has-upcoming'))
                     && (!applyOrder || card.classList.contains('offered-now'));
                 card.classList.toggle('cat-hidden', !match);
                 if (match && !card.classList.contains('wing-hidden')) shown++;
             });
 
             const total = grid.querySelectorAll('.card:not(.wing-hidden)').length;
-            if (countEl) countEl.textContent = (cat === 'todas' && !onlyUpcoming && !applyOrder) ? total : (shown + ' de ' + total);
+            if (countEl) countEl.textContent = (!onlyUpcoming && !applyOrder) ? total : (shown + ' de ' + total);
             const none = document.getElementById('disponibles-none');
             if (none) none.classList.toggle('cat-hidden', shown > 0);
         }
@@ -848,7 +817,6 @@
         })();
         function hhSetNextOnly(on) {
             localStorage.setItem('hh-board-next-only', on ? '1' : '0');
-            if (!on) localStorage.setItem('hh-board-category', 'todas');
             hhApplyCategoryFilter();
         }
         // Filtro por ala (norte / sur): oculta las tarjetas de las otras alas en todo el tablero
