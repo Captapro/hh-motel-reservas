@@ -14,7 +14,7 @@
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:10px 12px; border-radius:8px; margin-bottom:14px; font-size:13px; }
         .note-form { background:#fff !important; border:1px solid #e5e7eb !important; border-radius:10px; padding:12px 14px; margin-bottom:14px; }
         .note-form select, .note-form textarea, .search input { background:#fff !important; color:#1f2937 !important; border:1px solid #d1d5db !important; height:38px !important; min-height:38px !important; padding-top:0; padding-bottom:0; box-shadow:none !important; color-scheme:light; }
-        .note-form textarea { height:38px !important; padding:8px 10px !important; }
+        .note-form textarea { display:block; height:auto !important; max-height:120px; field-sizing:content; line-height:20px !important; padding:8px 10px !important; resize:none !important; overflow-y:auto; }
         .note-form select { padding:0 28px 0 10px !important; line-height:36px !important; }
         .note-form .flags input { appearance:auto !important; -webkit-appearance:checkbox !important; width:16px !important; height:16px !important; min-height:0 !important; padding:0 !important; background:#fff !important; border:1px solid #9ca3af !important; accent-color:#ff7918; color-scheme:light; }
         .note-form label, .search label { color:#374151 !important; }
@@ -136,7 +136,7 @@
                                     <div class="sub">Resuelta por {{ $note->resolver?->name ?? '—' }} el {{ $note->resolved_at->timezone($tz)->format('d/m H:i') }}: {{ $note->resolution }}</div>
                                 @endif
                             </td>
-                            <td>{{ $note->user->name }}</td>
+                            <td>{{ $note->authorName() }}</td>
                             <td>
                                 @if ($note->isOpen())<span class="tag hot">Pendiente</span>
                                 @elseif ($note->resolved_at)<span class="tag">Resuelta</span>

@@ -2744,7 +2744,7 @@ class BookingIntegrityTest extends TestCase
         $this->createSegmentRulesTable();
         $this->actingAs($next)->get(route('shift_notes.index'))->assertOk()->assertSee('Faltan monedas')->assertSee('Registrar novedad');
         $this->get(route('shift_notes.index', ['q' => 'monedas', 'desde' => now()->toDateString()]))->assertOk()->assertSee('Faltan monedas');
-        $this->get(route('shift_notes.index', ['q' => 'ampolleta']))->assertOk()->assertDontSee('Faltan monedas');
+        $this->assertCount(0, $this->get(route('shift_notes.index', ['q' => 'ampolleta']))->assertOk()->viewData('notes'));
 
         // En vista de anfitrión soporte sí puede escribir una novedad.
         $support = User::factory()->create(['role' => 'soporte']);
@@ -2755,6 +2755,16 @@ class BookingIntegrityTest extends TestCase
 
         // Soporte en vista de anfitrión ve lo mismo que ella, aunque haya escrito la novedad.
         $this->assertSame([$note->id], ShiftNote::previewAlert()->pluck('id')->all());
+
+        // Las del día siguen a la vista aunque ya se leyeron; salen al cambiar el día operativo.
+        $this->assertSame([$note->id], ShiftNote::today()->pluck('id')->all());
+        $plain = ShiftNote::create(['user_id' => $author->id, 'category' => 'Otro', 'body' => 'Dato del día']);
+        $this->assertTrue(ShiftNote::today()->pluck('id')->contains($plain->id));
+        $this->travel(2)->days();
+        $this->assertFalse(ShiftNote::today()->pluck('id')->contains($plain->id));
+        $this->assertTrue(ShiftNote::today()->pluck('id')->contains($note->id)); // pendiente: sigue
+        $this->travelBack();
+        $plain->delete();
 
         // Una pendiente vieja se sigue avisando; una normal vieja, no.
         $third = User::factory()->create(['role' => 'recepcion']);

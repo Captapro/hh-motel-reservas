@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Room;
+use App\Models\RoomCleaning;
 use App\Models\Staff;
 use App\Models\StaffShiftLog;
 use Carbon\Carbon;
@@ -51,7 +52,25 @@ class MucamaActivityController extends Controller
 
         $routesByStaff = $this->todaysRoutes($today);
 
-        return view('mucamas.activity', ['mucamas' => $mucamas, 'todayLogs' => $todayLogs, 'routesByStaff' => $routesByStaff]);
+        return view('mucamas.activity', ['mucamas' => $mucamas, 'todayLogs' => $todayLogs, 'routesByStaff' => $routesByStaff, 'cleanings' => $this->todaysCleanings($today)]);
+    }
+
+    /** Aseos del día con su duración y el tiempo que pasó desde el aseo anterior de la misma mucama. */
+    private function todaysCleanings(Carbon $today): Collection
+    {
+        return RoomCleaning::with(['room', 'staff'])->where('started_at', '>=', $today)->orderBy('started_at')->get()
+            ->groupBy('staff_id')
+            ->flatMap(function (Collection $rows) {
+                $previous = null;
+
+                return $rows->map(function (RoomCleaning $cleaning) use (&$previous) {
+                    $gap = $previous?->finished_at ? (int) $previous->finished_at->diffInMinutes($cleaning->started_at) : null;
+                    $previous = $cleaning;
+
+                    return ['cleaning' => $cleaning, 'gap' => $gap];
+                });
+            })
+            ->sortByDesc(fn (array $row) => $row['cleaning']->started_at->timestamp)->values();
     }
 
     /**

@@ -58,6 +58,7 @@ use App\Http\Controllers\MercadoPagoController;
 use App\Http\Controllers\MonthlySalesController;
 use App\Http\Controllers\MucamaActivityController;
 use App\Http\Controllers\MucamaAuthController;
+use App\Http\Controllers\MucamaWorkController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentDocumentController;
@@ -136,6 +137,9 @@ Route::get('/qr/habitacion/{room}', [RoomQrController::class, 'show'])->name('ro
 Route::get('/qr/habitacion/{room}/imagen.png', [RoomQrController::class, 'image'])->name('rooms.qr.image');
 Route::post('/qr/habitacion/{room}/aseo', [RoomQrController::class, 'reportAseo'])->middleware(['throttle:20,1,rooms.qr.report_aseo', 'mucama'])->name('rooms.qr.report_aseo');
 Route::post('/qr/habitacion/{room}/confirmar', [RoomQrController::class, 'confirmRoomReady'])->middleware(['throttle:20,1,rooms.qr.confirm_ready', 'mucama'])->name('rooms.qr.confirm_ready');
+Route::post('/qr/mucamas/aseo/{room}/empezar', [MucamaWorkController::class, 'start'])->middleware(['throttle:30,1,mucamas.work', 'mucama'])->name('mucamas.work.start');
+Route::post('/qr/mucamas/aseo/{room}/terminar', [MucamaWorkController::class, 'finish'])->middleware(['throttle:30,1,mucamas.work', 'mucama'])->name('mucamas.work.finish');
+Route::post('/qr/mucamas/novedad', [MucamaWorkController::class, 'note'])->middleware(['throttle:20,1,mucamas.note', 'mucama'])->name('mucamas.work.note');
 Route::get('/qr/mucamas', [RoomQrController::class, 'mucamaPanel'])->middleware('mucama')->name('rooms.qr.mucama_panel');
 Route::get('/qr/mucamas/imagen.png', [RoomQrController::class, 'mucamaPanelImage'])->name('rooms.qr.mucama_panel_image');
 Route::get('/qr/ronda-de-turno/imagen.png', [RoomQrController::class, 'shiftRoundImage'])->name('rooms.qr.shift_round_image');

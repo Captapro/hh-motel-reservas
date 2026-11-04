@@ -6,6 +6,8 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Room;
+use App\Models\ShiftNote;
+use App\Models\RoomCleaning;
 use App\Models\RoomCategory;
 use App\Models\Staff;
 use App\Models\StaffShiftLog;
@@ -52,6 +54,10 @@ class RoomAseoReactivationTest extends TestCase
             '2026_09_22_010022_add_pin_to_staff_table.php',
             '2026_09_22_010843_add_last_qr_scan_to_staff_table.php',
             '2026_09_22_012410_create_staff_shift_logs_table.php',
+            '2026_11_04_120000_create_shift_notes_tables.php',
+            '2026_11_04_130000_add_room_cleanings_and_note_staff.php',
+            '2026_09_15_230000_create_room_furniture_tables.php',
+            '2026_09_15_231000_create_room_inspections_table.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -259,5 +265,59 @@ class RoomAseoReactivationTest extends TestCase
         $this->assertSame('activa', $this->room->fresh()->operational_status);
         $log = AuditLog::where('action', 'habitacion.aseo_listo')->latest('id')->first();
         $this->assertSame('Ana Mucama', $log->new_value['cleaned_by']);
+    }
+
+    public function test_maid_starts_and_finishes_a_cleaning_and_leaves_a_note(): void
+    {
+        $mucama = Staff::create(['name' => 'Ana Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
+        $session = ['mucama_staff_id' => $mucama->id];
+        $other = Room::create(['room_category_id' => $this->room->room_category_id, 'name' => 'PLUS 999', 'operational_status' => 'aseo']);
+
+        $this->withSession($session)->post(route('mucamas.work.start', $this->room))->assertRedirect(route('rooms.qr.mucama_panel'));
+        $cleaning = RoomCleaning::sole();
+        $this->assertNull($cleaning->finished_at);
+
+        // Un aseo a la vez.
+        $this->withSession($session)->post(route('mucamas.work.start', $other))->assertSessionHasErrors('aseo');
+        $this->assertSame(1, RoomCleaning::count());
+
+        $this->travel(25)->minutes();
+        $this->withSession($session)->post(route('mucamas.work.finish', $this->room))->assertRedirect(route('rooms.qr.mucama_panel'));
+        $this->assertSame(25, $cleaning->fresh()->minutes());
+        $this->assertSame('Ana Mucama', $this->room->fresh()->aseo_reported_by);
+
+        $this->withSession($session)->post(route('mucamas.work.note'), ['category' => 'Insumos', 'body' => 'Falta jabón'])->assertSessionHasNoErrors();
+        $note = ShiftNote::sole();
+        $this->assertSame('Ana Mucama', $note->authorName());
+
+        // La novedad de la mucama le llega a la anfitriona.
+        $host = User::factory()->create(['role' => 'recepcion']);
+        $this->assertSame([$note->id], ShiftNote::alertFor($host)->pluck('id')->all());
+    }
+
+    public function test_each_room_falls_in_one_condition_and_only_free_rooms_get_a_round(): void
+    {
+        $categoryId = $this->room->room_category_id;
+        $free = Room::create(['room_category_id' => $categoryId, 'name' => 'GO 102', 'operational_status' => 'activa']);
+        $marked = Room::create(['room_category_id' => $categoryId, 'name' => 'GO 103', 'operational_status' => 'ocupada']);
+        $out = Room::create(['room_category_id' => $categoryId, 'name' => 'GO 104', 'operational_status' => 'mantencion']);
+
+        $groups = app(\App\Services\Booking\RoomBoardService::class)->byCondition();
+        $names = fn (string $group) => $groups[$group]->map(fn (array $e) => $e['room']->name)->all();
+
+        $this->assertSame([$this->room->name], $names('aseo'));
+        $this->assertSame([$free->name], $names('free'));
+        $this->assertSame([$marked->name], $names('occupied'));
+        $this->assertSame([$out->name], $names('out'));
+
+        $mucama = Staff::create(['name' => 'Ana Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
+        $this->withSession(['mucama_staff_id' => $mucama->id])->get(route('rooms.qr.mucama_panel'))
+            ->assertOk()->assertSee('Ocupadas (1)')->assertSee('Fuera de servicio (1)')->assertSee('Mantención');
+
+        // Aunque tenga un escaneo válido, una pieza en aseo no admite levantamiento.
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->withSession(['qr_scanned_at.'.$this->room->id => now()->timestamp])
+            ->get(route('rooms.inspections.create', $this->room).'?qr=1')
+            ->assertRedirect(route('rooms.qr.show', $this->room));
     }
 }

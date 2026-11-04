@@ -131,6 +131,8 @@
                                 {{ request('ronda') ? 'Marcar ocupada y seguir la ronda →' : 'Marcar como ocupada →' }}
                             </button>
                         </form>
+                    @elseif ($room->operational_status !== 'activa')
+                        <p style="margin:0; font-size:13px; color:#62656c;">Este Playroom no está en condiciones de levantamiento hasta que quede lista.</p>
                     @elseif ($hasValidScan)
                         <a class="primary" href="{{ route('rooms.inspections.create', $room) }}?qr=1{{ request('ronda') ? '&ronda=1' : '' }}">Hacer inspección completa →</a>
                     @else

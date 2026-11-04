@@ -341,7 +341,7 @@
         .aseo-priority.aseo-urgent { background:#ff7918; color:#21170e; }
         .aseo-priority.aseo-high { background:#ff7918; color:#21170e; }
         .aseo-priority.aseo-mid { background:#a8530f; color:#fff; }
-        .aseo-priority.aseo-info { background:#fff; color:#21170e; border:1px solid #ff7918; }
+        .aseo-priority.aseo-info { background:#0a5cff; color:#fff; }
         @keyframes stepPulseCard { 0%,100% { box-shadow:0 0 0 3px #ff7918; } 50% { box-shadow:0 0 0 6px rgba(255,121,24,.35); } }
         @media (prefers-reduced-motion: reduce) { .section.aseo .card.aseo-urgent { animation:none; } }
         /* Siguiente en fila: lo que toca arrendar; Ver todas muestra todos los disponibles. */

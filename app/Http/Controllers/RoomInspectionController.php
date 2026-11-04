@@ -30,6 +30,11 @@ class RoomInspectionController extends Controller
         // pasado de verdad por la cámara de escaneo -- si no, no se puede
         // llegar acá solo con el link guardado o tipeando la URL.
         if ($request->boolean('qr')) {
+            if ($room->operational_status !== 'activa') {
+                return redirect()->route('rooms.qr.show', $room)
+                    ->withErrors(['pin' => 'Este Playroom no está en condiciones de levantamiento hasta que quede lista.']);
+            }
+
             $scannedAt = $request->session()->get('qr_scanned_at.'.$room->id);
             if (! $scannedAt || (now()->timestamp - $scannedAt) > self::SCAN_VALID_SECONDS) {
                 return redirect()->route('rooms.qr.show', $room)

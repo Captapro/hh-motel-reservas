@@ -34,6 +34,9 @@
         .rg { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; }
         .rg > a.room-card, .rg > .done-card { margin-bottom:0; }
         .rg > .empty { grid-column:1 / -1; }
+        .state-card { background:#fff !important; border:1px solid #e5e7eb !important; border-radius:10px; padding:12px 16px; }
+        .state-card .name { color:#1f2937 !important; font-weight:700; font-size:14.5px; }
+        .state-card .cat { color:#6b7280 !important; font-size:12px; margin-top:2px; }
     </style>
 </head>
 <body>
@@ -87,6 +90,42 @@
         @endforeach
         </div>
     @endif
+
+    <h2 class="section">En aseo ({{ $aseo->count() }})</h2>
+    <div class="rg">
+    @forelse ($aseo as $entry)
+        <div class="state-card">
+            <div class="name">{{ $entry['room']->name }}</div>
+            <div class="cat">{{ $entry['room']->category->name }} · {{ $entry['room']->aseo_reported_at ? 'Aseo terminado, falta confirmar' : 'Sin levantamiento hasta que quede lista' }}</div>
+        </div>
+    @empty
+        <p class="empty">Ninguna en aseo.</p>
+    @endforelse
+    </div>
+
+    <h2 class="section">Ocupadas ({{ $occupied->count() }})</h2>
+    <div class="rg">
+    @forelse ($occupied as $entry)
+        <div class="state-card">
+            <div class="name">{{ $entry['room']->name }}</div>
+            <div class="cat">{{ $entry['room']->category->name }}@if ($entry['status']['occupancy'] === 'ocupada' && $entry['status']['eta_minutes'] !== null && $entry['status']['eta_minutes'] >= 0) · libera en {{ \App\Support\TimeFormat::minutes($entry['status']['eta_minutes']) }}@endif</div>
+        </div>
+    @empty
+        <p class="empty">Ninguna ocupada ahora.</p>
+    @endforelse
+    </div>
+
+    <h2 class="section">Fuera de servicio ({{ $out->count() }})</h2>
+    <div class="rg">
+    @forelse ($out as $entry)
+        <div class="state-card">
+            <div class="name">{{ $entry['room']->name }}</div>
+            <div class="cat">{{ \App\Services\Rooms\RoomClosingLog::STATUS_LABELS[$entry['room']->operational_status] }}@if ($entry['room']->operational_note) · {{ $entry['room']->operational_note }}@endif</div>
+        </div>
+    @empty
+        <p class="empty">Ninguna fuera de servicio.</p>
+    @endforelse
+    </div>
 </div>
 </body>
 </html>

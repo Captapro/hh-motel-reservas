@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\RateRulePrice;
 use App\Models\Room;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Dos ejes independientes por habitación: estado operativo (¿se puede usar
@@ -134,5 +135,29 @@ class RoomBoardService
             ->values()
             ->map(fn (Room $room) => ['room' => $room, 'status' => $this->statusFor($room)])
             ->all();
+    }
+
+    /**
+     * El tablero separado por condición, para los paneles de anfitrión y
+     * mucamas: cada Playroom cae en un solo grupo. Solo 'free' está en
+     * condiciones de recibir un levantamiento.
+     *
+     * @return array{out: Collection, aseo: Collection, occupied: Collection, free: Collection}
+     */
+    public function byCondition(): array
+    {
+        $groups = collect($this->board())->groupBy(fn (array $e) => match (true) {
+            in_array($e['room']->operational_status, ['mantencion', 'inactiva'], true) => 'out',
+            $e['room']->operational_status === 'aseo' => 'aseo',
+            $e['room']->operational_status === 'ocupada', $e['status']['occupancy'] === 'ocupada' => 'occupied',
+            default => 'free',
+        });
+
+        return [
+            'out' => $groups->get('out', collect())->values(),
+            'aseo' => $groups->get('aseo', collect())->values(),
+            'occupied' => $groups->get('occupied', collect())->values(),
+            'free' => $groups->get('free', collect())->values(),
+        ];
     }
 }

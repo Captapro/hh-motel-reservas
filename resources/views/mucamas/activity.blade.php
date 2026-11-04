@@ -98,6 +98,28 @@
     @endforelse
     </div>
 
+    <h2 class="section">Aseos de hoy</h2>
+    @if ($cleanings->isEmpty())
+        <p class="empty">Todavía no hay aseos registrados hoy.</p>
+    @else
+        <table class="log-table">
+            <thead><tr><th>Mucama</th><th>Playroom</th><th>Inicio</th><th>Término</th><th>Duración</th><th>Desde el aseo anterior</th></tr></thead>
+            <tbody>
+                @foreach ($cleanings as $row)
+                    @php $c = $row['cleaning']; @endphp
+                    <tr>
+                        <td>{{ $c->staff->name }}</td>
+                        <td>{{ $c->room->name }}</td>
+                        <td>{{ $c->started_at->timezone('America/Santiago')->format('H:i') }}</td>
+                        <td class="{{ $c->finished_at ? '' : 'open' }}">{{ $c->finished_at ? $c->finished_at->timezone('America/Santiago')->format('H:i') : 'En curso' }}</td>
+                        <td>{{ $c->finished_at ? \App\Support\TimeFormat::minutes($c->minutes()) : '—' }}</td>
+                        <td>{{ $row['gap'] !== null ? \App\Support\TimeFormat::minutes($row['gap']) : '—' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     <h2 class="section">Registro de turnos de hoy</h2>
     @if ($todayLogs->isEmpty())
         <p class="empty">Todavía no hay entradas registradas hoy.</p>

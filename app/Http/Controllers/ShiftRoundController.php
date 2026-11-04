@@ -20,18 +20,22 @@ class ShiftRoundController extends Controller
     {
         $today = now('America/Santiago')->startOfDay();
 
-        // board() ya trae room.category y room.latestInspection cargados --
-        // solo filtramos a lo "disponible ahora" (activa y libre; una
-        // ocupada no se puede inspeccionar con el huésped adentro).
-        $rooms = collect($board->board())
-            ->filter(fn (array $e) => $e['room']->operational_status === 'activa' && $e['status']['occupancy'] === 'libre')
-            ->map(fn (array $e) => $e['room'])
-            ->values();
+        // Solo las libres y listas admiten levantamiento: las demás se muestran
+        // aparte, sin acción, para saber en qué está cada Playroom.
+        $groups = $board->byCondition();
+        $rooms = $groups['free']->map(fn (array $e) => $e['room'])->values();
 
         $pending = $rooms->filter(fn (Room $r) => ! $r->latestInspection || $r->latestInspection->created_at->lt($today))->values();
         $done = $rooms->filter(fn (Room $r) => $r->latestInspection && $r->latestInspection->created_at->gte($today))->values();
 
-        return view('rooms.shift-round', ['pending' => $pending, 'done' => $done, 'total' => $rooms->count()]);
+        return view('rooms.shift-round', [
+            'pending' => $pending,
+            'done' => $done,
+            'total' => $rooms->count(),
+            'aseo' => $groups['aseo'],
+            'occupied' => $groups['occupied'],
+            'out' => $groups['out'],
+        ]);
     }
 
     /**

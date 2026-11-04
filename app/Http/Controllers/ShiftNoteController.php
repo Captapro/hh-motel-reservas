@@ -23,7 +23,7 @@ class ShiftNoteController extends Controller
         $to = (string) $request->query('hasta', '');
         $day = fn (string $date) => Carbon::hasFormat($date, 'Y-m-d') ? Carbon::parse($date, 'America/Santiago') : null;
 
-        $notes = ShiftNote::with(['user', 'room', 'resolver', 'readers'])
+        $notes = ShiftNote::with(['user', 'staff', 'room', 'resolver', 'readers'])
             ->when($filter === 'pendientes', fn ($q) => $q->where('pending', true)->whereNull('resolved_at'))
             ->when($filter === 'urgentes', fn ($q) => $q->where('urgent', true))
             ->when($search !== '', fn ($q) => $q->whereRaw('lower(body) like ?', ['%'.mb_strtolower($search).'%']))

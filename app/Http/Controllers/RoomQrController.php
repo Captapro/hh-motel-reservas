@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Room;
+use App\Models\RoomCleaning;
+use App\Models\ShiftNote;
 use App\Models\Staff;
 use App\Services\Booking\RoomBoardService;
 use Endroid\QrCode\Builder\Builder;
@@ -173,6 +175,8 @@ class RoomQrController extends Controller
 
         $old = $room->only(['aseo_reported_by', 'aseo_reported_at']);
         $room->update(['aseo_reported_by' => $mucama->name, 'aseo_reported_at' => now()]);
+        // Si lo empezó desde su panel y terminó con el QR de la puerta, el aseo igual se cierra.
+        RoomCleaning::where('room_id', $room->id)->where('staff_id', $mucama->id)->whereNull('finished_at')->update(['finished_at' => now()]);
         AuditLog::record(null, 'habitacion.aseo_reportado', 'Room', $room->id, $old, [
             ...$room->only(['aseo_reported_by', 'aseo_reported_at']),
             'staff_id' => $mucama->id,
@@ -188,27 +192,36 @@ class RoomQrController extends Controller
      */
     public function mucamaPanel(Request $request, RoomBoardService $board): View
     {
-        $entries = collect($board->board());
+        $groups = $board->byCondition();
 
         // Prioridad: la que tiene una reserva agendada más próxima primero
         // (por más urgente que sea limpiarla), las que no tienen nada
         // encima todavía agendado van al final -- next_booking se calcula
         // igual aunque la pieza esté en 'aseo', no hace falta nada nuevo acá.
-        $pendingAseo = $entries->filter(fn (array $e) => $e['room']->operational_status === 'aseo' && ! $e['room']->aseo_reported_at)
+        $pendingAseo = $groups['aseo']->filter(fn (array $e) => ! $e['room']->aseo_reported_at)
             ->sortBy(fn (array $e) => $e['status']['next_booking']?->starts_at?->timestamp ?? PHP_INT_MAX)
             ->values();
-        $reportedAseo = $entries->filter(fn (array $e) => $e['room']->operational_status === 'aseo' && $e['room']->aseo_reported_at)->values();
-        $occupied = $entries->filter(fn (array $e) => $e['room']->operational_status === 'activa' && $e['status']['occupancy'] === 'ocupada')->values();
-        $upcoming = $entries->filter(fn (array $e) => $e['room']->operational_status === 'activa' && $e['status']['occupancy'] === 'libre' && $e['status']['next_booking'])
+        $reportedAseo = $groups['aseo']->filter(fn (array $e) => $e['room']->aseo_reported_at)->values();
+        $upcoming = $groups['free']->filter(fn (array $e) => $e['status']['next_booking'])
             ->sortBy(fn (array $e) => $e['status']['next_booking']->starts_at)
             ->values();
 
+        $mucama = $request->attributes->get('mucama');
+        $open = RoomCleaning::with(['room', 'staff'])->whereNull('finished_at')->get();
+
         return view('rooms.qr-mucama-panel', [
+            'current' => $open->firstWhere('staff_id', $mucama->id),
+            'openByRoom' => $open->where('staff_id', '!=', $mucama->id)->keyBy('room_id'),
+            'doneToday' => RoomCleaning::where('staff_id', $mucama->id)->whereNotNull('finished_at')
+                ->where('started_at', '>=', now('America/Santiago')->startOfDay())->get(),
+            'rooms' => Room::orderBy('name')->get(['id', 'name']),
+            'todayNotes' => ShiftNote::today(),
             'pendingAseo' => $pendingAseo,
             'reportedAseo' => $reportedAseo,
-            'occupied' => $occupied,
+            'occupied' => $groups['occupied'],
+            'outOfService' => $groups['out'],
             'upcoming' => $upcoming,
-            'mucama' => $request->attributes->get('mucama'),
+            'mucama' => $mucama,
         ]);
     }
 }
