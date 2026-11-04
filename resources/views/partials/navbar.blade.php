@@ -190,4 +190,5 @@
 @include('partials.help-widget')
 @auth
     @include('partials.id-scanner')
+    @include('partials.shift-notes-alert')
 @endauth

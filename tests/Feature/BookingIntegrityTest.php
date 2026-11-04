@@ -28,6 +28,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\RateRule;
 use App\Models\Room;
+use App\Models\ShiftNote;
 use App\Models\RoomCategory;
 use App\Models\Staff;
 use App\Models\TrackingData;
@@ -2721,5 +2722,40 @@ class BookingIntegrityTest extends TestCase
 
         $this->put(route('payments.document', $payment), ['receipt_number' => '96302']);
         $this->assertSame('96302', $payment->fresh()->receipt_number);
+    }
+
+    public function test_shift_notes_alert_the_next_host_until_read_and_keep_who_read_them(): void
+    {
+        (require database_path('migrations/2026_11_04_120000_create_shift_notes_tables.php'))->up();
+        $author = User::factory()->create(['role' => 'recepcion']);
+        $next = User::factory()->create(['role' => 'recepcion']);
+
+        $this->actingAs($author)->post(route('shift_notes.store'), ['category' => 'Caja', 'body' => 'Faltan monedas', 'urgent' => 1, 'pending' => 1])->assertSessionHasNoErrors();
+        $note = ShiftNote::firstOrFail();
+
+        $this->assertTrue(ShiftNote::alertFor($author)->isEmpty()); // no se avisa a quien la escribió
+        $this->assertSame([$note->id], ShiftNote::alertFor($next)->pluck('id')->all());
+
+        $this->actingAs($next)->post(route('shift_notes.read'))->assertRedirect();
+        $this->assertTrue(ShiftNote::alertFor($next)->isEmpty());
+        $this->assertTrue($note->readers()->whereKey($next->id)->exists());
+
+        // Una pendiente vieja se sigue avisando; una normal vieja, no.
+        $third = User::factory()->create(['role' => 'recepcion']);
+        ShiftNote::whereKey($note->id)->update(['created_at' => now()->subDays(10)]);
+        $this->assertSame([$note->id], ShiftNote::alertFor($third)->pluck('id')->all());
+
+        $this->post(route('shift_notes.resolve', $note), ['resolution' => 'Se cambió sencillo'])->assertSessionHasNoErrors();
+        $this->assertFalse($note->fresh()->isOpen());
+        $this->assertTrue(ShiftNote::alertFor($third)->isEmpty());
+
+        $this->assertTrue(ShiftNote::alertFor(User::factory()->create(['role' => 'administrador']))->isEmpty());
+
+        // Al entrar se avisan las reservas de las próximas 24 horas, no las de después.
+        $this->travelTo(Carbon::parse('2026-10-05 10:00'));
+        $booking = $this->booking();
+        $this->assertTrue(ShiftNote::upcomingFor($next)->pluck('code')->contains($booking->code));
+        $booking->update(['starts_at' => Carbon::parse('2026-10-08 12:00'), 'ends_at' => Carbon::parse('2026-10-08 13:00')]);
+        $this->assertFalse(ShiftNote::upcomingFor($next)->pluck('code')->contains($booking->code));
     }
 }

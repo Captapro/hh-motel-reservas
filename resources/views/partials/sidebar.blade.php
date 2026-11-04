@@ -22,6 +22,7 @@
     if (auth()->user()?->isAdministrador()) {
         $navigation = array_values(array_filter($navigation, fn ($item) => ! in_array($item[2], ['Productos', 'Clientes'], true)));
     }
+    $navigation[] = ['shift_notes.index', 'shift_notes.*', 'Novedades', 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9 M10.3 21a2 2 0 0 0 3.4 0'];
     if (auth()->user()?->canUseAi('analista')) {
         $navigation[] = ['admin.analyst.index', 'admin.analyst.*', 'Analista IA', 'M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z'];
     }

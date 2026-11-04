@@ -72,6 +72,7 @@ use App\Http\Controllers\RoomQrController;
 use App\Http\Controllers\SaleDetailController;
 use App\Http\Controllers\ShiftHandoverController;
 use App\Http\Controllers\ShiftRoundController;
+use App\Http\Controllers\ShiftNoteController;
 use App\Http\Controllers\TvScreenController;
 use App\Http\Middleware\ApplyHostView;
 use App\Http\Middleware\CaptureAttribution;
@@ -172,6 +173,10 @@ Route::post('/ayuda', [HelpController::class, 'ask'])->middleware(['auth', 'ai:a
 Route::middleware(['auth', 'section'])->group(function () {
 
     Route::get('/reservar', [ReservationController::class, 'create'])->name('reservations.create');
+    Route::get('/novedades', [ShiftNoteController::class, 'index'])->name('shift_notes.index');
+    Route::post('/novedades', [ShiftNoteController::class, 'store'])->name('shift_notes.store');
+    Route::post('/novedades/leidas', [ShiftNoteController::class, 'markRead'])->name('shift_notes.read');
+    Route::post('/novedades/{note}/resolver', [ShiftNoteController::class, 'resolve'])->name('shift_notes.resolve');
     Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1,customers.lookup')->name('customers.lookup');
     Route::get('/clientes/nombres', fn (NameSuggestions $names) => response()->json($names->lists())->header('Cache-Control', 'private, max-age=3600'))->name('customers.names');
     Route::get('/reservar/precio', [ReservationController::class, 'priceQuote'])->middleware('throttle:80,1,reservations.price')->name('reservations.price');

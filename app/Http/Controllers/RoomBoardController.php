@@ -161,17 +161,11 @@ class RoomBoardController extends Controller
         return response()->json(array_merge($fresh, $paid, $passes));
     }
 
-    /**
-     * Primero los Playrooms en aseo con una reserva en las próximas 24 horas,
-     * de la que llega antes a la que llega después: esos se limpian primero.
-     */
+    /** Primero los Playrooms en aseo con reserva, de la que llega antes a la que llega después. */
     private function aseoByPriority(Collection $entries): Collection
     {
-        $limit = now()->addDay();
-
-        return $entries->map(function (array $entry) use ($limit) {
-            $next = $entry['status']['next_booking'] ?? null;
-            $entry['aseo_priority'] = $next && $next->starts_at->lte($limit) ? $next->starts_at : null;
+        return $entries->map(function (array $entry) {
+            $entry['aseo_priority'] = ($entry['status']['next_booking'] ?? null)?->starts_at;
 
             return $entry;
         })->sortBy(fn (array $entry) => $entry['aseo_priority']?->timestamp ?? PHP_INT_MAX)->values();
