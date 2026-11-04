@@ -22,7 +22,7 @@
         .banner, .errors { padding:11px 14px; border-radius:10px; margin-bottom:12px; font-size:14px; font-weight:600; }
         .banner { background:#fff3e6; border:1px solid #ff7918; color:#9a3412; }
         .errors { background:#fde8e8; border:1px solid #e88a8a; color:#991b1b; }
-        .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+        .stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
         .stat { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; }
         .stat b { display:block; font-size:21px; }
         .stat span { font-size:11.5px; color:#6b7280; }
@@ -68,6 +68,7 @@
         @if ($errors->any())<div class="errors">{{ $errors->first() }}</div>@endif
 
         <div class="stats">
+            <div class="stat"><b>{{ $occupied->count() }}</b><span>ocupadas</span></div>
             <div class="stat"><b>{{ $pendingAseo->count() }}</b><span>por limpiar</span></div>
             <div class="stat"><b>{{ $doneToday->count() }}</b><span>tus aseos de hoy</span></div>
             <div class="stat"><b>{{ $doneToday->isNotEmpty() ? round($doneToday->avg(fn ($c) => $c->minutes())).' min' : '—' }}</b><span>tu promedio</span></div>
@@ -84,6 +85,41 @@
                     <button class="go full" type="submit">Terminar aseo</button>
                 </form>
             </div>
+        @endif
+
+        <h2>Ocupadas ({{ $occupied->count() }})</h2>
+        @forelse ($occupied as $entry)
+            <div class="card row">
+                <span class="name">{{ $entry['room']->name }}</span>
+                <span class="meta">
+                    @if ($entry['status']['occupancy'] === 'ocupada' && $entry['status']['eta_minutes'] !== null && $entry['status']['eta_minutes'] >= 0)
+                        Libera en {{ \App\Support\TimeFormat::minutes($entry['status']['eta_minutes']) }}
+                    @else
+                        Ocupada
+                    @endif
+                </span>
+            </div>
+        @empty
+            <p class="empty">Ninguna ocupada ahora.</p>
+        @endforelse
+
+        @if ($upcoming->isNotEmpty())
+            <h2>Próximas a llegar ({{ $upcoming->count() }})</h2>
+            @foreach ($upcoming as $entry)
+                @php
+                    $next = $entry['status']['next_booking'];
+                    $priority = \App\Support\AseoPriority::for($next->starts_at);
+                @endphp
+                <a class="card {{ $priority['class'] }}" href="{{ route('rooms.qr.show', $entry['room']) }}">
+                    <div class="row">
+                        <div>
+                            <div class="name">{{ $entry['room']->name }}</div>
+                            <span class="tag {{ $priority['class'] }}">{{ $priority['text'] }}</span>
+                        </div>
+                        <span class="meta">{{ $next->room_checked_at ? 'Confirmada' : 'Falta confirmar' }}</span>
+                    </div>
+                </a>
+            @endforeach
         @endif
 
         <h2>Por limpiar ({{ $pendingAseo->count() }})</h2>
@@ -157,33 +193,6 @@
             <div class="card row"><span class="name">{{ $entry['room']->name }}</span><span class="meta">{{ $entry['room']->aseo_reported_by }} · {{ $entry['room']->aseo_reported_at->timezone('America/Santiago')->format('H:i') }}</span></div>
         @empty
             <p class="empty">Nada esperando confirmación.</p>
-        @endforelse
-
-        <h2>Próximas a llegar ({{ $upcoming->count() }})</h2>
-        @forelse ($upcoming as $entry)
-            @php $checked = $entry['status']['next_booking']->room_checked_at; @endphp
-            <a class="card row" href="{{ route('rooms.qr.show', $entry['room']) }}">
-                <span class="name">{{ $entry['room']->name }}</span>
-                <span class="meta">{{ $entry['status']['next_booking']->starts_at->timezone('America/Santiago')->format('H:i') }} · {{ $checked ? 'Confirmada' : 'Falta confirmar' }}</span>
-            </a>
-        @empty
-            <p class="empty">Nada agendado por ahora.</p>
-        @endforelse
-
-        <h2>Ocupadas ({{ $occupied->count() }})</h2>
-        @forelse ($occupied as $entry)
-            <div class="card row">
-                <span class="name">{{ $entry['room']->name }}</span>
-                <span class="meta">
-                    @if ($entry['status']['occupancy'] === 'ocupada' && $entry['status']['eta_minutes'] !== null && $entry['status']['eta_minutes'] >= 0)
-                        Libera en {{ \App\Support\TimeFormat::minutes($entry['status']['eta_minutes']) }}
-                    @else
-                        Ocupada
-                    @endif
-                </span>
-            </div>
-        @empty
-            <p class="empty">Ninguna ocupada ahora.</p>
         @endforelse
 
         <h2>Fuera de servicio ({{ $outOfService->count() }})</h2>

@@ -320,4 +320,30 @@ class RoomAseoReactivationTest extends TestCase
             ->get(route('rooms.inspections.create', $this->room).'?qr=1')
             ->assertRedirect(route('rooms.qr.show', $this->room));
     }
+
+    public function test_upcoming_arrivals_go_first_in_both_panels(): void
+    {
+        $activeRoom = Room::create(['room_category_id' => $this->room->room_category_id, 'name' => 'GO 102', 'operational_status' => 'activa']);
+        $customer = Customer::create(['name' => 'Cliente Prueba', 'phone_e164' => '+56911112222']);
+        Booking::create([
+            'code' => 'HH-TEST-0003',
+            'customer_id' => $customer->id,
+            'room_id' => $activeRoom->id,
+            'starts_at' => now()->addHour(),
+            'ends_at' => now()->addHours(2),
+            'duration_minutes' => 60,
+            'guests_count' => 2,
+            'booking_status' => 'CONFIRMADA',
+            'payment_status' => 'NO_PAGADA',
+            'price_original' => 20000,
+            'price_final' => 20000,
+        ]);
+
+        $mucama = Staff::create(['name' => 'Ana Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
+        $this->withSession(['mucama_staff_id' => $mucama->id])->get(route('rooms.qr.mucama_panel'))
+            ->assertOk()->assertSeeInOrder(['ocupadas', 'Ocupadas (0)', 'Próximas a llegar (1)', 'GO 102', 'Urgente', 'Por limpiar (1)']);
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->get(route('shift_round.index'))
+            ->assertOk()->assertSeeInOrder(['ocupadas', 'Ocupadas (0)', 'Próximas a llegar (1)', 'GO 102', 'Urgente', 'En aseo (1)', 'Por revisar (0)']);
+    }
 }

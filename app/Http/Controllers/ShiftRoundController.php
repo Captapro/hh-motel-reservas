@@ -25,14 +25,20 @@ class ShiftRoundController extends Controller
         $groups = $board->byCondition();
         $rooms = $groups['free']->map(fn (array $e) => $e['room'])->values();
 
-        $pending = $rooms->filter(fn (Room $r) => ! $r->latestInspection || $r->latestInspection->created_at->lt($today))->values();
-        $done = $rooms->filter(fn (Room $r) => $r->latestInspection && $r->latestInspection->created_at->gte($today))->values();
+        $reviewed = fn (Room $r) => $r->latestInspection && $r->latestInspection->created_at->gte($today);
+        $byArrival = fn (array $e) => $e['status']['next_booking']?->starts_at?->timestamp ?? PHP_INT_MAX;
+
+        // Lo que llega primero va arriba: las próximas salen de Pendientes para no repetirse.
+        $upcoming = $groups['free']->filter(fn (array $e) => $e['status']['next_booking'])->sortBy($byArrival)->values();
+        $upcomingIds = $upcoming->map(fn (array $e) => $e['room']->id);
 
         return view('rooms.shift-round', [
-            'pending' => $pending,
-            'done' => $done,
+            'upcoming' => $upcoming,
+            'pending' => $rooms->reject($reviewed)->whereNotIn('id', $upcomingIds)->values(),
+            'pendingTotal' => $rooms->reject($reviewed)->count(),
+            'done' => $rooms->filter($reviewed)->values(),
             'total' => $rooms->count(),
-            'aseo' => $groups['aseo'],
+            'aseo' => $groups['aseo']->sortBy($byArrival)->values(),
             'occupied' => $groups['occupied'],
             'out' => $groups['out'],
         ]);

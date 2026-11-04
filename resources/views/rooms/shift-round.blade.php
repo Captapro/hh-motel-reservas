@@ -1,131 +1,161 @@
 <!doctype html>
-<html lang="es" style="background:#111;color:#eee">
+<html lang="es">
 <head>
-    <meta charset="utf-8"><meta name="color-scheme" content="dark">
+    <meta charset="utf-8"><meta name="color-scheme" content="light">
     <title>Ronda de turno — HH Motel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        :root { color-scheme: dark; }
-        * { box-sizing: border-box; }
-        body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
-        .page-inner { max-width: none; margin: 0; padding: 24px 24px 60px; }
-        h1 { font-size: 18px; letter-spacing: .04em; margin-bottom: 2px; }
-        .sub { color:#999; font-size: 13px; margin:0 0 20px; }
-        .progress-card { background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:16px 18px; margin-bottom:20px; color:#eee; }
-        .progress-card .big { font-size:22px; font-weight:800; }
-        .progress-card .label { font-size:11px; color:#999; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
-        .progress-bar { height:8px; background:#292929; border-radius:20px; margin-top:12px; overflow:hidden; }
-        .progress-bar .fill { height:100%; background:#ff7918; border-radius:20px; }
-        .all-done { background:#1c2f1c; border-color:#2e5a2e; color:#8fe0ad; }
-        h2.section { font-size:13px; margin:26px 0 10px; color:#999; text-transform:uppercase; letter-spacing:.04em; }
-        a.room-card { display:flex; justify-content:space-between; align-items:center; background:#1c1c1c; border:1px solid #333; border-radius:10px; padding:14px 16px; margin-bottom:9px; text-decoration:none; color:#eee; }
-        a.room-card:hover { border-color:#ff7918; }
-        a.room-card .name { font-weight:700; font-size:14.5px; }
-        a.room-card .cat { color:#999; font-size:12px; margin-top:2px; }
-        a.room-card .go { color:#ff9a4a; font-size:13px; font-weight:600; }
-        .done-card { display:flex; justify-content:space-between; align-items:center; background:#161c16; border:1px solid #2a3a2a; border-radius:10px; padding:12px 16px; margin-bottom:8px; color:#9fcf9f; opacity:.85; }
-        .done-card .name { font-weight:700; font-size:14px; color:#cde; }
-        .done-card .when { font-size:11.5px; color:#7fa87f; }
-        .warn-tag { color:#e88a9a; font-size:11px; font-weight:700; margin-left:8px; }
-        .empty { color:#777; padding:20px 0; text-align:center; font-size:14px; }
-        a.scan-btn { display:inline-flex; align-items:center; gap:8px; background:#ff7918; color:#21170e; text-decoration:none; font-weight:800; font-size:15px; padding:13px 26px; border-radius:10px; margin-bottom:20px; }
-        a.scan-btn:hover { background:#ee6909; }
-        .progress-card { max-width:560px; }
-        .rg { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; }
-        .rg > a.room-card, .rg > .done-card { margin-bottom:0; }
-        .rg > .empty { grid-column:1 / -1; }
-        .state-card { background:#fff !important; border:1px solid #e5e7eb !important; border-radius:10px; padding:12px 16px; }
-        .state-card .name { color:#1f2937 !important; font-weight:700; font-size:14.5px; }
-        .state-card .cat { color:#6b7280 !important; font-size:12px; margin-top:2px; }
+        :root { color-scheme:light; }
+        * { box-sizing:border-box; }
+        body { background:#f4f4f2; color:#1f2937; font-family:-apple-system,'Segoe UI',sans-serif; margin:0; }
+        .page-inner { max-width:1100px; margin:0 auto; padding:18px 16px 50px; }
+        .rd-title { font-size:24px; margin:4px 0 2px; letter-spacing:-.02em; color:#1f2937; }
+        .rd-lead { margin:0 0 14px; color:#6b7280; font-size:14px; }
+        .rd-banner { padding:11px 14px; border-radius:10px; margin-bottom:12px; font-size:14px; font-weight:600; background:#fff3e6; border:1px solid #ff7918; color:#9a3412; }
+        .rd-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+        @media (max-width:480px) { .rd-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        .rd-stat { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; }
+        .rd-stat b { display:block; font-size:21px; color:#1f2937; }
+        .rd-stat span { font-size:11.5px; color:#6b7280; }
+        .rd-bar { height:8px; background:#e5e7eb; border-radius:20px; margin:10px 0 12px; overflow:hidden; }
+        .rd-bar i { display:block; height:100%; background:#ff7918; border-radius:20px; }
+        a.rd-scan { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:11px; background:#ff7918; color:#21170e !important; font-size:16px; font-weight:800; text-decoration:none; }
+        .rd-h { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#6b7280; margin:20px 0 8px; font-weight:700; }
+        .rd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:9px; }
+        .rd-card { display:flex; justify-content:space-between; align-items:center; gap:10px; background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px 14px; color:inherit; text-decoration:none; }
+        a.rd-card:hover { border-color:#ff7918; }
+        .rd-card.aseo-urgent { border:2px solid #ff7918; }
+        .rd-card.aseo-high { border:2px solid #ffb379; }
+        .rd-name { font-size:16px; font-weight:800; color:#1f2937; }
+        .rd-meta { font-size:12.5px; color:#6b7280; }
+        .rd-go { flex:none; color:#c2410c; font-size:13px; font-weight:700; }
+        .rd-tag { display:inline-block; margin-top:3px; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:800; }
+        .rd-tag.aseo-urgent, .rd-tag.aseo-high { background:#ff7918; color:#21170e; }
+        .rd-tag.aseo-mid { background:#a8530f; color:#fff; }
+        .rd-tag.aseo-info { background:#0a5cff; color:#fff; }
+        .rd-warn { flex:none; color:#c2410c; font-size:12px; font-weight:700; }
+        .rd-empty { color:#9ca3af; font-size:14px; padding:6px 2px; margin:0; }
     </style>
 </head>
-<body>
 @include('partials.navbar')
 <div class="page-inner">
-    <h1>Ronda de turno</h1>
-    <p class="sub">Recorré cada Playroom disponible ahora y dejá la pauta de inspección al día.</p>
+    <h1 class="rd-title">Ronda de turno</h1>
+    <p class="rd-lead">Recorre cada Playroom lista y deja la pauta de inspección al día.</p>
 
     @if (session('status'))
-        <div class="progress-card all-done" style="margin-bottom:14px;">{{ session('status') }}</div>
+        <div class="rd-banner">{{ session('status') }}</div>
     @endif
 
-    <div class="progress-card {{ $pending->isEmpty() && $total > 0 ? 'all-done' : '' }}">
-        <div class="label">Progreso de hoy</div>
-        <div class="big">{{ $done->count() }} de {{ $total }} revisadas</div>
-        <div class="progress-bar"><div class="fill" style="width:{{ $total > 0 ? round($done->count() / $total * 100) : 0 }}%;"></div></div>
+    <div class="rd-stats">
+        <div class="rd-stat"><b>{{ $occupied->count() }}</b><span>ocupadas</span></div>
+        <div class="rd-stat"><b>{{ $done->count() }} de {{ $total }}</b><span>revisadas hoy</span></div>
+        <div class="rd-stat"><b>{{ $pendingTotal }}</b><span>por revisar</span></div>
+        <div class="rd-stat"><b>{{ $aseo->count() }}</b><span>en aseo</span></div>
+    </div>
+    <div class="rd-bar"><i style="width:{{ $total > 0 ? round($done->count() / $total * 100) : 0 }}%;"></i></div>
+
+    <a class="rd-scan" href="{{ route('shift_round.scan') }}?ronda=1">Escanear QR del Playroom</a>
+
+    <h2 class="rd-h">Ocupadas ({{ $occupied->count() }})</h2>
+    <div class="rd-grid">
+    @forelse ($occupied as $entry)
+        <div class="rd-card">
+            <div>
+                <div class="rd-name">{{ $entry['room']->name }}</div>
+                <div class="rd-meta">{{ $entry['room']->category->name }}@if ($entry['status']['occupancy'] === 'ocupada' && $entry['status']['eta_minutes'] !== null && $entry['status']['eta_minutes'] >= 0) · libera en {{ \App\Support\TimeFormat::minutes($entry['status']['eta_minutes']) }}@endif</div>
+            </div>
+        </div>
+    @empty
+        <p class="rd-empty">Ninguna ocupada ahora.</p>
+    @endforelse
     </div>
 
-    <a class="scan-btn" href="{{ route('shift_round.scan') }}?ronda=1">📷 Escanear QR del Playroom →</a>
+    @if ($upcoming->isNotEmpty())
+        <h2 class="rd-h">Próximas a llegar ({{ $upcoming->count() }})</h2>
+        <div class="rd-grid">
+        @foreach ($upcoming as $entry)
+            @php
+                $room = $entry['room'];
+                $priority = \App\Support\AseoPriority::for($entry['status']['next_booking']->starts_at);
+                $isDone = $done->contains('id', $room->id);
+            @endphp
+            <a class="rd-card {{ $priority['class'] }}" href="{{ route('rooms.qr.show', $room) }}?ronda=1">
+                <div>
+                    <div class="rd-name">{{ $room->name }}</div>
+                    <span class="rd-tag {{ $priority['class'] }}">{{ $priority['text'] }}</span>
+                </div>
+                <span class="{{ $isDone ? 'rd-meta' : 'rd-go' }}">{{ $isDone ? 'Revisada ✓' : 'Ir al Playroom →' }}</span>
+            </a>
+        @endforeach
+        </div>
+    @endif
 
-    <h2 class="section">Pendientes ({{ $pending->count() }})</h2>
-    <div class="rg">
-    @forelse ($pending as $room)
-        <a class="room-card" href="{{ route('rooms.qr.show', $room) }}?ronda=1">
+    <h2 class="rd-h">En aseo ({{ $aseo->count() }})</h2>
+    <div class="rd-grid">
+    @forelse ($aseo as $entry)
+        @php
+            $next = $entry['status']['next_booking'];
+            $priority = $next ? \App\Support\AseoPriority::for($next->starts_at) : null;
+        @endphp
+        <div class="rd-card {{ $priority['class'] ?? '' }}">
             <div>
-                <div class="name">{{ $room->name }}</div>
-                <div class="cat">{{ $room->category->name }}</div>
+                <div class="rd-name">{{ $entry['room']->name }}</div>
+                @if ($priority)<span class="rd-tag {{ $priority['class'] }}">{{ $priority['text'] }}</span>@endif
+                <div class="rd-meta">{{ $entry['room']->aseo_reported_at ? 'Aseo terminado, falta confirmar' : 'Sin levantamiento hasta que quede lista' }}</div>
             </div>
-            <div class="go">Ir al Playroom →</div>
+        </div>
+    @empty
+        <p class="rd-empty">Ninguna en aseo.</p>
+    @endforelse
+    </div>
+
+    <h2 class="rd-h">Por revisar ({{ $pending->count() }})</h2>
+    <div class="rd-grid">
+    @forelse ($pending as $room)
+        <a class="rd-card" href="{{ route('rooms.qr.show', $room) }}?ronda=1">
+            <div>
+                <div class="rd-name">{{ $room->name }}</div>
+                <div class="rd-meta">{{ $room->category->name }}</div>
+            </div>
+            <span class="rd-go">Ir al Playroom →</span>
         </a>
     @empty
-        <p class="empty">@if($total > 0) ¡Ronda completa! No queda ninguna disponible sin revisar hoy. @else No hay Playrooms disponibles en este momento (todas ocupadas, en aseo o inactivas). @endif</p>
+        <p class="rd-empty">{{ $total > 0 ? 'No queda ninguna otra por revisar hoy.' : 'No hay Playrooms listas en este momento.' }}</p>
+    @endforelse
+    </div>
+
+    <h2 class="rd-h">Fuera de servicio ({{ $out->count() }})</h2>
+    <div class="rd-grid">
+    @forelse ($out as $entry)
+        <div class="rd-card">
+            <div>
+                <div class="rd-name">{{ $entry['room']->name }}</div>
+                <div class="rd-meta">{{ \App\Services\Rooms\RoomClosingLog::STATUS_LABELS[$entry['room']->operational_status] }}@if ($entry['room']->operational_note) · {{ $entry['room']->operational_note }}@endif</div>
+            </div>
+        </div>
+    @empty
+        <p class="rd-empty">Ninguna fuera de servicio.</p>
     @endforelse
     </div>
 
     @if ($done->isNotEmpty())
-        <h2 class="section">Ya revisadas hoy ({{ $done->count() }})</h2>
-        <div class="rg">
+        <h2 class="rd-h">Ya revisadas hoy ({{ $done->count() }})</h2>
+        <div class="rd-grid">
         @foreach ($done as $room)
-            <div class="done-card">
+            <div class="rd-card">
                 <div>
-                    <div class="name">{{ $room->name }} <span class="cat" style="margin-left:6px;">{{ $room->category->name }}</span></div>
-                    <div class="when">{{ $room->latestInspection->created_at->timezone('America/Santiago')->format('H:i') }} · {{ $room->latestInspection->inspected_by }}</div>
+                    <div class="rd-name">{{ $room->name }}</div>
+                    <div class="rd-meta">{{ $room->latestInspection->created_at->timezone('America/Santiago')->format('H:i') }} · {{ $room->latestInspection->inspected_by }}</div>
                 </div>
                 @if ($room->latestInspection->needs_maintenance)
-                    <span class="warn-tag">⚠ Necesita mantención</span>
+                    <span class="rd-warn">Necesita mantención</span>
                 @else
-                    <span>✓</span>
+                    <span class="rd-meta">✓</span>
                 @endif
             </div>
         @endforeach
         </div>
     @endif
-
-    <h2 class="section">En aseo ({{ $aseo->count() }})</h2>
-    <div class="rg">
-    @forelse ($aseo as $entry)
-        <div class="state-card">
-            <div class="name">{{ $entry['room']->name }}</div>
-            <div class="cat">{{ $entry['room']->category->name }} · {{ $entry['room']->aseo_reported_at ? 'Aseo terminado, falta confirmar' : 'Sin levantamiento hasta que quede lista' }}</div>
-        </div>
-    @empty
-        <p class="empty">Ninguna en aseo.</p>
-    @endforelse
-    </div>
-
-    <h2 class="section">Ocupadas ({{ $occupied->count() }})</h2>
-    <div class="rg">
-    @forelse ($occupied as $entry)
-        <div class="state-card">
-            <div class="name">{{ $entry['room']->name }}</div>
-            <div class="cat">{{ $entry['room']->category->name }}@if ($entry['status']['occupancy'] === 'ocupada' && $entry['status']['eta_minutes'] !== null && $entry['status']['eta_minutes'] >= 0) · libera en {{ \App\Support\TimeFormat::minutes($entry['status']['eta_minutes']) }}@endif</div>
-        </div>
-    @empty
-        <p class="empty">Ninguna ocupada ahora.</p>
-    @endforelse
-    </div>
-
-    <h2 class="section">Fuera de servicio ({{ $out->count() }})</h2>
-    <div class="rg">
-    @forelse ($out as $entry)
-        <div class="state-card">
-            <div class="name">{{ $entry['room']->name }}</div>
-            <div class="cat">{{ \App\Services\Rooms\RoomClosingLog::STATUS_LABELS[$entry['room']->operational_status] }}@if ($entry['room']->operational_note) · {{ $entry['room']->operational_note }}@endif</div>
-        </div>
-    @empty
-        <p class="empty">Ninguna fuera de servicio.</p>
-    @endforelse
-    </div>
 </div>
 </body>
 </html>
