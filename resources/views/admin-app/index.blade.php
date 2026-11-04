@@ -65,6 +65,11 @@
     @php
         $clp = fn (int $amount) => '$'.number_format($amount, 0, ',', '.');
         $hm = fn ($at) => $at->timezone('America/Santiago')->format('H:i');
+        $when = function ($at) use ($hm) {
+            $local = $at->copy()->timezone('America/Santiago');
+
+            return ($local->isToday() ? '' : ($local->isTomorrow() ? 'Mañana ' : $local->format('d/m').' ')).$hm($at);
+        };
     @endphp
     <div class="top">
         <span>HH Admin</span>
@@ -82,7 +87,7 @@
         <div class="stats">
             <div class="stat"><b>{{ $clp($sales['Hoy']['total']) }}</b><span>venta de hoy</span></div>
             <div class="stat"><b>{{ $occupied->count() }}</b><span>ocupadas</span></div>
-            <div class="stat"><b>{{ $upcoming->count() }}</b><span>reservas en 24 horas</span></div>
+            <div class="stat"><b>{{ $upcoming->count() }}</b><span>próximas reservas</span></div>
             <div class="stat"><b>{{ $freeCount }}</b><span>listas</span></div>
         </div>
 
@@ -141,13 +146,13 @@
             @forelse ($upcoming as $booking)
                 <div class="card">
                     <div>
-                        <div class="name">{{ $hm($booking->starts_at) }} · {{ $booking->room?->name }}</div>
+                        <div class="name">{{ $when($booking->starts_at) }} · {{ $booking->room?->name }}</div>
                         <div class="meta">{{ $booking->customer?->name }}</div>
                     </div>
                     <span class="meta">{{ $booking->balanceDue() > 0 ? 'Debe '.$clp((int) $booking->balanceDue()) : 'Pagada' }}</span>
                 </div>
             @empty
-                <p class="empty">Sin reservas en las próximas 24 horas.</p>
+                <p class="empty">Sin reservas próximas.</p>
             @endforelse
             </div>
         </section>

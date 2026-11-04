@@ -431,4 +431,26 @@ class RoomAseoReactivationTest extends TestCase
         $this->actingAs($admin)->post("/habitaciones/{$room->id}/estado", ['operational_status' => 'mantencion', 'operational_note' => 'Sigue la fuga']);
         $this->assertSame(1, \App\Models\StaffNotice::count());
     }
+
+    public function test_admin_app_lists_reservations_beyond_the_next_day(): void
+    {
+        $customer = Customer::create(['name' => 'Cliente Lejano', 'phone_e164' => '+56911112222']);
+        $later = now()->addDays(2);
+        Booking::create([
+            'code' => 'HH-TEST-0010',
+            'customer_id' => $customer->id,
+            'room_id' => $this->room->id,
+            'starts_at' => $later,
+            'ends_at' => $later->copy()->addHours(2),
+            'duration_minutes' => 120,
+            'guests_count' => 2,
+            'booking_status' => 'CONFIRMADA',
+            'payment_status' => 'NO_PAGADA',
+            'price_original' => 20000,
+            'price_final' => 20000,
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))
+            ->get(route('admin_app.index'))->assertOk()->assertSeeInOrder(['Próximas reservas', 'GO 101', 'Cliente Lejano']);
+    }
 }

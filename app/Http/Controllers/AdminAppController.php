@@ -40,7 +40,7 @@ class AdminAppController extends Controller
             'upcoming' => Booking::with(['room', 'customer', 'payments'])
                 ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'])
                 ->whereNull('checked_in_at')
-                ->whereBetween('starts_at', [now(), now()->addDay()])
+                ->where('ends_at', '>=', now())
                 ->orderBy('starts_at')->get(),
             'notes' => ShiftNote::today(),
             'notices' => StaffNotice::with('reads')->where('audience', '!=', 'administracion')->latest()->take(5)->get(),
