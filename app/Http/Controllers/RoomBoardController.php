@@ -47,6 +47,11 @@ class RoomBoardController extends Controller
                 || ! $e['room']->isFloorWingEnabled($setting)
         );
 
+        // El siguiente en la fila de cada categoría: el que le toca arrendarse.
+        $nextUpRoomIds = $disponibles->groupBy(fn (array $e) => $e['room']->room_category_id)
+            ->map(fn ($group) => $group->sortBy(fn (array $e) => $e['room']->rentOrder())->first()['room']->id)
+            ->values()->all();
+
         $grouped = [
             // "ocupada" a mano: un cliente adentro sin reserva en el sistema (p. ej. entró con la planilla).
             'ocupadas' => $entries->filter(
@@ -71,6 +76,7 @@ class RoomBoardController extends Controller
 
         return view('rooms.board', [
             'grouped' => $grouped,
+            'nextUpRoomIds' => $nextUpRoomIds,
             'roomOffers' => $this->activeOffersByRoom($entries, $now),
             'showTariff' => true,
             'tariff' => $tariff,

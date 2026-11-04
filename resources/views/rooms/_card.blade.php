@@ -5,7 +5,7 @@
     $endingSoon = ($status['current_booking'] ?? null) && $status['current_booking']->checked_in_at
         && ($status['eta_minutes'] ?? -1) >= 0 && $status['eta_minutes'] <= 10;
 @endphp
-<div class="card cat-{{ Str::slug($room->category->name) }} {{ $needsMaintenance ? 'needs-maintenance' : '' }} {{ (($status['eta_minutes'] ?? 0) < 0 && ($status['current_booking'] ?? null)) ? 'overdue-room' : '' }} {{ $status['upcoming_count'] > 0 ? 'has-upcoming' : '' }} {{ $endingSoon ? 'ending-soon' : '' }}" @if ($endingSoon) data-ending-soon="{{ $status['current_booking']->code }}" @endif data-wing="{{ $room->wing ?? 'none' }}" data-href="{{ $cardTarget }}">
+<div class="card cat-{{ Str::slug($room->category->name) }} {{ in_array($room->id, $nextUpRoomIds ?? [], true) ? 'next-up' : '' }} {{ $needsMaintenance ? 'needs-maintenance' : '' }} {{ (($status['eta_minutes'] ?? 0) < 0 && ($status['current_booking'] ?? null)) ? 'overdue-room' : '' }} {{ $status['upcoming_count'] > 0 ? 'has-upcoming' : '' }} {{ $endingSoon ? 'ending-soon' : '' }}" @if ($endingSoon) data-ending-soon="{{ $status['current_booking']->code }}" @endif data-wing="{{ $room->wing ?? 'none' }}" data-href="{{ $cardTarget }}">
     <div class="card-head">
         <b>{{ $room->name }}</b>
         @if ($offer)

@@ -2669,4 +2669,14 @@ class BookingIntegrityTest extends TestCase
         $asHost()->post(route('host_view.stop'))->assertRedirect(route('rooms.board'));
         $this->assertFalse(session()->has(ApplyHostView::SESSION_KEY));
     }
+
+    public function test_rooms_are_rented_first_floor_then_north_then_south(): void
+    {
+        $order = collect([
+            ['name' => 'PLUS 311', 'wing' => 'sur'], ['name' => 'PLUS 207', 'wing' => 'sur'],
+            ['name' => 'PLUS 101', 'wing' => null], ['name' => 'PLUS 302', 'wing' => 'norte'], ['name' => 'PLUS 202', 'wing' => 'norte'],
+        ])->map(fn ($r) => new Room($r))->sortBy(fn (Room $r) => $r->rentOrder())->pluck('name')->all();
+
+        $this->assertSame(['PLUS 101', 'PLUS 202', 'PLUS 302', 'PLUS 207', 'PLUS 311'], $order);
+    }
 }

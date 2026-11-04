@@ -53,16 +53,22 @@ class Room extends Model
     }
 
     /**
-     * Preferencia al asignar sola una habitación libre: primero el ala norte, después el
-     * primer piso (sin ala) y al final el ala sur, para llenar el norte antes que el sur.
+     * Preferencia al asignar sola una habitación libre: primero el primer piso (sin ala),
+     * después el ala norte y al final el ala sur.
      */
     public function wingPriority(): int
     {
         return match ($this->wing) {
-            'norte' => 0,
+            'norte' => 1,
             'sur' => 2,
-            default => 1,
+            default => 0,
         };
+    }
+
+    /** Orden de arriendo: primer piso, ala norte y ala sur; dentro de cada ala, del piso más bajo al más alto. */
+    public function rentOrder(): array
+    {
+        return [$this->wingPriority(), $this->floor ?? 9, $this->name];
     }
 
     public function isOperational(): bool

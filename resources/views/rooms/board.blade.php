@@ -335,6 +335,11 @@
         .compact .card a.bookings-btn.has-bookings { color:#e8c76f !important; }
         .compact .card details[open] summary { color:#ff9a4d !important; }
         .compact .card .sm svg { width:14px; height:14px; display:block; }
+        /* Siguiente en fila: el Playroom que toca arrendar en cada categoría. */
+        .next-switch { display:inline-flex; margin:0 0 10px; border:1px solid #d7d7d7; border-radius:9px; overflow:hidden; background:#fff; }
+        .next-switch button { background:none; border:none; margin:0; width:auto; padding:8px 14px; font-size:13px; font-weight:700; color:#555; cursor:pointer; white-space:nowrap; }
+        .next-switch button.active { background:#ff7918; color:#21170e; }
+        .card.next-up { box-shadow:0 0 0 2px #ff7918; }
         /* En aseo y Fuera de servicio: tarjetas iguales, de dos líneas. Arriba
            el nombre con sus atajos; abajo lo que hay que hacer o saber. El
            nombre ya trae la categoría y la sección dice el estado. */
@@ -594,6 +599,12 @@
                         ->concat($grouped['proximas'])->concat($grouped['fuera_de_servicio'])
                         ->pluck('room.category')->unique('id')->sortBy('display_order')->values();
                 @endphp
+                @if ($grouped['disponibles']->isNotEmpty())
+                    <div class="next-switch" id="next-switch">
+                        <button type="button" data-next="1" onclick="hhSetNextOnly(true)" title="Muestra solo el Playroom que toca arrendar en cada categoría. Al ocuparse, aparece el siguiente.">Siguiente en fila</button>
+                        <button type="button" data-next="0" onclick="hhSetNextOnly(false)">Ver todas</button>
+                    </div>
+                @endif
                 <div class="cat-filter" id="cat-filter">
                     @if ($boardCategories->count() > 1)
                         <button type="button" data-cat="todas" onclick="hhFilterCategory('todas')">Todas</button>
@@ -789,6 +800,11 @@
             filterBar.querySelectorAll('button[data-cat]').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
 
             const onlyUpcoming = localStorage.getItem('hh-board-only-upcoming') === '1';
+            // Con otra ala elegida el siguiente de la categoría puede quedar oculto: ahí se ven todas.
+            const wing = localStorage.getItem('hh-board-wing') || 'todas';
+            const nextOnly = localStorage.getItem('hh-board-next-only') !== '0';
+            const applyNext = nextOnly && wing === 'todas' && !onlyUpcoming;
+            document.querySelectorAll('#next-switch button').forEach(b => b.classList.toggle('active', (b.dataset.next === '1') === nextOnly));
             const upcomingBtn = document.getElementById('upcoming-filter-btn');
             if (upcomingBtn) upcomingBtn.classList.toggle('active', onlyUpcoming);
 
@@ -798,15 +814,20 @@
             let shown = 0;
             grid.querySelectorAll('.card').forEach(card => {
                 const match = (cat === 'todas' || card.classList.contains('cat-' + cat))
-                    && (!onlyUpcoming || card.classList.contains('has-upcoming'));
+                    && (!onlyUpcoming || card.classList.contains('has-upcoming'))
+                    && (!applyNext || card.classList.contains('next-up'));
                 card.classList.toggle('cat-hidden', !match);
                 if (match && !card.classList.contains('wing-hidden')) shown++;
             });
 
             const total = grid.querySelectorAll('.card:not(.wing-hidden)').length;
-            if (countEl) countEl.textContent = (cat === 'todas' && !onlyUpcoming) ? total : (shown + ' de ' + total);
+            if (countEl) countEl.textContent = (cat === 'todas' && !onlyUpcoming && !applyNext) ? total : (shown + ' de ' + total);
             const none = document.getElementById('disponibles-none');
             if (none) none.classList.toggle('cat-hidden', shown > 0);
+        }
+        function hhSetNextOnly(on) {
+            localStorage.setItem('hh-board-next-only', on ? '1' : '0');
+            hhApplyCategoryFilter();
         }
         // Filtro por ala (norte / sur): oculta las tarjetas de las otras alas en todo el tablero
         // y recalcula los contadores. Se recuerda en este navegador.

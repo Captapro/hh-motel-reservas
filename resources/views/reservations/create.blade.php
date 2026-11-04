@@ -1897,5 +1897,6 @@
     </script>
 @include('partials.combo-choices')
     @include('partials.name-suggest')
+    @include('partials.product-picker')
 </body>
 </html>

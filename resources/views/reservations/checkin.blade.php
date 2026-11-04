@@ -606,5 +606,6 @@
         });
     </script>
     @include('partials.name-suggest')
+    @include('partials.product-picker')
 </body>
 </html>
