@@ -335,6 +335,10 @@
         .compact .card a.bookings-btn.has-bookings { color:#e8c76f !important; }
         .compact .card details[open] summary { color:#ff9a4d !important; }
         .compact .card .sm svg { width:14px; height:14px; display:block; }
+        /* Siguiente en fila: lo que toca arrendar; Ver todas muestra todos los disponibles. */
+        .next-switch { display:inline-flex; margin:0 0 10px; border:1px solid #d7d7d7; border-radius:9px; overflow:hidden; background:#fff; }
+        .next-switch button { background:none; border:none; margin:0; width:auto; padding:8px 14px; font-size:13px; font-weight:700; color:#555; cursor:pointer; white-space:nowrap; }
+        .next-switch button.active { background:#ff7918; color:#21170e; }
         /* En aseo y Fuera de servicio: tarjetas iguales, de dos líneas. Arriba
            el nombre con sus atajos; abajo lo que hay que hacer o saber. El
            nombre ya trae la categoría y la sección dice el estado. */
@@ -594,9 +598,14 @@
                         ->concat($grouped['proximas'])->concat($grouped['fuera_de_servicio'])
                         ->pluck('room.category')->unique('id')->sortBy('display_order')->values();
                 @endphp
+                @if ($grouped['disponibles']->isNotEmpty())
+                    <div class="next-switch" id="next-switch">
+                        <button type="button" data-next="1" onclick="hhSetNextOnly(true)" title="Piso 1 y Ala Norte a la vista; el Ala Sur entra cuando se acaban los de esa categoría.">Siguiente en fila</button>
+                        <button type="button" data-next="0" onclick="hhSetNextOnly(false)">Ver todas</button>
+                    </div>
+                @endif
                 <div class="cat-filter" id="cat-filter">
                     @if ($boardCategories->count() > 1)
-                        <button type="button" data-cat="todas" onclick="hhFilterCategory('todas')">Todas</button>
                         @foreach ($boardCategories as $cat)
                             <button type="button" data-cat="{{ Str::slug($cat->name) }}" onclick="hhFilterCategory('{{ Str::slug($cat->name) }}')">{{ $cat->name }}</button>
                         @endforeach
@@ -768,8 +777,10 @@
         // Filtro de categoría — solo afecta la sección "Disponibles". Las
         // ocupadas y las "por llegar" quedan siempre visibles. La elección
         // se guarda y se re-aplica en cada refresco automático (cada 30s).
+        // Tocar de nuevo la categoría marcada la desmarca (no hay botón "Todas" en esta fila).
         function hhFilterCategory(cat) {
-            localStorage.setItem('hh-board-category', cat);
+            const current = localStorage.getItem('hh-board-category');
+            localStorage.setItem('hh-board-category', current === cat ? 'todas' : cat);
             hhApplyCategoryFilter();
         }
         // Segundo filtro, independiente de la categoría: mostrar solo las
@@ -792,7 +803,9 @@
             const onlyUpcoming = localStorage.getItem('hh-board-only-upcoming') === '1';
             // Al elegir un ala arriba se ven todos los de esa ala, por si un cliente pide uno puntual.
             const wing = localStorage.getItem('hh-board-wing') || 'todas';
-            const applyOrder = wing === 'todas' && !onlyUpcoming;
+            const nextOnly = localStorage.getItem('hh-board-next-only') !== '0';
+            const applyOrder = nextOnly && wing === 'todas' && !onlyUpcoming;
+            document.querySelectorAll('#next-switch button').forEach(b => b.classList.toggle('active', (b.dataset.next === '1') === nextOnly));
             const upcomingBtn = document.getElementById('upcoming-filter-btn');
             if (upcomingBtn) upcomingBtn.classList.toggle('active', onlyUpcoming);
 
@@ -812,6 +825,11 @@
             if (countEl) countEl.textContent = (cat === 'todas' && !onlyUpcoming && !applyOrder) ? total : (shown + ' de ' + total);
             const none = document.getElementById('disponibles-none');
             if (none) none.classList.toggle('cat-hidden', shown > 0);
+        }
+        function hhSetNextOnly(on) {
+            localStorage.setItem('hh-board-next-only', on ? '1' : '0');
+            if (!on) localStorage.setItem('hh-board-category', 'todas');
+            hhApplyCategoryFilter();
         }
         // Filtro por ala (norte / sur): oculta las tarjetas de las otras alas en todo el tablero
         // y recalcula los contadores. Se recuerda en este navegador.
