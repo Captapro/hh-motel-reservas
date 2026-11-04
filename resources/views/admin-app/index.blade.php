@@ -61,6 +61,9 @@
         .notify { margin-top:14px; border-radius:14px; overflow:hidden; background:#fff; border:1px solid #e5e7eb; }
         .notify summary { display:flex; align-items:center; justify-content:center; min-height:50px; background:#ff7918; color:#21170e; font-size:16px; font-weight:800; cursor:pointer; list-style:none; }
         .notify summary::-webkit-details-marker { display:none; }
+        .toast-box { position:fixed; left:12px; right:12px; top:56px; z-index:50; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+        .toast { max-width:440px; margin:0 auto; width:100%; padding:11px 14px; border-radius:12px; background:#111; color:#fff; font-size:14px; box-shadow:0 6px 20px rgba(0,0,0,.28); }
+        .toast b { display:block; color:#ffb379; font-size:12.5px; }
         .link { display:inline-block; margin-top:9px; color:#c2410c; font-size:13px; font-weight:700; text-decoration:none; }
     </style>
 </head>
@@ -230,6 +233,7 @@
             </div>
         </section>
     </div>
+    <div class="toast-box" id="toasts" aria-live="polite"></div>
     @include('partials.staff-notice-alert')
     <script>
         (function () {
@@ -254,8 +258,11 @@
                 const play = function (buffer) {
                     decoded = buffer;
                     const source = audio.createBufferSource();
+                    const volume = audio.createGain();
                     source.buffer = buffer;
-                    source.connect(audio.destination);
+                    volume.gain.value = .4;
+                    source.connect(volume);
+                    volume.connect(audio.destination);
                     source.start();
                 };
                 if (decoded) { play(decoded); return; }
@@ -281,13 +288,25 @@
                 }).catch(function () {});
             };
 
+            const toast = function (booking) {
+                const box = document.createElement('div');
+                const title = document.createElement('b');
+                box.className = 'toast';
+                title.textContent = 'Nueva reserva · ' + booking.origin;
+                box.appendChild(title);
+                box.appendChild(document.createTextNode(booking.room + ' · ' + booking.at + ' · $' + booking.amount.toLocaleString('es-CL')));
+                document.getElementById('toasts').appendChild(box);
+                setTimeout(function () { box.remove(); }, 12000);
+            };
+
             const pulse = function () {
-                fetch(pulseUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+                fetch(pulseUrl + '?desde=' + mark.booking, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
                     .then(function (response) { return response.ok ? response.json() : null; })
                     .then(function (latest) {
                         if (!latest) return;
                         const fresh = latest.booking > mark.booking || latest.payment > mark.payment;
                         mark = latest;
+                        (latest.new || []).forEach(toast);
                         if (fresh) { cash(); refresh(); }
                     }).catch(function () {});
             };

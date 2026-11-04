@@ -453,6 +453,10 @@ class RoomAseoReactivationTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'administrador']))
             ->get(route('admin_app.index'))->assertOk()->assertSeeInOrder(['Próximas reservas', 'GO 101', 'Cliente Lejano']);
 
-        $this->getJson(route('admin_app.pulse'))->assertExactJson(['booking' => Booking::max('id'), 'payment' => 0]);
+        $this->getJson(route('admin_app.pulse'))->assertExactJson(['booking' => Booking::max('id'), 'payment' => 0, 'new' => []]);
+        $this->getJson(route('admin_app.pulse', ['desde' => Booking::max('id')]))->assertJsonPath('new', []);
+        Booking::query()->update(['origin' => 'presencial']);
+        $this->getJson(route('admin_app.pulse', ['desde' => 0]))->assertJsonCount(1, 'new')
+            ->assertJsonPath('new.0.room', 'GO 101')->assertJsonPath('new.0.origin', Booking::sole()->originLabel())->assertJsonPath('new.0.amount', 20000);
     }
 }

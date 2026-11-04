@@ -50,9 +50,21 @@ class AdminAppController extends Controller
     }
 
     /** Última reserva y último pago: la app los compara para sonar cuando entra algo nuevo. */
-    public function pulse(): JsonResponse
+    public function pulse(Request $request): JsonResponse
     {
-        return response()->json($this->pulseMark());
+        $after = $request->integer('desde');
+
+        return response()->json($this->pulseMark() + [
+            'new' => ! $request->has('desde') ? [] : Booking::with('room')->where('id', '>', $after)
+                ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
+                ->orderBy('id')->take(5)->get()
+                ->map(fn (Booking $b) => [
+                    'origin' => $b->originLabel(),
+                    'room' => $b->room?->name,
+                    'at' => $b->starts_at->timezone(self::TZ)->format('H:i'),
+                    'amount' => (int) $b->price_final,
+                ])->values(),
+        ]);
     }
 
     private function pulseMark(): array
