@@ -192,6 +192,18 @@
         .panel .hint { margin-top:4px; }
         .panel-summary { position:sticky; top:12px; }
         .panel-summary .price-box { margin:6px 0 4px; }
+        /* Detalle del cobro como boleta: fondo blanco, letra de máquina y línea punteada antes del total. */
+        .panel-summary .price-box, .panel-summary .price-box.has-offer, .panel-summary .consumo-sum { background:#fff; border:1px solid #d9d9d9; border-radius:4px; color:#1a1a1a; font-family:ui-monospace, Menlo, monospace; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+        .panel-summary .price-box .p-sum, .panel-summary .consumo-sum .p-sum { color:#333; font-size:13px; }
+        .panel-summary .price-box .p-sum.disc { color:#15803d; }
+        .panel-summary .price-box .p-sum.sub { color:#666; }
+        .panel-summary .price-box .p-sum.total, .panel-summary .consumo-sum .p-sum.total { border-top:1px dashed #888; color:#111; }
+        .panel-summary .price-box .p-sum.total span:first-child { color:#444; }
+        .panel-summary .price-box .p-sum.total span:last-child, .panel-summary .price-box .p-sum.total span:last-child.offer { color:#111; }
+        .panel-summary .price-box .p-note { color:#92400e; }
+        .panel-summary .price-box .p-note.err, .panel-summary .price-box .p-err { color:#b91c1c; }
+        .panel-summary .price-box .p-wait { color:#666; }
+        .panel-summary .price-box .short-stay { font-family:-apple-system, "Segoe UI", sans-serif; }
         .row-id { gap:12px; flex-wrap:wrap; }
         .row-id > div { min-width:150px; }
         .guest-details { margin-top:14px; }
@@ -495,10 +507,10 @@
                         <span>📲 ¿Acepta recibir promociones por WhatsApp o correo? <span style="font-weight:400;color:#cfcfcf;">Pregúntale y marca si dice que sí.</span></span>
                     </label>
 
-                    <div class="sub-head">Identificación <span>— nacionalidad y fecha de nacimiento: opcionales, salvo para cupones que la exigen</span></div>
+                    <div class="sub-head id-extra" style="display:none">Identificación <span></span></div>
 
-                    <div class="row row-id">
-                        <div>
+                    <div class="row row-id id-extra" style="display:none">
+                        <div id="id-nationality">
                     <label>Nacionalidad</label>
                     <select id="nationality-select" onchange="hhSyncNationality()">
                         <option value="Chilena">Chilena</option>
@@ -517,7 +529,7 @@
                     <input type="hidden" name="nationality" id="customer-nationality" value="{{ old('nationality', 'Chilena') }}">
 
                         </div>
-                        <div>
+                        <div id="id-birth">
                     <label>Fecha de nacimiento</label>
                     <div class="dob-row">
                         <select id="birth-day" onchange="hhSyncBirthDate()">
@@ -617,7 +629,7 @@
                 @endif
 
                 <label>Código promocional (opcional)</label>
-                <select name="coupon_code" id="coupon-select" onchange="hhQuotePrice()">
+                <select name="coupon_code" id="coupon-select" onchange="hhQuotePrice(); hhSyncIdExtra();">
                     <option value="" @selected(old('coupon_code', '') === '')>Sin cupón</option>
                     @foreach ($coupons as $coupon)
                         @php
@@ -1393,8 +1405,10 @@
                 hhSyncDocField();
                 docNumber.value = hhRutFormat(card.rut);
                 hhValidateDocNumber();
-                if (!card.foreigner) hhSetNationality('Chilena');
+                hhForeignCard = card.foreigner;
+                if (card.foreigner) hhAskNationality(); else hhSetNationality('Chilena');
                 if (card.birthDate) { hhSetBirthDate(card.birthDate); hhQuotePrice(); }
+                hhSyncIdExtra();
             }
             function useFoundByRut(d) {
                 if (d.phone) { phone.value = d.phone; lastQuery = d.phone; }
@@ -1498,6 +1512,26 @@
 
         // Documento: el tipo elegido cambia qué se puede tipear y si se
         // valida con dígito verificador (solo RUT lo tiene).
+        // Nacionalidad y nacimiento no se piden: se guardan en la ficha con lo que
+        // trae el carnet. La nacionalidad aparece con pasaporte o carnet de
+        // extranjero; el nacimiento, con un cupón de edad mínima si aún falta.
+        let hhForeignCard = false;
+        function hhSyncIdExtra() {
+            const type = document.getElementById('document-type');
+            const coupon = document.getElementById('coupon-select');
+            const birth = document.getElementById('customer-birth-date');
+            const couponText = coupon && coupon.selectedOptions[0] ? coupon.selectedOptions[0].textContent : '';
+            const needsAge = /requiere \d+\+ años/.test(couponText) && birth && !birth.value;
+            const showNationality = (type && type.value === 'pasaporte') || hhForeignCard;
+            document.querySelectorAll('.id-extra').forEach(el => { el.style.display = showNationality || needsAge ? '' : 'none'; });
+            document.getElementById('id-nationality').style.display = showNationality ? '' : 'none';
+            document.getElementById('id-birth').style.display = needsAge ? '' : 'none';
+        }
+        // Sin carnet chileno no se asume "Chilena": hay que elegirla.
+        function hhAskNationality() {
+            const sel = document.getElementById('nationality-select');
+            if (sel && sel.value === 'Chilena') { sel.value = ''; hhSyncNationality(); }
+        }
         function hhSyncDocField() {
             const type = document.getElementById('document-type');
             const number = document.getElementById('document-number');
@@ -1516,6 +1550,7 @@
             number.placeholder = type.value === 'rut' ? '12345678-9' : 'Número de pasaporte';
             if (type.value === 'rut') number.value = hhRutFormat(number.value);
             hhValidateDocNumber();
+            hhSyncIdExtra();
         }
         function hhValidateDocNumber() {
             const type = document.getElementById('document-type');
@@ -1547,7 +1582,14 @@
             const type = document.getElementById('document-type');
             const number = document.getElementById('document-number');
             if (!type || !number) return;
-            type.addEventListener('change', function () { hhDocTypeTouched = true; hhSyncDocField(); });
+            type.addEventListener('change', function () {
+                hhDocTypeTouched = true;
+                hhSyncDocField();
+                if (type.value === 'pasaporte') hhAskNationality();
+                // De vuelta a RUT: el selector se oculta, así que no puede quedar vacío.
+                else if (!document.getElementById('customer-nationality').value) hhSetNationality('Chilena');
+                hhSyncIdExtra();
+            });
             number.addEventListener('input', function () {
                 if (type.value === 'rut') number.value = hhRutFormat(number.value);
                 hhValidateDocNumber();
