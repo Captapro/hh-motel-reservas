@@ -128,6 +128,7 @@
         </select>
         <div class="chip-error" id="chip-error" hidden>Elige un medio de pago para continuar.</div>
         <p class="pay-wait" id="pay-wait">Elige el medio de pago para seguir.</p>
+        @include('payments._transfer-box', ['booking' => $booking, 'balance' => $balance])
 
         <div id="pay-rest" hidden>
             <div class="step-title"><b>2</b> ¿Cuánto paga?</div>
@@ -174,6 +175,13 @@
         @include('payments._pay-link', ['booking' => $booking, 'divider' => true])
     </form>
     </div>
+
+    <form method="POST" action="{{ route('bookings.transfer_sent', $booking->code) }}" id="transfer-sent-form">
+        @csrf
+        @if ($after)
+            <input type="hidden" name="after" value="{{ $after }}">
+        @endif
+    </form>
 
     @if ($after === 'board')
         <a class="back" href="{{ route('rooms.board') }}">← Volver al tablero</a>
@@ -225,6 +233,8 @@
                 const code = select.selectedOptions[0]?.dataset.code;
                 rest.hidden = !code;
                 wait.hidden = !!code;
+                const transferBox = document.getElementById('transfer-box');
+                if (transferBox) transferBox.hidden = code !== 'transferencia';
                 if (!code) return;
                 const cashLike = code === 'efectivo' || code === 'transferencia';
                 const cardLike = code === 'debito' || code === 'credito';

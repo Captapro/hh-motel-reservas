@@ -271,6 +271,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/reservas/{code}/reactivar', [BookingReactivateController::class, 'store'])->name('bookings.reactivate');
     Route::delete('/reservas/{code}', [BookingDeleteController::class, 'destroy'])->middleware('role:soporte')->name('bookings.destroy');
     Route::post('/reservas/{code}/fidelizacion', [CustomerLoyaltyController::class, 'store'])->name('customers.loyalty');
+    Route::post('/reservas/{code}/transferencia-enviada', [BookingPaymentInstructionsController::class, 'transferSent'])->name('bookings.transfer_sent');
     Route::post('/reservas/{code}/instrucciones-pago', [BookingPaymentInstructionsController::class, 'store'])->name('bookings.payment_instructions');
     Route::get('/reservas/{code}/finalizar', [BookingFinalizeController::class, 'show'])->name('bookings.finalize.show');
     Route::post('/reservas/{code}/finalizar', [BookingFinalizeController::class, 'store'])->name('bookings.finalize.store');

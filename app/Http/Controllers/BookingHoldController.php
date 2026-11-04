@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 class BookingHoldController extends Controller
 {
-    private const REASONS = [
+    public const REASONS = [
         'recepcion' => 'Pagará en recepción',
         'tardio' => 'Pago tardío (transferencia por confirmar)',
     ];
@@ -28,13 +28,19 @@ class BookingHoldController extends Controller
         }
 
         $label = self::REASONS[$validated['reason']];
+        self::keep($booking, $label);
+
+        return back()->with('status', 'Reserva mantenida sin vencimiento — '.$label.'.');
+    }
+
+    /** Deja la reserva sin vencimiento, con el motivo a la vista en sus notas. */
+    public static function keep(Booking $booking, string $label): void
+    {
         $old = ['expires_at' => $booking->expires_at?->toDateTimeString()];
         $booking->update([
             'expires_at' => null,
             'notes' => trim(($booking->notes ? $booking->notes."\n" : '').'Retención mantenida por recepción: '.$label.'.'),
         ]);
         AuditLog::record(auth()->id(), 'reserva.mantener_retencion', 'Booking', $booking->id, $old, ['expires_at' => null, 'motivo' => $label]);
-
-        return back()->with('status', 'Reserva mantenida sin vencimiento — '.$label.'.');
     }
 }

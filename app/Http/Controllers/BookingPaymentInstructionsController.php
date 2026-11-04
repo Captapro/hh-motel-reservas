@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 /**
  * Registra cuándo se le mandaron al cliente los datos de pago (botón de
@@ -25,5 +27,22 @@ class BookingPaymentInstructionsController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /** Datos de transferencia enviados: el Playroom queda tomado hasta confirmar el pago y recepción sigue. */
+    public function transferSent(Request $request, string $code): RedirectResponse
+    {
+        $booking = Booking::where('code', $code)->firstOrFail();
+
+        $this->store($code);
+        if ($booking->booking_status === 'PENDIENTE_PAGO' && $booking->expires_at) {
+            BookingHoldController::keep($booking, BookingHoldController::REASONS['tardio']);
+        }
+
+        $status = 'Datos de transferencia enviados. Registra el pago cuando llegue la plata a la cuenta.';
+
+        return $request->input('after') === 'board'
+            ? redirect()->route('rooms.board')->with('status', $status)
+            : redirect()->route('reservations.show', $booking->code)->with('status', $status);
     }
 }

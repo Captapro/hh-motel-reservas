@@ -2785,4 +2785,22 @@ class BookingIntegrityTest extends TestCase
         $booking->update(['starts_at' => Carbon::parse('2026-10-08 12:00'), 'ends_at' => Carbon::parse('2026-10-08 13:00')]);
         $this->assertFalse(ShiftNote::upcomingFor($next)->pluck('code')->contains($booking->code));
     }
+
+    public function test_reception_sends_transfer_details_and_moves_on(): void
+    {
+        (require database_path('migrations/2026_09_22_001051_add_payment_instructions_sent_at_to_bookings_table.php'))->up();
+        config(['services.hh_payment.bank_titular' => 'Titular de prueba', 'services.hh_payment.bank_account_number' => '123']);
+        $booking = $this->booking(['booking_status' => 'PENDIENTE_PAGO', 'expires_at' => now()->addMinutes(10)]);
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+
+        $this->get(route('payments.create', ['code' => $booking->code, 'after' => 'board']))
+            ->assertOk()->assertSee('Titular de prueba')->assertSee('Datos enviados, avanzar');
+
+        $this->post(route('bookings.transfer_sent', $booking->code), ['after' => 'board'])->assertRedirect(route('rooms.board'));
+
+        $fresh = $booking->fresh();
+        $this->assertNull($fresh->expires_at);
+        $this->assertNotNull($fresh->payment_instructions_sent_at);
+        $this->assertSame('PENDIENTE_PAGO', $fresh->booking_status);
+    }
 }
