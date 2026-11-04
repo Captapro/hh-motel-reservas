@@ -264,7 +264,7 @@
                     const source = audio.createBufferSource();
                     const volume = audio.createGain();
                     source.buffer = buffer;
-                    volume.gain.value = .4;
+                    volume.gain.value = .15;
                     source.connect(volume);
                     volume.connect(audio.destination);
                     source.start();
