@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccessCodeController;
 use App\Http\Controllers\Admin\AccessController;
+use App\Http\Controllers\RondaAuthController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\CleanupController;
@@ -137,11 +138,14 @@ Route::get('/qr/habitacion/{room}', [RoomQrController::class, 'show'])->name('ro
 Route::get('/qr/habitacion/{room}/imagen.png', [RoomQrController::class, 'image'])->name('rooms.qr.image');
 Route::post('/qr/habitacion/{room}/aseo', [RoomQrController::class, 'reportAseo'])->middleware(['throttle:20,1,rooms.qr.report_aseo', 'mucama'])->name('rooms.qr.report_aseo');
 Route::post('/qr/habitacion/{room}/confirmar', [RoomQrController::class, 'confirmRoomReady'])->middleware(['throttle:20,1,rooms.qr.confirm_ready', 'mucama'])->name('rooms.qr.confirm_ready');
-Route::post('/qr/mucamas/aseo/{room}/empezar', [MucamaWorkController::class, 'start'])->middleware(['throttle:30,1,mucamas.work', 'mucama'])->name('mucamas.work.start');
-Route::post('/qr/mucamas/aseo/{room}/terminar', [MucamaWorkController::class, 'finish'])->middleware(['throttle:30,1,mucamas.work', 'mucama'])->name('mucamas.work.finish');
+Route::post('/qr/mucamas/aseo/{room}/empezar', [MucamaWorkController::class, 'start'])->middleware(['throttle:30,1,mucamas.work.start', 'mucama'])->name('mucamas.work.start');
+Route::post('/qr/mucamas/aseo/{room}/terminar', [MucamaWorkController::class, 'finish'])->middleware(['throttle:30,1,mucamas.work.finish', 'mucama'])->name('mucamas.work.finish');
 Route::post('/qr/mucamas/novedad', [MucamaWorkController::class, 'note'])->middleware(['throttle:20,1,mucamas.note', 'mucama'])->name('mucamas.work.note');
 Route::get('/qr/mucamas', [RoomQrController::class, 'mucamaPanel'])->middleware('mucama')->name('rooms.qr.mucama_panel');
 Route::get('/qr/mucamas/imagen.png', [RoomQrController::class, 'mucamaPanelImage'])->name('rooms.qr.mucama_panel_image');
+Route::get('/ronda-de-turno/entrar', [RondaAuthController::class, 'showLogin'])->name('ronda.login');
+Route::post('/ronda-de-turno/entrar', [RondaAuthController::class, 'login'])->middleware('throttle:10,1,ronda.login.store')->name('ronda.login.store');
+Route::post('/ronda-de-turno/salir', [RondaAuthController::class, 'logout'])->name('ronda.logout');
 Route::get('/qr/ronda-de-turno/imagen.png', [RoomQrController::class, 'shiftRoundImage'])->name('rooms.qr.shift_round_image');
 
 Route::get('/login', [LoginController::class, 'create'])->middleware('guest')->name('login');

@@ -83,6 +83,10 @@ class AccountController extends Controller
         if ($newPassword) {
             $user->update(['password' => $newPassword]);
         }
+        if ($request->boolean('clear_ronda_pin') && $user->ronda_pin) {
+            $user->forceFill(['ronda_pin' => null])->save();
+            AuditLog::record(auth()->id(), 'ronda.pin_borrado', 'User', $user->id, null, null);
+        }
 
         AuditLog::record(auth()->id(), 'cuenta.editar', 'User', $user->id, $old, $user->only(['name', 'email', 'role', 'is_active', 'can_use_analyst', 'can_use_help']));
 

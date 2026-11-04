@@ -60,13 +60,18 @@
 </script>
 @php
     // La ronda de turno es un panel aparte: solo registrar y revisar cada Playroom.
-    $hhRound = request()->routeIs('shift_round.*') || request()->boolean('ronda');
+    $hhRondaOnly = (bool) session(\App\Http\Middleware\RestrictRondaSession::SESSION_KEY);
+    $hhRound = $hhRondaOnly || request()->routeIs('shift_round.*') || request()->boolean('ronda');
 @endphp
 @if ($hhRound)
     <style>body { margin-left:0 !important; padding-left:0 !important; }</style>
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; background:#111; color:#eee; border-bottom:1px solid #292929; font:700 14px -apple-system,'Segoe UI',sans-serif;">
         <span>HH MOTEL · Ronda de turno</span>
-        <a href="{{ route('rooms.board') }}" style="color:#ff9a4d; font-size:13px; text-decoration:none;">Salir de la ronda</a>
+        @if ($hhRondaOnly)
+            <form method="POST" action="{{ route('ronda.logout') }}" style="margin:0;">@csrf<button type="submit" style="background:none; border:none; padding:0; color:#ff9a4d; font-size:13px; cursor:pointer;">Salir de la ronda</button></form>
+        @else
+            <a href="{{ route('rooms.board') }}" style="color:#ff9a4d; font-size:13px; text-decoration:none;">Salir de la ronda</a>
+        @endif
     </div>
 @else
 @include('partials.sidebar')

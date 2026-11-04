@@ -56,6 +56,7 @@ class RoomAseoReactivationTest extends TestCase
             '2026_09_22_012410_create_staff_shift_logs_table.php',
             '2026_11_04_120000_create_shift_notes_tables.php',
             '2026_11_04_130000_add_room_cleanings_and_note_staff.php',
+            '2026_11_04_140000_add_ronda_pin_to_users.php',
             '2026_09_15_230000_create_room_furniture_tables.php',
             '2026_09_15_231000_create_room_inspections_table.php',
         ] as $migration) {
@@ -312,7 +313,7 @@ class RoomAseoReactivationTest extends TestCase
 
         $mucama = Staff::create(['name' => 'Ana Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
         $this->withSession(['mucama_staff_id' => $mucama->id])->get(route('rooms.qr.mucama_panel'))
-            ->assertOk()->assertSee('Ocupadas (1)')->assertSee('Fuera de servicio (1)')->assertSee('Mantención');
+            ->assertOk()->assertSeeInOrder(['Ocupadas', 'GO 103', 'Fuera de servicio', 'GO 104', 'Mantención']);
 
         // Aunque tenga un escaneo válido, una pieza en aseo no admite levantamiento.
         $this->actingAs(User::factory()->create(['role' => 'recepcion']))
@@ -341,9 +342,47 @@ class RoomAseoReactivationTest extends TestCase
 
         $mucama = Staff::create(['name' => 'Ana Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
         $this->withSession(['mucama_staff_id' => $mucama->id])->get(route('rooms.qr.mucama_panel'))
-            ->assertOk()->assertSeeInOrder(['ocupadas', 'Ocupadas (0)', 'Próximas a llegar (1)', 'GO 102', 'Urgente', 'Por limpiar (1)']);
+            ->assertOk()->assertSeeInOrder(['ocupadas', 'Ocupadas', 'Próximas a llegar', 'GO 102', 'Urgente', 'Por limpiar', 'Novedades de hoy']);
 
         $this->actingAs(User::factory()->create(['role' => 'recepcion']))->get(route('shift_round.index'))
-            ->assertOk()->assertSeeInOrder(['ocupadas', 'Ocupadas (0)', 'Próximas a llegar (1)', 'GO 102', 'Urgente', 'En aseo (1)', 'Por revisar (0)']);
+            ->assertOk()->assertSeeInOrder(['ocupadas', 'Ocupadas', 'Próximas a llegar', 'GO 102', 'Urgente', 'En aseo', 'Por revisar']);
+    }
+
+    public function test_host_creates_a_pin_and_it_only_opens_the_round(): void
+    {
+        $host = User::factory()->create(['role' => 'recepcion', 'name' => 'Ana Anfitriona']);
+        $admin = User::factory()->create(['role' => 'administrador', 'name' => 'Jefa Admin']);
+
+        $this->get(route('shift_round.index'))->assertRedirect(route('ronda.login'));
+        $this->get(route('ronda.login'))->assertOk()->assertSee('Ana Anfitriona')->assertDontSee('Jefa Admin');
+
+        // Crear el PIN pide repetirlo.
+        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '1234', 'pin_confirmation' => '9999'])->assertSessionHasErrors('pin');
+        $this->assertNull($host->fresh()->ronda_pin);
+        $this->assertGuest();
+
+        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '1234', 'pin_confirmation' => '1234'])->assertRedirect(route('shift_round.index'));
+        $this->assertAuthenticatedAs($host);
+        $this->assertNotSame('1234', $host->fresh()->ronda_pin);
+
+        // La sesión con PIN sirve solo para la ronda y no abre turno.
+        $this->get(route('shift_round.index'))->assertOk()->assertSee('Salir de la ronda');
+        $this->get(route('rooms.board'))->assertRedirect(route('shift_round.index'));
+        $this->get(route('cash.show'))->assertRedirect(route('shift_round.index'));
+        $this->assertSame(0, StaffShiftLog::count());
+
+        $this->post(route('ronda.logout'))->assertRedirect(route('ronda.login'));
+        $this->assertGuest();
+
+        // Después entra siempre con ese PIN.
+        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '0000'])->assertSessionHasErrors('pin');
+        $this->assertGuest();
+        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '1234'])->assertRedirect(route('shift_round.index'));
+        $this->assertAuthenticatedAs($host);
+        $this->post(route('ronda.logout'));
+
+        // Un administrador no entra con PIN.
+        $this->post(route('ronda.login.store'), ['user_id' => $admin->id, 'pin' => '1234', 'pin_confirmation' => '1234'])->assertSessionHasErrors('pin');
+        $this->assertGuest();
     }
 }

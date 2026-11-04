@@ -53,6 +53,23 @@
         .checks input { width:20px; height:20px; accent-color:#ff7918; }
         details { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px 14px; margin-bottom:9px; }
         summary { cursor:pointer; font-weight:800; }
+        .mod { border-radius:16px; overflow:hidden; margin-top:14px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+        .mod-h { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 14px; font-size:14px; font-weight:800; color:#fff; }
+        .mod-h b { min-width:26px; padding:1px 8px; border-radius:999px; background:rgba(255,255,255,.22); text-align:center; font-size:13px; }
+        .mod-b { padding:10px; }
+        .mod-b > .card:last-child, .mod-b > .note:last-child { margin-bottom:0; }
+        .mod .card { background:#f7f7f5; }
+        .mod .empty { margin:0; padding:4px 4px; }
+        .mod-orange .mod-h { background:#ff7918; color:#21170e; }
+        .mod-orange .mod-h b { background:rgba(0,0,0,.14); }
+        .mod-blue .mod-h { background:#0a5cff; }
+        .mod-dark .mod-h { background:#111; color:#ffb379; }
+        .mod-amber .mod-h { background:#a8530f; }
+        .mod-gray .mod-h { background:#4b5563; }
+        .note { background:#fff7ef; border:1px solid #ffd2ad; border-left:5px solid #ff7918; border-radius:10px; padding:10px 12px; margin-bottom:9px; color:#1f2937; }
+        .note .meta { color:#7c4a1e; font-weight:600; }
+        #novedad { margin:10px 0 0; background:#f3f4f6; border-color:#d1d5db; }
+        #novedad[open] { background:#e5e7eb; border-color:#9ca3af; }
     </style>
 </head>
 <body>
@@ -87,7 +104,9 @@
             </div>
         @endif
 
-        <h2>Ocupadas ({{ $occupied->count() }})</h2>
+        <section class="mod mod-blue">
+            <div class="mod-h"><span>Ocupadas</span><b>{{ $occupied->count() }}</b></div>
+            <div class="mod-b">
         @forelse ($occupied as $entry)
             <div class="card row">
                 <span class="name">{{ $entry['room']->name }}</span>
@@ -102,9 +121,13 @@
         @empty
             <p class="empty">Ninguna ocupada ahora.</p>
         @endforelse
+            </div>
+        </section>
 
         @if ($upcoming->isNotEmpty())
-            <h2>Próximas a llegar ({{ $upcoming->count() }})</h2>
+            <section class="mod mod-orange">
+                <div class="mod-h"><span>Próximas a llegar</span><b>{{ $upcoming->count() }}</b></div>
+                <div class="mod-b">
             @foreach ($upcoming as $entry)
                 @php
                     $next = $entry['status']['next_booking'];
@@ -120,9 +143,13 @@
                     </div>
                 </a>
             @endforeach
+                </div>
+            </section>
         @endif
 
-        <h2>Por limpiar ({{ $pendingAseo->count() }})</h2>
+        <section class="mod mod-orange">
+            <div class="mod-h"><span>Por limpiar</span><b>{{ $pendingAseo->count() }}</b></div>
+            <div class="mod-b">
         @forelse ($pendingAseo as $entry)
             @php
                 $room = $entry['room'];
@@ -149,18 +176,20 @@
             <p class="empty">Nada pendiente ahora mismo.</p>
         @endforelse
         @if ($current)<p class="meta">Termina el aseo en curso para empezar otro.</p>@endif
+            </div>
+        </section>
 
-        @if ($todayNotes->isNotEmpty())
-            <h2>Novedades de hoy ({{ $todayNotes->count() }})</h2>
-            @foreach ($todayNotes as $note)
-                <div class="card">
+        <section class="mod mod-dark">
+            <div class="mod-h"><span>Novedades de hoy</span><b>{{ $todayNotes->count() }}</b></div>
+            <div class="mod-b">
+            @forelse ($todayNotes as $note)
+                <div class="note">
                     <div class="meta">@if ($note->urgent)<b style="color:#c2410c;">Urgente · </b>@endif{{ $note->category }}@if ($note->room) · {{ $note->room->name }}@endif · {{ $note->authorName() }} · {{ $note->created_at->timezone('America/Santiago')->format('H:i') }}</div>
                     <div style="font-size:14.5px; line-height:1.4; margin-top:3px; white-space:pre-wrap;">{{ $note->body }}</div>
                 </div>
-            @endforeach
-        @endif
-
-        <h2>Dejar novedad</h2>
+            @empty
+                <p class="empty">Sin novedades por ahora.</p>
+            @endforelse
         <details id="novedad" @if ($errors->has('body')) open @endif>
             <summary>Avisar algo a recepción</summary>
             <form method="POST" action="{{ route('mucamas.work.note') }}">
@@ -187,15 +216,23 @@
                 <button class="go full" type="submit">Enviar novedad</button>
             </form>
         </details>
+            </div>
+        </section>
 
-        <h2>Esperan confirmación de recepción ({{ $reportedAseo->count() }})</h2>
+        <section class="mod mod-amber">
+            <div class="mod-h"><span>Esperan confirmación de recepción</span><b>{{ $reportedAseo->count() }}</b></div>
+            <div class="mod-b">
         @forelse ($reportedAseo as $entry)
             <div class="card row"><span class="name">{{ $entry['room']->name }}</span><span class="meta">{{ $entry['room']->aseo_reported_by }} · {{ $entry['room']->aseo_reported_at->timezone('America/Santiago')->format('H:i') }}</span></div>
         @empty
             <p class="empty">Nada esperando confirmación.</p>
         @endforelse
+            </div>
+        </section>
 
-        <h2>Fuera de servicio ({{ $outOfService->count() }})</h2>
+        <section class="mod mod-gray">
+            <div class="mod-h"><span>Fuera de servicio</span><b>{{ $outOfService->count() }}</b></div>
+            <div class="mod-b">
         @forelse ($outOfService as $entry)
             <div class="card row">
                 <span class="name">{{ $entry['room']->name }}</span>
@@ -204,6 +241,8 @@
         @empty
             <p class="empty">Ninguna fuera de servicio.</p>
         @endforelse
+            </div>
+        </section>
     </div>
     <script>
         (function () {

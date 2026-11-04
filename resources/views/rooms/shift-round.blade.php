@@ -20,9 +20,20 @@
         .rd-bar { height:8px; background:#e5e7eb; border-radius:20px; margin:10px 0 12px; overflow:hidden; }
         .rd-bar i { display:block; height:100%; background:#ff7918; border-radius:20px; }
         a.rd-scan { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:11px; background:#ff7918; color:#21170e !important; font-size:16px; font-weight:800; text-decoration:none; }
-        .rd-h { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#6b7280; margin:20px 0 8px; font-weight:700; }
+        .mod { border-radius:16px; overflow:hidden; margin-top:14px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+        .mod-h { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 14px; font-size:14px; font-weight:800; color:#fff; }
+        .mod-h b { min-width:26px; padding:1px 8px; border-radius:999px; background:rgba(255,255,255,.22); text-align:center; font-size:13px; }
+        .mod-b { padding:10px; }
+        .mod-orange .mod-h { background:#ff7918; color:#21170e; }
+        .mod-orange .mod-h b { background:rgba(0,0,0,.14); }
+        .mod-blue .mod-h { background:#0a5cff; }
+        .mod-dark .mod-h { background:#111; color:#ffb379; }
+        .mod-amber .mod-h { background:#a8530f; }
+        .mod-gray .mod-h { background:#4b5563; }
+        .mod-soft .mod-h { background:#e5e7eb; color:#374151; }
+        .mod-soft .mod-h b { background:rgba(0,0,0,.08); }
         .rd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:9px; }
-        .rd-card { display:flex; justify-content:space-between; align-items:center; gap:10px; background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px 14px; color:inherit; text-decoration:none; }
+        .rd-card { display:flex; justify-content:space-between; align-items:center; gap:10px; background:#f7f7f5; border:1px solid #e5e7eb; border-radius:14px; padding:12px 14px; color:inherit; text-decoration:none; }
         a.rd-card:hover { border-color:#ff7918; }
         .rd-card.aseo-urgent { border:2px solid #ff7918; }
         .rd-card.aseo-high { border:2px solid #ffb379; }
@@ -34,7 +45,7 @@
         .rd-tag.aseo-mid { background:#a8530f; color:#fff; }
         .rd-tag.aseo-info { background:#0a5cff; color:#fff; }
         .rd-warn { flex:none; color:#c2410c; font-size:12px; font-weight:700; }
-        .rd-empty { color:#9ca3af; font-size:14px; padding:6px 2px; margin:0; }
+        .rd-empty { grid-column:1 / -1; color:#9ca3af; font-size:14px; padding:4px; margin:0; }
     </style>
 </head>
 @include('partials.navbar')
@@ -56,8 +67,9 @@
 
     <a class="rd-scan" href="{{ route('shift_round.scan') }}?ronda=1">Escanear QR del Playroom</a>
 
-    <h2 class="rd-h">Ocupadas ({{ $occupied->count() }})</h2>
-    <div class="rd-grid">
+    <section class="mod mod-blue">
+        <div class="mod-h"><span>Ocupadas</span><b>{{ $occupied->count() }}</b></div>
+        <div class="mod-b rd-grid">
     @forelse ($occupied as $entry)
         <div class="rd-card">
             <div>
@@ -69,10 +81,12 @@
         <p class="rd-empty">Ninguna ocupada ahora.</p>
     @endforelse
     </div>
+    </section>
 
     @if ($upcoming->isNotEmpty())
-        <h2 class="rd-h">Próximas a llegar ({{ $upcoming->count() }})</h2>
-        <div class="rd-grid">
+        <section class="mod mod-orange">
+            <div class="mod-h"><span>Próximas a llegar</span><b>{{ $upcoming->count() }}</b></div>
+            <div class="mod-b rd-grid">
         @foreach ($upcoming as $entry)
             @php
                 $room = $entry['room'];
@@ -88,10 +102,12 @@
             </a>
         @endforeach
         </div>
+        </section>
     @endif
 
-    <h2 class="rd-h">En aseo ({{ $aseo->count() }})</h2>
-    <div class="rd-grid">
+    <section class="mod mod-amber">
+        <div class="mod-h"><span>En aseo</span><b>{{ $aseo->count() }}</b></div>
+        <div class="mod-b rd-grid">
     @forelse ($aseo as $entry)
         @php
             $next = $entry['status']['next_booking'];
@@ -108,9 +124,11 @@
         <p class="rd-empty">Ninguna en aseo.</p>
     @endforelse
     </div>
+    </section>
 
-    <h2 class="rd-h">Por revisar ({{ $pending->count() }})</h2>
-    <div class="rd-grid">
+    <section class="mod mod-dark">
+        <div class="mod-h"><span>Por revisar</span><b>{{ $pending->count() }}</b></div>
+        <div class="mod-b rd-grid">
     @forelse ($pending as $room)
         <a class="rd-card" href="{{ route('rooms.qr.show', $room) }}?ronda=1">
             <div>
@@ -123,9 +141,11 @@
         <p class="rd-empty">{{ $total > 0 ? 'No queda ninguna otra por revisar hoy.' : 'No hay Playrooms listas en este momento.' }}</p>
     @endforelse
     </div>
+    </section>
 
-    <h2 class="rd-h">Fuera de servicio ({{ $out->count() }})</h2>
-    <div class="rd-grid">
+    <section class="mod mod-gray">
+        <div class="mod-h"><span>Fuera de servicio</span><b>{{ $out->count() }}</b></div>
+        <div class="mod-b rd-grid">
     @forelse ($out as $entry)
         <div class="rd-card">
             <div>
@@ -137,10 +157,12 @@
         <p class="rd-empty">Ninguna fuera de servicio.</p>
     @endforelse
     </div>
+    </section>
 
     @if ($done->isNotEmpty())
-        <h2 class="rd-h">Ya revisadas hoy ({{ $done->count() }})</h2>
-        <div class="rd-grid">
+        <section class="mod mod-soft">
+            <div class="mod-h"><span>Ya revisadas hoy</span><b>{{ $done->count() }}</b></div>
+            <div class="mod-b rd-grid">
         @foreach ($done as $room)
             <div class="rd-card">
                 <div>
@@ -155,6 +177,7 @@
             </div>
         @endforeach
         </div>
+        </section>
     @endif
 </div>
 </body>

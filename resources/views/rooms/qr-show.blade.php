@@ -138,7 +138,11 @@
                     @else
                         <a class="primary" href="{{ route('shift_round.scan') }}{{ request('ronda') ? '?ronda=1' : '' }}">📷 Escanear para inspeccionar →</a>
                     @endif
-                    <a href="{{ route('rooms.board') }}">← Ver tablero interno</a>
+                    @if (session(\App\Http\Middleware\RestrictRondaSession::SESSION_KEY))
+                        <a href="{{ route('shift_round.index') }}">← Volver a la ronda</a>
+                    @else
+                        <a href="{{ route('rooms.board') }}">← Ver tablero interno</a>
+                    @endif
                 </div>
             @endauth
         </div>
