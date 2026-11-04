@@ -158,7 +158,7 @@ Bloqueos:
 1. La mucama escanea el QR de la puerta, entra con su PIN y aprieta "Reportar aseo listo →".
 2. En el tablero aparece "✓ <mucama> reportó aseo listo a las HH:MM — falta tu confirmación". El PIN ya identifica quién hizo el aseo.
 3. Revisa el Playroom y aprieta "Confirmar aseo de <mucama>". No hay que elegir a nadie. Es la única forma de que vuelva a Disponibles.
-- Si ninguna mucama lo reportó con su PIN (por ejemplo, no escaneó el QR), la tarjeta pide elegir "¿Quién limpió?" y luego "Aseo listo".
+- Si ninguna mucama lo reportó con su PIN (por ejemplo, no escaneó el QR), la tarjeta pide elegir "¿Quién?" y luego "Aseo listo".
 - Si no hay mucamas para elegir: "No hay mucamas activas cargadas en Personal" → avisa al administrador.
 - "Aseo del día" (Operaciones) muestra salidas, aseos cerrados y pendientes. "Dónde están las mucamas" muestra en qué Playroom está cada una.
 

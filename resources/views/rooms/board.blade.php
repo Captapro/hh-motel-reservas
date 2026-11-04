@@ -335,22 +335,32 @@
         .compact .card a.bookings-btn.has-bookings { color:#e8c76f !important; }
         .compact .card details[open] summary { color:#ff9a4d !important; }
         .compact .card .sm svg { width:14px; height:14px; display:block; }
-        /* En aseo y Fuera de servicio: la sección ya dice el estado y el nombre
-           ya trae la categoría. Queda el nombre con sus atajos y, debajo, lo
-           único que hay que hacer o saber. */
+        /* En aseo y Fuera de servicio: tarjetas iguales, de dos líneas. Arriba
+           el nombre con sus atajos; abajo lo que hay que hacer o saber. El
+           nombre ya trae la categoría y la sección dice el estado. */
+        .compact .section.aseo .grid, .compact .section.fuera .grid { grid-auto-rows:1fr; align-items:stretch; }
+        .compact .section.aseo .card, .compact .section.fuera .card { gap:6px 0; min-height:84px; align-content:space-between; }
         .compact .section.aseo .card .brk, .compact .section.fuera .card .brk,
         .compact .section.aseo .card .cat, .compact .section.fuera .card .cat,
-        .compact .section.aseo .card .pill { display:none; }
-        .compact .section.aseo .card, .compact .section.fuera .card { gap:6px 2px; }
+        .compact .section.aseo .card .pill,
+        .compact .section.aseo .card .eta:not(.aseo-help) { display:none; }
+        .compact .section.aseo .card .card-head, .compact .section.fuera .card .card-head { flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .compact .section.aseo .card-head b, .compact .section.fuera .card-head b { font-size:13px; letter-spacing:-.015em; }
         .compact .section.aseo .card .bookings-btn, .compact .section.aseo .card .copy-link-btn, .compact .section.aseo .card details,
-        .compact .section.fuera .card .bookings-btn, .compact .section.fuera .card .copy-link-btn, .compact .section.fuera .card details { order:2; }
-        .compact .section.aseo .card details[open], .compact .section.fuera .card details[open] { order:9; }
-        .compact .section.aseo .card .eta, .compact .section.fuera .card .eta { order:3; flex:1 1 100%; text-align:left; }
-        .compact .section.fuera .card .pill { order:3; margin:0; }
-        .compact .section.aseo .card .aseo-ready-form { order:4; display:flex; gap:6px; margin:0; }
-        .compact .section.aseo .card .aseo-cleaner-input { flex:1 1 0; min-width:0; width:auto; height:30px; min-height:0; margin:0; padding:0 7px; font-size:11.5px; }
+        .compact .section.fuera .card .bookings-btn, .compact .section.fuera .card .copy-link-btn, .compact .section.fuera .card details { order:2; flex:0 0 auto; }
+        .compact .section.aseo .card .bookings-btn, .compact .section.aseo .card .copy-link-btn, .compact .section.aseo .card summary,
+        .compact .section.fuera .card .bookings-btn, .compact .section.fuera .card .copy-link-btn, .compact .section.fuera .card summary { min-width:19px; gap:1px; padding-left:1px; padding-right:1px; }
+        .compact .section.aseo .card .sm svg, .compact .section.fuera .card .sm svg { width:13px; height:13px; }
+        .compact .section.aseo .card details[open], .compact .section.fuera .card details[open] { order:9; flex:1 1 100%; }
+        .compact .section.aseo .card .aseo-ready-form { order:4; flex:1 1 100%; display:flex; gap:6px; margin:0; }
+        .compact .section.aseo .card .aseo-cleaner-input { flex:1 1 0; min-width:0; width:auto; height:30px; min-height:0; margin:0; padding:0 22px 0 8px; font-size:11.5px; text-overflow:ellipsis; }
         .compact .section.aseo .card .aseo-ready-btn { flex:0 0 auto; width:auto; height:30px; margin:0; padding:0 9px; white-space:nowrap; }
-        .compact .section.aseo .card .aseo-ready-form button:only-child { flex:1 1 100%; }
+        .compact .section.aseo .card .aseo-ready-form button:only-child { flex:1 1 100%; overflow:hidden; text-overflow:ellipsis; }
+        .compact .section.aseo .card .eta.aseo-help { order:4; flex:1 1 100%; }
+        /* Fuera de servicio: estado y motivo en la misma línea; el motivo completo sale al pasar el mouse. */
+        .compact .section.fuera .card .pill { order:4; flex:0 0 auto; margin:0 6px 0 0; }
+        .compact .section.fuera .card .eta { order:5; flex:1 1 0; min-width:0; margin:0; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .compact .section.fuera .card .fuera-break { display:block; order:3; flex:1 1 100%; height:0; }
         /* Vista chips — máxima densidad: solo categoría, número y estado.
            El resto (botones, código, detalle de estado) se oculta; la
            tarjeta entera pasa a ser clickeable hacia el detalle de la

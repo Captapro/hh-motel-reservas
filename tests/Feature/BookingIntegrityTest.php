@@ -1596,6 +1596,8 @@ class BookingIntegrityTest extends TestCase
         $this->travelTo(Carbon::parse('2026-11-02 13:00'));
         $page = $this->get(route('calendar.index', ['view' => 'day', 'date' => '2026-11-02']))->assertOk();
 
+        $page->assertSeeInOrder(['Check-in', 'Check-out', 'Salida real', 'Hab.']);
+
         $states = $page->viewData('agenda')->mapWithKeys(fn ($b) => [$b->code => $b->agendaState()['key']]);
         $this->assertSame('atrasada', $states[$late->code]);
         $this->assertSame('por_llegar', $states[$coming->code]);

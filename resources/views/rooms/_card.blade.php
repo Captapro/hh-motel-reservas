@@ -16,7 +16,7 @@
         @endif
     </div>
     <div class="cat"><span class="cat-label">Categoría </span>{{ $room->category->name }}</div>
-    <span class="brk b1"></span><span class="brk b2"></span>
+    <span class="brk b1"></span><span class="brk b2"></span><span class="fuera-break" hidden></span>
 
     @if ($room->operational_status === 'aseo')
         <span class="pill pill-aseo">EN ASEO</span>
@@ -42,10 +42,10 @@
                 @csrf
                 @if ($reportedBy)
                     {{-- La mucama ya se identificó con su PIN al reportar: solo se confirma. --}}
-                    <button type="submit" class="aseo-ready-btn">Confirmar aseo de {{ $reportedBy }}</button>
+                    <button type="submit" class="aseo-ready-btn" title="{{ $reportedBy }} reportó aseo listo a las {{ $room->aseo_reported_at->timezone('America/Santiago')->format('H:i') }}">Confirmar aseo de {{ $reportedBy }}</button>
                 @else
                     <select name="cleaned_by" class="aseo-cleaner-input" required>
-                        <option value="" selected disabled>¿Quién limpió?</option>
+                        <option value="" selected disabled>¿Quién?</option>
                         @foreach ($cleaningStaff as $name)
                             <option value="{{ $name }}">{{ $name }}</option>
                         @endforeach
@@ -57,7 +57,7 @@
             <div class="eta aseo-help" style="color:#e88a9a;">No hay mucamas activas cargadas en <a href="{{ route('admin.staff.index') }}" style="color:#e88a9a;">Personal</a> — agrega al menos una para poder marcar el aseo.</div>
         @endif
     @elseif ($room->operational_status === 'ocupada')
-        <div class="eta">{{ $room->operational_note ?: 'Ocupada sin reserva en el sistema' }}</div>
+        <div class="eta" title="{{ $room->operational_note ?: 'Ocupada sin reserva en el sistema' }}">{{ $room->operational_note ?: 'Ocupada sin reserva en el sistema' }}</div>
         <a class="reserve-btn" href="{{ route('reservations.create', ['room_id' => $room->id, 'modo' => 'ingreso']) }}">Registrar ingreso →</a>
         <form method="POST" action="{{ route('rooms.status', $room) }}" class="occupied-out-form" onsubmit="return confirm('¿El cliente de {{ $room->name }} ya salió? La pieza pasa a aseo.');">
             @csrf
@@ -66,7 +66,7 @@
         </form>
     @elseif ($room->operational_status !== 'activa')
         @if ($room->operational_note)
-            <div class="eta">{{ $room->operational_note }}</div>
+            <div class="eta" title="{{ $room->operational_note }}">{{ $room->operational_note }}</div>
         @endif
     @else
         @if ($status['occupancy'] === 'ocupada' && $status['current_booking'])

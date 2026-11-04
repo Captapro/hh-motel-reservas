@@ -143,22 +143,25 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
  <div class="sheet-wrap">
   <table class="sheet" id="agenda-table">
    <thead><tr>
-    <th>Entrada</th><th>Salida</th><th>Hab.</th><th>Cliente</th><th>Reserva</th><th>Origen</th><th>Estado</th>
-    <th>Check-in</th><th>Salida real</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th><th></th>
+    <th title="Hora real de ingreso; si aún no llega, la hora reservada">Check-in</th><th title="Hora en que debía salir según lo contratado">Check-out</th><th title="Hora en que realmente salió">Salida real</th>
+    <th>Hab.</th><th>Cliente</th><th>Reserva</th><th>Origen</th><th>Estado</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th><th></th>
    </tr></thead>
    <tbody>
    @forelse ($agendaRows as $r)
-    @php $b = $r['b']; $k = $r['state']['key']; @endphp
+    @php
+     $b = $r['b']; $k = $r['state']['key'];
+     $in = ($b->checked_in_at ?? $b->starts_at)->copy()->timezone('America/Santiago');
+     $outDiff = $b->checkOutDiffMinutes();
+    @endphp
     <tr data-href="{{ route('reservations.show', $b->code) }}" data-state="{{ $k }}" class="{{ in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'dim' : '' }}">
-     <td data-label="Entrada"><b>{{ $b->starts_at->format('H:i') }}</b>@if(! $b->starts_at->isSameDay($date)) <small>({{ $b->starts_at->locale('es')->isoFormat('ddd D') }})</small>@endif</td>
-     <td data-label="Salida">{{ $b->ends_at->format('H:i') }}</td>
+     <td data-label="Check-in"><b>{{ $in->format('H:i') }}</b>@if(! $in->isSameDay($date)) <small>({{ $in->locale('es')->isoFormat('ddd D') }})</small>@endif @unless($b->checked_in_at)<small>reservada</small>@endunless</td>
+     <td data-label="Check-out">{{ $b->bookedEndsAt()->copy()->timezone('America/Santiago')->format('H:i') }}</td>
+     <td data-label="Salida real">@if ($b->checked_out_at){{ $b->checked_out_at->copy()->timezone('America/Santiago')->format('H:i') }}@if ($outDiff) <small class="{{ $outDiff > 0 ? 'late-out' : '' }}">{{ $outDiff > 0 ? '+' : '−' }}{{ \App\Support\TimeFormat::minutes($outDiff) }}</small>@endif @else — @endif</td>
      <td data-label="Playroom"><b>{{ $b->room->name }}</b> <small>{{ $b->room->category->name }}</small></td>
      <td data-label="Cliente">{{ $b->customer->name }}</td>
      <td data-label="Reserva"><a class="code" href="{{ route('reservations.show', $b->code) }}">{{ $b->code }}</a></td>
      <td data-label="Origen"><span class="org org-{{ $b->origin ?: 'none' }}">{{ $b->originLabel() }}</span></td>
      <td data-label="Estado"><span class="ag ag-{{ $k }}">{{ $r['state']['label'] }}</span></td>
-     <td data-label="Check-in">{{ $b->checked_in_at ? $b->checked_in_at->timezone('America/Santiago')->format('H:i') : '—' }}</td>
-     <td data-label="Salida real">{{ $b->checked_out_at ? $b->checked_out_at->timezone('America/Santiago')->format('H:i') : '—' }}</td>
      <td class="n" data-label="Total">{{ $money($r['total']) }}</td>
      <td class="n" data-label="Pagado">{{ $money($r['paid']) }}</td>
      <td class="n {{ $r['balance'] > 0 && ! in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'owe' : '' }}" data-label="Saldo">{{ $r['balance'] > 0 ? $money($r['balance']) : '—' }}</td>
@@ -170,9 +173,9 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
      </td>
     </tr>
    @empty
-    <tr class="zero"><td colspan="13">No hay reservas para este día.</td></tr>
+    <tr class="zero"><td colspan="12">No hay reservas para este día.</td></tr>
    @endforelse
-   <tr class="zero" id="agenda-empty" style="display:none"><td colspan="13">No hay reservas en este grupo.</td></tr>
+   <tr class="zero" id="agenda-empty" style="display:none"><td colspan="12">No hay reservas en este grupo.</td></tr>
    </tbody>
   </table>
  </div>
@@ -188,7 +191,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
  #agenda-table tr[data-state] td:last-child{justify-content:flex-end;padding-top:8px}
  #agenda-table tr[data-state] td:last-child::before{content:none}
  #agenda-table tr.zero td{display:block;text-align:center}
- #agenda-table tr[data-state] td:nth-child(6),#agenda-table tr[data-state] td:nth-child(10),#agenda-table tr[data-state] td:nth-child(11){display:none}
+ #agenda-table tr[data-state] td:nth-child(7),#agenda-table tr[data-state] td:nth-child(9),#agenda-table tr[data-state] td:nth-child(10){display:none}
 }
 .agenda-chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
 .agenda-chip{background:#fff;border:1px solid #d1d5db;color:#374151;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
@@ -199,6 +202,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
 .ag-en_alojamiento{background:#dcfce7;color:#15803d}.ag-finalizada{background:#e0e7ff;color:#3730a3}
 .ag-pendiente{background:#fef3c7;color:#92400e}.ag-cancelada,.ag-vencida,.ag-no_show{background:#f3f4f6;color:#6b7280}
 table.sheet tr.dim td{color:#9ca3af}
+#agenda-table small.late-out{color:#b91c1c;font-weight:700}
 a.ag-act{color:#c2410c;font-weight:700;text-decoration:none;white-space:nowrap}
 </style>
 <script>
