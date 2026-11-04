@@ -57,6 +57,10 @@ class RoomAseoReactivationTest extends TestCase
             '2026_11_04_120000_create_shift_notes_tables.php',
             '2026_11_04_130000_add_room_cleanings_and_note_staff.php',
             '2026_11_04_140000_add_ronda_pin_to_users.php',
+            '2026_11_04_150000_create_staff_notices_tables.php',
+            '2026_08_18_120014_create_booking_addons_table.php',
+            '2026_08_18_120015_create_payment_methods_table.php',
+            '2026_08_18_120016_create_payments_table.php',
             '2026_09_15_230000_create_room_furniture_tables.php',
             '2026_09_15_231000_create_room_inspections_table.php',
         ] as $migration) {
@@ -384,5 +388,47 @@ class RoomAseoReactivationTest extends TestCase
         // Un administrador no entra con PIN.
         $this->post(route('ronda.login.store'), ['user_id' => $admin->id, 'pin' => '1234', 'pin_confirmation' => '1234'])->assertSessionHasErrors('pin');
         $this->assertGuest();
+    }
+
+    public function test_admin_sends_a_notice_and_staff_must_confirm_it(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador']);
+        $host = User::factory()->create(['role' => 'recepcion', 'name' => 'Ana Anfitriona']);
+        $mucama = Staff::create(['name' => 'Eva Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
+
+        $this->actingAs($host)->get(route('admin_app.index'))->assertForbidden();
+
+        $this->actingAs($admin)->get(route('admin_app.index'))->assertOk()->assertSee('Avisar al personal');
+        $this->post(route('admin_app.notify'), ['audience' => 'mucamas', 'body' => 'Revisar insumos', 'urgent' => '1'])->assertSessionHasNoErrors();
+        $this->get(route('admin_app.index'))->assertOk()->assertSee('Revisar insumos')->assertSee('Eva Mucama');
+        $notice = \App\Models\StaffNotice::sole();
+
+        // A la anfitriona no le llega un aviso solo para mucamas.
+        $this->actingAs($host)->getJson(route('staff_notices.pending'))->assertExactJson([]);
+        $this->postJson(route('staff_notices.read', $notice))->assertNotFound();
+        auth()->logout();
+
+        $session = ['mucama_staff_id' => $mucama->id];
+        $this->withSession($session)->getJson(route('staff_notices.pending'))->assertJsonCount(1)->assertJsonPath('0.urgent', true);
+        $this->withSession($session)->postJson(route('staff_notices.read', $notice))->assertOk();
+        $this->withSession($session)->getJson(route('staff_notices.pending'))->assertExactJson([]);
+        $this->assertSame(['Eva Mucama'], $notice->fresh('reads')->delivery()['read']->all());
+    }
+
+    public function test_room_going_to_maintenance_alerts_the_admins_with_the_reason(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador']);
+        $host = User::factory()->create(['role' => 'recepcion']);
+        $room = Room::create(['room_category_id' => $this->room->room_category_id, 'name' => 'GO 102', 'operational_status' => 'activa']);
+
+        $this->actingAs($admin)->post("/habitaciones/{$room->id}/estado", ['operational_status' => 'mantencion', 'operational_note' => 'Fuga en la ducha'])->assertSessionHasNoErrors();
+
+        $this->assertSame('GO 102 quedó en mantención. Motivo: Fuga en la ducha', \App\Models\StaffNotice::sole()->body);
+        $this->getJson(route('staff_notices.pending'))->assertJsonCount(1);
+        $this->actingAs($host)->getJson(route('staff_notices.pending'))->assertExactJson([]);
+
+        // Guardar otra vez el mismo estado no repite la alerta.
+        $this->actingAs($admin)->post("/habitaciones/{$room->id}/estado", ['operational_status' => 'mantencion', 'operational_note' => 'Sigue la fuga']);
+        $this->assertSame(1, \App\Models\StaffNotice::count());
     }
 }

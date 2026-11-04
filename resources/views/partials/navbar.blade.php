@@ -208,6 +208,9 @@
     @include('partials.help-widget')
 @endunless
 @auth
+    @if (auth()->user()->isRecepcion() || auth()->user()->isAdministrador())
+        @include('partials.staff-notice-alert')
+    @endif
     @include('partials.id-scanner')
     @unless ($hhRound)
         @include('partials.shift-notes-alert')

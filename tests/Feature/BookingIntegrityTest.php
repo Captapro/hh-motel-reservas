@@ -101,6 +101,7 @@ class BookingIntegrityTest extends TestCase
             '2026_08_18_120010_create_customers_table.php',
             '2026_09_11_090000_add_identity_fields_to_customers_table.php',
             '2026_09_16_010000_create_staff_and_shifts_tables.php',
+            '2026_11_04_150000_create_staff_notices_tables.php',
             '2026_08_26_120001_add_aseo_override_to_rooms_table.php',
             '2026_08_26_140001_add_aseo_started_to_rooms_table.php',
             '2026_09_22_004138_add_aseo_report_to_rooms_table.php',

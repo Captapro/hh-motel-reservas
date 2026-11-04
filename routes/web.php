@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\AccessCodeController;
 use App\Http\Controllers\Admin\AccessController;
+use App\Http\Controllers\AdminAppController;
 use App\Http\Controllers\RondaAuthController;
+use App\Http\Controllers\StaffNoticeController;
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\CleanupController;
@@ -143,6 +145,8 @@ Route::post('/qr/mucamas/aseo/{room}/terminar', [MucamaWorkController::class, 'f
 Route::post('/qr/mucamas/novedad', [MucamaWorkController::class, 'note'])->middleware(['throttle:20,1,mucamas.note', 'mucama'])->name('mucamas.work.note');
 Route::get('/qr/mucamas', [RoomQrController::class, 'mucamaPanel'])->middleware('mucama')->name('rooms.qr.mucama_panel');
 Route::get('/qr/mucamas/imagen.png', [RoomQrController::class, 'mucamaPanelImage'])->name('rooms.qr.mucama_panel_image');
+Route::get('/avisos/pendientes', [StaffNoticeController::class, 'pending'])->middleware('throttle:60,1,staff_notices.pending')->name('staff_notices.pending');
+Route::post('/avisos/{notice}/leido', [StaffNoticeController::class, 'read'])->middleware('throttle:60,1,staff_notices.read')->name('staff_notices.read');
 Route::get('/ronda-de-turno/entrar', [RondaAuthController::class, 'showLogin'])->name('ronda.login');
 Route::post('/ronda-de-turno/entrar', [RondaAuthController::class, 'login'])->middleware('throttle:10,1,ronda.login.store')->name('ronda.login.store');
 Route::post('/ronda-de-turno/salir', [RondaAuthController::class, 'logout'])->name('ronda.logout');
@@ -166,6 +170,11 @@ Route::post('/vista-anfitrion/salir', function (Request $request) {
 
 // Entrega de turno del anfitrión (caja chica + stock). Fuera de 'section':
 // tiene que poder hacerla aunque su perfil no vea Caja ni Productos.
+Route::middleware(['auth', 'role:administrador'])->group(function () {
+    Route::get('/panel', [AdminAppController::class, 'index'])->name('admin_app.index');
+    Route::post('/panel/avisos', [AdminAppController::class, 'notify'])->middleware('throttle:20,1,admin_app.notify')->name('admin_app.notify');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/turno/recibir', [ShiftHandoverController::class, 'receive'])->name('shift.receive');
     Route::get('/turno/entregar', [ShiftHandoverController::class, 'deliver'])->name('shift.deliver');

@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Coupon;
 use App\Models\OperationalSetting;
 use App\Models\Room;
+use App\Models\StaffNotice;
 use App\Models\RoomCategory;
 use App\Models\Staff;
 use App\Services\Booking\RoomBoardService;
@@ -324,6 +325,15 @@ class RoomBoardController extends Controller
         $room->update($validated);
 
         AuditLog::record(auth()->id(), 'habitacion.estado_operativo', 'Room', $room->id, $old, $validated);
+
+        if ($validated['operational_status'] === 'mantencion' && $old['operational_status'] !== 'mantencion') {
+            StaffNotice::create([
+                'user_id' => auth()->id(),
+                'audience' => 'administracion',
+                'urgent' => true,
+                'body' => $room->name.' quedó en mantención. Motivo: '.$validated['operational_note'],
+            ]);
+        }
 
         return redirect()->route('rooms.board');
     }

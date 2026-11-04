@@ -244,6 +244,7 @@
             </div>
         </section>
     </div>
+    @include('partials.staff-notice-alert')
     <script>
         (function () {
             const timer = document.getElementById('timer');

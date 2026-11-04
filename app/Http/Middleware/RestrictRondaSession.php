@@ -13,6 +13,7 @@ class RestrictRondaSession
 
     private const ALLOWED = [
         'ronda.*',
+        'staff_notices.*',
         'shift_round.*',
         'rooms.qr.show',
         'rooms.qr.confirm_scan',
