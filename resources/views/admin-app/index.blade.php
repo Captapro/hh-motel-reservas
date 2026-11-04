@@ -83,7 +83,6 @@
     <div class="top">
         <span>HH Admin</span>
         <div>
-            <button type="button" id="sound-test">Sonido</button>
             <a href="{{ route('rooms.board') }}">Sistema</a>
             <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Salir</button></form>
         </div>
@@ -264,7 +263,7 @@
                     const source = audio.createBufferSource();
                     const volume = audio.createGain();
                     source.buffer = buffer;
-                    volume.gain.value = .15;
+                    volume.gain.value = .4;
                     source.connect(volume);
                     volume.connect(audio.destination);
                     source.start();
@@ -272,11 +271,6 @@
                 if (decoded) { play(decoded); return; }
                 audio.decodeAudioData(sound.slice(0), play);
             };
-
-            document.getElementById('sound-test').addEventListener('click', function () {
-                unlock();
-                setTimeout(cash, 60);
-            });
 
             // Actualiza sin recargar la página: recargar volvería a silenciar el celular.
             const refresh = function () {
@@ -336,38 +330,42 @@
                     body: JSON.stringify(subscription.toJSON()),
                 });
             };
-            if (pushKey) {
-                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                    message('Para recibir notificaciones, instala HH Admin en la pantalla de inicio y ábrela desde su ícono.');
-                } else {
-                    navigator.serviceWorker.register('/sw-admin.js', { scope: '/panel' }).then(function () {
-                        return navigator.serviceWorker.ready;
-                    }).then(function (registration) {
-                        return registration.pushManager.getSubscription().then(function (current) {
-                            if (current) { save(current); return; }
-                            if (Notification.permission === 'denied') {
-                                message('Las notificaciones están bloqueadas. Actívalas en los ajustes del celular.');
-                                return;
-                            }
-                            const button = document.createElement('button');
-                            button.type = 'button';
-                            button.textContent = 'Activar notificaciones';
-                            button.addEventListener('click', function () {
-                                Notification.requestPermission().then(function (answer) {
-                                    if (answer !== 'granted') { message('No se activaron las notificaciones.'); return null; }
-                                    return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pushKey) });
-                                }).then(function (subscription) {
-                                    if (!subscription) return;
-                                    return save(subscription).then(function () {
-                                        message('Notificaciones activadas en este celular.');
-                                        setTimeout(function () { pushBox.hidden = true; }, 4000);
-                                    });
-                                }).catch(function () { message('No se pudieron activar. Inténtalo de nuevo.'); });
-                            });
-                            pushBox.replaceChildren(button);
-                            pushBox.hidden = false;
+            const offer = function () {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = 'Activar notificaciones';
+                button.addEventListener('click', function () {
+                    Notification.requestPermission().then(function (answer) {
+                        if (answer !== 'granted') { message('No se activaron las notificaciones.'); return null; }
+                        return navigator.serviceWorker.ready.then(function (registration) {
+                            return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pushKey) });
                         });
-                    }).catch(function () {});
+                    }).then(function (subscription) {
+                        if (!subscription) return;
+                        return save(subscription).then(function () {
+                            message('Notificaciones activadas en este celular.');
+                            setTimeout(function () { pushBox.hidden = true; }, 4000);
+                        });
+                    }).catch(function () { message('No se pudieron activar. Inténtalo de nuevo.'); });
+                });
+                pushBox.replaceChildren(button);
+                pushBox.hidden = false;
+            };
+            if (pushKey) {
+                // Safari abierto como navegador no trae Notification: solo existe en la app instalada.
+                if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                    message('Para recibir notificaciones, abre HH Admin desde su ícono. Si ya lo hiciste, bórrala y agrégala de nuevo desde Safari a la pantalla de inicio.');
+                } else {
+                    navigator.serviceWorker.register('/sw-admin.js', { scope: '/panel' }).then(function (registration) {
+                        return registration.pushManager.getSubscription();
+                    }).then(function (current) {
+                        if (current) { save(current); return; }
+                        if (Notification.permission === 'denied') {
+                            message('Las notificaciones están bloqueadas. Actívalas en los ajustes del celular.');
+                            return;
+                        }
+                        offer();
+                    }).catch(function () { message('No se pudieron preparar las notificaciones en este celular.'); });
                 }
             }
 
