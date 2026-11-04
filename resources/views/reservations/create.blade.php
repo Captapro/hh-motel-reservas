@@ -139,12 +139,15 @@
         .short-stay label input { width:18px; height:18px; flex:none; }
         .short-stay.short-pending { border-color:#ff9f1c; box-shadow:0 0 0 2px rgba(255,159,28,.25); }
         /* Falta confirmar la salida al cierre: tiene que saltar a la vista. */
-        .short-alert { margin-top:12px; padding:12px 14px; border-radius:9px; background:#ff7918; color:#21170e; font-size:14px; font-weight:700; line-height:1.35; animation:stepPulse 1.8s ease-in-out infinite; }
-        .short-stay.short-pending, .panel-summary .price-box .short-stay.short-pending { background:#ff7918; border-color:#ff7918; color:#21170e; font-weight:600; animation:stepPulse 1.8s ease-in-out infinite; }
-        .short-stay.short-pending b, .short-stay.short-pending .ss-title, .short-stay.short-pending label { color:#21170e; }
-        .panel .price-box .short-stay.short-pending label { color:#21170e; font-size:13.5px; font-weight:800; text-transform:none; letter-spacing:0; }
-        .short-stay.short-pending label input { width:22px; height:22px; accent-color:#21170e; }
-        @media (prefers-reduced-motion: reduce) { .short-alert, .short-stay.short-pending, .panel-summary .price-box .short-stay.short-pending { animation:none; } }
+        .short-alert { margin-top:12px; padding:13px 14px; border-radius:10px; background:#ff7918; color:#21170e; font-size:13.5px; font-weight:600; line-height:1.4; animation:stepPulse 1.8s ease-in-out infinite; }
+        .short-alert b { color:#21170e; }
+        .short-alert .ss-title { display:block; font-size:15px; font-weight:800; margin-bottom:3px; }
+        .panel .short-alert label { display:flex; gap:10px; align-items:center; margin:10px 0 0; padding:9px 10px; border-radius:8px; background:#fff; color:#21170e !important; font-size:14px; font-weight:800; text-transform:none; letter-spacing:0; cursor:pointer; }
+        .short-alert label input { width:22px; height:22px; flex:none; margin:0; accent-color:#15803d; }
+        .short-alert .ss-need { display:block; margin-top:8px; font-size:13px; font-weight:800; }
+        .short-alert.ok { background:#14251c; color:#b7f0cd; border:1px solid #2e6e45; animation:none; }
+        .short-alert.ok b { color:#fff; }
+        @media (prefers-reduced-motion: reduce) { .short-alert { animation:none; } }
 
         .upsell-overlay { position:fixed; inset:0; background:rgba(0,0,0,.72); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px; }
         .upsell-overlay[hidden] { display:none; }
@@ -1056,9 +1059,7 @@
                     const ss = d.short_stay;
                     note += '<div class="short-stay' + (accepted ? '' : ' short-pending') + '">'
                         + '<span class="ss-title">⏱ Estadía corta por cierre</span>'
-                        + 'Quedan <b>' + ss.minutes_label + '</b> para el cierre y lo mínimo que se vende es ' + ss.duration_label + '. '
-                        + 'Precio con descuento según el tiempo que queda y <b>salida a las ' + ss.closes_at + '</b>.'
-                        + '<label><input type="checkbox" id="short-stay-accept"' + (accepted ? ' checked' : '') + '> El cliente acepta salir a las ' + ss.closes_at + '</label>'
+                        + 'Salida a las <b>' + ss.closes_at + '</b>.'
                         + '</div>';
                 }
                 shortFlag.value = accepted ? '1' : '0';
@@ -1066,27 +1067,35 @@
 
                 box.className = 'price-box' + (hasDiscount ? ' has-offer' : '');
                 box.innerHTML = rows + note;
-                hhShortAlert(d.short_stay && !accepted ? d.short_stay.closes_at : null);
+                hhShortAlert(d.short_stay || null, accepted);
                 box.dataset.final = finalPrice;
-                const acceptEl = document.getElementById('short-stay-accept');
-                if (acceptEl) acceptEl.addEventListener('change', function () {
-                    shortFlag.value = acceptEl.checked ? '1' : '0';
-                    acceptEl.closest('.short-stay').classList.toggle('short-pending', !acceptEl.checked);
-                    hhShortAlert(acceptEl.checked ? null : d.short_stay.closes_at);
-                    hhValidateSchedule();
-                });
                 hhValidateSchedule();
                 if (window.hhRefreshConsumo) window.hhRefreshConsumo();
                 hhLatestUpsells = Array.isArray(d.upsells) ? d.upsells : [];
             } catch (e) { box.className = 'price-box'; box.innerHTML = '<div class="p-wait">—</div>'; hhShortAlert(null); }
         }
 
-        // Aviso grande junto a la estadía: el check está al final, en el resumen.
-        function hhShortAlert(closesAt) {
+        // La estadía no alcanza antes del cierre: recepción confirma aquí, en el
+        // paso 1, que el cliente acepta salir; sin eso no se abre el paso del cliente.
+        function hhShortAlert(ss, accepted) {
             const el = document.getElementById('short-alert');
             if (!el) return;
-            el.hidden = !closesAt;
-            if (closesAt) el.textContent = '⏱ No alcanza la estadía completa: sale a las ' + closesAt + '. Avísale al cliente y márcalo en el Resumen.';
+            el.hidden = !ss;
+            if (!ss) { el.innerHTML = ''; return; }
+            el.classList.toggle('ok', !!accepted);
+            el.innerHTML = '<span class="ss-title">⏱ Estadía corta por cierre</span>'
+                + 'Quedan <b>' + ss.minutes_label + '</b> para el cierre y lo mínimo que se vende es ' + ss.duration_label + '. '
+                + 'Precio con descuento y <b>salida a las ' + ss.closes_at + '</b>.'
+                + '<label><input type="checkbox" id="short-stay-accept"' + (accepted ? ' checked' : '') + '> El cliente acepta salir a las ' + ss.closes_at + '</label>'
+                + (accepted ? '' : '<span class="ss-need">👆 Márcalo para seguir con el cliente</span>');
+            document.getElementById('short-stay-accept').addEventListener('change', function () {
+                const on = this.checked;
+                document.getElementById('short-stay-flag').value = on ? '1' : '0';
+                document.querySelector('#price-box .short-stay')?.classList.toggle('short-pending', !on);
+                hhShortAlert(ss, on);
+                hhValidateSchedule();
+                document.querySelector('.form-grid').closest('form').dispatchEvent(new Event('input', { bubbles: true }));
+            });
         }
 
         // Muestra solo las duraciones que tienen precio en la categoría de la
@@ -1814,9 +1823,9 @@
                 const warn = document.getElementById('time-warning');
                 const quoteOk = box && !box.hidden && !box.querySelector('.p-err, .p-wait');
                 const warned = warn && getComputedStyle(warn).display !== 'none';
-                // Aceptar la estadía corta se pide en el resumen (el botón final sigue bloqueado sin eso):
-                // no puede frenar los pasos anteriores, porque la casilla está al final.
-                return !!val('room-select') && !!val('duration-select') && quoteOk && !warned;
+                // Sin aceptar la salida al cierre no se pasa al cliente: el check está en este mismo paso.
+                const shortPending = box && !!box.querySelector('.short-pending');
+                return !!val('room-select') && !!val('duration-select') && quoteOk && !warned && !shortPending;
             }
 
             function clientDone() {
