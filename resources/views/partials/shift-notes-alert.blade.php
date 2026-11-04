@@ -2,11 +2,13 @@
      confirmar queda latiendo en el borde derecho hasta apretar "Leí y entendí". --}}
 @php
     $hhPreview = $hostView ?? false;
+    // Administración y soporte las ven sin aviso insistente: no les toca confirmar la lectura.
+    $hhAdmin = ! $hhPreview && auth()->user()?->isAdministrador();
     $hhNotes = $hhPreview ? \App\Models\ShiftNote::previewAlert() : \App\Models\ShiftNote::alertFor(auth()->user());
     $hhUpcoming = ! $hhPreview && session(\App\Http\Controllers\ShiftNoteController::UPCOMING_SEEN) ? collect() : \App\Models\ShiftNote::upcomingFor(auth()->user());
     $hhAlerts = $hhNotes->count() + $hhUpcoming->count();
     // Las leídas siguen a la mano durante el día; salen solas al cambiar el día operativo.
-    $hhToday = auth()->user()?->isRecepcion() ? \App\Models\ShiftNote::today() : collect();
+    $hhToday = $hhAdmin ? \App\Models\ShiftNote::previewAlert() : (auth()->user()?->isRecepcion() ? \App\Models\ShiftNote::today() : collect());
     $hhAll = $hhNotes->merge($hhToday)->unique('id');
     $hhCount = $hhAlerts ?: $hhAll->count();
 @endphp
@@ -26,7 +28,7 @@
         <div style="display:flex; align-items:flex-start; gap:10px; padding:16px 16px 10px;">
             <div style="flex:1;">
                 <div id="shift-notes-title" style="font-size:17px; font-weight:800;">🔔 Novedades del turno ({{ $hhCount }})</div>
-                <div style="font-size:13px; color:#aaa; margin-top:2px;">{{ $hhAlerts ? 'Léelas y confirma.' : 'Ya las leíste. Salen solas al terminar el día.' }} <a href="{{ route('shift_notes.index') }}" style="color:#ff9a4d;">Ver el libro completo</a></div>
+                <div style="font-size:13px; color:#aaa; margin-top:2px;">{{ $hhAdmin ? 'Lo que hay para el turno.' : ($hhAlerts ? 'Léelas y confirma.' : 'Ya las leíste. Salen solas al terminar el día.') }} <a href="{{ route('shift_notes.index') }}" style="color:#ff9a4d;">Ver el libro completo</a></div>
             </div>
             <button type="button" id="shift-notes-close" aria-label="Minimizar" style="background:none; border:1px solid #444; color:#ccc; border-radius:7px; padding:4px 10px; cursor:pointer;">✕</button>
         </div>
