@@ -11,12 +11,16 @@ use Illuminate\Database\Eloquent\Model;
  */
 #[Fillable([
     'enabled', 'reception_enabled', 'catalog_enabled',
-    'min_minutes', 'max_minutes', 'pricing_mode', 'percent',
+    'min_minutes', 'max_minutes', 'pricing_mode', 'percent', 'tiers',
 ])]
 class ShortStaySetting extends Model
 {
-    /** Minutos que quedan para el cierre (hasta) => % de descuento. Nunca más de 25%. */
-    public const TIERS = [90 => 25, 120 => 15, 151 => 10];
+    /** Tramos por defecto: minutos que quedan para el cierre (hasta) y % de descuento. */
+    public const TIERS = [
+        ['up_to' => 90, 'percent' => 25],
+        ['up_to' => 120, 'percent' => 15],
+        ['up_to' => 151, 'percent' => 10],
+    ];
 
     public const MODES = [
         'tramos' => 'Descuento por tramos (10%, 15% y 25%)',
@@ -33,6 +37,7 @@ class ShortStaySetting extends Model
             'min_minutes' => 'integer',
             'max_minutes' => 'integer',
             'percent' => 'integer',
+            'tiers' => 'array',
         ];
     }
 
@@ -45,11 +50,18 @@ class ShortStaySetting extends Model
         return $setting->wasRecentlyCreated ? $setting->refresh() : $setting;
     }
 
+    /** @return list<array{up_to: int, percent: int}> del tramo más corto al más largo */
+    public function discountTiers(): array
+    {
+        return collect($this->tiers ?: self::TIERS)->sortBy('up_to')->values()->all();
+    }
+
+    /** % de descuento según lo que queda; nunca pasa del descuento máximo. */
     public function discountForMinutes(int $minutes): int
     {
-        foreach (self::TIERS as $upTo => $percent) {
-            if ($minutes <= $upTo) {
-                return $percent;
+        foreach ($this->discountTiers() as $tier) {
+            if ($minutes <= $tier['up_to']) {
+                return min((int) $tier['percent'], (int) $this->percent);
             }
         }
 

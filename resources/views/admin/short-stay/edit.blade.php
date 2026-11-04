@@ -5,6 +5,16 @@
         .hint { color:#888; font-size:12px; margin-top:4px; line-height:1.4; }
         .ss-example { margin-top:18px; padding:12px 14px; border-radius:8px; background:#2e2410; border:1px solid #c98a1b; color:#f3d9a4; font-size:13px; line-height:1.5; }
         .ss-example b { color:#fff; }
+        .ss-h { font-size:15px; margin:20px 0 6px; }
+        .ss-table { width:100%; max-width:640px; border-collapse:collapse; font-size:13.5px; }
+        .ss-table th { text-align:left; font-size:11px; color:#888; font-weight:600; padding:6px 8px; border-bottom:1px solid #444; }
+        .ss-table td { padding:6px 8px; border-bottom:1px solid #2f2f2f; }
+        .ss-table .n { text-align:right; font-variant-numeric:tabular-nums; }
+        .ss-table input[type=number] { width:80px; display:inline-block; padding:6px 8px; }
+        .ss-readable { color:#999; }
+        .ss-calc { margin-top:26px; padding-top:6px; border-top:1px solid #333; max-width:720px; }
+        .ss-calc input[type=range] { width:100%; accent-color:#ff7918; }
+        .calc-charge { font-weight:800; color:#ff9a4d; }
     </style>
 
     <h1>Estadía corta por cierre</h1>
@@ -66,10 +76,21 @@
             </div>
         </div>
 
-        <div class="ss-example" id="ss-tiers" hidden>
-            <b>Descuento por tramos</b>, según lo que queda para el cierre (categoría con mínimo de 3 h):
-            hasta 2h 31min: <b>10%</b> · hasta 2h: <b>15%</b> · hasta 1h 30min: <b>25%</b>, el máximo.
-            Con más de 2h 31min se cobra el precio completo y sale al cierre. Con menos del tiempo mínimo ya no se vende.
+        <div id="ss-tiers" hidden>
+            <h2 class="ss-h">Tramos de descuento</h2>
+            <p class="hint" style="margin-top:0;">Se cuenta el tiempo que queda para el cierre. Con más tiempo que el último tramo se cobra el precio completo.</p>
+            <table class="ss-table">
+                <thead><tr><th>Si quedan hasta</th><th></th><th>Descuento</th></tr></thead>
+                <tbody>
+                    @foreach ($setting->discountTiers() as $i => $tier)
+                        <tr>
+                            <td><input type="number" name="tiers[{{ $i }}][up_to]" class="ss-tier-up" min="5" max="720" value="{{ old('tiers.'.$i.'.up_to', $tier['up_to']) }}" aria-label="Minutos que quedan"> min</td>
+                            <td class="ss-readable"></td>
+                            <td><input type="number" name="tiers[{{ $i }}][percent]" class="ss-tier-pct" min="0" max="100" value="{{ old('tiers.'.$i.'.percent', $tier['percent']) }}" aria-label="Porcentaje de descuento"> %</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
         <div class="ss-example" id="ss-example"></div>
 
@@ -77,6 +98,29 @@
             <button class="btn" type="submit">Guardar</button>
         </div>
     </form>
+
+    <section class="ss-calc" id="ss-calc">
+        <h2 class="ss-h">Calculadora rápida</h2>
+        <p class="hint" style="margin-top:0;">Cambia los tramos de arriba y mira aquí cuánto se cobra, antes de guardar. No crea nada. Vale igual para recepción y catálogo.</p>
+        <div class="row2">
+            <div>
+                <label for="calc-rule">Tarifa</label>
+                <select id="calc-rule">
+                    @foreach ($calculator as $i => $rule)
+                        <option value="{{ $i }}">{{ $rule['name'] }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="calc-left">Quedan para el cierre: <b id="calc-left-label"></b></label>
+                <input type="range" id="calc-left" min="30" max="180" value="135">
+            </div>
+        </div>
+        <table class="ss-table" id="calc-table" style="margin-top:12px;">
+            <thead><tr><th>Categoría</th><th class="n">Mínimo</th><th class="n">Precio normal</th><th class="n">Descuento</th><th class="n">Se cobra</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </section>
 
     <script>
         (function () {
@@ -88,13 +132,13 @@
                 const max = Number($('ss-max').value) || 0;
                 const pct = Number($('ss-percent').value) || 0;
                 const prop = $('ss-mode').value === 'proporcional';
-                const tiers = $('ss-mode').value === 'tramos';
-                $('ss-tiers').hidden = !tiers;
-                $('ss-example').hidden = tiers;
-                $('ss-percent').closest('div').style.display = tiers ? 'none' : '';
-                $('ss-max').closest('div').style.display = tiers ? 'none' : '';
-                $('ss-percent-label').textContent = prop ? 'Precio mínimo (% del precio)' : 'Precio (% del precio)';
-                $('ss-percent-hint').textContent = prop ? 'Piso: nunca cobra menos que este porcentaje.' : 'Siempre se cobra este porcentaje, quede el tiempo que quede.';
+                const byTiers = $('ss-mode').value === 'tramos';
+                $('ss-tiers').hidden = !byTiers;
+                $('ss-calc').hidden = !byTiers;
+                $('ss-example').hidden = byTiers;
+                $('ss-max').closest('div').style.display = byTiers ? 'none' : '';
+                $('ss-percent-label').textContent = byTiers ? 'Descuento máximo (%)' : prop ? 'Precio mínimo (% del precio)' : 'Precio (% del precio)';
+                $('ss-percent-hint').textContent = byTiers ? 'Ningún tramo descuenta más que esto.' : prop ? 'Piso: nunca cobra menos que este porcentaje.' : 'Siempre se cobra este porcentaje, quede el tiempo que quede.';
                 // Ejemplo con una tarifa mínima de 3 h a $30.000 y el máximo de tiempo configurado.
                 const full = 30000, dur = 180, left = Math.min(max, dur - 1);
                 const floor = Math.ceil(full * pct / 100 / 100) * 100;
@@ -109,6 +153,43 @@
             }
             ['ss-min', 'ss-max', 'ss-percent', 'ss-mode'].forEach((id) => $(id).addEventListener('input', paint));
             paint();
+
+            // Calculadora: mismas reglas que cobra el sistema, con lo que esté escrito en pantalla.
+            const RULES = @json($calculator);
+            const tiers = () => [...document.querySelectorAll('#ss-tiers tbody tr')]
+                .map((row) => ({ upTo: Number(row.querySelector('.ss-tier-up').value), pct: Number(row.querySelector('.ss-tier-pct').value) }))
+                .sort((a, b) => a.upTo - b.upTo);
+            function discountFor(left) {
+                const tier = tiers().find((t) => left <= t.upTo);
+                return tier ? Math.min(tier.pct, Number($('ss-percent').value) || 0) : 0;
+            }
+            function calc() {
+                document.querySelectorAll('#ss-tiers tbody tr').forEach((row) => {
+                    row.querySelector('.ss-readable').textContent = hm(Number(row.querySelector('.ss-tier-up').value) || 0);
+                });
+                const left = Number($('calc-left').value);
+                const min = Number($('ss-min').value) || 0;
+                const arrive = hhClock(left);
+                $('calc-left-label').textContent = hm(left) + ' (cierre 03:00: llega a las ' + arrive + ')';
+                const rule = RULES[Number($('calc-rule').value)];
+                const body = document.querySelector('#calc-table tbody');
+                body.replaceChildren();
+                (rule ? rule.categories : []).forEach((cat) => {
+                    const row = body.insertRow();
+                    const cell = (text, cls) => { const td = row.insertCell(); td.textContent = text; if (cls) td.className = cls; };
+                    cell(cat.name);
+                    cell(hm(cat.duration), 'n');
+                    cell(fmt(cat.price), 'n');
+                    if (left >= cat.duration) { cell('—', 'n'); cell('Estadía normal', 'n'); return; }
+                    if (left < min) { cell('—', 'n'); cell('No se vende', 'n'); return; }
+                    const pct = discountFor(left);
+                    cell(pct ? pct + '%' : 'Sin descuento', 'n');
+                    cell(fmt(Math.ceil(cat.price * (100 - pct) / 100 / 100) * 100), 'n calc-charge');
+                });
+            }
+            document.querySelectorAll('.ss-tier-up, .ss-tier-pct').forEach((el) => el.addEventListener('input', calc));
+            ['calc-left', 'calc-rule', 'ss-min', 'ss-percent'].forEach((id) => $(id).addEventListener('input', calc));
+            calc();
         })();
     </script>
 @endsection

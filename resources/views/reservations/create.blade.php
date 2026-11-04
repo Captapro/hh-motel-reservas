@@ -48,10 +48,10 @@
         .doc-row { display:flex; gap:10px; }
         .doc-row select { flex:0 0 130px; }
         .doc-row input { flex:1; }
-        .doc-row input.doc-valid { border-color:#2e6e45; }
+        .doc-row input.doc-valid { border-color:#ff7918; }
         .doc-row input.doc-invalid { border-color:#7a2d2d; }
         #document-hint.err { color:#f3b8b8; }
-        #document-hint.ok { color:#8fe0ad; }
+        #document-hint.ok { color:#ffb379; }
         .doc-missing-warn { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:10px 12px; border-radius:8px; font-size:13px; font-weight:600; margin-bottom:12px; }
         .time-row { display:flex; gap:8px; }
         .time-row select { flex: 1 1 0; width:auto; text-align:center; }
@@ -106,7 +106,7 @@
         .dur-quick button.dur-360.active  { background:#f2994a; }
         .dur-quick button.dur-720.active  { background:#ff7918; }
         .cust-badge { font-size:12.5px; margin-top:8px; padding:8px 12px; border-radius:7px; line-height:1.4; }
-        .cust-badge.known { background:#14251c; border:1px solid #2e6e45; color:#8fe0ad; }
+        .cust-badge.known { background:#2a1a0c; border:1px solid #6b3a14; color:#ffb379; }
         .cust-badge.known.hot { background:#2a2410; border:1px solid #7a6a1e; color:#f0d98a; }
         .cust-badge.nuevo { background:#1c2f3a; border:1px solid #3a5a72; color:#a9d3e6; }
         .cust-ficha { background:#1c1c1c; border:1px solid #333; border-radius:9px; padding:12px 14px; margin-top:14px; }
@@ -120,14 +120,14 @@
         .aseo-opt { display:flex; gap:8px; align-items:flex-start; font-weight:normal; margin:4px 0; }
         .aseo-opt input { width:auto; margin-top:3px; }
         .aseo-ready { margin-top:10px; padding:10px; border:1px solid #6b5a2a; background:#221d10; border-radius:8px; }
-        .price-box.has-offer { background:#16201a; border-color:#2e6e45; }
+        .price-box.has-offer { background:#2a1a0c; border-color:#6b3a14; }
         .price-box .p-sum { display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; color:#bbb; }
-        .price-box .p-sum.disc { color:#7fd49b; }
+        .price-box .p-sum.disc { color:#ffb379; }
         .price-box .p-sum.sub { color:#888; font-size:12.5px; }
         .price-box .p-sum.total { border-top:1px solid #333; margin-top:5px; padding-top:7px; color:#eee; }
         .price-box .p-sum.total span:first-child { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#999; }
         .price-box .p-sum.total span:last-child { font-family: ui-monospace, monospace; font-weight:700; font-size:18px; }
-        .price-box .p-sum.total span:last-child.offer { color:#7fd49b; }
+        .price-box .p-sum.total span:last-child.offer { color:#ffb379; }
         .price-box .p-note { font-size:11.5px; color:#e8c76f; margin-top:6px; }
         .price-box .p-note.err { color:#f3b8b8; }
         .price-box .p-err { color:#f3b8b8; font-size:13px; }
@@ -143,9 +143,9 @@
         .short-alert b { color:#21170e; }
         .short-alert .ss-title { display:block; font-size:15px; font-weight:800; margin-bottom:3px; }
         .panel .short-alert label { display:flex; gap:10px; align-items:center; margin:10px 0 0; padding:9px 10px; border-radius:8px; background:#fff; color:#21170e !important; font-size:14px; font-weight:800; text-transform:none; letter-spacing:0; cursor:pointer; }
-        .short-alert label input { width:22px; height:22px; flex:none; margin:0; accent-color:#15803d; }
+        .short-alert label input { width:22px; height:22px; flex:none; margin:0; accent-color:#ff7918; }
         .short-alert .ss-need { display:block; margin-top:8px; font-size:13px; font-weight:800; }
-        .short-alert.ok { background:#14251c; color:#b7f0cd; border:1px solid #2e6e45; animation:none; }
+        .short-alert.ok { background:#2a1a0c; color:#ffd2ad; border:1px solid #ff7918; animation:none; }
         .short-alert.ok b { color:#fff; }
         @media (prefers-reduced-motion: reduce) { .short-alert { animation:none; } }
 
@@ -205,7 +205,7 @@
         /* Detalle del cobro como boleta: fondo blanco, letra de máquina y línea punteada antes del total. */
         .panel-summary .price-box, .panel-summary .price-box.has-offer, .panel-summary .consumo-sum { background:#fff; border:1px solid #d9d9d9; border-radius:4px; color:#1a1a1a; font-family:ui-monospace, Menlo, monospace; box-shadow:0 2px 8px rgba(0,0,0,.25); }
         .panel-summary .price-box .p-sum, .panel-summary .consumo-sum .p-sum { color:#333; font-size:13px; }
-        .panel-summary .price-box .p-sum.disc { color:#15803d; }
+        .panel-summary .price-box .p-sum.disc { color:#c2410c; }
         .panel-summary .price-box .p-sum.sub { color:#666; }
         .panel-summary .price-box .p-sum.total, .panel-summary .consumo-sum .p-sum.total { border-top:1px dashed #888; color:#111; }
         .panel-summary .price-box .p-sum.total span:first-child { color:#444; }
@@ -232,10 +232,10 @@
         .step-panel.step-active .step-num { background:#ff7918; color:#111; }
         .step-panel.step-active .step-tag { color:#ff7918; }
         .step-panel.step-pending { opacity:.7; }
-        .step-panel.step-done { border-color:#2e6e45; }
-        .step-panel.step-done .step-num { background:#2e6e45; color:#fff; font-size:0; }
+        .step-panel.step-done { border-color:#6b3a14; }
+        .step-panel.step-done .step-num { background:#6b3a14; color:#fff; font-size:0; }
         .step-panel.step-done .step-num::after { content:'✓'; font-size:13px; }
-        .step-panel.step-done .step-tag { color:#6fd39a; }
+        .step-panel.step-done .step-tag { color:#ffb379; }
         .panel-summary.step-active button.submit { animation: stepPulse 1.8s ease-in-out infinite; }
         @keyframes stepPulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,121,24,.5); } 50% { box-shadow:0 0 0 8px rgba(255,121,24,0); } }
         @media (prefers-reduced-motion: reduce) { .panel-summary.step-active button.submit { animation:none; } }
@@ -247,7 +247,7 @@
         /* Ingreso presencial: estadía | cliente + acompañantes | ofrecer consumo | resumen */
         .consumo-panel .cat-label { font-size:10.5px; color:#888; text-transform:uppercase; letter-spacing:.06em; margin:10px 0 4px; }
         .consumo-total { font-size:12.5px; font-family:ui-monospace,monospace; color:#888; margin:2px 0 6px; }
-        .consumo-total.has { color:#8fe0ad; font-weight:700; }
+        .consumo-total.has { color:#ffb379; font-weight:700; }
         .consumo-panel .combo-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; margin-bottom:8px; }
         .consumo-panel .combo-card { display:flex; flex-direction:column; align-items:center; text-align:center; gap:3px; padding:10px 8px; background:#202020; border:1px solid #333; border-radius:11px; }
         .consumo-panel .combo-card.out { opacity:.5; }
@@ -271,6 +271,10 @@
         .offer-none:hover { border-color:#ff7918; color:#fff; }
         .offer-ok { background:#ff7918; border:1px solid #ff7918; color:#111; }
         .step-panel.step-done .offer-actions { display:none; }
+        /* Tocaron el resumen sin resolver la oferta: el botón que falta salta a la vista. */
+        .offer-actions button.attention { background:#ff7918; border-color:#fff; color:#111; animation:offerAttention .55s ease-in-out 4; }
+        @keyframes offerAttention { 0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(255,121,24,.7); } 50% { transform:scale(1.04); box-shadow:0 0 0 10px rgba(255,121,24,0); } }
+        @media (prefers-reduced-motion: reduce) { .offer-actions button.attention { animation:none; } }
         #submit-btn:disabled { opacity:.4; cursor:not-allowed; animation:none; }
         .closed-note { margin:0 0 10px; padding:12px 14px; border-radius:10px; background:#3a1c1c; border:1px solid #b3202f; color:#ffd0ca; font-size:13.5px; line-height:1.45; }
         .closed-note b { display:block; font-size:14.5px; color:#fff; margin-bottom:2px; }
@@ -436,7 +440,7 @@
                             <button type="button" class="walkin-late-toggle" id="walkin-late-toggle">¿Entró antes? Cambiar hora</button>
                             <div class="walkin-late" id="walkin-late" hidden>
                                 <label for="walkin-late-time" style="margin:0;">Hora real de llegada</label>
-                                <input type="time" id="walkin-late-time" step="300">
+                                <input type="time" id="walkin-late-time" step="60">
                                 <span class="hint" style="margin:0;">Hasta {{ \App\Services\Booking\BookingService::LATE_REGISTRATION_HOURS }} horas atrás. Si es una hora mayor a la actual, se toma como de ayer.</span>
                             </div>
                         @endif
@@ -1940,6 +1944,16 @@
             const resolve = () => { window.hhOfferResolved = true; document.querySelector('.form-grid').closest('form').dispatchEvent(new Event('change', { bubbles: true })); };
             none.addEventListener('click', resolve);
             ok.addEventListener('click', resolve);
+            // El resumen se abre recién con la oferta resuelta: si lo tocan antes, se les muestra qué falta.
+            document.querySelector('.panel-summary').addEventListener('click', function () {
+                if (window.hhOfferResolved || !panel.classList.contains('step-active')) return;
+                const btn = ok.hidden ? none : ok;
+                btn.classList.remove('attention');
+                void btn.offsetWidth;
+                btn.classList.add('attention');
+                btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                setTimeout(() => btn.classList.remove('attention'), 2600);
+            });
             panel.querySelectorAll('.qty').forEach((box) => {
                 const input = box.querySelector('input');
                 const step = (d) => {

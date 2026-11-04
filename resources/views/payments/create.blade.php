@@ -153,6 +153,7 @@
                 </div>
             </div>
             <p class="doc-hint" id="doc-hint"></p>
+            <a href="https://eboleta.sii.cl/emitir/" target="hh_sii_boleta" rel="noopener" data-sii-boleta id="sii-boleta-link" style="display:inline-block; margin:2px 0 8px; color:#ff7918; font-size:13px; font-weight:700;">Emitir boleta en el SII ↗</a>
 
             <button type="button" class="note-toggle" id="note-toggle" @if (old('notes')) hidden @endif>+ Agregar una nota</button>
             <div id="note-box" @if (! old('notes')) hidden @endif>
@@ -228,6 +229,7 @@
                 const cashLike = code === 'efectivo' || code === 'transferencia';
                 const cardLike = code === 'debito' || code === 'credito';
 
+                document.getElementById('sii-boleta-link').style.display = cardLike ? 'none' : '';
                 voucherField.style.display = cashLike ? 'none' : '';
                 receiptField.style.display = cardLike ? 'none' : '';
                 if (cashLike) voucherInput.value = '';

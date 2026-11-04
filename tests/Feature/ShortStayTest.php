@@ -14,6 +14,7 @@ use App\Services\Booking\BookingService;
 use App\Services\Pricing\ShortStayPricer;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -190,5 +191,19 @@ class ShortStayTest extends TestCase
         $this->assertSame(15000, $quote('2026-10-06 01:30')['price']);  // 1h30: 25%
         $this->assertSame(15000, $quote('2026-10-06 02:00')['price']);  // 1h: 25%, el máximo
         $this->assertNull($quote('2026-10-06 02:05'));                  // menos de 1 h: no se vende
+    }
+
+    public function test_discount_tiers_can_be_edited_and_never_pass_the_maximum(): void
+    {
+        Schema::table('short_stay_settings', fn ($table) => $table->json('tiers')->nullable());
+        $setting = ShortStaySetting::current();
+        $setting->update(['pricing_mode' => 'tramos', 'percent' => 20, 'tiers' => [
+            ['up_to' => 150, 'percent' => 5], ['up_to' => 60, 'percent' => 40], ['up_to' => 100, 'percent' => 10],
+        ]]);
+
+        $this->assertSame(20, $setting->fresh()->discountForMinutes(60));  // pide 40%, tope 20%
+        $this->assertSame(10, $setting->fresh()->discountForMinutes(100));
+        $this->assertSame(5, $setting->fresh()->discountForMinutes(120));
+        $this->assertSame(0, $setting->fresh()->discountForMinutes(170));
     }
 }

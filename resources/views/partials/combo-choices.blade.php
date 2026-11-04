@@ -10,7 +10,7 @@
 <style>
     .cc-box { margin-top:8px; text-align:left; font-size:12.5px; width:100%; box-sizing:border-box; }
     .cc-box .cc-toggle { display:flex !important; align-items:center; justify-content:space-between; gap:6px; width:100% !important; margin:0 !important; padding:7px 10px !important; border-radius:8px; border:1px dashed rgba(255,121,24,.7); background:rgba(255,121,24,.08); color:#ff9a4d; font:600 12px/1.3 inherit; text-align:left; cursor:pointer; }
-    .cc-box .cc-toggle.cc-done { border-style:solid; border-color:rgba(52,211,153,.55); background:rgba(52,211,153,.08); color:#34d399; }
+    .cc-box .cc-toggle.cc-done { border-style:solid; border-color:rgba(255,121,24,.6); background:rgba(255,121,24,.15); color:#ffb379; }
     .cc-box .cc-toggle span { overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .cc-box .cc-toggle i { font-style:normal; flex:none; transition:transform .15s ease; }
     .cc-box.cc-open .cc-toggle i { transform:rotate(180deg); }

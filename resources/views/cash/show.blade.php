@@ -135,7 +135,10 @@
 
     @if ($pendingReceipts->isNotEmpty())
         <div class="panel pending-receipts">
-            <h3>Boletas por ingresar ({{ $pendingReceipts->count() }})</h3>
+            <div class="head-row">
+                <h3>Boletas por ingresar ({{ $pendingReceipts->count() }})</h3>
+                <a href="https://eboleta.sii.cl/emitir/" target="hh_sii_boleta" rel="noopener" data-sii-boleta style="color:#ff7918; font-size:13px; font-weight:700;">Emitir boleta en el SII ↗</a>
+            </div>
             @foreach ($pendingReceipts as $payment)
                 <a class="pending-row" href="{{ route('reservations.show', $payment->booking->code) }}">
                     <span>{{ $payment->created_at->timezone('America/Santiago')->format('d/m H:i') }}</span>

@@ -57,7 +57,7 @@ Qué hacer:
 | Pago | Se cobra en el mismo flujo | Queda sin pago hasta que pague (a distancia o al llegar) |
 | Estado al crear | Confirmada | Pendiente de pago, en "⚠ Pendientes de gestionar" con "Sin vencimiento" |
 | Botón final | "Crear, cobrar y hacer check-in →" | "Crear reserva" |
-| Después | Registrar pago → check-in → el Playroom queda Ocupado | Vuelve al tablero; el Playroom aparece en "Por llegar" cuando se acerca la hora |
+| Después | Registrar pago → el ingreso se registra solo y el Playroom queda Ocupado (si falta algo, el sistema lo pide) | Vuelve al tablero; el Playroom aparece en "Por llegar" cuando se acerca la hora |
 
 Regla práctica: si el cliente está frente a ti y entra ya, usa "+ Ingreso presencial". Si no está o entra más tarde, usa "+ Reserva". No uses "+ Reserva" para alguien que entra ahora: quedaría como pendiente y tendrías que hacer el cobro y el check-in por separado.
 
@@ -71,7 +71,7 @@ Pasos:
 3. **Ofrecer productos y combos** (solo Ingreso presencial): hay que resolverlo con "El cliente no quiere nada · continuar →" o "Continuar con N ítems →".
 4. **Resumen**: revisa "Precio Playroom", descuentos y "Total a pagar". "Código promocional (opcional)" para cupones. Si el Playroom ya tiene una oferta automática, el cupón no se suma ("El código no aplica — este Playroom ya está en oferta.").
 5. Botón "Crear reserva" o, en ingreso, "Crear, cobrar y hacer check-in →". En ingreso presencial, si no cargaste consumo, aparece "💡 ¿Le ofreciste algo al cliente?" con upsells (subir de categoría, más tiempo): "Agregar lo elegido y crear reserva" o "El cliente no quiere nada — crear igual".
-6. Si queda saldo, el sistema te lleva a "Registrar pago" (sección 7). En ingreso presencial, después sigue el check-in.
+6. Si queda saldo, el sistema te lleva a "Registrar pago" (sección 7). En ingreso presencial, al pagar el ingreso se registra solo; solo se detiene si falta un dato.
 
 **Estadía corta por cierre**: si la hora más la duración mínima pasa del cierre, el sistema ofrece salir a la hora de cierre con descuento según lo que queda: hasta 2h 31min, 10%; hasta 2h, 15%; hasta 1h 30min, 25% (el máximo). Con más de 2h 31min se paga el precio completo. Con menos de 1 hora ya no se vende. En La estadía hay que marcar "El cliente acepta salir a las HH:MM" para seguir con el cliente. No suma ofertas ni cupones y no admite tiempo extra.
 

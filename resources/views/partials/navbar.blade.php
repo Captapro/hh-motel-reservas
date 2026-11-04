@@ -97,6 +97,7 @@
         @stack('nav-actions')
         <a class="hh-new-btn" href="{{ route('reservations.create', ['modo' => 'ingreso']) }}">+ Ingreso presencial</a>
         <a class="hh-new-btn hh-alt-btn" href="{{ route('reservations.create') }}">+ Reserva</a>
+        <a class="hh-new-btn hh-alt-btn" href="https://eboleta.sii.cl/emitir/" target="hh_sii_boleta" rel="noopener" data-sii-boleta title="Abre el SII en una ventana al lado del sistema">Emitir boleta</a>
         @auth
             @if (auth()->user()->isAdministrador() && ($hhShiftAlerts = \App\Models\ShiftHandover::pendingReviewCount()) > 0)
                 <a href="{{ route('cash.shifts') }}" style="background:#3a1c22; color:#e88a9a; font-weight:600;">⚠ Turnos con diferencias ({{ $hhShiftAlerts }})</a>
@@ -175,6 +176,17 @@
         </form>
     </div>
 @endif
+<script>
+    // El SII no permite abrirse dentro de otro sitio: va en una ventana aparte, siempre la misma, pegada a la derecha.
+    document.addEventListener('click', function (e) {
+        const link = e.target.closest && e.target.closest('[data-sii-boleta]');
+        if (!link) return;
+        e.preventDefault();
+        const width = 560, height = Math.min(900, screen.availHeight);
+        const win = window.open(link.href, 'hh_sii_boleta', 'width=' + width + ',height=' + height + ',left=' + Math.max(0, screen.availWidth - width) + ',top=0');
+        if (win) win.focus();
+    });
+</script>
 @include('partials.help-widget')
 @auth
     @include('partials.id-scanner')

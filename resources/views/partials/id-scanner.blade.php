@@ -62,7 +62,7 @@
         let hideTimer = null;
         function toast(kind, html) {
             const el = document.getElementById('id-scan-toast');
-            const colors = { ok: ['#1c3a2a', '#6fd39a'], warn: ['#3a331c', '#e8c76f'], bad: ['#4a1c1c', '#ffb4b4'] }[kind];
+            const colors = { ok: ['#2a1a0c', '#ffb379'], warn: ['#3a331c', '#e8c76f'], bad: ['#4a1c1c', '#ffb4b4'] }[kind];
             el.style.background = colors[0];
             el.style.color = colors[1];
             el.style.border = '1px solid ' + colors[1];

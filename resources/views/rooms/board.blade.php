@@ -336,6 +336,15 @@
         .compact .card a.bookings-btn.has-bookings { color:#e8c76f !important; }
         .compact .card details[open] summary { color:#ff9a4d !important; }
         .compact .card .sm svg { width:14px; height:14px; display:block; }
+        /* Ocupadas en una línea (nombre y tiempo): crecen al tocarlas, para ver En aseo y Fuera de servicio sin bajar. */
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) { cursor:pointer; flex-wrap:wrap; gap:2px 8px; padding-top:7px; padding-bottom:7px; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) > :not(.card-head):not(.eta) { display:none !important; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) .eta[style], html.compact:not(.chips) .section.ocupadas .card:not(.open) .code { display:none !important; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) .eta { order:2; flex:0 1 auto; margin:0 0 0 auto; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) .eta.ending-soon-text { flex:1 1 100%; white-space:normal; text-align:left; }
+        /* Lo urgente no se esconde con la tarjeta cerrada. */
+        html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.pending-balance)::after { content:'Falta cobrar'; order:3; flex:1 1 100%; color:#ffb379; font-size:11px; font-weight:700; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.checkin-btn)::after { content:'Falta check-in'; order:3; flex:1 1 100%; color:#ffb379; font-size:11px; font-weight:700; }
         /* Siguiente en fila: lo que toca arrendar; Ver todas muestra todos los disponibles. */
         .next-switch { display:inline-flex; margin:0 0 10px; border:1px solid #d7d7d7; border-radius:9px; overflow:hidden; background:#fff; }
         .next-switch button { background:none; border:none; margin:0; width:auto; padding:8px 14px; font-size:13px; font-weight:700; color:#555; cursor:pointer; white-space:nowrap; }
@@ -662,7 +671,7 @@
             <p class="sidebar-hint">Libres ahora, con una reserva próxima: no las asignes a clientes sin reserva.</p>
             @foreach ($grouped['proximas'] as $entry)
                 @php $mins = $entry['status']['minutes_until_next']; @endphp
-                <div class="proxima-card cat-{{ Str::slug($entry['room']->category->name) }}" data-wing="{{ $entry['room']->wing ?? 'none' }}" data-href="{{ route('reservations.show', $entry['status']['next_booking']->code) }}" role="link" tabindex="0" title="Abrir la reserva">
+                <div class="proxima-card cat-{{ Str::slug($entry['room']->category->name) }}" @if ($mins >= 0 && $mins <= 10) data-arriving="{{ $entry['status']['next_booking']->code }}" @endif data-wing="{{ $entry['room']->wing ?? 'none' }}" data-href="{{ route('reservations.show', $entry['status']['next_booking']->code) }}" role="link" tabindex="0" title="Abrir la reserva">
                     <div class="card-head"><b>{{ $entry['room']->name }}</b></div>
                     <div class="cat">{{ $entry['room']->category->name }}</div>
                     <div class="guest">{{ $entry['status']['next_booking']->customer->name }}</div>
@@ -827,6 +836,33 @@
             const none = document.getElementById('disponibles-none');
             if (none) none.classList.toggle('cat-hidden', shown > 0);
         }
+        // Ocupadas: un toque abre la tarjeta y deja a la vista sus acciones. Se recuerda
+        // cuál quedó abierta porque el tablero se recarga solo cada 30 segundos.
+        (function () {
+            const KEY = 'hh-board-open-occupied';
+            const cards = () => document.querySelectorAll('.section.ocupadas .card');
+            const nameOf = (card) => card.querySelector('.card-head b')?.textContent.trim();
+            function open(card) {
+                cards().forEach(c => c.classList.toggle('open', c === card));
+                try { card ? sessionStorage.setItem(KEY, nameOf(card)) : sessionStorage.removeItem(KEY); } catch (e) {}
+            }
+            try {
+                const saved = sessionStorage.getItem(KEY);
+                if (saved) cards().forEach(c => { if (nameOf(c) === saved) c.classList.add('open'); });
+            } catch (e) {}
+            document.addEventListener('click', function (e) {
+                const card = e.target.closest && e.target.closest('.section.ocupadas .card');
+                const html = document.documentElement.classList;
+                if (!html.contains('compact') || html.contains('chips')) return;
+                // Tocar fuera la cierra; ya abierta, la tarjeta funciona como siempre.
+                if (!card) { if (document.querySelector('.section.ocupadas .card.open')) open(null); return; }
+                if (!card.classList.contains('open')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    open(card);
+                }
+            }, true);
+        })();
         function hhSetNextOnly(on) {
             localStorage.setItem('hh-board-next-only', on ? '1' : '0');
             if (!on) localStorage.setItem('hh-board-category', 'todas');
@@ -891,6 +927,40 @@
                 try { sessionStorage.setItem('hh-dismissed-alerts', JSON.stringify(dismissed().concat(x.dataset.dismiss))); } catch (err) { /* sin almacenamiento */ }
                 x.closest('.pass-scan').remove();
             });
+            // Tonos cortos de aviso. Si el navegador aún no deja sonar, suenan al primer toque o tecla.
+            window.hhTone = function (notes, gap) {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const play = () => notes.forEach((freq, i) => {
+                        const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * gap;
+                        osc.type = 'sine'; osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.0001, at);
+                        gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, at + gap + 0.25);
+                        osc.connect(gain); gain.connect(ctx.destination);
+                        osc.start(at); osc.stop(at + gap + 0.3);
+                    });
+                    if (ctx.state === 'running') { play(); return; }
+                    const unlock = () => {
+                        document.removeEventListener('pointerdown', unlock);
+                        document.removeEventListener('keydown', unlock);
+                        ctx.resume().then(play);
+                    };
+                    document.addEventListener('pointerdown', unlock);
+                    document.addEventListener('keydown', unlock);
+                } catch (e) { /* sin audio: queda el aviso en pantalla */ }
+            };
+            // Una vez por código, aunque el tablero se recargue cada 30 segundos.
+            window.hhToneOnce = function (key, codes, notes, gap) {
+                let done = [];
+                try { done = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+                const fresh = codes.filter((code) => !done.includes(code));
+                if (!fresh.length) return;
+                try { localStorage.setItem(key, JSON.stringify(done.concat(fresh).slice(-200))); } catch (e) {}
+                window.hhTone(notes, gap);
+            };
+            // Reserva a 10 minutos o menos de llegar: ding-dong.
+            window.hhToneOnce('hh-arriving-warned', [...document.querySelectorAll('[data-arriving]')].map((c) => c.dataset.arriving), [659.25, 523.25], 0.32);
             // Campanita propia de reserva nueva (do-mi-sol-do), una vez por reserva aunque el
             // tablero se recargue. Si el navegador aún no deja sonar (nadie tocó la página),
             // suena al primer toque o tecla.
@@ -929,6 +999,8 @@
                     if (sig === last) return;
                     last = sig;
                     hhChimeForNewBookings(list.filter((p) => p.type === 'nueva').map((p) => p.id));
+                    // Pase escaneado: el cliente ya está en recepción.
+                    window.hhToneOnce('hh-pass-chimed', list.filter((p) => p.type !== 'nueva' && p.type !== 'pago').map((p) => String(p.code || p.id)), [880, 1108.73, 880], 0.11);
                     box.innerHTML = list.filter((p) => !dismissed().includes(p.id)).map((p) => p.type === 'nueva'
                         ? '<div class="pass-scan new-alert"><div class="ps-main"><b>🛎️ Nueva reserva del catálogo — ' + esc(p.customer) + '</b><small>' + esc(p.room) + ' · ' + esc(p.when) + ' · $' + Number(p.amount).toLocaleString('es-CL') + (p.paid ? ' · pagada' : ' · esperando el pago') + ' · ' + esc(p.code) + '</small></div><a href="' + esc(p.url) + '">Ver reserva →</a><button type="button" class="pa-x" data-dismiss="' + esc(p.id) + '" aria-label="Cerrar aviso">✕</button></div>'
                         : p.type === 'pago'
@@ -965,5 +1037,26 @@
 
     setInterval(function () { if (!window.hhHoldRefresh) window.location.reload(); }, 30000);
 </script>
+@if (Str::contains((string) session('status'), ['Ingreso registrado con éxito', '✓ Registrado']))
+    {{-- Ingreso presencial listo: dos notas cortas, distintas de la campanita del catálogo. --}}
+    <script id="hh-success-sound">
+        (function () {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const play = () => [784, 1174.66].forEach((freq, i) => {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * 0.13;
+                    osc.type = 'sine'; osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.0001, at);
+                    gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(at); osc.stop(at + 0.35);
+                });
+                if (ctx.state === 'running') { play(); return; }
+                ctx.resume().then(() => { if (ctx.state === 'running') play(); });
+            } catch (e) { /* sin audio: queda el mensaje en pantalla */ }
+        })();
+    </script>
+@endif
 </body>
 </html>

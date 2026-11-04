@@ -337,6 +337,13 @@ class BookingIntegrityTest extends TestCase
 
         $this->assertSame(0, $booking->fresh()->balanceDue());
         $this->assertSame(2, $booking->payments()->count());
+
+        // Ingreso presencial: con todo listo entra solo; si falta un acompañante, se detiene a pedirlo.
+        $express = route('bookings.checkin.show', ['code' => $booking->code, 'flujo' => 'ingreso']);
+        $this->get($express)->assertOk()->assertDontSee('id="auto-checkin"', false);
+        BookingGuest::create(['booking_id' => $booking->id, 'name' => 'Luz Prueba']);
+        $this->get($express)->assertOk()->assertSee('id="auto-checkin"', false);
+        $this->get(route('bookings.checkin.show', $booking->code))->assertOk()->assertDontSee('id="auto-checkin"', false);
     }
 
     public function test_student_coupon_needs_a_photo_of_the_credential_or_is_removed_before_check_in(): void

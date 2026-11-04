@@ -181,6 +181,9 @@
             $holder = $booking->customer;
             $needDoc = ! $holder->documentNumber();
             $needNat = ! $holder->nationality;
+            // Ingreso presencial con todo listo: no hay nada que confirmar, entra solo.
+            // Si el servidor devuelve un error, la pantalla queda visible para resolverlo.
+            $autoConfirm = $express && $guestsReady && ! $needDoc && ! $needNat && (! $proofRequired || $proof) && ! $errors->any();
         @endphp
         @if ($needDoc || $needNat)
             {{-- Ficha incompleta (ej. reserva del catálogo): se completa acá, con el titular presente. --}}
@@ -329,6 +332,10 @@
             @endunless
         </div>
     </form>
+    @if ($autoConfirm)
+        <div id="auto-checkin" role="status" style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:#111; color:#fff; font-size:18px; font-weight:700;">Registrando ingreso…</div>
+        <script>document.querySelector('form[action$="/checkin"]').submit();</script>
+    @endif
 
     </div>
 
