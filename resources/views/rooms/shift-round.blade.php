@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8"><meta name="color-scheme" content="light">
+    @include('partials.pwa-head', ['appName' => 'HH Ronda', 'manifest' => 'manifest-ronda.webmanifest'])
     <title>Ronda de turno — HH Motel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -20,33 +21,22 @@
         .rd-bar { height:8px; background:#e5e7eb; border-radius:20px; margin:10px 0 12px; overflow:hidden; }
         .rd-bar i { display:block; height:100%; background:#ff7918; border-radius:20px; }
         a.rd-scan { display:flex; align-items:center; justify-content:center; min-height:52px; border-radius:11px; background:#ff7918; color:#21170e !important; font-size:16px; font-weight:800; text-decoration:none; }
-        .mod { border-radius:16px; overflow:hidden; margin-top:14px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,.06); }
-        .mod-h { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 14px; font-size:14px; font-weight:800; color:#fff; }
-        .mod-h b { min-width:26px; padding:1px 8px; border-radius:999px; background:rgba(255,255,255,.22); text-align:center; font-size:13px; }
-        .mod-b { padding:10px; }
-        .mod-orange .mod-h { background:#ff7918; color:#21170e; }
-        .mod-orange .mod-h b { background:rgba(0,0,0,.14); }
-        .mod-blue .mod-h { background:#0a5cff; }
-        .mod-dark .mod-h { background:#111; color:#ffb379; }
-        .mod-amber .mod-h { background:#a8530f; }
-        .mod-gray .mod-h { background:#4b5563; }
-        .mod-soft .mod-h { background:#e5e7eb; color:#374151; }
-        .mod-soft .mod-h b { background:rgba(0,0,0,.08); }
         .rd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:9px; }
         .rd-card { display:flex; justify-content:space-between; align-items:center; gap:10px; background:#f7f7f5; border:1px solid #e5e7eb; border-radius:14px; padding:12px 14px; color:inherit; text-decoration:none; }
         a.rd-card:hover { border-color:#ff7918; }
         .rd-card.aseo-urgent { border:2px solid #ff7918; }
         .rd-card.aseo-high { border:2px solid #ffb379; }
         .rd-name { font-size:16px; font-weight:800; color:#1f2937; }
-        .rd-meta { font-size:12.5px; color:#6b7280; }
+        .rd-meta { font-size:12.5px; color:#4b5563; }
         .rd-go { flex:none; color:#c2410c; font-size:13px; font-weight:700; }
         .rd-tag { display:inline-block; margin-top:3px; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:800; }
         .rd-tag.aseo-urgent, .rd-tag.aseo-high { background:#ff7918; color:#21170e; }
         .rd-tag.aseo-mid { background:#a8530f; color:#fff; }
         .rd-tag.aseo-info { background:#0a5cff; color:#fff; }
         .rd-warn { flex:none; color:#c2410c; font-size:12px; font-weight:700; }
-        .rd-empty { grid-column:1 / -1; color:#9ca3af; font-size:14px; padding:4px; margin:0; }
+        .rd-empty { grid-column:1 / -1; color:#6b7280; font-size:14px; padding:4px; margin:0; }
     </style>
+    @include('partials.module-styles')
 </head>
 @include('partials.navbar')
 <div class="page-inner">
@@ -160,7 +150,7 @@
     </section>
 
     @if ($done->isNotEmpty())
-        <section class="mod mod-soft">
+        <section class="mod">
             <div class="mod-h"><span>Ya revisadas hoy</span><b>{{ $done->count() }}</b></div>
             <div class="mod-b rd-grid">
         @foreach ($done as $room)

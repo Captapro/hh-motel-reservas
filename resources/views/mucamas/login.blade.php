@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.pwa-head', ['appName' => 'HH Aseo', 'manifest' => 'manifest-aseo.webmanifest'])
     <title>Entrar — Panel de mucamas — HH Motel</title>
     <style>
         :root {

@@ -6,11 +6,13 @@ use App\Models\AuditLog;
 use App\Models\InspectionPhoto;
 use App\Models\Room;
 use App\Models\RoomInspection;
+use App\Models\StaffNotice;
 use App\Services\Booking\RoomInspectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
@@ -61,6 +63,10 @@ class RoomInspectionController extends Controller
         $inspection = $service->submit($request, $room, $validated, $validated['inspected_by']);
 
         AuditLog::record(auth()->id(), 'habitacion.inspeccionar', 'Room', $room->id, null, $inspection->toArray());
+
+        if ($inspection->needs_maintenance) {
+            StaffNotice::alertAdmins(auth()->id(), $room->name.' necesita mantención', 'Inspección de '.$inspection->inspected_by.($inspection->notes ? ': '.Str::limit($inspection->notes, 160) : ''));
+        }
 
         $statusMessage = $inspection->needs_maintenance
             ? 'Inspección guardada — '.$room->name.' necesita mantención.'

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#111111">
+    @include('partials.pwa-head', ['appName' => 'HH Ronda', 'manifest' => 'manifest-ronda.webmanifest'])
     <title>Entrar a la ronda — HH Motel</title>
     <style>
         :root { color-scheme:light; }

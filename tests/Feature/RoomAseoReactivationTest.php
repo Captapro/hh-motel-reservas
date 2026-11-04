@@ -484,4 +484,21 @@ class RoomAseoReactivationTest extends TestCase
 
         $this->assertSame(1, \App\Models\PushSubscription::count());
     }
+
+    public function test_inspection_that_needs_maintenance_alerts_the_admins(): void
+    {
+        $inspection = new \App\Models\RoomInspection(['inspected_by' => 'Ana', 'needs_maintenance' => true, 'notes' => 'Fuga en la ducha']);
+        $this->mock(\App\Services\Booking\RoomInspectionService::class, function ($mock) use ($inspection) {
+            $mock->shouldReceive('validationRules')->andReturn([]);
+            $mock->shouldReceive('submit')->andReturn($inspection);
+        });
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('rooms.inspections.store', $this->room), ['inspected_by' => 'Ana', 'shift' => 'Noche'])
+            ->assertSessionHasNoErrors();
+
+        $notice = \App\Models\StaffNotice::sole();
+        $this->assertSame('administracion', $notice->audience);
+        $this->assertSame('GO 101 necesita mantención. Inspección de Ana: Fuga en la ducha', $notice->body);
+    }
 }

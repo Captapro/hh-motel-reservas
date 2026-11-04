@@ -4,9 +4,7 @@
     <meta charset="utf-8">
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="HH Aseo">
-    <meta name="theme-color" content="#111111">
+    @include('partials.pwa-head', ['appName' => 'HH Aseo', 'manifest' => 'manifest-aseo.webmanifest'])
     <title>Aseo — HH Motel</title>
     <style>
         :root { color-scheme:light; }
@@ -35,7 +33,7 @@
         .card.aseo-high { border:2px solid #ffb379; }
         .row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
         .name { font-size:16px; font-weight:800; }
-        .meta { font-size:12.5px; color:#6b7280; }
+        .meta { font-size:12.5px; color:#4b5563; }
         .tag { display:inline-block; margin-top:3px; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:800; }
         .tag.aseo-urgent, .tag.aseo-high { background:#ff7918; color:#21170e; }
         .tag.aseo-mid { background:#a8530f; color:#fff; }
@@ -43,7 +41,7 @@
         .go { flex:none; min-height:46px; border:none; border-radius:11px; background:#ff7918; color:#21170e; font:800 15px -apple-system,'Segoe UI',sans-serif; padding:0 16px; cursor:pointer; }
         .go.full { width:100%; min-height:52px; font-size:17px; }
         .go:disabled { background:#e5e7eb; color:#9ca3af; cursor:not-allowed; }
-        .empty { color:#9ca3af; font-size:14px; padding:6px 2px; }
+        .empty { color:#6b7280; font-size:14px; padding:6px 2px; }
         a.card { display:block; color:inherit; text-decoration:none; }
         label { display:block; font-size:13px; font-weight:600; color:#374151; margin:9px 0 4px; }
         select, textarea { width:100%; border:1px solid #d1d5db; border-radius:9px; background:#fff; color:#1f2937; font:15px -apple-system,'Segoe UI',sans-serif; padding:10px; }
@@ -53,24 +51,15 @@
         .checks input { width:20px; height:20px; accent-color:#ff7918; }
         details { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px 14px; margin-bottom:9px; }
         summary { cursor:pointer; font-weight:800; }
-        .mod { border-radius:16px; overflow:hidden; margin-top:14px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,.06); }
-        .mod-h { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 14px; font-size:14px; font-weight:800; color:#fff; }
-        .mod-h b { min-width:26px; padding:1px 8px; border-radius:999px; background:rgba(255,255,255,.22); text-align:center; font-size:13px; }
-        .mod-b { padding:10px; }
         .mod-b > .card:last-child, .mod-b > .note:last-child { margin-bottom:0; }
         .mod .card { background:#f7f7f5; }
         .mod .empty { margin:0; padding:4px 4px; }
-        .mod-orange .mod-h { background:#ff7918; color:#21170e; }
-        .mod-orange .mod-h b { background:rgba(0,0,0,.14); }
-        .mod-blue .mod-h { background:#0a5cff; }
-        .mod-dark .mod-h { background:#111; color:#ffb379; }
-        .mod-amber .mod-h { background:#a8530f; }
-        .mod-gray .mod-h { background:#4b5563; }
         .note { background:#fff7ef; border:1px solid #ffd2ad; border-left:5px solid #ff7918; border-radius:10px; padding:10px 12px; margin-bottom:9px; color:#1f2937; }
         .note .meta { color:#7c4a1e; font-weight:600; }
         #novedad { margin:10px 0 0; background:#f3f4f6; border-color:#d1d5db; }
         #novedad[open] { background:#e5e7eb; border-color:#9ca3af; }
     </style>
+    @include('partials.module-styles')
 </head>
 <body>
     <div class="top">

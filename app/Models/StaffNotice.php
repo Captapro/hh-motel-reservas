@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Notifications\AdminPush;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +36,13 @@ class StaffNotice extends Model
     public function reads(): HasMany
     {
         return $this->hasMany(StaffNoticeRead::class);
+    }
+
+    /** Alerta a los administradores en pantalla y en el celular. */
+    public static function alertAdmins(int $userId, string $title, string $detail): void
+    {
+        self::create(['user_id' => $userId, 'audience' => 'administracion', 'urgent' => true, 'body' => $title.'. '.$detail]);
+        AdminPush::send($title, $detail);
     }
 
     /** Lo que aún no confirma esta anfitriona o esta mucama. Vacío si la tabla aún no existe. */
