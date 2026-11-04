@@ -170,11 +170,11 @@ Bloqueos:
 
 ## 9. Caja
 - "Caja": "Saldo en caja" (efectivo que debería haber ahora), cobros del día por medio de pago, de dónde viene la plata y "Movimientos del día". Navega con "← Día anterior", "Ir a hoy", "Día siguiente →".
-- Registrar movimiento de caja chica: "Tipo" ("+ Ingreso (caja chica)" o "− Egreso"), "Monto (CLP)", "Descripción" y "Registrar". No se pueden editar ni borrar: revisa antes de guardar.
-- No hay apertura ni cierre formal de caja. Al terminar el turno: cuenta el efectivo y compáralo con "Saldo en caja", registra retiros como "− Egreso".
+- Registrar movimiento: "+ Ingreso" o "− Depósito / egreso", "Monto (CLP)", "Descripción" y "Registrar". No se pueden editar ni borrar: revisa antes de guardar.
+- No hay apertura ni cierre formal de caja, y el efectivo no se entrega entre anfitrionas: cada cobro entra directo a la caja. Registra retiros y depósitos como "− Depósito / egreso".
 
 ## 10. Entrega de turno
-Entrega al siguiente anfitrión: próximas llegadas ("Por llegar"), "Pendientes de gestionar", tarjetas con "Falta cobrar", Playrooms "En aseo" sin confirmar o en mantención, el efectivo contado y cualquier incidente con el código de la reserva. Cierra sesión con "Salir".
+Entrega al siguiente anfitrión: próximas llegadas ("Por llegar"), "Pendientes de gestionar", tarjetas con "Falta cobrar", Playrooms "En aseo" sin confirmar o en mantención, y deja en "Novedades" cualquier incidente con el código de la reserva. En la entrega se cuentan los productos; el efectivo no se entrega entre anfitrionas. Cierra sesión con "Salir".
 
 Para escalar un problema al administrador: "Reserva [código] / hora [hora] / intenté [acción] / apareció [mensaje] / verifiqué [resultado]".
 

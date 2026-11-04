@@ -35,6 +35,14 @@
         .note .sub { font-size:12px; color:#999; margin-top:6px; }
         .resolve { display:flex; gap:8px; margin-top:8px; }
         .resolve button { background:#2c2c2c; color:#fff; border:1px solid #444; border-radius:7px; padding:0 12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .book-title { font-size:15px; margin:18px 0 8px; }
+        .search { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+        .search input[type=text] { flex:1 1 220px; width:auto; }
+        .search label { display:flex; align-items:center; gap:6px; margin:0; font-size:13px; }
+        .search input[type=date] { background:#141414; border:1px solid #333; color:#fff; padding:8px 9px; border-radius:7px; font-family:inherit; }
+        .search button { background:#2c2c2c; color:#fff; border:1px solid #444; border-radius:7px; padding:9px 14px; font-weight:600; cursor:pointer; }
+        .pages { display:flex; justify-content:center; gap:16px; align-items:center; padding:12px 0; font-size:13px; color:#999; }
+        .pages a { color:#ff9a4d; text-decoration:none; font-weight:700; }
         .empty { color:#777; padding:20px 0; text-align:center; font-size:14px; }
     </style>
 </head>
@@ -79,11 +87,19 @@
             </div>
         </form>
 
+        <h2 class="book-title">Libro de novedades</h2>
         <div class="tabs">
             @foreach (['todas' => 'Todas', 'pendientes' => 'Pendientes', 'urgentes' => 'Urgentes'] as $key => $label)
-                <a href="{{ route('shift_notes.index', ['ver' => $key]) }}" class="{{ $filter === $key ? 'on' : '' }}">{{ $label }}</a>
+                <a href="{{ route('shift_notes.index', ['ver' => $key, 'q' => $search ?: null, 'desde' => $from ?: null, 'hasta' => $to ?: null]) }}" class="{{ $filter === $key ? 'on' : '' }}">{{ $label }}</a>
             @endforeach
         </div>
+        <form method="GET" action="{{ route('shift_notes.index') }}" class="search">
+            <input type="hidden" name="ver" value="{{ $filter }}">
+            <input type="text" name="q" value="{{ $search }}" placeholder="Buscar en el libro" aria-label="Buscar en el libro">
+            <label>Desde <input type="date" name="desde" value="{{ $from }}"></label>
+            <label>Hasta <input type="date" name="hasta" value="{{ $to }}"></label>
+            <button type="submit">Buscar</button>
+        </form>
 
         @forelse ($notes as $note)
             <div class="note {{ $note->urgent ? 'urgent' : '' }} {{ $note->isOpen() ? 'open' : '' }}">
@@ -98,7 +114,7 @@
                 @if ($note->resolved_at)
                     <div class="sub">Resuelta por {{ $note->resolver?->name ?? '—' }} el {{ $note->resolved_at->timezone($tz)->format('d/m H:i') }}: {{ $note->resolution }}</div>
                 @endif
-                @if (auth()->user()->isAdministrador())
+                @if ($note->readers->isNotEmpty() || auth()->user()->isAdministrador())
                     <div class="sub">
                         Leída por: {{ $note->readers->isEmpty() ? 'nadie todavía' : $note->readers->map(fn ($r) => $r->name.' '.\Illuminate\Support\Carbon::parse($r->pivot->read_at)->timezone($tz)->format('d/m H:i'))->implode(' · ') }}
                     </div>
@@ -114,6 +130,14 @@
         @empty
             <p class="empty">No hay novedades.</p>
         @endforelse
+
+        @if ($notes->hasPages())
+            <div class="pages">
+                @if ($notes->previousPageUrl())<a href="{{ $notes->previousPageUrl() }}">← Más nuevas</a>@endif
+                <span>Página {{ $notes->currentPage() }} de {{ $notes->lastPage() }}</span>
+                @if ($notes->nextPageUrl())<a href="{{ $notes->nextPageUrl() }}">Más antiguas →</a>@endif
+            </div>
+        @endif
     </div>
 </body>
 </html>

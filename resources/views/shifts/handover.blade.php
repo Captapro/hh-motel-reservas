@@ -43,10 +43,10 @@
         <div class="brand">HH MOTEL</div>
         @if ($kind === 'recibir')
             <h1>Recibir turno</h1>
-            <p class="lead">Hola {{ auth()->user()->name }}. Revisa la caja chica y los productos: ya vienen con lo que dice el sistema, corrige solo lo que no calce. Al aceptar, lo que recibes queda a tu cargo.</p>
+            <p class="lead">Hola {{ auth()->user()->name }}. Revisa los productos: ya vienen con lo que dice el sistema, corrige solo lo que no calce. Al aceptar, lo que recibes queda a tu cargo.</p>
         @else
             <h1>Entregar turno</h1>
-            <p class="lead">Antes de salir, revisa la caja chica y los productos que dejas: ya vienen con lo que dice el sistema, corrige solo lo que no calce.</p>
+            <p class="lead">Antes de salir, revisa los productos que dejas: ya vienen con lo que dice el sistema, corrige solo lo que no calce.</p>
         @endif
 
         @if ($errors->any())
@@ -59,11 +59,6 @@
 
         <form method="POST" action="{{ route('shift.store', $kind) }}" id="handover-form">
             @csrf
-            <h2>Caja chica</h2>
-            <label class="big" for="counted_cash">Efectivo que hay en la caja</label>
-            <div class="money"><span>$</span><input type="number" id="counted_cash" name="counted_cash" min="0" step="1" inputmode="numeric" value="{{ old('counted_cash', $expectedCash) }}" required autofocus></div>
-            <p class="hint">Ya viene con lo que dice el sistema. Si al contar billetes y monedas da otra cifra, escríbela (solo números, sin puntos).</p>
-
             <h2>Productos</h2>
             @if ($products->isNotEmpty())
                 <p class="hint" style="margin:0 0 6px;">Ya viene con lo que dice el sistema. Revisa cada uno y corrige solo si no calza con lo que ves.</p>
@@ -78,11 +73,11 @@
             @endforelse
 
             <h2>Notas</h2>
-            <textarea name="notes" rows="3" placeholder="Si algo no cuadra, explica qué pasó (ej: faltan 2 bebidas, se pagó un proveedor)">{{ old('notes') }}</textarea>
+            <textarea name="notes" rows="3" placeholder="Si algo no cuadra, explica qué pasó (ej: faltan 2 bebidas)">{{ old('notes') }}</textarea>
 
             <label class="accept">
                 <input type="checkbox" required>
-                <span>{{ $kind === 'recibir' ? 'Conté la caja y los productos, y acepto el turno.' : 'Conté la caja y los productos, y entrego el turno.' }}</span>
+                <span>{{ $kind === 'recibir' ? 'Conté los productos y acepto el turno.' : 'Conté los productos y entrego el turno.' }}</span>
             </label>
 
             <button type="submit" class="go">{{ $kind === 'recibir' ? 'Acepto el turno' : 'Entregar turno y salir' }}</button>

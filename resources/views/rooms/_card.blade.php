@@ -5,10 +5,21 @@
     $endingSoon = ($status['current_booking'] ?? null) && $status['current_booking']->checked_in_at
         && ($status['eta_minutes'] ?? -1) >= 0 && $status['eta_minutes'] <= 10;
 @endphp
-<div class="card cat-{{ Str::slug($room->category->name) }} {{ in_array($room->id, $offeredRoomIds ?? [], true) ? 'offered-now' : '' }} {{ ($entry['aseo_priority'] ?? null) ? 'aseo-first' : '' }} {{ $needsMaintenance ? 'needs-maintenance' : '' }} {{ (($status['eta_minutes'] ?? 0) < 0 && ($status['current_booking'] ?? null)) ? 'overdue-room' : '' }} {{ $status['upcoming_count'] > 0 ? 'has-upcoming' : '' }} {{ $endingSoon ? 'ending-soon' : '' }}" @if ($endingSoon) data-ending-soon="{{ $status['current_booking']->code }}" @endif data-wing="{{ $room->wing ?? 'none' }}" data-href="{{ $cardTarget }}">
-    @if ($entry['aseo_priority'] ?? null)
-        @php $aseoAt = $entry['aseo_priority']->copy()->timezone('America/Santiago'); @endphp
-        <span class="aseo-priority" title="Tiene una reserva: conviene limpiarlo primero">Prioridad · {{ $aseoAt->isToday() || $aseoAt->isPast() ? '' : ($aseoAt->isTomorrow() ? 'mañana ' : $aseoAt->format('d/m').' ') }}{{ $aseoAt->format('H:i') }}</span>
+@php
+    // Prioridad de aseo según lo que falta para la reserva: 3, 6 y 12 horas.
+    $aseoAt = ($entry['aseo_priority'] ?? null)?->copy()->timezone('America/Santiago');
+    $aseoHours = $aseoAt ? now()->diffInMinutes($aseoAt, false) / 60 : null;
+    $aseoLevel = match (true) {
+        $aseoAt === null => null,
+        $aseoHours <= 3 => ['aseo-urgent', 'Urgente'],
+        $aseoHours <= 6 => ['aseo-high', 'Prioridad alta'],
+        $aseoHours <= 12 => ['aseo-mid', 'Prioridad'],
+        default => ['aseo-info', 'Reserva'],
+    };
+@endphp
+<div class="card cat-{{ Str::slug($room->category->name) }} {{ in_array($room->id, $offeredRoomIds ?? [], true) ? 'offered-now' : '' }} {{ $aseoAt ? 'aseo-first '.$aseoLevel[0] : '' }} {{ $needsMaintenance ? 'needs-maintenance' : '' }} {{ (($status['eta_minutes'] ?? 0) < 0 && ($status['current_booking'] ?? null)) ? 'overdue-room' : '' }} {{ $status['upcoming_count'] > 0 ? 'has-upcoming' : '' }} {{ $endingSoon ? 'ending-soon' : '' }}" @if ($endingSoon) data-ending-soon="{{ $status['current_booking']->code }}" @endif data-wing="{{ $room->wing ?? 'none' }}" data-href="{{ $cardTarget }}">
+    @if ($aseoAt)
+        <span class="aseo-priority {{ $aseoLevel[0] }}" title="Tiene una reserva: conviene limpiarlo primero">{{ $aseoLevel[1] }} · {{ $aseoAt->isToday() || $aseoAt->isPast() ? '' : ($aseoAt->isTomorrow() ? 'mañana ' : $aseoAt->format('d/m').' ') }}{{ $aseoAt->format('H:i') }}</span>
     @endif
     <div class="card-head">
         <b>{{ $room->name }}</b>

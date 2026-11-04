@@ -3,7 +3,6 @@
 namespace App\Services\Shifts;
 
 use App\Models\AuditLog;
-use App\Models\CashMovement;
 use App\Models\Product;
 use App\Models\ShiftHandover;
 use App\Models\User;
@@ -21,21 +20,20 @@ class ShiftHandoverService
     }
 
     /**
-     * Guarda el cuadre. Lo contado pasa a ser la verdad: el stock queda en
-     * lo contado y la diferencia de efectivo entra como ingreso o egreso de
-     * caja, así el siguiente turno parte cuadrado. Si algo no coincide y no
-     * hay nota, no se guarda nada: se le pide recontar o explicar.
+     * Guarda el cuadre de productos. Lo contado pasa a ser la verdad: el stock
+     * queda en lo contado, así el siguiente turno parte cuadrado. Si algo no
+     * coincide y no hay nota, no se guarda nada: se le pide recontar o explicar.
+     * El efectivo no se cruza aquí: cada cobro entra directo a la caja.
      *
      * @param  array<int, int>  $counts  product_id => unidades contadas
      */
-    public function record(User $user, string $kind, int $countedCash, array $counts, ?string $notes): ShiftHandover
+    public function record(User $user, string $kind, array $counts, ?string $notes): ShiftHandover
     {
-        return DB::transaction(function () use ($user, $kind, $countedCash, $counts, $notes) {
-            $expectedCash = CashMovement::balance()['saldo'];
+        return DB::transaction(function () use ($user, $kind, $counts, $notes) {
             $products = Product::whereIn('id', $this->countableProducts()->pluck('id'))->lockForUpdate()->get();
 
             $stockDiffs = $products->filter(fn (Product $p) => (int) ($counts[$p->id] ?? 0) !== (int) $p->stock);
-            $hasDifferences = $countedCash !== $expectedCash || $stockDiffs->isNotEmpty();
+            $hasDifferences = $stockDiffs->isNotEmpty();
 
             if ($hasDifferences && trim((string) $notes) === '') {
                 throw ValidationException::withMessages([
@@ -47,8 +45,8 @@ class ShiftHandoverService
                 'user_id' => $user->id,
                 'staff_shift_log_id' => $user->openShiftLog()?->id,
                 'kind' => $kind,
-                'expected_cash' => $expectedCash,
-                'counted_cash' => $countedCash,
+                'expected_cash' => 0,
+                'counted_cash' => 0,
                 'has_differences' => $hasDifferences,
                 'notes' => trim((string) $notes) ?: null,
             ]);
@@ -65,16 +63,6 @@ class ShiftHandoverService
                     AuditLog::record($user->id, 'producto.cuadre_turno', 'Product', $product->id, ['stock' => $product->stock], ['stock' => $counted, 'entrega_turno' => $handover->id]);
                     $product->update(['stock' => $counted]);
                 }
-            }
-
-            $cashDiff = $countedCash - $expectedCash;
-            if ($cashDiff !== 0) {
-                CashMovement::create([
-                    'type' => $cashDiff > 0 ? 'ingreso' : 'egreso',
-                    'amount' => abs($cashDiff),
-                    'description' => 'Ajuste por cuadre de turno ('.($kind === 'recibir' ? 'al recibir' : 'al entregar').') — '.$user->name,
-                    'created_by' => $user->id,
-                ]);
             }
 
             return $handover;

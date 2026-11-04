@@ -9,8 +9,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * El anfitrión no puede trabajar hasta recibir su turno: contar la caja
- * chica y el stock (ShiftHandoverController). Un turno = un StaffShiftLog;
+ * El anfitrión no puede trabajar hasta recibir su turno: contar los
+ * productos (ShiftHandoverController). Un turno = un StaffShiftLog;
  * si la sesión sigue abierta de un día para otro y el turno anterior ya se
  * cerró solo, parte uno nuevo y tiene que volver a recibir.
  * Si hay gente esperando puede dejar el conteo para después: trabaja normal

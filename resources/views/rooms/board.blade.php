@@ -331,10 +331,19 @@
         /* Lo urgente no se esconde con la tarjeta cerrada. */
         html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.pending-balance)::after { content:'Falta cobrar'; order:3; flex:1 1 100%; color:#ffb379; font-size:11px; font-weight:700; }
         html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.checkin-btn)::after { content:'Falta check-in'; order:3; flex:1 1 100%; color:#ffb379; font-size:11px; font-weight:700; }
-        /* En aseo con reserva cerca: primero en la lista y bien marcado, sin cambiar el tamaño de la tarjeta. */
+        /* En aseo con reserva: van primero; el borde y la etiqueta suben con lo que falta (12, 6 y 3 horas). No cambian el tamaño de la tarjeta. */
         .section.aseo .grid { margin-top:14px; row-gap:16px; }
-        .section.aseo .card.aseo-first { position:relative; border-color:#ff7918; box-shadow:0 0 0 2px #ff7918; }
-        .aseo-priority { position:absolute; top:-10px; left:10px; z-index:2; padding:2px 9px; border-radius:999px; background:#ff7918; color:#21170e; font-size:11px; font-weight:800; line-height:1.4; white-space:nowrap; }
+        .section.aseo .card.aseo-first { position:relative; }
+        .section.aseo .card.aseo-mid { border-color:#a8530f; box-shadow:0 0 0 1px #a8530f; }
+        .section.aseo .card.aseo-high { border-color:#ff7918; box-shadow:0 0 0 2px #ff7918; }
+        .section.aseo .card.aseo-urgent { border-color:#ff7918; box-shadow:0 0 0 3px #ff7918; animation:stepPulseCard 1.6s ease-in-out infinite; }
+        .aseo-priority { position:absolute; top:-10px; left:10px; z-index:2; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800; line-height:1.4; white-space:nowrap; }
+        .aseo-priority.aseo-urgent { background:#ff7918; color:#21170e; }
+        .aseo-priority.aseo-high { background:#ff7918; color:#21170e; }
+        .aseo-priority.aseo-mid { background:#a8530f; color:#fff; }
+        .aseo-priority.aseo-info { background:#444; color:#ddd; }
+        @keyframes stepPulseCard { 0%,100% { box-shadow:0 0 0 3px #ff7918; } 50% { box-shadow:0 0 0 6px rgba(255,121,24,.35); } }
+        @media (prefers-reduced-motion: reduce) { .section.aseo .card.aseo-urgent { animation:none; } }
         /* Siguiente en fila: lo que toca arrendar; Ver todas muestra todos los disponibles. */
         .next-switch { display:inline-flex; border:1px solid #d7d7d7; border-radius:9px; overflow:hidden; background:#fff; }
         .cat-filter .next-switch button { background:none; border:none; border-radius:0; box-shadow:none; margin:0; width:auto; padding:8px 14px; font-size:13px; font-weight:700; color:#555; cursor:pointer; white-space:nowrap; }

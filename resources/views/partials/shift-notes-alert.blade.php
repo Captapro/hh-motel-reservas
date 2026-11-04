@@ -1,8 +1,9 @@
 {{-- Aleta de novedades: no ocupa lugar en la pantalla. Se abre sola al entrar, y si la cierran sin
      confirmar queda latiendo en el borde derecho hasta apretar "Leí y entendí". --}}
 @php
-    $hhNotes = ($hostView ?? false) ? collect() : \App\Models\ShiftNote::alertFor(auth()->user());
-    $hhUpcoming = ($hostView ?? false) || session(\App\Http\Controllers\ShiftNoteController::UPCOMING_SEEN) ? collect() : \App\Models\ShiftNote::upcomingFor(auth()->user());
+    $hhPreview = $hostView ?? false;
+    $hhNotes = $hhPreview ? \App\Models\ShiftNote::previewAlert() : \App\Models\ShiftNote::alertFor(auth()->user());
+    $hhUpcoming = ! $hhPreview && session(\App\Http\Controllers\ShiftNoteController::UPCOMING_SEEN) ? collect() : \App\Models\ShiftNote::upcomingFor(auth()->user());
     $hhAlerts = $hhNotes->count() + $hhUpcoming->count();
 @endphp
 @if ($hhAlerts > 0)
@@ -19,7 +20,7 @@
         <div style="display:flex; align-items:flex-start; gap:10px; padding:16px 16px 10px;">
             <div style="flex:1;">
                 <div id="shift-notes-title" style="font-size:17px; font-weight:800;">🔔 Novedades del turno ({{ $hhAlerts }})</div>
-                <div style="font-size:13px; color:#aaa; margin-top:2px;">Léelas y confirma.</div>
+                <div style="font-size:13px; color:#aaa; margin-top:2px;">Léelas y confirma. <a href="{{ route('shift_notes.index') }}" style="color:#ff9a4d;">Ver el libro completo</a></div>
             </div>
             <button type="button" id="shift-notes-close" aria-label="Minimizar" style="background:none; border:1px solid #444; color:#ccc; border-radius:7px; padding:4px 10px; cursor:pointer;">✕</button>
         </div>
@@ -47,10 +48,14 @@
                 </div>
             @endforeach
         </div>
-        <form method="POST" action="{{ route('shift_notes.read') }}" style="padding:12px 16px 16px;">
+        @if ($hhPreview)
+            <p style="margin:0; padding:12px 16px 16px; font-size:13px; color:#ffb379;">Vista previa de soporte: aquí la anfitriona confirma con "Leí y entendí".</p>
+        @else
+            <form method="POST" action="{{ route('shift_notes.read') }}" style="padding:12px 16px 16px;">
             @csrf
             <button type="submit" style="width:100%; background:#ff7918; color:#21170e; border:none; border-radius:9px; padding:12px; font-size:15px; font-weight:800; cursor:pointer;">Leí y entendí</button>
         </form>
+        @endif
     </aside>
     <script>
         (function () {

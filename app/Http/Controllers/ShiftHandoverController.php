@@ -12,8 +12,9 @@ use Illuminate\View\View;
 /**
  * Entrega de turno del anfitrión. Al entrar no puede trabajar hasta recibir
  * el turno (EnsureShiftReceived); al salir, "Salir" lo trae a entregarlo.
- * El formulario viene lleno con la caja y el stock del sistema; si el
- * anfitrión corrige algo, queda como diferencia para el administrador.
+ * Se cruzan solo los productos: el efectivo va directo a la caja, no pasa de
+ * anfitrión a anfitrión. El formulario viene lleno con el stock del sistema; si
+ * el anfitrión corrige algo, queda como diferencia para el administrador.
  */
 class ShiftHandoverController extends Controller
 {
@@ -34,8 +35,6 @@ class ShiftHandoverController extends Controller
         return view('shifts.handover', [
             'kind' => $kind,
             'products' => $this->handovers->countableProducts(),
-            // Viene lleno con lo que dice el sistema: el anfitrión revisa y corrige solo lo que no calce.
-            'expectedCash' => \App\Models\CashMovement::balance()['saldo'],
         ]);
     }
 
@@ -47,7 +46,7 @@ class ShiftHandoverController extends Controller
         $request->session()->put('shift_receive_later', $log->id);
 
         return redirect()->route($request->user()->homeRoute())
-            ->with('status', 'Listo, atiende tranquilo. Cuando puedas, aprieta "Recibir turno ahora" arriba para contar la caja y los productos.');
+            ->with('status', 'Listo, atiende tranquilo. Cuando puedas, aprieta "Recibir turno ahora" arriba para contar los productos.');
     }
 
     public function store(Request $request, string $kind): RedirectResponse
@@ -55,19 +54,16 @@ class ShiftHandoverController extends Controller
         abort_unless(in_array($kind, ['recibir', 'entregar'], true), 404);
 
         $validated = $request->validate([
-            'counted_cash' => ['required', 'integer', 'min:0'],
             'counts' => ['array'],
             'counts.*' => ['required', 'integer', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
-            'counted_cash.required' => 'Escribe cuánto efectivo contaste en la caja chica.',
             'counts.*.required' => 'Falta contar un producto (si no hay, pon 0).',
         ]);
 
         $handover = $this->handovers->record(
             $request->user(),
             $kind,
-            (int) $validated['counted_cash'],
             array_map('intval', $validated['counts'] ?? []),
             $validated['notes'] ?? null,
         );

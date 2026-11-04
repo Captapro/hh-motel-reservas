@@ -2740,6 +2740,15 @@ class BookingIntegrityTest extends TestCase
         $this->assertTrue(ShiftNote::alertFor($next)->isEmpty());
         $this->assertTrue($note->readers()->whereKey($next->id)->exists());
 
+        // El libro completo también es para las anfitrionas.
+        $this->createSegmentRulesTable();
+        $this->actingAs($next)->get(route('shift_notes.index'))->assertOk()->assertSee('Faltan monedas')->assertSee('Registrar novedad');
+        $this->get(route('shift_notes.index', ['q' => 'monedas', 'desde' => now()->toDateString()]))->assertOk()->assertSee('Faltan monedas');
+        $this->get(route('shift_notes.index', ['q' => 'ampolleta']))->assertOk()->assertDontSee('Faltan monedas');
+
+        // Soporte en vista de anfitrión ve lo mismo que ella, aunque haya escrito la novedad.
+        $this->assertSame([$note->id], ShiftNote::previewAlert()->pluck('id')->all());
+
         // Una pendiente vieja se sigue avisando; una normal vieja, no.
         $third = User::factory()->create(['role' => 'recepcion']);
         ShiftNote::whereKey($note->id)->update(['created_at' => now()->subDays(10)]);

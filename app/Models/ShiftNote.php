@@ -60,6 +60,19 @@ class ShiftNote extends Model
                 ->orWhere(fn ($open) => $open->where('pending', true)->whereNull('resolved_at')));
     }
 
+    /** Vista de anfitrión de soporte: lo que le saldría a una anfitriona, sin contar lecturas. */
+    public static function previewAlert(): Collection
+    {
+        try {
+            return self::with(['user', 'room'])
+                ->where(fn ($q) => $q->where('created_at', '>=', now()->subDays(self::ALERT_DAYS))
+                    ->orWhere(fn ($open) => $open->where('pending', true)->whereNull('resolved_at')))
+                ->orderByDesc('urgent')->orderByDesc('created_at')->get();
+        } catch (QueryException) {
+            return collect();
+        }
+    }
+
     /** Reservas que llegan en las próximas 24 horas, para avisarlas al entrar al turno. */
     public static function upcomingFor(?User $user): Collection
     {

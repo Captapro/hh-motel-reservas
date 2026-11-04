@@ -112,7 +112,7 @@
             @if ($hostView ?? false)
                 {{-- Nada de entregar turno: es soporte mirando, no un turno real. --}}
             @elseif (auth()->user()->isRecepcion())
-                {{-- El anfitrión sale entregando el turno: cuenta caja chica y stock. --}}
+                {{-- El anfitrión sale entregando el turno: cuenta los productos. --}}
                 <a href="{{ route('shift.deliver') }}" class="hh-danger">Entregar turno y salir</a>
             @else
                 <form method="POST" action="{{ route('logout') }}" style="display:inline;">

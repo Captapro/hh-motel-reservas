@@ -67,11 +67,11 @@ class ShiftHandoverTest extends TestCase
         $this->login();
 
         $this->get('/caja')->assertRedirect(route('shift.receive'));
-        // Viene lleno con lo del sistema: caja y stock, para revisar en vez de digitar.
+        // Viene lleno con el stock del sistema, y no se pide efectivo: va directo a la caja.
         $this->get('/turno/recibir')->assertOk()->assertSee('Cerveza')
-            ->assertSee('value="50000"', false)->assertSee('inputmode="numeric" value="10"', false);
+            ->assertDontSee('Caja chica')->assertSee('inputmode="numeric" value="10"', false);
 
-        $this->post('/turno/recibir', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]])
+        $this->post('/turno/recibir', ['counts' => [$this->beer->id => 10]])
             ->assertRedirect(route('rooms.board'));
 
         $handover = ShiftHandover::sole();
@@ -88,7 +88,7 @@ class ShiftHandoverTest extends TestCase
         $this->post('/turno/recibir/despues')->assertRedirect(route('rooms.board'));
         $this->get('/caja')->assertOk()->assertSee('Te falta recibir el turno');
 
-        $this->post('/turno/recibir', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]])->assertRedirect();
+        $this->post('/turno/recibir', ['counts' => [$this->beer->id => 10]])->assertRedirect();
         $this->get('/caja')->assertOk()->assertDontSee('Te falta recibir el turno');
     }
 
@@ -97,18 +97,17 @@ class ShiftHandoverTest extends TestCase
         $this->login();
 
         $this->from('/turno/recibir')
-            ->post('/turno/recibir', ['counted_cash' => 45000, 'counts' => [$this->beer->id => 8]])
+            ->post('/turno/recibir', ['counts' => [$this->beer->id => 8]])
             ->assertRedirect('/turno/recibir')->assertSessionHasErrors('notes');
         $this->assertSame(0, ShiftHandover::count());
 
-        $this->post('/turno/recibir', ['counted_cash' => 45000, 'counts' => [$this->beer->id => 8], 'notes' => 'Faltan 2 cervezas y $5.000'])
+        $this->post('/turno/recibir', ['counts' => [$this->beer->id => 8], 'notes' => 'Faltan 2 cervezas'])
             ->assertRedirect();
 
         $handover = ShiftHandover::sole();
         $this->assertTrue($handover->has_differences);
-        $this->assertSame(-5000, $handover->cashDifference());
         $this->assertSame(8, $this->beer->fresh()->stock);
-        $this->assertSame(45000, CashMovement::balance()['saldo']);
+        $this->assertSame(50000, CashMovement::balance()['saldo']); // el turno ya no mueve la caja
 
         $admin = User::factory()->create(['role' => 'administrador']);
         $this->actingAs($admin)->get('/caja-turnos')->assertOk()->assertSee('Faltan 2 cervezas')->assertSee('Turnos con diferencias (1)');
@@ -119,12 +118,12 @@ class ShiftHandoverTest extends TestCase
     public function test_delivering_the_shift_logs_the_host_out(): void
     {
         $this->login();
-        $this->post('/turno/recibir', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]]);
+        $this->post('/turno/recibir', ['counts' => [$this->beer->id => 10]]);
 
         // Al cerrar, los productos vienen con el stock del sistema para revisar más rápido.
         $this->get('/turno/entregar')->assertOk()->assertSee('name="counts['.$this->beer->id.']" min="0" step="1" inputmode="numeric" value="10"', false);
 
-        $this->post('/turno/entregar', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]])
+        $this->post('/turno/entregar', ['counts' => [$this->beer->id => 10]])
             ->assertRedirect(route('login'));
 
         $this->assertGuest();
@@ -135,7 +134,7 @@ class ShiftHandoverTest extends TestCase
     public function test_the_host_cannot_see_the_shift_history(): void
     {
         $this->login();
-        $this->post('/turno/recibir', ['counted_cash' => 50000, 'counts' => [$this->beer->id => 10]]);
+        $this->post('/turno/recibir', ['counts' => [$this->beer->id => 10]]);
 
         $this->get('/caja-turnos')->assertForbidden();
     }

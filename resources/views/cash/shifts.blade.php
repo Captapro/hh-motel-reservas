@@ -8,7 +8,7 @@
     <div class="page-head">
         <div>
             <h1>Entregas de turno</h1>
-            <p class="sub">Lo que cada anfitrión contó al recibir y al entregar su turno: caja chica y productos. Lo contado queda como saldo y stock del sistema; las diferencias se registran como ajuste.</p>
+            <p class="sub">Lo que cada anfitrión contó al recibir y al entregar su turno: los productos. Lo contado queda como saldo y stock del sistema; las diferencias se registran como ajuste.</p>
         </div>
         <a class="link" href="{{ route('cash.show') }}">← Volver a Caja</a>
     </div>
@@ -37,12 +37,15 @@
                         @endif
                     </div>
                 </div>
+                {{-- Solo los cuadres antiguos traen caja: ahora se cruzan únicamente productos. --}}
+                @if ($h->counted_cash || $h->expected_cash)
                 <div style="font-size:13.5px; margin-top:6px;">
                     Caja: contó <b>{{ $money($h->counted_cash) }}</b> · sistema {{ $money($h->expected_cash) }}
                     @if ($h->cashDifference() !== 0)
                         · <span style="color:{{ $h->cashDifference() < 0 ? '#e88a9a' : '#e8c76f' }}; font-weight:700;">{{ $signed($h->cashDifference()) }}</span>
                     @endif
                 </div>
+                @endif
                 @if ($diffItems->isNotEmpty())
                     <div style="font-size:13.5px; margin-top:4px;">
                         Productos:
