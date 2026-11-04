@@ -2706,14 +2706,11 @@ class BookingIntegrityTest extends TestCase
         $this->assertEqualsCanonicalizing([1, 2, 5], $offered);
     }
 
-    public function test_cash_payment_can_leave_the_receipt_for_later_but_transfer_cannot(): void
+    public function test_cash_payment_can_leave_the_receipt_for_later(): void
     {
         $booking = $this->booking();
         $cash = PaymentMethod::firstOrCreate(['code' => 'efectivo'], ['name' => 'Efectivo', 'is_active' => true]);
-        $transfer = PaymentMethod::firstOrCreate(['code' => 'transferencia'], ['name' => 'Transferencia', 'is_active' => true]);
 
-        $this->post(route('payments.store', $booking->code), ['payment_method_id' => $transfer->id, 'amount' => 1000, 'request_token' => (string) Str::uuid()])
-            ->assertSessionHasErrors('receipt_number');
 
         $this->post(route('payments.store', $booking->code), ['payment_method_id' => $cash->id, 'amount' => 1000, 'request_token' => (string) Str::uuid()])
             ->assertSessionHasNoErrors();
@@ -2802,5 +2799,18 @@ class BookingIntegrityTest extends TestCase
         $this->assertNull($fresh->expires_at);
         $this->assertNotNull($fresh->payment_instructions_sent_at);
         $this->assertSame('PENDIENTE_PAGO', $fresh->booking_status);
+    }
+
+    public function test_confirmed_transfer_can_be_registered_before_the_receipt(): void
+    {
+        $booking = $this->booking();
+        $method = PaymentMethod::firstOrCreate(['code' => 'transferencia'], ['name' => 'Transferencia']);
+
+        $this->post('/reservas/'.$booking->code.'/pago', [
+            'payment_method_id' => $method->id, 'amount' => 5000, 'request_token' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame(5000, $booking->fresh()->paidAmount());
+        $this->assertNull($booking->payments()->sole()->receipt_number);
     }
 }

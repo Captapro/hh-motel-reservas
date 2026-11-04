@@ -80,12 +80,15 @@ class CashRegisterController extends Controller
         $sameDay = $collected->filter(fn (Payment $p) => $stayOf($p)?->between($day, $dayEnd));
         $late = $collected->reject(fn (Payment $p) => $stayOf($p)?->gt($dayEnd) || $stayOf($p)?->between($day, $dayEnd));
 
-        // Pagos en efectivo de la última semana a los que aún les falta la boleta.
+        // Pagos en efectivo o transferencia a los que aún les falta la boleta: los
+        // de la última semana y los de estadías que todavía no pasan, porque una
+        // transferencia se paga antes y la boleta se entrega al llegar.
         $pendingReceipts = Payment::with(['booking.room'])
             ->where('status', 'aprobado')
-            ->whereHas('paymentMethod', fn ($q) => $q->where('code', 'efectivo'))
+            ->whereHas('paymentMethod', fn ($q) => $q->whereIn('code', ['efectivo', 'transferencia']))
             ->where(fn ($q) => $q->whereNull('receipt_number')->orWhere('receipt_number', ''))
-            ->where('created_at', '>=', now()->subDays(7))
+            ->where(fn ($q) => $q->where('created_at', '>=', now()->subDays(7))
+                ->orWhereHas('booking', fn ($b) => $b->where('starts_at', '>=', now()->subDays(7))))
             ->orderByDesc('created_at')
             ->get();
 

@@ -26,6 +26,7 @@ class ShiftHandoverTest extends TestCase
             '2026_08_18_120001_add_role_to_users_table.php',
             '2026_10_23_210000_allow_soporte_role_on_users.php',
             '2026_10_27_120000_add_ai_access_to_users_table.php',
+            '2026_08_18_120011_create_bookings_table.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
             '2026_09_15_233000_add_voucher_receipt_to_payments.php',
