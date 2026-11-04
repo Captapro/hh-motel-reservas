@@ -58,6 +58,17 @@
         if (el) { el.classList.toggle('tip-r', el.getBoundingClientRect().left + 330 > window.innerWidth); }
     });
 </script>
+@php
+    // La ronda de turno es un panel aparte: solo registrar y revisar cada Playroom.
+    $hhRound = request()->routeIs('shift_round.*') || request()->boolean('ronda');
+@endphp
+@if ($hhRound)
+    <style>body { margin-left:0 !important; padding-left:0 !important; }</style>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; background:#111; color:#eee; border-bottom:1px solid #292929; font:700 14px -apple-system,'Segoe UI',sans-serif;">
+        <span>HH MOTEL · Ronda de turno</span>
+        <a href="{{ route('rooms.board') }}" style="color:#ff9a4d; font-size:13px; text-decoration:none;">Salir de la ronda</a>
+    </div>
+@else
 @include('partials.sidebar')
 <div class="hh-nav-wrap">
     @if (! empty($shiftReceivePending))
@@ -167,6 +178,7 @@
         </div>
     @endif
 </div>
+@endif
 @if ($hostView ?? false)
     <div style="position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:9990; display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:center; background:#3a2a12; border:1px solid #ff7918; color:#ffd2ad; padding:10px 16px; border-radius:10px; font:13.5px -apple-system,'Segoe UI',sans-serif; box-shadow:0 6px 24px rgba(0,0,0,.5); max-width:calc(100vw - 32px);">
         <span><b>Vista de anfitrión</b> · {{ session('host_view_blocked') ? 'no se guardó: solo es para mirar' : 'solo para mirar, no guarda cambios' }}</span>
@@ -187,8 +199,12 @@
         if (win) win.focus();
     });
 </script>
-@include('partials.help-widget')
+@unless ($hhRound)
+    @include('partials.help-widget')
+@endunless
 @auth
     @include('partials.id-scanner')
-    @include('partials.shift-notes-alert')
+    @unless ($hhRound)
+        @include('partials.shift-notes-alert')
+    @endunless
 @endauth
