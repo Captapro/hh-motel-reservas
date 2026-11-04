@@ -257,17 +257,12 @@
         .consumo-sum .p-sum { display:flex; justify-content:space-between; padding:2px 0; color:#bbb; }
         .consumo-sum .p-sum.total { border-top:1px solid #333; margin-top:4px; padding-top:6px; color:#eee; font-weight:700; }
         .consumo-sum .p-sum.total span:last-child { font-family:ui-monospace,monospace; font-size:18px; }
-        /* Tres columnas: estadía | cliente | consumo con el resumen debajo. Se llena de izquierda a derecha y el resumen queda ancho. */
-        @media (min-width: 1300px) {
-            .form-grid.walkin-grid { grid-template-columns: minmax(0,.85fr) minmax(0,1fr) minmax(0,1.45fr); grid-template-rows:auto 1fr; gap:14px 16px; }
-            .form-grid.walkin-grid > [data-step="1"] { grid-column:1; grid-row:1 / span 2; }
-            .form-grid.walkin-grid > [data-step="2"] { grid-column:2; grid-row:1 / span 2; }
-            .form-grid.walkin-grid > [data-step="3"] { grid-column:3; grid-row:1; }
-            .form-grid.walkin-grid > [data-step="4"] { grid-column:3; grid-row:2; position:static; margin-top:0; }
-            .form-grid.walkin-grid .summary-cols { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; }
-            .form-grid.walkin-grid .summary-cols .price-box { margin-top:6px; }
+        /* Cuatro columnas en el orden del llenado; el resumen queda con ancho suficiente para leerse de una. */
+        @media (min-width: 1500px) {
+            .form-grid.walkin-grid { grid-template-columns: minmax(0,.78fr) minmax(0,1.05fr) minmax(0,1.15fr) minmax(300px,.85fr); }
             .form-grid.walkin-grid .panel .row > div { flex:1 1 130px; min-width:0; }
             .form-grid.walkin-grid .panel .row-id > div { min-width:0; }
+            .form-grid.walkin-grid .panel-summary .hint { font-size:11px; }
         }
         .form-grid.walkin-grid .panel input:not([type=checkbox]), .form-grid.walkin-grid .panel select { padding:7px 11px; font-size:14px; }
         .form-grid.walkin-grid .panel label { margin:9px 0 4px; }
@@ -275,7 +270,7 @@
         .form-grid.walkin-grid .sub-head span { display:none; }
         .form-grid.walkin-grid .panel .hint { font-size:11.5px; margin-top:3px; }
         .form-grid.walkin-grid .guest-row input { padding:7px 11px; }
-        @media (max-width: 1299px) and (min-width: 701px) { .form-grid.walkin-grid { grid-template-columns: 1fr 1fr; gap:16px; } .form-grid.walkin-grid .panel-summary { grid-column:auto; position:static; margin-top:0; } }
+        @media (max-width: 1499px) and (min-width: 701px) { .form-grid.walkin-grid { grid-template-columns: 1fr 1fr; gap:16px; } .form-grid.walkin-grid .panel-summary { grid-column:auto; position:static; margin-top:0; } }
         @media (max-width: 700px) { .consumo-panel .prod-cols { column-count:1; } }
         @media (max-width: 1280px) { .form-grid { grid-template-columns: 1fr 1fr; } .panel-summary { grid-column: 1 / -1; position:static; margin-top:16px; } }
         @media (max-width: 700px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
@@ -456,7 +451,7 @@
 
                 <div id="cust-document-fields">
                     <div class="doc-missing-warn" id="doc-missing-warn" hidden>⚠ A este cliente le falta el RUT o pasaporte — hay que cargarlo.</div>
-                    <label>Documento de identidad <span style="text-transform:none;font-weight:400;color:#9a9a9a;">— pasa el carnet por el lector o escribe el RUT</span></label>
+                    <label>Documento de identidad</label>
                     <div class="doc-row">
                         <select name="document_type" id="document-type" required>
                             <option value="" @selected(old('document_type', '') === '')>— Tipo —</option>
@@ -616,15 +611,11 @@
             <div class="panel panel-summary step-panel" data-step="{{ $walkInMode ? 4 : 3 }}">
                 <div class="form-col-head"><span class="step-num">{{ $walkInMode ? 4 : 3 }}</span>Resumen<span class="step-tag"></span></div>
 
-                <div class="summary-cols">
-                <div>
                 <div class="price-box" id="price-box" hidden></div>
                 @if ($walkInMode)
                     <div class="consumo-sum" id="consumo-sum" hidden></div>
                 @endif
-                </div>
 
-                <div>
                 <label>Código promocional (opcional)</label>
                 <select name="coupon_code" id="coupon-select" onchange="hhQuotePrice()">
                     <option value="" @selected(old('coupon_code', '') === '')>Sin cupón</option>
@@ -640,8 +631,6 @@
                     @endforeach
                 </select>
                 <div class="hint">Si exige cédula o credencial, verifícala antes de aplicarlo. Los que piden edad mínima no quedan activos si falta la fecha de nacimiento del cliente.</div>
-                </div>
-                </div>
 
                 @unless ($walkInMode)
                 <div hidden>{{-- acompañantes y consumo se piden en el check-in --}}
