@@ -12,18 +12,26 @@
         h1 { font-size:22px; margin:0 0 14px; }
         .banner { background:#2a1a0c; border:1px solid #ff7918; color:#ffd2ad; padding:10px 16px; border-radius:9px; margin-bottom:14px; font-size:14px; font-weight:600; }
         .errors { background:#3a1c1c; border:1px solid #7a2d2d; color:#f3b8b8; padding:10px 12px; border-radius:8px; margin-bottom:14px; font-size:13px; }
-        .panel { background:#1c1c1c; border:1px solid #333; border-radius:12px; padding:14px 16px; margin-bottom:14px; }
-        .new-grid { display:grid; grid-template-columns:170px 170px minmax(0,1fr); gap:10px; }
-        @media (max-width:760px) { .new-grid { grid-template-columns:minmax(0,1fr); } }
-        label { display:block; font-size:12px; color:#bbb; margin-bottom:5px; }
-        select, textarea, input[type=text] { width:100%; background:#141414; border:1px solid #333; color:#fff; padding:9px 11px; border-radius:7px; font-size:14px; font-family:inherit; }
-        textarea { min-height:44px; resize:vertical; }
-        .flags { display:flex; flex-wrap:wrap; gap:18px; align-items:center; margin-top:10px; font-size:13.5px; }
-        .flags label { display:flex; gap:7px; align-items:center; margin:0; color:#ddd; font-size:13.5px; cursor:pointer; }
-        .flags input { width:17px; height:17px; accent-color:#ff7918; margin:0; }
-        .btn { background:#ff7918; color:#21170e; border:none; padding:9px 18px; border-radius:7px; font-size:14px; font-weight:700; cursor:pointer; margin-left:auto; }
-        .tabs { display:flex; gap:6px; margin-bottom:12px; }
-        .tabs a { color:#ccc; text-decoration:none; background:#1c1c1c; border:1px solid #333; padding:7px 13px; border-radius:7px; font-size:13px; font-weight:600; }
+        .note-form { background:#fff !important; border:1px solid #e5e7eb !important; border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+        .note-form select, .note-form textarea, .search input { background:#fff !important; color:#1f2937 !important; border:1px solid #d1d5db !important; height:38px !important; min-height:38px !important; padding-top:0; padding-bottom:0; box-shadow:none !important; color-scheme:light; }
+        .note-form textarea { height:38px !important; padding:8px 10px !important; }
+        .note-form select { padding:0 28px 0 10px !important; line-height:36px !important; }
+        .note-form .flags input { appearance:auto !important; -webkit-appearance:checkbox !important; width:16px !important; height:16px !important; min-height:0 !important; padding:0 !important; background:#fff !important; border:1px solid #9ca3af !important; accent-color:#ff7918; color-scheme:light; }
+        .note-form label, .search label { color:#374151 !important; }
+        .new-grid { display:grid; grid-template-columns:170px 170px minmax(0,1fr) auto; gap:10px; align-items:end; }
+        @media (max-width:860px) { .new-grid { grid-template-columns:minmax(0,1fr); } }
+        label { display:block; font-size:12px; color:#4b5563; font-weight:600; margin-bottom:4px; }
+        select, textarea, input[type=text], input[type=date] { width:100%; height:38px; background:#fff; border:1px solid #d1d5db; color:#1f2937; padding:0 10px; border-radius:7px; font-size:14px; font-family:inherit; color-scheme:light; }
+        textarea { padding:8px 10px; resize:vertical; min-height:38px; }
+        select:focus, textarea:focus, input:focus { outline:none; border-color:#ff7918; }
+        .flags { display:flex; flex-wrap:wrap; gap:18px; align-items:center; margin-top:8px; }
+        .flags label { display:flex; gap:7px; align-items:center; margin:0; color:#374151; font-size:13px; font-weight:500; cursor:pointer; }
+        .flags input { width:16px; height:16px; accent-color:#ff7918; margin:0; }
+        .btn { background:#ff7918; color:#21170e; border:none; height:38px; padding:0 16px; border-radius:7px; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; }
+        .book-head { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0 10px; }
+        .book-title { font-size:15px; margin:0; color:#1f2937; }
+        .tabs { display:flex; gap:6px; }
+        .tabs a { color:#374151; text-decoration:none; background:#fff; border:1px solid #d1d5db; height:38px; display:inline-flex; align-items:center; padding:0 12px; border-radius:7px; font-size:13px; font-weight:600; }
         .tabs a.on { background:#ff7918; border-color:#ff7918; color:#21170e; }
         .sheet-wrap { overflow:auto; border:1px solid #e5e7eb; border-radius:8px; }
         table.sheet { width:100%; border-collapse:collapse; font-size:12.5px; }
@@ -41,12 +49,11 @@
         .resolve { display:flex; gap:6px; margin-top:6px; }
         .resolve input { width:180px; padding:6px 8px; background:#fff; color:#1f2937; border:1px solid #d1d5db; font-size:12.5px; }
         .resolve button { background:#ff7918; color:#21170e; border:none; border-radius:7px; padding:0 10px; font-weight:700; cursor:pointer; }
-        .book-title { font-size:15px; margin:18px 0 8px; }
-        .search { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
-        .search input[type=text] { flex:1 1 220px; width:auto; }
-        .search label { display:flex; align-items:center; gap:6px; margin:0; font-size:13px; }
-        .search input[type=date] { background:#141414; border:1px solid #333; color:#fff; padding:8px 9px; border-radius:7px; font-family:inherit; }
-        .search button { background:#2c2c2c; color:#fff; border:1px solid #444; border-radius:7px; padding:9px 14px; font-weight:600; cursor:pointer; }
+        .search { display:flex; flex:1 1 520px; flex-wrap:wrap; gap:8px; align-items:center; }
+        .search input[type=text] { flex:1 1 200px; width:auto; }
+        .search label { display:flex; align-items:center; gap:6px; margin:0; font-size:13px; font-weight:500; }
+        .search input[type=date] { width:145px; }
+        .search button { height:38px; background:#fff; color:#1f2937; border:1px solid #d1d5db; border-radius:7px; padding:0 14px; font-weight:600; cursor:pointer; }
         .pages { display:flex; justify-content:center; gap:16px; align-items:center; padding:12px 0; font-size:13px; color:#999; }
         .pages a { color:#ff9a4d; text-decoration:none; font-weight:700; }
         .empty { color:#777; padding:20px 0; text-align:center; font-size:14px; }
@@ -61,7 +68,7 @@
         @if (session('status'))<div class="banner">{{ session('status') }}</div>@endif
         @if ($errors->any())<div class="errors">{{ $errors->first() }}</div>@endif
 
-        <form method="POST" action="{{ route('shift_notes.store') }}" class="panel">
+        <form method="POST" action="{{ route('shift_notes.store') }}" class="note-form">
             @csrf
             <div class="new-grid">
                 <div>
@@ -83,17 +90,18 @@
                 </div>
                 <div>
                     <label for="note-body">Novedad para el siguiente turno</label>
-                    <textarea name="body" id="note-body" maxlength="1000" required>{{ old('body') }}</textarea>
+                    <textarea name="body" id="note-body" rows="1" maxlength="1000" required>{{ old('body') }}</textarea>
                 </div>
+                <button class="btn" type="submit">Registrar novedad</button>
             </div>
             <div class="flags">
                 <label><input type="checkbox" name="urgent" value="1" @checked(old('urgent'))> Urgente</label>
                 <label><input type="checkbox" name="pending" value="1" @checked(old('pending'))> Queda pendiente de resolver</label>
-                <button class="btn" type="submit">Registrar novedad</button>
             </div>
         </form>
 
-        <h2 class="book-title">Libro de novedades</h2>
+        <div class="book-head">
+            <h2 class="book-title">Libro de novedades</h2>
         <div class="tabs">
             @foreach (['todas' => 'Todas', 'pendientes' => 'Pendientes', 'urgentes' => 'Urgentes'] as $key => $label)
                 <a href="{{ route('shift_notes.index', ['ver' => $key, 'q' => $search ?: null, 'desde' => $from ?: null, 'hasta' => $to ?: null]) }}" class="{{ $filter === $key ? 'on' : '' }}">{{ $label }}</a>
@@ -106,6 +114,7 @@
             <label>Hasta <input type="date" name="hasta" value="{{ $to }}"></label>
             <button type="submit">Buscar</button>
         </form>
+        </div>
 
         <div class="sheet-wrap">
             <table class="sheet">
