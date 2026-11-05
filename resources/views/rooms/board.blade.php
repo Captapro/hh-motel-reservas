@@ -3,12 +3,15 @@
 <head>
     <meta charset="utf-8"><meta name="color-scheme" content="dark">
     <noscript><meta http-equiv="refresh" content="30"></noscript>
+    <meta name="hh-board-version" content="{{ filemtime(resource_path('views/rooms/board.blade.php')) }}">
     <title>Tablero de Playrooms — HH Motel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
+        #hh-sound-hint { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:60; border:0; border-radius:999px; padding:10px 18px; background:#ff7918; color:#21170e; font:inherit; font-size:14px; font-weight:800; box-shadow:0 8px 24px rgba(0,0,0,.35); cursor:pointer; }
+        #hh-sound-hint[hidden] { display:none; }
         .page-inner { max-width: 1700px; width:100%; margin: 0; padding: 24px 24px 60px; }
         .flash-status { background:#0f2b22; border:1px solid #1c9169; color:#6ee7b7; padding:12px 16px; border-radius:9px; font-size:14px; font-weight:600; margin-bottom:20px; }
         .topline { margin-bottom: 14px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
@@ -322,15 +325,15 @@
         .compact .card a.bookings-btn.has-bookings { color:#e8c76f !important; }
         .compact .card details[open] summary { color:#ff9a4d !important; }
         .compact .card .sm svg { width:14px; height:14px; display:block; }
-        /* Ocupadas en una línea (nombre y tiempo): crecen al tocarlas, para ver En aseo y Fuera de servicio sin bajar. */
-        html.compact:not(.chips) .section.ocupadas .card:not(.open) { cursor:pointer; flex-wrap:wrap; gap:2px 8px; padding-top:7px; padding-bottom:7px; }
+        /* Ocupadas en dos líneas fijas (nombre arriba, tiempo y aviso abajo), todas del mismo alto: crecen al tocarlas, para ver En aseo y Fuera de servicio sin bajar. */
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) { cursor:pointer; flex-wrap:wrap; gap:3px 8px; padding-top:7px; padding-bottom:7px; min-height:62px; align-content:center; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) .card-head { flex:1 1 100%; }
         html.compact:not(.chips) .section.ocupadas .card:not(.open) > :not(.card-head):not(.eta) { display:none !important; }
         html.compact:not(.chips) .section.ocupadas .card:not(.open) .eta[style], html.compact:not(.chips) .section.ocupadas .card:not(.open) .code { display:none !important; }
-        html.compact:not(.chips) .section.ocupadas .card:not(.open) .eta { order:2; flex:0 1 auto; margin:0 0 0 auto; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        html.compact:not(.chips) .section.ocupadas .card:not(.open) .eta.ending-soon-text { flex:1 1 100%; white-space:normal; text-align:left; }
-        /* Lo urgente no se esconde con la tarjeta cerrada. */
-        html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.pending-balance)::after { content:'Falta cobrar'; order:3; flex:1 1 100%; color:#ffb379; font-size:11px; font-weight:700; }
-        html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.checkin-btn)::after { content:'Falta check-in'; order:3; flex:1 1 100%; color:#ffb379; font-size:11px; font-weight:700; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) .eta { order:2; flex:1 1 0; min-width:0; margin:0; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+                /* Lo urgente no se esconde con la tarjeta cerrada. */
+        html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.pending-balance)::after { content:'Falta cobrar'; order:3; flex:0 0 auto; color:#ffb379; font-size:11px; font-weight:700; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open):has(.checkin-btn)::after { content:'Falta check-in'; order:3; flex:0 0 auto; color:#ffb379; font-size:11px; font-weight:700; }
         /* En aseo con reserva: van primero; el borde y la etiqueta suben con lo que falta (12, 6 y 3 horas). No cambian el tamaño de la tarjeta. */
         .section.aseo .grid { margin-top:14px; row-gap:16px; }
         .section.aseo .card.aseo-first { position:relative; }
@@ -465,6 +468,51 @@
         }
 </style>
     <script>
+        // Un solo audio para todo el tablero. El navegador lo deja mudo hasta el primer
+        // toque o tecla en la página: por eso el tablero se actualiza sin recargar
+        // (recargar lo volvería a bloquear) y lo que no pudo sonar queda en cola.
+        (function () {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            const queue = [];
+            let ctx = null;
+            const running = () => !!ctx && ctx.state === 'running';
+            const hint = () => {
+                const el = document.getElementById('hh-sound-hint');
+                if (el) el.hidden = !AudioCtx || running();
+            };
+            const flush = () => {
+                while (running() && queue.length) queue.shift()(ctx);
+                hint();
+            };
+            const context = () => {
+                if (!ctx) {
+                    ctx = new AudioCtx();
+                    ctx.onstatechange = flush;
+                }
+                return ctx;
+            };
+            const wake = () => {
+                if (!AudioCtx) return;
+                try { context().resume().then(flush).catch(() => {}); } catch (e) { /* sin audio */ }
+            };
+            window.hhSound = function (play) {
+                if (!AudioCtx) return;
+                try {
+                    if (context().state === 'running') { play(ctx); return; }
+                    if (queue.length < 6) queue.push(play);
+                    wake();
+                    hint();
+                } catch (e) { /* sin audio: queda el aviso en pantalla */ }
+            };
+            document.addEventListener('pointerdown', wake, true);
+            document.addEventListener('keydown', wake, true);
+            document.addEventListener('DOMContentLoaded', () => { wake(); setTimeout(hint, 400); });
+        })();
+        // Lo que se vuelve a preparar cada vez que el tablero se actualiza.
+        window.hhBoardRenderers = [];
+        window.hhOnBoardRender = function (fn) { window.hhBoardRenderers.push(fn); fn(); };
+    </script>
+    <script>
         // Tres niveles de densidad: normal → compacta → chips → normal.
         // Se aplica antes de pintar para no hacer parpadear el layout.
         // 'hh-compact-board'='1' es el valor viejo (antes de que existiera
@@ -480,6 +528,7 @@
 </head>
 <body>
     @include('partials.navbar')
+    <button type="button" id="hh-sound-hint" hidden>🔔 Sonido bloqueado: toca aquí para activarlo</button>
     <div class="page-inner">
     @if (session('status'))
         <div class="flash-status">{{ session('status') }}</div>
@@ -669,10 +718,10 @@
     <script>
         // Tarjetas de "Por llegar": un clic en cualquier parte abre la reserva
         // (el botón de check-in conserva su propio enlace).
-        document.querySelectorAll('.proxima-card[data-href]').forEach(function (card) {
+        hhOnBoardRender(() => document.querySelectorAll('.proxima-card[data-href]').forEach(function (card) {
             card.addEventListener('click', function (e) { if (!e.target.closest('a, button')) window.location.href = card.dataset.href; });
             card.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.target.closest('a, button')) window.location.href = card.dataset.href; });
-        });
+        }));
     </script>
     <script>
         // Ciclo de densidad: normal → compacta → chips → normal. Un solo
@@ -696,7 +745,7 @@
             hhSetCompactLabel();
             hhSyncCompactWidth();
         }
-        hhSetCompactLabel();
+        hhOnBoardRender(hhSetCompactLabel);
 
         // Vista compacta: cuántas tarjetas de al menos 200 px caben en el panel
         // de Ocupadas (el más angosto de la columna principal) y qué ancho
@@ -712,7 +761,7 @@
             const cols = Math.max(1, Math.floor((inner + gap) / (min + gap)));
             root.style.setProperty('--hh-card-w', Math.floor((inner - gap * (cols - 1)) / cols) + 'px');
         }
-        hhSyncCompactWidth();
+        hhOnBoardRender(hhSyncCompactWidth);
         window.addEventListener('resize', hhSyncCompactWidth);
 
         // "Cambiar estado" abierto: un clic fuera (o Esc) lo cierra y la tarjeta vuelve a su tamaño.
@@ -755,12 +804,12 @@
 
         // Vista chips: la tarjeta entera es clickeable hacia el detalle de
         // el Playroom (sus botones quedan ocultos por CSS en ese modo).
-        document.querySelectorAll('.grid .card[data-href]').forEach(function (card) {
+        hhOnBoardRender(() => document.querySelectorAll('.grid .card[data-href]').forEach(function (card) {
             card.addEventListener('click', function (event) {
                 if (event.target.closest('a, button, input, select, form, details')) return;
                 if (hhCurrentDensity() === 'chips' || card.classList.contains('overdue-room') || card.querySelector('.pill-ocupada')) window.location.href = card.dataset.href;
             });
-        });
+        }));
 
         // Filtro de categoría — solo afecta la sección "Disponibles". Las
         // ocupadas y las "por llegar" quedan siempre visibles. La elección
@@ -811,10 +860,12 @@
                 cards().forEach(c => c.classList.toggle('open', c === card));
                 try { card ? sessionStorage.setItem(KEY, nameOf(card)) : sessionStorage.removeItem(KEY); } catch (e) {}
             }
-            try {
-                const saved = sessionStorage.getItem(KEY);
-                if (saved) cards().forEach(c => { if (nameOf(c) === saved) c.classList.add('open'); });
-            } catch (e) {}
+            hhOnBoardRender(() => {
+                try {
+                    const saved = sessionStorage.getItem(KEY);
+                    if (saved) cards().forEach(c => { if (nameOf(c) === saved) c.classList.add('open'); });
+                } catch (e) {}
+            });
             document.addEventListener('click', function (e) {
                 const card = e.target.closest && e.target.closest('.section.ocupadas .card');
                 const html = document.documentElement.classList;
@@ -862,7 +913,7 @@
             const se = document.getElementById('sidebar-empty'); if (se) se.hidden = proximas > 0;
         }
         // Los contadores de arriba llevan a su sección.
-        document.querySelectorAll('.summary .chip').forEach(function (chip) {
+        hhOnBoardRender(() => document.querySelectorAll('.summary .chip').forEach(function (chip) {
             const name = ['ocupadas', 'aseo', 'disponibles', 'fuera'].find(function (n) { return chip.classList.contains(n); });
             if (!name) return;
             chip.style.cursor = 'pointer';
@@ -871,9 +922,11 @@
                 const sec = document.querySelector('.section.' + name);
                 if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
+        }));
+        hhOnBoardRender(() => {
+            hhApplyWingFilter();
+            hhApplyCategoryFilter();
         });
-        hhApplyWingFilter();
-        hhApplyCategoryFilter();
     </script>
 
     <script>
@@ -893,28 +946,17 @@
             });
             // Tonos cortos de aviso. Si el navegador aún no deja sonar, suenan al primer toque o tecla.
             window.hhTone = function (notes, gap) {
-                try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const play = () => notes.forEach((freq, i) => {
-                        const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * gap;
-                        osc.type = 'sine'; osc.frequency.value = freq;
-                        gain.gain.setValueAtTime(0.0001, at);
-                        gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02);
-                        gain.gain.exponentialRampToValueAtTime(0.0001, at + gap + 0.25);
-                        osc.connect(gain); gain.connect(ctx.destination);
-                        osc.start(at); osc.stop(at + gap + 0.3);
-                    });
-                    if (ctx.state === 'running') { play(); return; }
-                    const unlock = () => {
-                        document.removeEventListener('pointerdown', unlock);
-                        document.removeEventListener('keydown', unlock);
-                        ctx.resume().then(play);
-                    };
-                    document.addEventListener('pointerdown', unlock);
-                    document.addEventListener('keydown', unlock);
-                } catch (e) { /* sin audio: queda el aviso en pantalla */ }
+                window.hhSound((ctx) => notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * gap;
+                    osc.type = 'sine'; osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.0001, at);
+                    gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, at + gap + 0.25);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(at); osc.stop(at + gap + 0.3);
+                }));
             };
-            // Una vez por código, aunque el tablero se recargue cada 30 segundos.
+            // Una vez por código, aunque el tablero se actualice cada 30 segundos.
             window.hhToneOnce = function (key, codes, notes, gap) {
                 let done = [];
                 try { done = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
@@ -924,35 +966,23 @@
                 window.hhTone(notes, gap);
             };
             // Reserva a 10 minutos o menos de llegar: ding-dong.
-            window.hhToneOnce('hh-arriving-warned', [...document.querySelectorAll('[data-arriving]')].map((c) => c.dataset.arriving), [659.25, 523.25], 0.32);
-            // Campanita propia de reserva nueva (do-mi-sol-do), una vez por reserva aunque el
-            // tablero se recargue. Si el navegador aún no deja sonar (nadie tocó la página),
-            // suena al primer toque o tecla.
+            hhOnBoardRender(() => window.hhToneOnce('hh-arriving-warned', [...document.querySelectorAll('[data-arriving]')].map((c) => c.dataset.arriving), [659.25, 523.25], 0.32));
+            // Campanita propia de reserva nueva (do-mi-sol-do), una vez por reserva.
             function hhChimeForNewBookings(ids) {
                 let sounded = [];
                 try { sounded = JSON.parse(localStorage.getItem('hh-new-booking-chimed') || '[]'); } catch (e) {}
                 const fresh = ids.filter((id) => !sounded.includes(id));
                 if (!fresh.length) return;
                 try { localStorage.setItem('hh-new-booking-chimed', JSON.stringify(sounded.concat(fresh).slice(-200))); } catch (e) {}
-                try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const play = () => [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
-                        const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * 0.16;
-                        osc.type = 'triangle'; osc.frequency.value = freq;
-                        gain.gain.setValueAtTime(0.0001, at);
-                        gain.gain.exponentialRampToValueAtTime(0.35, at + 0.02);
-                        gain.gain.exponentialRampToValueAtTime(0.0001, at + (i === 3 ? 0.9 : 0.35));
-                        osc.connect(gain); gain.connect(ctx.destination);
-                        osc.start(at); osc.stop(at + 1);
-                    });
-                    if (ctx.state === 'suspended') {
-                        const unlock = () => { ctx.resume().then(play); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };
-                        document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
-                        ctx.resume().then(() => { if (ctx.state === 'running') { document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); play(); } }).catch(() => {});
-                    } else {
-                        play();
-                    }
-                } catch (e) {}
+                window.hhSound((ctx) => [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * 0.16;
+                    osc.type = 'triangle'; osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.0001, at);
+                    gain.gain.exponentialRampToValueAtTime(0.35, at + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, at + (i === 3 ? 0.9 : 0.35));
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(at); osc.stop(at + 1);
+                }));
             }
             async function poll() {
                 try {
@@ -979,46 +1009,74 @@
         })();
     </script>
 <script>
-    // Se recarga solo cada 30 s, salvo mientras alguien usa el chat de Ayuda
-    // (window.hhHoldRefresh lo marca partials/help-widget): recargar lo cerraría.
-    // Suena una vez por estadía cuando entra en "por vencer" (el tablero se recarga cada 30 s).
-    (function () {
+    // Suena una vez por estadía cuando entra en "por vencer". Si el navegador aún no
+    // deja sonar, queda en cola y suena al primer toque o tecla.
+    hhOnBoardRender(function () {
         let warned = [];
         try { warned = JSON.parse(localStorage.getItem('hh-ending-soon-warned') || '[]'); } catch (e) {}
         const fresh = [...document.querySelectorAll('.card[data-ending-soon]')].map(c => c.dataset.endingSoon).filter(code => !warned.includes(code));
         if (!fresh.length) return;
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            [0, 0.35].forEach(function (at) {
-                const osc = ctx.createOscillator(), gain = ctx.createGain();
-                osc.frequency.value = 880; gain.gain.value = 0.15;
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.start(ctx.currentTime + at); osc.stop(ctx.currentTime + at + 0.2);
-            });
-        } catch (e) {}
         try { localStorage.setItem('hh-ending-soon-warned', JSON.stringify(warned.concat(fresh).slice(-200))); } catch (e) {}
-    })();
+        window.hhSound((ctx) => [0, 0.35].forEach(function (at) {
+            const osc = ctx.createOscillator(), gain = ctx.createGain();
+            osc.frequency.value = 880; gain.gain.value = 0.6;
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + at); osc.stop(ctx.currentTime + at + 0.2);
+        }));
+    });
 
-    setInterval(function () { if (!window.hhHoldRefresh) window.location.reload(); }, 30000);
+    // Se actualiza cada 30 s sin recargar la página: recargar volvería a bloquear el sonido.
+    // No actualiza mientras se usa el chat de Ayuda (window.hhHoldRefresh, partials/help-widget)
+    // ni mientras se escribe o hay un menú abierto en el tablero, para no borrarlo.
+    (function () {
+        const page = document.querySelector('.page-inner');
+        const version = () => document.querySelector('meta[name="hh-board-version"]')?.content;
+        const inUse = () => {
+            const active = document.activeElement;
+            return window.hhHoldRefresh
+                || (active && active.matches('input, select, textarea') && page.contains(active))
+                || !!page.querySelector('details[open]');
+        };
+        let busy = false;
+        async function refresh() {
+            if (busy || inUse()) return;
+            busy = true;
+            try {
+                const response = await fetch(window.location.href, { headers: { 'Accept': 'text/html' }, cache: 'no-store' });
+                // Sesión vencida: la recarga normal lleva al ingreso.
+                if (response.redirected) { window.location.reload(); return; }
+                if (!response.ok) return;
+                const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+                const fresh = doc.querySelector('.page-inner');
+                // Hubo una publicación: la página cambió y hay que cargarla entera.
+                if (!fresh || doc.querySelector('meta[name="hh-board-version"]')?.content !== version()) { window.location.reload(); return; }
+                if (inUse()) return;
+                fresh.querySelector('#pass-scans')?.replaceWith(page.querySelector('#pass-scans'));
+                page.replaceChildren(...fresh.childNodes);
+                const closes = document.querySelector('.hh-when'), freshCloses = doc.querySelector('.hh-when');
+                if (closes && freshCloses) closes.textContent = freshCloses.textContent;
+                window.hhBoardRenderers.forEach((fn) => fn());
+            } catch (e) { /* sin red: se reintenta en la próxima vuelta */ } finally {
+                busy = false;
+            }
+        }
+        window.hhRefreshBoard = refresh;
+        setInterval(refresh, 30000);
+    })();
 </script>
 @if (Str::contains((string) session('status'), ['Ingreso registrado con éxito', '✓ Registrado']))
     {{-- Ingreso presencial listo: dos notas cortas, distintas de la campanita del catálogo. --}}
     <script id="hh-success-sound">
         (function () {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const play = () => [784, 1174.66].forEach((freq, i) => {
-                    const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * 0.13;
-                    osc.type = 'sine'; osc.frequency.value = freq;
-                    gain.gain.setValueAtTime(0.0001, at);
-                    gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
-                    osc.connect(gain); gain.connect(ctx.destination);
-                    osc.start(at); osc.stop(at + 0.35);
-                });
-                if (ctx.state === 'running') { play(); return; }
-                ctx.resume().then(() => { if (ctx.state === 'running') play(); });
-            } catch (e) { /* sin audio: queda el mensaje en pantalla */ }
+            window.hhSound((ctx) => [784, 1174.66].forEach((freq, i) => {
+                const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime + i * 0.13;
+                osc.type = 'sine'; osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.0001, at);
+                gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(at); osc.stop(at + 0.35);
+            }));
         })();
     </script>
 @endif
