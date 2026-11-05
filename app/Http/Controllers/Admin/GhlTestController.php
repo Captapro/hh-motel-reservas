@@ -50,12 +50,18 @@ class GhlTestController extends Controller
             ->get()
             ->map(function (Booking $booking) use ($reviews) {
                 $hasPhone = filled($booking->customer?->phone_e164);
+                $result = Cache::get(GhlReviewRequests::RESULT_KEY_PREFIX.$booking->id);
                 $status = match (true) {
+                    $result && $result['sent'] => 'Enviado a GHL ('.$result['result'].')',
+                    $result && $booking->review_requested_at => 'Falló, ya no se reintenta ('.$result['result'].')',
+                    (bool) $result => 'Falló, se reintenta ('.$result['result'].')',
                     ! $booking->review_requested_at && $booking->checked_out_at->gt(now()->subMinutes(GhlReviewRequests::MINUTES_AFTER_CHECKOUT)) => 'Esperando sus 15 minutos',
-                    ! $booking->review_requested_at => 'No se procesó',
-                    ! $hasPhone => 'Sin teléfono: no se envía',
                     $reviews->alreadyReviewed($booking) => 'Ya había opinado: no se envía',
-                    default => 'Enviado a GHL',
+                    ! $hasPhone => 'Sin teléfono: no se envía',
+                    ! $booking->customer?->marketing_opt_in => 'Sin permiso de promociones: no se envía',
+                    (bool) $booking->review_requested_at => 'Enviado a GHL',
+                    $reviews->isQuietHours() => 'Espera horario: sale a las 11:00',
+                    default => 'Por enviar',
                 };
 
                 return ['booking' => $booking, 'has_phone' => $hasPhone, 'status' => $status];

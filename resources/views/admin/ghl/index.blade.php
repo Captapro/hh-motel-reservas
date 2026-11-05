@@ -28,7 +28,7 @@
 
     <div class="card">
         <h2 style="font-size:14px; margin:0 0 4px;">Pedidos de opinión</h2>
-        <p class="sub" style="margin:0 0 10px;">15 minutos después del check-out el sistema avisa a GHL para que mande el WhatsApp. Aquí se ve qué pasó con cada salida de las últimas 24 horas.</p>
+        <p class="sub" style="margin:0 0 10px;">15 minutos después del check-out el sistema avisa a GHL para que mande el WhatsApp, solo a clientes con teléfono y permiso de promociones, entre las 11:00 y las 22:00. Aquí se ve qué pasó con cada salida de las últimas 24 horas.</p>
         @foreach ($reviewWebhooks as $name => $set)
             <p style="margin:2px 0; color:{{ $set ? '#6ee7b7' : '#f3b8b8' }};">{{ $set ? '✓' : '✗' }} {{ $name }} {{ $set ? 'configurado' : 'vacío: no se envía nada' }}</p>
         @endforeach

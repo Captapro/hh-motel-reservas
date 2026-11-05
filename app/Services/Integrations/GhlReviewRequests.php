@@ -18,6 +18,11 @@ use Throwable;
  * WhatsApp los manda GHL por webhook; sin la URL configurada no se envía
  * nada, pero el cupón igual se crea y se muestra en la página de gracias.
  *
+ * Las plantillas son de marketing: solo van a quien aceptó promociones. De
+ * noche no se escribe: lo que venza entre las 22:00 y las 11:00 sale a las 11:00.
+ * Si GHL falla se reintenta, y un teléfono o permiso agregado después igual
+ * alcanza a salir dentro de las 24 horas siguientes a la salida.
+ *
  * El premio es por opinar en nuestra página, cualquiera sea la nota: Google
  * prohíbe dar descuentos a cambio de reseñas en Google.
  */
@@ -33,13 +38,25 @@ class GhlReviewRequests
 
     public const ORIGIN = 'opinion';
 
+    public const SEND_FROM_HOUR = 11;
+
+    public const SEND_UNTIL_HOUR = 22;
+
+    public const WINDOW_HOURS = 24;
+
+    public const MAX_ATTEMPTS = 3;
+
+    public const RETRY_MINUTES = 15;
+
+    public const RESULT_KEY_PREFIX = 'ghl:review-result:';
+
     public function __construct(private readonly GhlReservationNotifier $notifier) {}
 
     /** Corre con app:reservas-expirar. Nunca lanza. */
     public function sendDue(): void
     {
         $url = config('services.ghl.webhook_pedir_opinion');
-        if (! filled($url)) {
+        if (! filled($url) || $this->isQuietHours()) {
             return;
         }
 
@@ -49,14 +66,43 @@ class GhlReviewRequests
             ->whereNotNull('checked_out_at')
             ->where('checked_out_at', '<=', now()->subMinutes(self::MINUTES_AFTER_CHECKOUT))
             // Solo las recién terminadas: al configurar el webhook no se le escribe a estadías viejas.
-            ->where('checked_out_at', '>=', now()->subHours(6))
+            ->where('checked_out_at', '>=', now()->subHours(self::WINDOW_HOURS))
             ->get()
             ->each(function (Booking $booking) use ($url) {
-                $booking->update(['review_requested_at' => now()]);
-                if (filled($booking->customer?->phone_e164) && ! $this->alreadyReviewed($booking)) {
-                    $this->post('pedir_opinion', $url, $booking, ['link_opinion' => route('reviews.create', $booking->code)]);
+                if ($this->alreadyReviewed($booking)) {
+                    $booking->update(['review_requested_at' => now()]);
+
+                    return;
+                }
+                // Sin teléfono o sin permiso queda pendiente: si se agrega a tiempo, igual sale.
+                if (! $this->canReceive($booking)) {
+                    return;
+                }
+                // Evita dos envíos a la vez y espacia los reintentos.
+                if (! Cache::add('ghl:review-try:'.$booking->id, true, now()->addMinutes(self::RETRY_MINUTES))) {
+                    return;
+                }
+
+                $sent = $this->post('pedir_opinion', $url, $booking, ['link_opinion' => route('reviews.create', $booking->code)]);
+                $attemptsKey = 'ghl:review-attempts:'.$booking->id;
+                Cache::add($attemptsKey, 0, now()->addDays(2));
+                if ($sent || Cache::increment($attemptsKey) >= self::MAX_ATTEMPTS) {
+                    $booking->update(['review_requested_at' => now()]);
                 }
             });
+    }
+
+    /** Tiene WhatsApp y aceptó promociones: las plantillas de opinión y cupón son de marketing. */
+    public function canReceive(Booking $booking): bool
+    {
+        return filled($booking->customer?->phone_e164) && (bool) $booking->customer?->marketing_opt_in;
+    }
+
+    public function isQuietHours(): bool
+    {
+        $hour = now('America/Santiago')->hour;
+
+        return $hour < self::SEND_FROM_HOUR || $hour >= self::SEND_UNTIL_HOUR;
     }
 
     /** ¿Este cliente ya dejó alguna opinión ligada a una de sus reservas? */
@@ -102,7 +148,7 @@ class GhlReviewRequests
         $review->update(['coupon_id' => $coupon->id]);
 
         $url = config('services.ghl.webhook_cupon_opinion');
-        if (filled($url) && filled($booking->customer?->phone_e164)) {
+        if (filled($url) && $this->canReceive($booking)) {
             $this->post('cupon_opinion', $url, $booking, [
                 'cupon_codigo' => $coupon->code,
                 'cupon_descuento' => self::DISCOUNT_PERCENT.'%',
@@ -123,19 +169,27 @@ class GhlReviewRequests
         return $code;
     }
 
-    private function post(string $kind, string $url, Booking $booking, array $extra): void
+    private function post(string $kind, string $url, Booking $booking, array $extra): bool
     {
+        $sent = false;
         try {
             $response = Http::timeout(6)->acceptJson()->post($url, $this->notifier->payload($booking) + $extra);
+            $sent = $response->successful();
             $result = 'GHL respondió '.$response->status();
-            if (! $response->successful()) {
+            if (! $sent) {
                 Log::warning('GHL: el webhook "'.$kind.'" respondió '.$response->status().' para la reserva '.$booking->code);
             }
         } catch (Throwable $e) {
             $result = 'no se pudo enviar: '.$e->getMessage();
             Log::warning('GHL: no se pudo mandar "'.$kind.'" de la reserva '.$booking->code, ['error' => $e->getMessage()]);
         }
-        // Último envío de cada tipo, para el diagnóstico en Admin → Integración GHL.
-        Cache::put(self::LAST_SENT_KEY_PREFIX.$kind, ['at' => now()->toIso8601String(), 'booking' => $booking->code, 'result' => $result], now()->addDays(7));
+        // Último envío de cada tipo y resultado por reserva, para el diagnóstico en Admin → Integración GHL.
+        $info = ['at' => now()->toIso8601String(), 'booking' => $booking->code, 'result' => $result, 'sent' => $sent];
+        Cache::put(self::LAST_SENT_KEY_PREFIX.$kind, $info, now()->addDays(7));
+        if ($kind === 'pedir_opinion') {
+            Cache::put(self::RESULT_KEY_PREFIX.$booking->id, $info, now()->addDays(2));
+        }
+
+        return $sent;
     }
 }

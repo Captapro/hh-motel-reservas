@@ -947,6 +947,7 @@ class BookingIntegrityTest extends TestCase
         }
         config(['services.ghl.webhook_pedir_opinion' => 'https://services.leadconnectorhq.com/hooks/opinion', 'services.ghl.webhook_cupon_opinion' => 'https://services.leadconnectorhq.com/hooks/cupon']);
         Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $this->customer->update(['marketing_opt_in' => true]);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
         $next = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00')]);
         Carbon::setTestNow(Carbon::parse('2026-11-02 15:00'));
@@ -984,6 +985,50 @@ class BookingIntegrityTest extends TestCase
         app(CouponValidator::class)->validate($coupon, $this->room, Carbon::parse('2026-11-05 12:00'), 60, $other, 20000);
     }
 
+    public function test_review_requests_respect_consent_night_hours_and_retry_when_ghl_fails(): void
+    {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        config(['services.ghl.webhook_pedir_opinion' => 'https://services.leadconnectorhq.com/hooks/opinion']);
+        Http::fake(['services.leadconnectorhq.com/*' => Http::sequence()->push([], 500)->push([], 500)->push(['ok' => true])]);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 12:00'), 'checked_out_at' => Carbon::parse('2026-11-03 04:00', 'UTC')]);
+        $requests = app(GhlReviewRequests::class);
+
+        // 01:30 en Chile: de noche no sale nada.
+        $this->customer->update(['marketing_opt_in' => true]);
+        Carbon::setTestNow(Carbon::parse('2026-11-03 04:30', 'UTC'));
+        $requests->sendDue();
+        Http::assertNothingSent();
+
+        // 11:05: sin permiso de promociones tampoco, pero queda pendiente y sale si lo acepta.
+        $this->customer->update(['marketing_opt_in' => false]);
+        Carbon::setTestNow(Carbon::parse('2026-11-03 14:05', 'UTC'));
+        $requests->sendDue();
+        Http::assertNothingSent();
+        $this->assertNull($booking->fresh()->review_requested_at);
+        $this->customer->update(['marketing_opt_in' => true]);
+
+        // GHL falla: no se reintenta en cada vuelta, sí a los 15 minutos, y no se pierde el pedido.
+        $requests->sendDue();
+        $requests->sendDue();
+        Http::assertSentCount(1);
+        $this->assertNull($booking->fresh()->review_requested_at);
+        Carbon::setTestNow(Carbon::parse('2026-11-03 14:21', 'UTC'));
+        $requests->sendDue();
+        Http::assertSentCount(2);
+        Carbon::setTestNow(Carbon::parse('2026-11-03 14:37', 'UTC'));
+        $requests->sendDue();
+        Http::assertSentCount(3);
+        $this->assertNotNull($booking->fresh()->review_requested_at);
+
+        // Ya salió: no se repite.
+        Carbon::setTestNow(Carbon::parse('2026-11-03 15:00', 'UTC'));
+        $requests->sendDue();
+        Http::assertSentCount(3);
+    }
+
     public function test_the_ghl_page_shows_what_happened_to_each_checkout_and_a_failing_step_does_not_block_review_requests(): void
     {
         foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
@@ -991,6 +1036,7 @@ class BookingIntegrityTest extends TestCase
         }
         config(['services.ghl.webhook_pedir_opinion' => 'https://services.leadconnectorhq.com/hooks/opinion', 'services.ghl.webhook_cupon_opinion' => null]);
         Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $this->customer->update(['marketing_opt_in' => true]);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
         Carbon::setTestNow(Carbon::parse('2026-11-02 15:06'));
         $booking->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 12:00'), 'checked_out_at' => Carbon::parse('2026-11-02 14:50')]);
