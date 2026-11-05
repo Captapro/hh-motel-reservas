@@ -196,6 +196,8 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/novedades', [ShiftNoteController::class, 'store'])->name('shift_notes.store');
     Route::post('/novedades/leidas', [ShiftNoteController::class, 'markRead'])->name('shift_notes.read');
     Route::post('/novedades/{note}/resolver', [ShiftNoteController::class, 'resolve'])->name('shift_notes.resolve');
+    Route::post('/novedades/{note}/quitar-fija', [ShiftNoteController::class, 'unpin'])->name('shift_notes.unpin');
+    Route::delete('/novedades/{note}', [ShiftNoteController::class, 'destroy'])->name('shift_notes.destroy');
     Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1,customers.lookup')->name('customers.lookup');
     Route::get('/clientes/nombres', fn (NameSuggestions $names) => response()->json($names->lists())->header('Cache-Control', 'private, max-age=3600'))->name('customers.names');
     Route::get('/reservar/precio', [ReservationController::class, 'priceQuote'])->middleware('throttle:80,1,reservations.price')->name('reservations.price');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Room;
 use App\Models\ShiftNote;
 use Carbon\Carbon;
@@ -29,6 +30,7 @@ class ShiftNoteController extends Controller
             ->when($search !== '', fn ($q) => $q->whereRaw('lower(body) like ?', ['%'.mb_strtolower($search).'%']))
             ->when($day($from), fn ($q, $date) => $q->where('created_at', '>=', $date->startOfDay()))
             ->when($day($to), fn ($q, $date) => $q->where('created_at', '<=', $date->endOfDay()))
+            ->orderByDesc('pinned')
             ->orderByRaw('case when pending and resolved_at is null then 0 else 1 end')
             ->orderByDesc('created_at')
             ->paginate(40)
@@ -52,13 +54,16 @@ class ShiftNoteController extends Controller
             'room_id' => ['nullable', 'exists:rooms,id'],
             'urgent' => ['nullable', 'boolean'],
             'pending' => ['nullable', 'boolean'],
+            'pinned' => ['nullable', 'boolean'],
         ], ['body.required' => 'Escribe la novedad.']);
 
-        ShiftNote::create($validated + [
+        ShiftNote::create([
             'user_id' => $request->user()->id,
             'urgent' => $request->boolean('urgent'),
             'pending' => $request->boolean('pending'),
-        ]);
+            // Fija: queda en la aleta de todos los turnos, por eso la marca solo administración.
+            'pinned' => $request->user()->isAdministrador() && $request->boolean('pinned'),
+        ] + $validated);
 
         return back()->with('status', 'Novedad registrada.');
     }
@@ -84,5 +89,32 @@ class ShiftNoteController extends Controller
         $note->update($validated + ['resolved_at' => now(), 'resolved_by' => $request->user()->id]);
 
         return back()->with('status', 'Novedad resuelta.');
+    }
+
+    /** Deja de estar fija: sale de la aleta, pero sigue en el libro. */
+    public function unpin(Request $request, ShiftNote $note): RedirectResponse
+    {
+        abort_unless($request->user()->isAdministrador(), 403);
+
+        $note->update(['pinned' => false]);
+
+        return back()->with('status', 'La novedad ya no está fija.');
+    }
+
+    /** Solo administración: queda la copia del texto en el registro de cambios. */
+    public function destroy(Request $request, ShiftNote $note): RedirectResponse
+    {
+        abort_unless($request->user()->isAdministrador(), 403);
+
+        AuditLog::record($request->user()->id, 'novedad.eliminada', 'ShiftNote', $note->id, [
+            'autor' => $note->authorName(),
+            'categoria' => $note->category,
+            'fija' => $note->pinned,
+            'texto' => $note->body,
+            'escrita' => $note->created_at?->toIso8601String(),
+        ], null);
+        $note->delete();
+
+        return back()->with('status', 'Novedad eliminada.');
     }
 }

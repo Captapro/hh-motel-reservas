@@ -59,6 +59,7 @@ class RoomAseoReactivationTest extends TestCase
             '2026_11_04_140000_add_ronda_pin_to_users.php',
             '2026_11_04_150000_create_staff_notices_tables.php',
             '2026_11_04_160000_create_push_subscriptions_table.php',
+            '2026_11_05_100000_add_pinned_to_shift_notes.php',
             '2026_08_18_120014_create_booking_addons_table.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',

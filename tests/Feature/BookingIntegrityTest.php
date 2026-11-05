@@ -2768,9 +2768,32 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('96302', $payment->fresh()->receipt_number);
     }
 
+    public function test_temporary_notes_leave_after_24_hours_and_only_admins_pin_them(): void
+    {
+        (require database_path('migrations/2026_11_04_120000_create_shift_notes_tables.php'))->up();
+        (require database_path('migrations/2026_11_05_100000_add_pinned_to_shift_notes.php'))->up();
+        $next = User::factory()->create(['role' => 'recepcion']);
+        $admin = User::factory()->create(['role' => 'administrador']);
+
+        // Temporal: sale a las 24 horas pero queda en el libro. Fija (solo administración): sigue hasta quitarla.
+        $this->actingAs($next)->post(route('shift_notes.store'), ['category' => 'Otro', 'body' => 'Fija pedida por anfitriona', 'pinned' => 1]);
+        $this->assertFalse(ShiftNote::where('body', 'Fija pedida por anfitriona')->sole()->pinned);
+        $this->actingAs($admin)->post(route('shift_notes.store'), ['category' => 'Otro', 'body' => 'Regla permanente', 'pinned' => 1]);
+        $pinned = ShiftNote::where('body', 'Regla permanente')->sole();
+        $this->assertTrue($pinned->pinned);
+        $this->travel(25)->hours();
+        $this->assertSame([$pinned->id], ShiftNote::today()->pluck('id')->all());
+        $this->assertSame([$pinned->id], ShiftNote::alertFor($next)->pluck('id')->all());
+        $this->assertSame(2, ShiftNote::count());
+        $this->actingAs($next)->post(route('shift_notes.unpin', $pinned))->assertForbidden();
+        $this->actingAs($admin)->post(route('shift_notes.unpin', $pinned))->assertRedirect();
+        $this->assertTrue(ShiftNote::today()->isEmpty());
+    }
+
     public function test_shift_notes_alert_the_next_host_until_read_and_keep_who_read_them(): void
     {
         (require database_path('migrations/2026_11_04_120000_create_shift_notes_tables.php'))->up();
+        (require database_path('migrations/2026_11_05_100000_add_pinned_to_shift_notes.php'))->up();
         $author = User::factory()->create(['role' => 'recepcion']);
         $next = User::factory()->create(['role' => 'recepcion']);
 
@@ -2796,6 +2819,17 @@ class BookingIntegrityTest extends TestCase
             ->post(route('shift_notes.store'), ['category' => 'Otro', 'body' => 'Prueba desde soporte'])->assertSessionHasNoErrors();
         $this->assertSame($support->id, ShiftNote::where('body', 'Prueba desde soporte')->value('user_id'));
         ShiftNote::where('body', 'Prueba desde soporte')->delete();
+
+        $admin = User::factory()->create(['role' => 'administrador']);
+        // Solo administración elimina novedades, y queda el texto en el registro de cambios.
+        $removable = ShiftNote::create(['user_id' => $author->id, 'category' => 'Otro', 'body' => 'Escrita por error']);
+        $this->actingAs($next)->delete(route('shift_notes.destroy', $removable))->assertForbidden();
+        $this->get(route('shift_notes.index'))->assertDontSee('Eliminar');
+        $this->assertDatabaseHas('shift_notes', ['id' => $removable->id]);
+        $this->actingAs($admin)->get(route('shift_notes.index'))->assertSee('Eliminar');
+        $this->delete(route('shift_notes.destroy', $removable))->assertRedirect();
+        $this->assertDatabaseMissing('shift_notes', ['id' => $removable->id]);
+        $this->assertStringContainsString('Escrita por error', (string) \App\Models\AuditLog::where('action', 'novedad.eliminada')->sole()->getRawOriginal('old_value'));
 
         // Soporte en vista de anfitrión ve lo mismo que ella, aunque haya escrito la novedad.
         $this->assertSame([$note->id], ShiftNote::previewAlert()->pluck('id')->all());

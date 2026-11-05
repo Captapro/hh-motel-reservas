@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Services\Rooms\RoomClosingLog;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -13,19 +12,21 @@ use Illuminate\Support\Collection;
 
 /**
  * Cuaderno de novedades: lo que un turno le deja al siguiente. Lo escrito no se
- * edita ni se borra; una novedad pendiente sigue avisándose hasta resolverse.
+ * edita; solo administración puede eliminarlo, y queda en el registro de cambios.
+ * Las temporales salen de la aleta a las 24 horas; las fijas y las pendientes se
+ * quedan hasta quitarlas o resolverlas. En el libro quedan todas.
  */
-#[Fillable(['user_id', 'staff_id', 'category', 'body', 'room_id', 'urgent', 'pending', 'resolved_at', 'resolved_by', 'resolution'])]
+#[Fillable(['user_id', 'staff_id', 'category', 'body', 'room_id', 'urgent', 'pending', 'pinned', 'resolved_at', 'resolved_by', 'resolution'])]
 class ShiftNote extends Model
 {
     public const CATEGORIES = ['Playroom', 'Cliente', 'Caja', 'Mantención', 'Insumos', 'Otro'];
 
-    /** Una anfitriona nueva o que vuelve no recibe novedades más viejas que esto, salvo las pendientes. */
-    public const ALERT_DAYS = 3;
+    /** Cuánto dura a la vista una novedad temporal. */
+    public const TEMPORARY_HOURS = 24;
 
     protected function casts(): array
     {
-        return ['urgent' => 'boolean', 'pending' => 'boolean', 'resolved_at' => 'datetime'];
+        return ['urgent' => 'boolean', 'pending' => 'boolean', 'pinned' => 'boolean', 'resolved_at' => 'datetime'];
     }
 
     public function user(): BelongsTo
@@ -68,26 +69,23 @@ class ShiftNote extends Model
     {
         return $query->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', '!=', $user->id))
             ->whereDoesntHave('readers', fn ($q) => $q->whereKey($user->id))
-            ->where(fn ($q) => $q->where('created_at', '>=', now()->subDays(self::ALERT_DAYS))
-                ->orWhere(fn ($open) => $open->where('pending', true)->whereNull('resolved_at')));
+            ->active();
     }
 
-    /**
-     * Las novedades del día operativo (corta a las 03:00) y las pendientes.
-     * Quedan a la vista durante el día y salen solas al empezar el siguiente.
-     */
+    /** A la vista del turno: temporales de las últimas 24 horas, fijas y pendientes. */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where(fn ($q) => $q->where('created_at', '>=', now()->subHours(self::TEMPORARY_HOURS))
+            ->orWhere('pinned', true)
+            ->orWhere(fn ($open) => $open->where('pending', true)->whereNull('resolved_at')));
+    }
+
+    /** Lo que está a la vista del turno, con fijas y urgentes primero. */
     public static function today(): Collection
     {
-        $cut = now('America/Santiago')->setTimeFromTimeString(RoomClosingLog::CUT_TIME);
-        if ($cut->isFuture()) {
-            $cut->subDay();
-        }
-
         try {
-            return self::with(['user', 'staff', 'room'])
-                ->where(fn ($q) => $q->where('created_at', '>=', $cut)
-                    ->orWhere(fn ($open) => $open->where('pending', true)->whereNull('resolved_at')))
-                ->orderByDesc('urgent')->orderByDesc('created_at')->get();
+            return self::with(['user', 'staff', 'room'])->active()
+                ->orderByDesc('pinned')->orderByDesc('urgent')->orderByDesc('created_at')->get();
         } catch (QueryException) {
             return collect();
         }
@@ -96,14 +94,7 @@ class ShiftNote extends Model
     /** Vista de anfitrión de soporte: lo que le saldría a una anfitriona, sin contar lecturas. */
     public static function previewAlert(): Collection
     {
-        try {
-            return self::with(['user', 'staff', 'room'])
-                ->where(fn ($q) => $q->where('created_at', '>=', now()->subDays(self::ALERT_DAYS))
-                    ->orWhere(fn ($open) => $open->where('pending', true)->whereNull('resolved_at')))
-                ->orderByDesc('urgent')->orderByDesc('created_at')->get();
-        } catch (QueryException) {
-            return collect();
-        }
+        return self::today();
     }
 
     /** Reservas que llegan en las próximas 24 horas, para avisarlas al entrar al turno. */
@@ -134,7 +125,7 @@ class ShiftNote extends Model
 
         try {
             return self::with(['user', 'staff', 'room'])->unreadBy($user)
-                ->orderByDesc('urgent')->orderByDesc('created_at')->get();
+                ->orderByDesc('pinned')->orderByDesc('urgent')->orderByDesc('created_at')->get();
         } catch (QueryException) {
             return collect();
         }

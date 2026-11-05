@@ -48,6 +48,11 @@
         .resolve-box summary { cursor:pointer; color:#c2410c; font-weight:700; }
         .resolve { display:flex; gap:6px; margin-top:6px; }
         .resolve input { width:180px; padding:6px 8px; background:#fff; color:#1f2937; border:1px solid #d1d5db; font-size:12.5px; }
+        .tag.pin { background:#fff1e6; color:#c2410c; }
+        .flag-hint { color:#6b7280; font-size:12.5px; }
+        .note-delete button.unpin { color:#c2410c; }
+        .note-delete { margin-top:6px; }
+        .note-delete button { background:none; border:none; padding:0; color:#b42318; font-size:12.5px; font-weight:700; cursor:pointer; }
         .resolve button { background:#ff7918; color:#21170e; border:none; border-radius:7px; padding:0 10px; font-weight:700; cursor:pointer; }
         .search { display:flex; flex:1 1 520px; flex-wrap:wrap; gap:8px; align-items:center; }
         .search input[type=text] { flex:1 1 200px; width:auto; }
@@ -97,6 +102,10 @@
             <div class="flags">
                 <label><input type="checkbox" name="urgent" value="1" @checked(old('urgent'))> Urgente</label>
                 <label><input type="checkbox" name="pending" value="1" @checked(old('pending'))> Queda pendiente de resolver</label>
+                @if (auth()->user()->isAdministrador())
+                    <label><input type="checkbox" name="pinned" value="1" @checked(old('pinned'))> 📌 Fija: queda a la vista hasta quitarla</label>
+                @endif
+                <span class="flag-hint">Si no es fija ni pendiente, sale de la aleta a las 24 horas y queda en el libro.</span>
             </div>
         </form>
 
@@ -130,6 +139,7 @@
                             <td>{{ $note->category }}</td>
                             <td>{{ $note->room?->name ?? '—' }}</td>
                             <td class="text">
+                                @if ($note->pinned)<span class="tag pin">📌 Fija</span>@endif
                                 @if ($note->urgent)<span class="tag hot">Urgente</span>@endif
                                 <span class="note-text">{{ $note->body }}</span>
                                 @if ($note->resolved_at)
@@ -153,6 +163,19 @@
                                             <button type="submit">Guardar</button>
                                         </form>
                                     </details>
+                                @endif
+                                @if ($note->pinned && auth()->user()->isAdministrador())
+                                    <form method="POST" action="{{ route('shift_notes.unpin', $note) }}" class="note-delete">
+                                        @csrf
+                                        <button type="submit" class="unpin">Quitar fija</button>
+                                    </form>
+                                @endif
+                                @if (auth()->user()->isAdministrador())
+                                    <form method="POST" action="{{ route('shift_notes.destroy', $note) }}" class="note-delete" onsubmit="return confirm('¿Eliminar esta novedad? Desaparece para todo el equipo.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit">Eliminar</button>
+                                    </form>
                                 @endif
                             </td>
                         </tr>

@@ -49,6 +49,7 @@
             @foreach ($hhAll as $note)
                 <div style="padding:10px 12px; margin-bottom:8px; border-radius:9px; background:#141414; border-left:4px solid {{ $note->urgent ? '#ff7918' : '#555' }}; {{ $hhNotes->contains('id', $note->id) ? '' : 'opacity:.65;' }}">
                     <div style="font-size:12px; color:#999; margin-bottom:3px;">
+                        @if ($note->pinned)<b style="color:#ffb379;">📌 Fija · </b>@endif
                         @if ($note->urgent)<b style="color:#ff9a4d;">Urgente · </b>@endif
                         {{ $note->category }}@if ($note->room) · {{ $note->room->name }}@endif · {{ $note->authorName() }} · {{ $note->created_at->timezone('America/Santiago')->format('d/m H:i') }}
                     </div>
