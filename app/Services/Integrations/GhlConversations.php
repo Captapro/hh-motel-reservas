@@ -223,6 +223,7 @@ class GhlConversations
 
         return [
             'contact_id' => $contactId,
+            'last_at' => isset($messages->last()['dateAdded']) ? Carbon::parse($messages->last()['dateAdded'])->getTimestampMs() : 0,
             'messages' => $messages->map(fn (array $m) => [
                 'id' => (string) ($m['id'] ?? ''),
                 'mine' => ($m['direction'] ?? '') !== 'inbound',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AttentionRequest;
 use App\Models\AuditLog;
+use App\Models\ClosedConversation;
 use App\Models\Customer;
 use App\Models\OperationalSetting;
 use App\Models\TeamContact;
@@ -73,6 +74,10 @@ class ConversationController extends Controller
                 $result['items'] = array_values(array_filter($result['items'], fn (array $item) => ! $item['team']));
             }
 
+            if (($data['vista'] ?? null) === 'esperando') {
+                $result['items'] = array_values(array_filter($result['items'], fn (array $item) => ! $item['closed']));
+            }
+
             if (($data['vista'] ?? null) === 'por_atender') {
                 $result['items'] = array_values(array_filter($result['items'], fn (array $item) => $item['pending']));
                 // Vienen de la más nueva a la más vieja: pasado el punto de partida no hay nada más.
@@ -94,10 +99,18 @@ class ConversationController extends Controller
     {
         $since = OperationalSetting::current()->conversations_since?->getTimestampMs() ?? 0;
 
-        $result['items'] = array_map(fn (array $item) => $item + [
-            'team' => in_array($item['contact_id'], $team, true),
-            'pending' => $item['direction'] === 'inbound' && $item['at'] >= $since,
-        ], $result['items']);
+        $closures = ClosedConversation::whereIn('ghl_conversation_id', array_column($result['items'], 'id'))->pluck('closed_at', 'ghl_conversation_id');
+
+        $result['items'] = array_map(function (array $item) use ($team, $since, $closures) {
+            // Un mensaje posterior al alta la devuelve al seguimiento sola.
+            $closed = isset($closures[$item['id']]) && $closures[$item['id']]->getTimestampMs() >= $item['at'];
+
+            return $item + [
+                'team' => in_array($item['contact_id'], $team, true),
+                'closed' => $closed,
+                'pending' => ! $closed && $item['direction'] === 'inbound' && $item['at'] >= $since,
+            ];
+        }, $result['items']);
 
         return $result + ['since' => $since];
     }
@@ -113,6 +126,7 @@ class ConversationController extends Controller
                 'cata' => $this->cataState($thread['contact']),
                 'customer' => $this->customerCard($thread['contact']),
                 'team' => $thread['contact_id'] !== '' && TeamContact::where('ghl_contact_id', $thread['contact_id'])->exists(),
+                'closed' => (ClosedConversation::where('ghl_conversation_id', $conversation)->first()?->closed_at?->getTimestampMs() ?? -1) >= $thread['last_at'],
             ];
         });
     }
@@ -180,6 +194,24 @@ class ConversationController extends Controller
                 TeamContact::where('ghl_contact_id', $contactId)->delete();
             }
             AuditLog::record($request->user()->id, $data['on'] ? 'conversacion.marcada_equipo' : 'conversacion.quitada_equipo', 'GhlConversation', $conversation, null, null);
+
+            return ['ok' => true];
+        });
+    }
+
+    public function close(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
+    {
+        $data = $request->validate(['on' => ['required', 'boolean']]);
+
+        return $this->guarded(function () use ($request, $conversation, $ghl, $data) {
+            $this->contactOf($conversation, $ghl);
+
+            if ($data['on']) {
+                ClosedConversation::updateOrCreate(['ghl_conversation_id' => $conversation], ['closed_at' => now(), 'closed_by' => $request->user()->id]);
+            } else {
+                ClosedConversation::where('ghl_conversation_id', $conversation)->delete();
+            }
+            AuditLog::record($request->user()->id, $data['on'] ? 'conversacion.dada_de_alta' : 'conversacion.reabierta', 'GhlConversation', $conversation, null, null);
 
             return ['ok' => true];
         });

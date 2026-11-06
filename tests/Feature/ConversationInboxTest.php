@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AttentionRequest;
 use App\Models\AuditLog;
+use App\Models\ClosedConversation;
 use App\Models\OperationalSetting;
 use App\Models\TeamContact;
 use App\Models\User;
@@ -31,6 +32,7 @@ class ConversationInboxTest extends TestCase
             '2026_09_17_002913_add_floor_toggles_to_operational_settings.php',
             '2026_09_21_135116_split_floor_toggles_by_wing_in_operational_settings.php',
             '2026_11_06_190000_add_conversations_since_to_operational_settings.php',
+            '2026_11_06_200000_create_closed_conversations_table.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -149,6 +151,29 @@ class ConversationInboxTest extends TestCase
             ->assertJsonCount(1, 'items')->assertJsonPath('items.0.id', 'nuevo');
         $this->getJson(route('admin.conversations.list'))
             ->assertJsonCount(2, 'items')->assertJsonPath('items.1.pending', false);
+    }
+
+    public function test_closed_conversation_leaves_follow_up_until_a_new_message_arrives(): void
+    {
+        $this->thread();
+        $lastMessageAt = now()->subHour()->getTimestampMs();
+        $reply = fn (int $at) => Http::response(['conversations' => [
+            ['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'outbound', 'lastMessageDate' => $at],
+        ]]);
+        $answers = [$reply($lastMessageAt), $reply($lastMessageAt), $reply(now()->addHour()->getTimestampMs())];
+        Http::fake([self::GHL.'/conversations/search*' => function () use (&$answers) { return array_shift($answers); }]);
+        $user = User::factory()->create(['role' => 'soporte']);
+
+        $this->actingAs($user)->postJson(route('admin.conversations.close', 'abc'), ['on' => true])->assertOk();
+        $this->assertSame($user->id, ClosedConversation::sole()->closed_by);
+
+        $this->getJson(route('admin.conversations.list', ['vista' => 'esperando']))->assertJsonCount(0, 'items');
+        $this->getJson(route('admin.conversations.list'))->assertJsonPath('items.0.closed', true);
+        $this->getJson(route('admin.conversations.list', ['vista' => 'esperando']))->assertJsonCount(1, 'items')->assertJsonPath('items.0.closed', false);
+        $this->getJson(route('admin.conversations.show', 'abc'))->assertJsonPath('closed', true);
+
+        $this->postJson(route('admin.conversations.close', 'abc'), ['on' => false])->assertOk();
+        $this->assertSame(0, ClosedConversation::count());
     }
 
     public function test_team_contacts_leave_the_inbox_and_go_to_their_own_filter(): void

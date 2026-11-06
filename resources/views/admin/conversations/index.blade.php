@@ -127,6 +127,7 @@
                 <div class="cv-head-row">
                     <span id="cv-state"></span>
                     <button type="button" class="cv-btn" id="cv-cata" hidden></button>
+                    <button type="button" class="cv-btn" id="cv-close" hidden></button>
                 </div>
             </div>
             <div id="cv-chat-error" class="cv-error" hidden></div>
@@ -198,6 +199,7 @@
             const top = el('div', 'cv-item-top');
             const title = el('span', '', c.name);
             if (c.team) title.append(el('span', 'cv-item-tag', 'Equipo'));
+            if (c.closed) title.append(el('span', 'cv-item-tag', 'De alta'));
             top.append(title, el('span', 'cv-time', c.when));
             const prev = el('div', 'cv-prev');
             prev.append(el('span', '', c.preview));
@@ -277,6 +279,11 @@
             cata.hidden = !data.contact;
             cata.textContent = noBot ? 'Prender Cata' : 'Apagar Cata';
             cata.dataset.on = noBot ? '1' : '0';
+
+            const close = $('cv-close');
+            close.hidden = false;
+            close.textContent = data.closed ? 'Reabrir' : 'Dar de alta';
+            close.dataset.on = data.closed ? '0' : '1';
 
             $('cv-form').hidden = !data.can_reply;
             $('cv-blocked').hidden = data.can_reply;
@@ -420,6 +427,7 @@
                 $('cv-form').hidden = true;
                 $('cv-blocked').hidden = true;
                 $('cv-cata').hidden = true;
+                $('cv-close').hidden = true;
             }
             refreshThread(true);
         }
@@ -470,6 +478,20 @@
             } finally {
                 state.sending = false;
                 $('cv-send').disabled = false;
+            }
+        });
+
+        $('cv-close').addEventListener('click', async e => {
+            const button = e.currentTarget;
+            button.disabled = true;
+            try {
+                await api(`${urls.base}/${state.open}/alta`, { method: 'POST', body: JSON.stringify({ on: button.dataset.on === '1' }) });
+                await refreshThread();
+                loadList();
+            } catch (error) {
+                showError('cv-chat-error', error.message);
+            } finally {
+                button.disabled = false;
             }
         });
 
