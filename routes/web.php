@@ -52,6 +52,7 @@ use App\Http\Controllers\CouponProofController;
 use App\Http\Controllers\CustomerLoyaltyController;
 use App\Http\Controllers\DailyAseoController;
 use App\Http\Controllers\DailySalesController;
+use App\Http\Controllers\AttentionRequestController;
 use App\Http\Controllers\GhlWebhookController;
 use App\Http\Controllers\GuestReviewController;
 use App\Http\Controllers\HelpController;
@@ -109,6 +110,7 @@ Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->mi
 Route::get('/catalogo/pagar/{token}', [MercadoPagoController::class, 'pay'])->middleware('throttle:10,1,catalog.pay')->name('catalog.pay');
 Route::post('/webhooks/mercadopago', [MercadoPagoController::class, 'webhook'])->middleware('throttle:120,1,webhooks.mercadopago')->name('webhooks.mercadopago');
 Route::post('/webhooks/ghl/marketing-baja', [GhlWebhookController::class, 'marketingOptOut'])->middleware('throttle:60,1,webhooks.ghl')->name('webhooks.ghl.marketing_optout');
+Route::post('/webhooks/ghl/atencion', [AttentionRequestController::class, 'store'])->middleware('throttle:60,1,webhooks.ghl')->name('webhooks.ghl.attention');
 Route::get('/catalogo/reservado/{token}', [PublicBookingController::class, 'booked'])->name('catalog.booked');
 // El pase PDF se manda directo al cliente por WhatsApp (ver el botón de
 // "instrucciones de pago" en reservations/show) -- tiene que poder abrirlo
@@ -234,6 +236,9 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/aseo/mes/{date?}', [AseoSummaryController::class, 'month'])->name('aseo.month');
     Route::get('/aseo/cierre/{date?}', [RoomClosingController::class, 'show'])->name('aseo.closing');
     Route::get('/aseo/{date?}', [DailyAseoController::class, 'show'])->name('aseo.daily');
+
+    Route::get('/atencion/pendientes', [AttentionRequestController::class, 'pending'])->name('attention.pending');
+    Route::post('/atencion/{attention}/atendido', [AttentionRequestController::class, 'attend'])->name('attention.attend');
 
     Route::get('/habitaciones', [RoomBoardController::class, 'index'])->name('rooms.board');
     Route::get('/habitaciones/pases', [RoomBoardController::class, 'passScans'])->name('rooms.pass_scans');

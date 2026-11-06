@@ -2929,4 +2929,39 @@ class BookingIntegrityTest extends TestCase
         $this->assertStringNotContainsString(route('bookings.checkin.show', $futura->code), $html);
         $this->assertSame(1, substr_count($html, '<tr data-href="'.route('reservations.show', $hoy->code).'"'));
     }
+
+    private function atencionSchema(): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('attention_requests')) {
+            (require database_path('migrations/2026_11_05_130000_create_attention_requests_table.php'))->up();
+        }
+        config(['services.ghl.inbound_secret' => 'token-ghl']);
+    }
+
+    public function test_atencion_requiere_token(): void
+    {
+        $this->atencionSchema();
+        $this->postJson(route('webhooks.ghl.attention'), ['phone' => '+56911112222'])->assertStatus(401);
+        $this->assertSame(0, \App\Models\AttentionRequest::count());
+    }
+
+    public function test_atencion_avisa_una_vez_y_queda_hasta_marcarla_atendida(): void
+    {
+        $this->atencionSchema();
+        $url = route('webhooks.ghl.attention', ['token' => 'token-ghl']);
+
+        $this->postJson($url, ['phone' => '+56 9 1111 2222', 'full_name' => 'Ana', 'motivo' => 'Reclamo'])->assertOk()->assertJsonPath('result', 'avisado');
+        $this->postJson($url, ['phone' => '911112222', 'motivo' => 'Reclamo por cobro'])->assertOk();
+        $this->assertSame(1, \App\Models\AttentionRequest::count());
+
+        $list = $this->getJson(route('attention.pending'))->assertOk()->assertJsonCount(1);
+        $list->assertJsonPath('0.name', 'Ana')->assertJsonPath('0.reason', 'Reclamo por cobro')->assertJsonPath('0.whatsapp', 'https://web.whatsapp.com/send?phone=56911112222');
+
+        $this->postJson($list->json('0.attend_url'))->assertOk();
+        $this->getJson(route('attention.pending'))->assertJsonCount(0);
+
+        // Si vuelve a pedir atención después, es un aviso nuevo.
+        $this->postJson($url, ['phone' => '+56911112222'])->assertOk();
+        $this->assertSame(2, \App\Models\AttentionRequest::count());
+    }
 }

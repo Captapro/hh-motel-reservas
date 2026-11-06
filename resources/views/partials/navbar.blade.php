@@ -218,6 +218,9 @@
     @if (auth()->user()->isRecepcion() && ! $hhRound)
         @include('partials.ending-soon-bar')
     @endif
+    @if ((auth()->user()->isRecepcion() || auth()->user()->isAdministrador()) && ! $hhRound)
+        @include('partials.attention-bar')
+    @endif
     @include('partials.id-scanner')
     @unless ($hhRound)
         @include('partials.shift-notes-alert')
