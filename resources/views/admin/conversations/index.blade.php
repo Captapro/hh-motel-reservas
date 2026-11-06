@@ -8,18 +8,11 @@
     <style>
         :root { --bg:#efeeea; --panel:#fff; --soft:#efeeea; --line:#e2e0da; --ink:#141414; --muted:#6f6e69; --accent:#ff7918; --accent-soft:#fff0e4; --blue:#0a5cff; --warn:#8a5a00; --warn-bg:#fff8e6; }
         * { box-sizing:border-box; }
-        html, body { height:100%; }
-        body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system, "Segoe UI", sans-serif; display:flex; flex-direction:column; }
+        body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system, "Segoe UI", sans-serif; }
         button, input, textarea { font-family:inherit; }
         h2, h3 { margin:0; }
-        .cv-top { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 18px 12px; }
-        .cv-brand { display:flex; align-items:center; gap:10px; min-width:0; }
-        .cv-logo { width:38px; height:38px; flex:none; border-radius:11px; background:var(--panel); color:var(--accent); display:grid; place-items:center; font-weight:800; font-size:15px; }
-        .cv-brand strong { display:block; font-size:15px; }
-        .cv-brand span { color:var(--muted); font-size:12px; }
-        .cv-exit { color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:9px 14px; font-size:13.5px; font-weight:600; text-decoration:none; white-space:nowrap; }
-        .cv-notice { margin:0 18px 10px; background:var(--warn-bg); color:var(--warn); border-radius:12px; padding:10px 14px; font-size:13.5px; }
-        .cv { flex:1; min-height:0; display:grid; grid-template-columns:290px minmax(0,1fr) 270px; gap:12px; padding:0 18px 16px; }
+        .cv-notice { margin:14px 18px 0; background:var(--warn-bg); color:var(--warn); border-radius:12px; padding:10px 14px; font-size:13.5px; }
+        .cv { display:grid; grid-template-columns:290px minmax(0,1fr) 270px; gap:12px; padding:14px 18px 16px; height:calc(100vh - 80px); min-height:460px; }
         .cv-panel { background:var(--panel); border-radius:20px; display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden; }
         .cv-filters { padding:18px 16px 12px; display:flex; flex-direction:column; gap:10px; }
         .cv-filters h2 { font-size:22px; font-weight:800; }
@@ -77,8 +70,7 @@
         #cv-back { display:none; }
         @media (max-width:1040px) { .cv { grid-template-columns:290px minmax(0,1fr); } .cv-info { display:none; } }
         @media (max-width:760px) {
-            .cv-top { padding:10px 12px; }
-            .cv { grid-template-columns:minmax(0,1fr); padding:0 10px 10px; }
+            .cv { grid-template-columns:minmax(0,1fr); padding:10px; }
             .cv.is-open .cv-inbox, .cv:not(.is-open) .cv-chat { display:none; }
             #cv-back { display:inline-block; }
             .cv-msg { max-width:86%; }
@@ -87,13 +79,7 @@
 </head>
 <body>
 
-    <header class="cv-top">
-        <div class="cv-brand">
-            <div class="cv-logo" aria-hidden="true">HH</div>
-            <div><strong>HH Motel</strong><span>Conversaciones en vivo desde GHL</span></div>
-        </div>
-        <a class="cv-exit" href="{{ route('rooms.board') }}">Volver al sistema</a>
-    </header>
+    @include('partials.navbar')
 
     @unless ($configured)
         <div class="cv-notice">La conexión con GHL no está configurada en este ambiente.</div>
@@ -170,7 +156,10 @@
             return node;
         };
         document.querySelectorAll('.cv-round').forEach(b => b.append(dot(b.dataset.channel)));
-        const state = { view: 'todas', channel: '', q: '', open: null, next: null, seen: '', sending: false };
+        const state = { view: 'todas', channel: '', q: '', open: null, contact: '', next: null, seen: '', sending: false };
+        // Lo ya visto se muestra al instante y se actualiza por detrás.
+        const threads = new Map();
+        const loading = new Map();
 
         const el = (tag, cls, text) => {
             const node = document.createElement(tag);
@@ -204,6 +193,7 @@
             body.append(top, prev);
             item.append(dot(c.channel), body);
             item.addEventListener('click', () => openConversation(c));
+            item.addEventListener('pointerenter', () => { if (!threads.has(c.id)) fetchThread(c.id, c.contact_id).catch(() => {}); });
             return item;
         }
 
@@ -306,19 +296,33 @@
             side.replaceChildren(...content);
         }
 
+        function fetchThread(id, contact) {
+            if (loading.has(id)) return loading.get(id);
+            const query = contact ? '?contacto=' + encodeURIComponent(contact) : '';
+            const request = api(`${urls.base}/${id}${query}`)
+                .then(data => { threads.set(id, data); return data; })
+                .finally(() => loading.delete(id));
+            loading.set(id, request);
+            return request;
+        }
+
+        function show(data, scroll) {
+            const signature = JSON.stringify(data);
+            if (signature !== state.seen) {
+                state.seen = signature;
+                renderThread(data);
+            }
+            if (scroll) $('cv-msgs').scrollTop = $('cv-msgs').scrollHeight;
+        }
+
         async function refreshThread(scroll = false) {
             const id = state.open;
             if (!id) return;
             try {
-                const data = await api(`${urls.base}/${id}`);
+                const data = await fetchThread(id, state.contact);
                 if (id !== state.open) return;
                 showError('cv-chat-error', '');
-                const signature = JSON.stringify(data);
-                if (signature !== state.seen) {
-                    state.seen = signature;
-                    renderThread(data);
-                }
-                if (scroll) $('cv-msgs').scrollTop = $('cv-msgs').scrollHeight;
+                show(data, scroll);
             } catch (error) {
                 if (id === state.open) showError('cv-chat-error', error.message);
             }
@@ -326,16 +330,22 @@
 
         function openConversation(c) {
             state.open = c.id;
+            state.contact = c.contact_id;
             state.seen = '';
+            showError('cv-chat-error', '');
             $('cv').classList.add('is-open');
             $('cv-name').textContent = c.name;
             $('cv-state').replaceChildren();
             $('cv-channel-dot').replaceChildren(dot(c.channel));
-            $('cv-msgs').replaceChildren(el('div', 'cv-empty', 'Cargando…'));
-            $('cv-form').hidden = true;
-            $('cv-blocked').hidden = true;
-            $('cv-cata').hidden = true;
             document.querySelectorAll('.cv-item').forEach(i => i.classList.toggle('is-on', i.dataset.id === c.id));
+            if (threads.has(c.id)) {
+                show(threads.get(c.id), true);
+            } else {
+                $('cv-msgs').replaceChildren(el('div', 'cv-empty', 'Cargando…'));
+                $('cv-form').hidden = true;
+                $('cv-blocked').hidden = true;
+                $('cv-cata').hidden = true;
+            }
             refreshThread(true);
         }
 
@@ -400,6 +410,14 @@
                 button.disabled = false;
             }
         });
+
+        // La bandeja llena lo que queda bajo la barra del sistema, sin mover la página.
+        const fit = () => {
+            const height = window.innerHeight - $('cv').getBoundingClientRect().top - window.scrollY;
+            $('cv').style.height = Math.max(460, height) + 'px';
+        };
+        fit();
+        window.addEventListener('resize', fit);
 
         loadList();
         setInterval(() => {

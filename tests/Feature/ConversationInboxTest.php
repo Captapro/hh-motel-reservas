@@ -87,6 +87,26 @@ class ConversationInboxTest extends TestCase
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/contacts/c1') && $r->header('Version') === ['2021-07-28']);
     }
 
+    public function test_opening_from_the_inbox_asks_messages_and_contact_without_the_extra_query(): void
+    {
+        Http::fake([
+            self::GHL.'/conversations/abc/messages*' => Http::response(['messages' => ['messages' => [
+                ['id' => 'm1', 'contactId' => 'c1', 'direction' => 'inbound', 'messageType' => 'TYPE_WHATSAPP', 'body' => 'Hola', 'dateAdded' => now()->subHour()->toIso8601String()],
+            ]]]),
+            self::GHL.'/contacts/c1' => Http::response(['contact' => ['firstName' => 'Ana', 'phone' => '', 'tags' => []]]),
+            self::GHL.'/contacts/otro' => Http::response(['contact' => ['firstName' => 'Otra persona', 'phone' => '', 'tags' => []]]),
+        ]);
+        $user = User::factory()->create(['role' => 'soporte']);
+
+        $this->actingAs($user)->getJson(route('admin.conversations.show', ['conversation' => 'abc', 'contacto' => 'c1']))
+            ->assertOk()->assertJsonPath('contact.name', 'Ana')->assertJsonPath('cata.active', true);
+        Http::assertSentCount(2);
+
+        // Si la pista no calza, manda el contacto real de la conversación.
+        $this->getJson(route('admin.conversations.show', ['conversation' => 'abc', 'contacto' => 'otro']))
+            ->assertOk()->assertJsonPath('contact.name', 'Ana');
+    }
+
     public function test_reply_goes_by_the_conversation_channel_and_records_who_answered(): void
     {
         $this->thread('TYPE_INSTAGRAM');

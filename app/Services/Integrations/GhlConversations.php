@@ -3,9 +3,11 @@
 namespace App\Services\Integrations;
 
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Throwable;
 
 /**
  * Bandeja de mensajes de la subcuenta de GHL, leída en vivo: el sistema no
@@ -52,7 +54,12 @@ class GhlConversations
     /** La versión va aquí y no después: withHeaders suma valores y GHL rechaza dos versiones. */
     private function http(string $version = self::API_VERSION): PendingRequest
     {
-        return Http::withToken($this->token)
+        return $this->configure(Http::timeout(10), $version);
+    }
+
+    private function configure(PendingRequest $request, string $version): PendingRequest
+    {
+        return $request->withToken($this->token)
             ->withHeaders(['Version' => $version, 'Accept' => 'application/json'])
             ->baseUrl((string) config('services.ghl.base_url', self::BASE_URL))
             ->timeout(10);
@@ -110,17 +117,65 @@ class GhlConversations
     }
 
     /**
+     * Conversación lista para mostrar. Con el contacto que trae la bandeja,
+     * mensajes y ficha se piden a GHL al mismo tiempo: es lo que hace rápido
+     * pasar de un cliente a otro.
+     *
+     * @return array<string, mixed>
+     */
+    public function open(string $conversationId, ?string $contactHint = null): array
+    {
+        if (! $contactHint) {
+            $thread = $this->thread($conversationId);
+
+            return $thread + ['contact' => $thread['contact_id'] !== '' ? $this->contact($thread['contact_id']) : null];
+        }
+
+        $responses = Http::pool(fn (Pool $pool) => [
+            $this->configure($pool->as('messages'), self::API_VERSION)->get("/conversations/{$conversationId}/messages", ['limit' => 50]),
+            $this->configure($pool->as('contact'), self::CONTACTS_API_VERSION)->get("/contacts/{$contactHint}"),
+        ]);
+
+        foreach ($responses as $response) {
+            if ($response instanceof Throwable) {
+                throw $response;
+            }
+            $response->throw();
+        }
+
+        $thread = $this->buildThread($conversationId, (array) $responses['messages']->json('messages.messages', []));
+
+        // La bandeja es solo una pista: manda el contacto real de la conversación.
+        $contact = $thread['contact_id'] === $contactHint
+            ? $this->contactCard((array) $responses['contact']->json('contact', []))
+            : ($thread['contact_id'] !== '' ? $this->contact($thread['contact_id']) : null);
+
+        return $thread + ['contact' => $contact];
+    }
+
+    /**
      * Mensajes de la conversación, del más antiguo al más nuevo.
      *
      * @return array{contact_id: string, messages: array<int, array<string, mixed>>, channel: ?string, window_left_minutes: ?int, can_reply: bool, reply_blocked: ?string}
      */
     public function thread(string $conversationId): array
     {
-        $conversation = (array) $this->http()->get("/conversations/{$conversationId}")->throw()->json();
-        $conversation = (array) ($conversation['conversation'] ?? $conversation);
+        return $this->buildThread($conversationId, (array) $this->http()->get("/conversations/{$conversationId}/messages", ['limit' => 50])
+            ->throw()->json('messages.messages', []));
+    }
 
-        $raw = (array) $this->http()->get("/conversations/{$conversationId}/messages", ['limit' => 50])
-            ->throw()->json('messages.messages', []);
+    /** @return array{contact_id: string, messages: array<int, array<string, mixed>>, channel: ?string, window_left_minutes: ?int, can_reply: bool, reply_blocked: ?string} */
+    private function buildThread(string $conversationId, array $raw): array
+    {
+        $contactId = (string) (collect($raw)->pluck('contactId')->filter()->first() ?? '');
+
+        // Solo si los mensajes no lo dicen se gasta una consulta más.
+        $conversation = [];
+        if ($contactId === '') {
+            $conversation = (array) $this->http()->get("/conversations/{$conversationId}")->throw()->json();
+            $conversation = (array) ($conversation['conversation'] ?? $conversation);
+            $contactId = (string) ($conversation['contactId'] ?? '');
+        }
 
         $messages = collect($raw)
             ->filter(fn (array $m) => ! str_starts_with((string) ($m['messageType'] ?? ''), 'TYPE_ACTIVITY') && ($this->text($m) !== '' || ! empty($m['attachments'])))
@@ -131,7 +186,7 @@ class GhlConversations
         $channel = $this->channelOf((string) ($lastInbound['messageType'] ?? $messages->last()['messageType'] ?? $conversation['type'] ?? ''));
 
         return [
-            'contact_id' => (string) ($conversation['contactId'] ?? ''),
+            'contact_id' => $contactId,
             'messages' => $messages->map(fn (array $m) => [
                 'id' => (string) ($m['id'] ?? ''),
                 'mine' => ($m['direction'] ?? '') !== 'inbound',
@@ -190,8 +245,12 @@ class GhlConversations
     /** @return array<string, mixed> */
     public function contact(string $contactId): array
     {
-        $contact = (array) $this->http(self::CONTACTS_API_VERSION)->get("/contacts/{$contactId}")->throw()->json('contact', []);
+        return $this->contactCard((array) $this->http(self::CONTACTS_API_VERSION)->get("/contacts/{$contactId}")->throw()->json('contact', []));
+    }
 
+    /** @return array<string, mixed> */
+    private function contactCard(array $contact): array
+    {
         return [
             'name' => trim(($contact['firstName'] ?? '').' '.($contact['lastName'] ?? '')) ?: (string) ($contact['contactName'] ?? ''),
             'phone' => (string) ($contact['phone'] ?? ''),

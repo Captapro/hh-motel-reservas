@@ -51,13 +51,14 @@ class ConversationController extends Controller
         ));
     }
 
-    public function show(string $conversation, GhlConversations $ghl): JsonResponse
+    public function show(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
     {
-        return $this->guarded(function () use ($conversation, $ghl) {
-            $thread = $ghl->thread($conversation);
-            $contact = $thread['contact_id'] !== '' ? $ghl->contact($thread['contact_id']) : null;
+        $data = $request->validate(['contacto' => ['nullable', 'string', 'alpha_num', 'max:64']]);
 
-            return $thread + ['contact' => $contact, 'cata' => $this->cataState($contact), 'customer' => $this->customerCard($contact)];
+        return $this->guarded(function () use ($conversation, $ghl, $data) {
+            $thread = $ghl->open($conversation, $data['contacto'] ?? null);
+
+            return $thread + ['cata' => $this->cataState($thread['contact']), 'customer' => $this->customerCard($thread['contact'])];
         });
     }
 

@@ -143,7 +143,7 @@
         @endauth
     </div>
     {{-- Analytics, Opiniones, Analista de IA y Mercado Pago son herramientas de uso diario: no llevan la barra de configuración. --}}
-    @if (request()->routeIs('admin.*') && ! request()->routeIs('admin.analytics.*', 'admin.reviews.*', 'admin.analyst.*', 'admin.mercadopago.*') && auth()->user()?->isAdministrador())
+    @if (request()->routeIs('admin.*') && ! request()->routeIs('admin.analytics.*', 'admin.reviews.*', 'admin.analyst.*', 'admin.mercadopago.*', 'admin.conversations.*') && auth()->user()?->isAdministrador())
         {{-- Solo configuraciones generales acá, agrupadas por tema. Clientes,
              Analytics y Personal/Turnos ya tienen su propio ícono en el riel
              izquierdo -- repetirlos acá era puro ruido. --}}
