@@ -7,7 +7,7 @@
     .hh-ending-row.late { background:#ffc233; color:#3a2a00; }
     .hh-ending-row .hh-ending-text { flex:1 1 auto; min-width:0; }
     .hh-ending-row small { display:block; font-size:12.5px; font-weight:600; }
-    .hh-ending-row a, .hh-ending-row button { flex:none; padding:8px 12px; border-radius:9px; font:inherit; font-size:13.5px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .hh-ending-row a, .hh-ending-row button { flex:none; width:auto; margin:0; padding:8px 12px; border-radius:9px; font:inherit; font-size:13.5px; font-weight:800; cursor:pointer; text-decoration:none; }
     .hh-ending-row a { background:transparent; color:inherit; border:1.5px solid currentColor; }
     .hh-ending-row button { background:#fff; color:#0a3fb0; border:none; }
     .hh-ending-row.late button { background:#3a2a00; color:#fff; }

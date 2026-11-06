@@ -6,7 +6,7 @@
     .hh-attention-row { display:flex; align-items:center; gap:10px; padding:10px 12px 10px 16px; border-radius:12px; background:#111827; color:#fff; font-size:15px; font-weight:800; box-shadow:0 8px 24px rgba(0,0,0,.35); border:2px solid #ffc233; }
     .hh-attention-row .hh-attention-text { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
     .hh-attention-row small { display:block; font-size:12.5px; font-weight:600; color:#d1d5db; }
-    .hh-attention-row a, .hh-attention-row button { flex:none; padding:8px 12px; border-radius:9px; font:inherit; font-size:13.5px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .hh-attention-row a, .hh-attention-row button { flex:none; width:auto; margin:0; padding:8px 12px; border-radius:9px; font:inherit; font-size:13.5px; font-weight:800; cursor:pointer; text-decoration:none; }
     .hh-attention-row a { background:#ffc233; color:#3a2a00; }
     .hh-attention-row button { background:transparent; color:#fff; border:1.5px solid #fff; }
     @media (max-width:600px) { .hh-attention-row { flex-wrap:wrap; } .hh-attention-row .hh-attention-text { flex-basis:100%; } }

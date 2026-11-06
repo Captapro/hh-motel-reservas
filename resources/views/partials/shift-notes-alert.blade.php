@@ -14,7 +14,7 @@
 @endphp
 @if ($hhCount > 0)
     <style>
-        #shift-notes-flap { position:fixed; right:0; top:38%; z-index:9995; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 7px; border:none; border-radius:10px 0 0 10px; background:#ff7918; color:#21170e; font:800 13px -apple-system,'Segoe UI',sans-serif; cursor:pointer; }
+        #shift-notes-flap { position:fixed; right:0; top:38%; width:auto; margin:0; z-index:9995; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 7px; border:none; border-radius:10px 0 0 10px; background:#ff7918; color:#21170e; font:800 13px -apple-system,'Segoe UI',sans-serif; cursor:pointer; }
         #shift-notes-flap.unread { animation:hhNotesPulse 1.6s ease-in-out infinite; }
         #shift-notes-flap.quiet { background:#2c2c2c; color:#ffb379; }
         #shift-notes-flap span { writing-mode:vertical-rl; transform:rotate(180deg); }
@@ -30,7 +30,7 @@
                 <div id="shift-notes-title" style="font-size:17px; font-weight:800;">🔔 Novedades del turno ({{ $hhCount }})</div>
                 <div style="font-size:13px; color:#aaa; margin-top:2px;">{{ $hhAdmin ? 'Lo que hay para el turno.' : ($hhAlerts ? 'Léelas y confirma.' : 'Ya las leíste. Salen solas al terminar el día.') }} <a href="{{ route('shift_notes.index') }}" style="color:#ff9a4d;">Ver el libro completo</a></div>
             </div>
-            <button type="button" id="shift-notes-close" aria-label="Minimizar" style="background:none; border:1px solid #444; color:#ccc; border-radius:7px; padding:4px 10px; cursor:pointer;">✕</button>
+            <button type="button" id="shift-notes-close" aria-label="Minimizar" style="width:auto; margin:0; flex:none; background:none; border:1px solid #444; color:#ccc; border-radius:7px; padding:4px 10px; cursor:pointer;">✕</button>
         </div>
         <div style="flex:1; min-height:0; overflow-y:auto; padding:0 16px;">
             @if ($hhUpcoming->isNotEmpty())
