@@ -19,7 +19,7 @@
 .calendar-head h1{font-size:20px;margin-bottom:0}.calendar-head .sub{margin:2px 0 0;font-size:12.5px}
 .calendar-search input{padding:7px 10px;min-width:220px}.calendar-search button{padding:7px 14px}
 .calendar-toolbar,.calendar-card{padding:10px 12px;border-radius:12px}
-.calendar-views a,.calendar-nav a{padding:6px 13px}.calendar-nav{gap:10px}.calendar-nav a{font-size:20px;line-height:1;padding:5px 12px}
+.calendar-views a,.calendar-nav a{padding:6px 13px}.calendar-views a.views-soon{margin-left:6px;border:1.5px solid #ff7918;background:#fff2e7;color:#c2410c;font-weight:700}.calendar-views a.views-soon.active,.calendar-views a.views-soon:hover{background:#ff7918;color:#fff}.calendar-nav{gap:10px}.calendar-nav a{font-size:20px;line-height:1;padding:5px 12px}
 .weekdays,.month-grid{gap:5px}.weekdays{margin-bottom:5px}
 .day-cell{min-height:92px;padding:6px 7px;border-radius:8px}
 .day-create{min-width:20px;height:20px;font-size:12.5px}.today-tag{font-size:8.5px;padding:2px 6px}
@@ -66,7 +66,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
  </form>
 </div>
 <section class="calendar-toolbar">
- <div class="calendar-views"><a class="{{ $view==='month'?'active':'' }}" href="{{ route('calendar.index',['view'=>'month','date'=>$date->toDateString()]) }}">Mes</a><a class="{{ $view==='week'?'active':'' }}" href="{{ route('calendar.index',['view'=>'week','date'=>$date->toDateString()]) }}">Semana</a><a class="{{ $view==='day'?'active':'' }}" href="{{ route('calendar.index',['view'=>'day','date'=>$date->toDateString()]) }}">Día</a><a class="{{ $view==='history'?'active':'' }}" href="{{ route('calendar.index',['view'=>'history','date'=>$date->toDateString()]) }}">Historial</a></div>
+ <div class="calendar-views"><a class="{{ $view==='month'?'active':'' }}" href="{{ route('calendar.index',['view'=>'month','date'=>$date->toDateString()]) }}">Mes</a><a class="{{ $view==='week'?'active':'' }}" href="{{ route('calendar.index',['view'=>'week','date'=>$date->toDateString()]) }}">Semana</a><a id="tab-day" class="{{ $view==='day'?'active':'' }}" href="{{ route('calendar.index',['view'=>'day','date'=>$date->toDateString()]) }}">Día</a><a class="{{ $view==='history'?'active':'' }}" href="{{ route('calendar.index',['view'=>'history','date'=>$date->toDateString()]) }}">Historial</a><a id="tab-soon" class="views-soon" href="{{ route('calendar.index',['view'=>'day','date'=>$view==='day'?$date->toDateString():now('America/Santiago')->toDateString(),'proximas'=>1]) }}">◷ Próximas</a></div>
  <div class="calendar-nav"><a href="{{ route('calendar.index',['view'=>$view,'date'=>$previous,'periodo'=>$view==='history'?$period:null]) }}">‹</a><strong>{{ $period==='month' ? ucfirst($date->locale('es')->isoFormat('MMMM YYYY')) : ($period==='week' ? 'Semana del '.$rangeStart->format('d/m').' al '.$rangeEnd->format('d/m/Y') : ucfirst($date->locale('es')->isoFormat('dddd D [de] MMMM YYYY'))) }}</strong><a href="{{ route('calendar.index',['view'=>$view,'date'=>$next,'periodo'=>$view==='history'?$period:null]) }}">›</a></div>
 </section>
 @if($view==='history')
@@ -142,7 +142,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
   @foreach ($groupsDef as $gk => [$glabel, $gkeys])
    <button type="button" class="agenda-chip {{ $gk === 'todas' ? 'on' : '' }}" data-filter="{{ $gk }}" data-keys="{{ $gkeys ? implode(',', $gkeys) : '' }}">{{ $glabel }} <b>{{ $countOf($gkeys) }}</b></button>
   @endforeach
-  <button type="button" class="agenda-chip" data-filter="proximas" data-future="1">Próximas <b>{{ $futureRows->count() }}</b></button>
+  <button type="button" class="agenda-chip" data-filter="proximas" data-future="1" hidden>Próximas</button>
  </div>
  <div class="sheet-wrap">
   <table class="sheet" id="agenda-table">
@@ -157,7 +157,7 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
      $in = ($b->checked_in_at ?? $b->starts_at)->copy()->timezone('America/Santiago');
      $outDiff = $b->checkOutDiffMinutes();
     @endphp
-    <tr data-href="{{ route('reservations.show', $b->code) }}" data-state="{{ $k }}" @if ($r['future']) data-future="1" style="display:none" @endif class="{{ in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'dim' : '' }}">
+    <tr data-href="{{ route('reservations.show', $b->code) }}" data-state="{{ $k }}" @if ($soon->contains('id', $b->id)) data-soon="1" @endif @if ($r['future']) data-future="1" style="display:none" @endif class="{{ in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'dim' : '' }}">
      <td data-label="Check-in"><b>{{ $in->format('H:i') }}</b>@if(! $in->isSameDay($date)) <small>({{ $in->locale('es')->isoFormat('ddd D') }})</small>@endif @unless($b->checked_in_at)<small>reservada</small>@endunless</td>
      <td data-label="Check-out">{{ $b->bookedEndsAt()->copy()->timezone('America/Santiago')->format('H:i') }}</td>
      <td data-label="Salida real">@if ($b->checked_out_at){{ $b->checked_out_at->copy()->timezone('America/Santiago')->format('H:i') }}@if ($outDiff) <small class="{{ $outDiff > 0 ? 'late-out' : '' }}">{{ $outDiff > 0 ? '+' : '−' }}{{ \App\Support\TimeFormat::minutes($outDiff) }}</small>@endif @else — @endif</td>
@@ -213,14 +213,21 @@ document.querySelectorAll('.agenda-chip').forEach(function (chip) {
   document.querySelectorAll('.agenda-chip').forEach(function (c) { c.classList.toggle('on', c === chip); });
   var keys = chip.dataset.keys ? chip.dataset.keys.split(',') : null, shown = 0, future = !!chip.dataset.future;
   document.querySelectorAll('#agenda-table tbody tr[data-state]').forEach(function (tr) {
-   var ok = future ? !!tr.dataset.future : (!tr.dataset.future && (!keys || keys.indexOf(tr.dataset.state) !== -1));
+   var ok = future ? !!tr.dataset.soon : (!tr.dataset.future && (!keys || keys.indexOf(tr.dataset.state) !== -1));
    tr.style.display = ok ? '' : 'none'; if (ok) shown++;
   });
   var empty = document.getElementById('agenda-empty'); if (empty) empty.style.display = shown ? 'none' : '';
   document.getElementById('agenda-title').textContent = future ? 'Próximas reservas' : 'Reservas del día';
   document.getElementById('agenda-count').textContent = shown + (shown === 1 ? ' reserva' : ' reservas');
+  document.getElementById('tab-soon').classList.toggle('active', future);
+  document.getElementById('tab-day').classList.toggle('active', !future);
  });
 });
+(function () {
+ var soon = document.querySelector('.agenda-chip[data-future]');
+ document.getElementById('tab-soon').addEventListener('click', function (e) { e.preventDefault(); soon.click(); });
+ if (new URLSearchParams(location.search).has('proximas')) soon.click();
+})();
 </script>
 @endif
 @if($view!=='history')
