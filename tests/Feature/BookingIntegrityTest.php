@@ -1673,11 +1673,11 @@ class BookingIntegrityTest extends TestCase
 
         $this->get(route('catalog.booked', $booking->pass_token))
             ->assertOk()->assertSee('data:image/png;base64', false)->assertSee('Descargar mi pase')
-            ->assertDontSee('O paga por transferencia');
+            ->assertDontSee('Prefiero pagar por transferencia');
 
         config(['services.hh_payment.bank_titular' => 'Titular de prueba', 'services.hh_payment.bank_account_number' => '000111', 'services.hh_payment.mercadopago_link' => 'https://mpago.test/pago']);
         $this->get(route('catalog.booked', $booking->pass_token))
-            ->assertSee('O paga por transferencia')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('https://mpago.test/pago', false)->assertSee('ahora →', false);
+            ->assertSee('Prefiero pagar por transferencia')->assertSee('Titular de prueba')->assertSee('000111')->assertSee('https://mpago.test/pago', false)->assertSee('ahora →', false);
     }
 
     public function test_public_page_puts_payment_first_and_hides_the_qr_while_the_online_hold_runs(): void
@@ -2963,5 +2963,25 @@ class BookingIntegrityTest extends TestCase
         // Si vuelve a pedir atención después, es un aviso nuevo.
         $this->postJson($url, ['phone' => '+56911112222'])->assertOk();
         $this->assertSame(2, \App\Models\AttentionRequest::count());
+    }
+
+    public function test_catalogo_whatsapp_pide_informacion_sin_datos_de_reserva(): void
+    {
+        $url = urldecode(\App\Http\Controllers\CatalogController::whatsappUrl());
+
+        $this->assertStringContainsString('Quiero más información', $url);
+        $this->assertStringNotContainsString('Hora de llegada', $url);
+        $this->assertStringNotContainsString('Motel', $url);
+    }
+
+    public function test_el_ultimo_paso_ofrece_transferencia_aunque_haya_pago_en_linea(): void
+    {
+        config(['services.hh_payment.bank_titular' => 'HH Prueba', 'services.hh_payment.bank_account_number' => '123456']);
+        $this->mock(\App\Services\Payments\MercadoPagoClient::class, fn ($mock) => $mock->shouldReceive('enabled')->andReturnTrue());
+        $booking = $this->booking(['starts_at' => Carbon::now()->addDay()->startOfWeek()->addWeek()->setTime(12, 0)]);
+        $booking->update(['booking_status' => 'PENDIENTE_PAGO', 'expires_at' => now()->addMinutes(20)]);
+
+        $this->get(route('catalog.booked', $booking->pass_token))->assertOk()
+            ->assertSee('Prefiero pagar por transferencia')->assertSee('HH Prueba')->assertSee('123456');
     }
 }

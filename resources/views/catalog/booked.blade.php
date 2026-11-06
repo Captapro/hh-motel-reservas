@@ -178,16 +178,17 @@
                 <small>También puedes pagarlo al llegar al motel.</small>
             </div>
         @endif
-        @if (! $expired && ! $canPayOnline && $hasBank && $booking->balanceDue() > 0)
-            <div class="pay-box">
-                <strong>O paga por transferencia — {{ $amount }}</strong>
+        @if (! $expired && $hasBank && $booking->balanceDue() > 0)
+            {{-- Con pago en línea activo queda plegado: quien prefiere transferir lo abre. --}}
+            <details class="pay-box" id="transfer-details" @unless ($canPayOnline) open @endunless>
+                <summary style="cursor:pointer; font-weight:800;">Prefiero pagar por transferencia — {{ $amount }}</summary>
                 <div class="line"><span>Titular</span><span>{{ $pay['bank_titular'] }}</span></div>
                 @if (! empty($pay['bank_rut']))<div class="line"><span>RUT</span><span>{{ $pay['bank_rut'] }}</span></div>@endif
                 @if (! empty($pay['bank_name']))<div class="line"><span>Banco</span><span>{{ $pay['bank_name'] }}</span></div>@endif
                 <div class="line"><span>{{ $pay['bank_account_type'] ?: 'Cuenta' }}</span><span>{{ $pay['bank_account_number'] }}</span></div>
                 @if (! empty($pay['bank_email']))<div class="line"><span>Correo</span><span>{{ $pay['bank_email'] }}</span></div>@endif
                 <small>Envíanos el comprobante por WhatsApp indicando tu código {{ $booking->code }}.</small>
-            </div>
+            </details>
         @endif
 
         @unless ($expired)
