@@ -76,7 +76,7 @@
         @foreach ($booking->payments as $p)
             <tr>
                 <td>
-                    {{ $p->paymentMethod?->name ?? '—' }}
+                    {{ $p->methodLabel() ?: '—' }}
                     @if ($p->status !== 'aprobado')<span class="sd-tag">{{ $p->status }}</span>@endif
                     <div class="sd-mut sd-small">
                         {{ $p->created_at->timezone($tz)->format('d/m H:i') }}

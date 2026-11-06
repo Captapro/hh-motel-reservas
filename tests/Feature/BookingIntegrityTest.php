@@ -411,6 +411,18 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('CONFIRMADA', $paid->fresh()->booking_status);
     }
 
+    public function test_cash_card_adds_up_the_month_and_starts_at_zero_the_next_month(): void
+    {
+        (require database_path('migrations/2026_09_11_100000_create_cash_movements_table.php'))->up();
+        $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $this->travelTo(Carbon::parse('2026-10-30 12:00', 'America/Santiago'));
+        app(PaymentService::class)->register($this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]), $method, 1000, null, null, auth()->id(), null, null);
+        $this->travelTo(Carbon::parse('2026-11-02 12:00', 'America/Santiago'));
+
+        $this->assertSame(0, $this->get(route('cash.show'))->assertOk()->assertSee('Efectivo del mes')->assertSee('noviembre')->viewData('monthCashSales'));
+        $this->assertSame(1000, $this->get(route('cash.show', '2026-10-15'))->assertOk()->viewData('monthCashSales'));
+    }
+
     public function test_sale_detail_panel_shows_payments_and_consumptions(): void
     {
         $method = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);

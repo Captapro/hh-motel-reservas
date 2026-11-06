@@ -56,6 +56,10 @@
         .pay-status { margin-left:auto; font-size:10.5px; font-family: ui-monospace, monospace; text-transform:uppercase; background:#16301f; color:#6fd39a; padding:2px 9px; border-radius:20px; }
         .pay-doc-done { display:flex; gap:16px; align-items:center; flex-wrap:wrap; font-size:13.5px; color:#bbb; padding-top:4px; }
         .pay-doc-done b { color:#eee; font-family:ui-monospace,monospace; }
+        .pay-operation { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:13.5px; color:#bbb; }
+        .pay-operation b { color:#eee; font-family:ui-monospace,monospace; }
+        .pay-operation a { color:#ff9a4d; font-weight:600; }
+        .pay-operation button { width:auto; margin:0; padding:3px 9px; background:transparent; color:#eee; border:1px solid #555; border-radius:6px; font-size:12.5px; cursor:pointer; }
         .pay-doc-edit { margin-left:auto; background:transparent; border:0; color:#888; font-size:12.5px; cursor:pointer; padding:2px 4px; }
         .pay-doc-edit:hover { color:#ff7918; }
         .pay-docs[hidden] { display:none; }
@@ -491,10 +495,19 @@
                     @foreach ($booking->payments as $payment)
                         <div class="pay-block">
                             <div class="pay-head">
-                                <span class="pay-method">{{ $payment->paymentMethod->name }}</span>
+                                <span class="pay-method">{{ $payment->methodLabel() }}</span>
                                 <span class="pay-amount">${{ number_format($payment->amount, 0, ',', '.') }}</span>
                                 <span class="pay-status">{{ $payment->status }}</span>
                             </div>
+                            @if ($payment->isMercadoPago())
+                                <div class="pay-operation">
+                                    @if ($payment->mercadoPagoOperation())
+                                        <span>N° operación <b>{{ $payment->mercadoPagoOperation() }}</b></span>
+                                        <button type="button" onclick="navigator.clipboard.writeText('{{ $payment->mercadoPagoOperation() }}').then(() => { this.textContent = 'Copiado ✓'; })">Copiar</button>
+                                    @endif
+                                    <a href="https://www.mercadopago.cl/activities" target="_blank" rel="noopener">Abrir actividad en Mercado Pago ↗</a>
+                                </div>
+                            @endif
                             @php $hasDoc = filled($payment->voucher_number) || filled($payment->receipt_number); @endphp
                             @if ($hasDoc)
                                 {{-- Ya registrado: se muestra como dato; corregirlo es una acción aparte. --}}

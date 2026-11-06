@@ -30,6 +30,12 @@ class CashRegisterController extends Controller
         $totalEgresos = $balance['egresos'];
         $saldoEnCaja = $balance['saldo'];
 
+        // Ventas en efectivo del mes del día elegido: al empezar un mes nuevo parte de cero.
+        $monthCashSales = (int) Payment::where('payment_method_id', $cashMethodId)
+            ->where('status', 'aprobado')
+            ->whereBetween('created_at', [$day->copy()->startOfMonth(), $day->copy()->endOfMonth()])
+            ->sum('amount');
+
         // Detalle del día elegido, para el desglose día a día.
         $dayPayments = Payment::with(['booking.room', 'booking.customer'])
             ->where('payment_method_id', $cashMethodId)
@@ -102,6 +108,7 @@ class CashRegisterController extends Controller
             'advancePayments' => $advance->values(),
             'day' => $day,
             'saldoEnCaja' => $saldoEnCaja,
+            'monthCashSales' => $monthCashSales,
             'totalCashFromSales' => $totalCashFromSales,
             'totalIngresos' => $totalIngresos,
             'totalEgresos' => $totalEgresos,

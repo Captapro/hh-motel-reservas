@@ -107,9 +107,9 @@
 
     <div class="kpis">
         <div class="kpi saldo">
-            <div class="label">Efectivo por depositar</div>
-            <div class="value">{{ $m($saldoEnCaja) }}</div>
-            <div class="note">acumulado en caja fuerte</div>
+            <div class="label">Efectivo del mes</div>
+            <div class="value">{{ $m($monthCashSales) }}</div>
+            <div class="note">ventas en efectivo de {{ $day->copy()->locale('es')->translatedFormat('F') }}</div>
         </div>
         <div class="kpi">
             <div class="label">Máquina Mercado Pago</div>

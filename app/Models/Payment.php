@@ -27,6 +27,28 @@ class Payment extends Model
         ];
     }
 
+    /** El medio con su origen: débito y crédito pasan por la máquina de Mercado Pago. */
+    public function methodLabel(): string
+    {
+        return match ($this->paymentMethod?->code) {
+            'mercado_pago' => 'Mercado Pago · Online',
+            'debito' => 'Mercado Pago · Máquina · Débito',
+            'credito' => 'Mercado Pago · Máquina · Crédito',
+            default => (string) $this->paymentMethod?->name,
+        };
+    }
+
+    public function isMercadoPago(): bool
+    {
+        return in_array($this->paymentMethod?->code, ['mercado_pago', 'debito', 'credito'], true);
+    }
+
+    /** N° de operación de un pago en línea; el saldo de un reembolso parcial conserva el del pago original. */
+    public function mercadoPagoOperation(): ?string
+    {
+        return preg_match('/^MP-(\d+)/', (string) $this->external_id, $match) ? $match[1] : null;
+    }
+
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
