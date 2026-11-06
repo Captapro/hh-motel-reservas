@@ -17,7 +17,7 @@ class AvailabilityChecker
     public const RESERVATION_GAP_MINUTES = 60;
 
     /** Al asignar sola una habitación, se evitan las que tienen una reserva dentro de estas horas. */
-    public const RESERVED_SOON_HOURS = 24;
+    public const RESERVED_SOON_HOURS = 12;
 
     public function hasGuestInside(Room $room, ?int $excludeBookingId = null): bool
     {
