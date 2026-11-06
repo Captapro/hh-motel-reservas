@@ -117,12 +117,15 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
 @if($view==='day')
 @php
  $money = fn ($n) => '$'.number_format((int) $n, 0, ',', '.');
- $agendaRows = $agenda->map(function ($b) {
+ $toAgendaRow = function ($b, $future = false) {
   $extras = (int) $b->addons->sum('amount');
   $paid = (int) $b->payments->where('status', 'aprobado')->sum('amount');
   $total = (int) $b->price_final + $extras;
-  return ['b' => $b, 'state' => $b->agendaState(), 'extras' => $extras, 'paid' => $paid, 'total' => $total, 'balance' => max(0, $total - $paid)];
- });
+  return ['b' => $b, 'state' => $b->agendaState(), 'extras' => $extras, 'paid' => $paid, 'total' => $total, 'balance' => max(0, $total - $paid), 'future' => $future];
+ };
+ $agendaRows = $agenda->map(fn ($b) => $toAgendaRow($b));
+ // Las próximas van en la misma tabla, ocultas hasta tocar su botón.
+ $futureRows = $soon->reject(fn ($b) => $agenda->contains('id', $b->id))->values()->map(fn ($b) => $toAgendaRow($b, true));
  $groupsDef = [
   'todas' => ['Todas', null],
   'por_llegar' => ['Por llegar', ['por_llegar', 'atrasada']],
@@ -134,11 +137,12 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
  $countOf = fn ($keys) => $keys === null ? $agendaRows->count() : $agendaRows->whereIn('state.key', $keys)->count();
 @endphp
 <section class="calendar-card agenda-card sheet-card">
- <h2>Reservas del día <span class="hist-count">{{ $agendaRows->count() }} {{ Str::plural('reserva', $agendaRows->count()) }} · toca una fila para ver el detalle</span></h2>
+ <h2><span id="agenda-title">Reservas del día</span> <span class="hist-count"><span id="agenda-count">{{ $agendaRows->count() }} {{ Str::plural('reserva', $agendaRows->count()) }}</span> · toca una fila para ver el detalle</span></h2>
  <div class="agenda-chips">
   @foreach ($groupsDef as $gk => [$glabel, $gkeys])
    <button type="button" class="agenda-chip {{ $gk === 'todas' ? 'on' : '' }}" data-filter="{{ $gk }}" data-keys="{{ $gkeys ? implode(',', $gkeys) : '' }}">{{ $glabel }} <b>{{ $countOf($gkeys) }}</b></button>
   @endforeach
+  <button type="button" class="agenda-chip" data-filter="proximas" data-future="1">Próximas <b>{{ $futureRows->count() }}</b></button>
  </div>
  <div class="sheet-wrap">
   <table class="sheet" id="agenda-table">
@@ -147,13 +151,13 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
     <th>Hab.</th><th>Cliente</th><th>Reserva</th><th>Origen</th><th>Estado</th><th class="n">Total</th><th class="n">Pagado</th><th class="n">Saldo</th><th></th>
    </tr></thead>
    <tbody>
-   @forelse ($agendaRows as $r)
+   @foreach ($agendaRows->concat($futureRows) as $r)
     @php
      $b = $r['b']; $k = $r['state']['key'];
      $in = ($b->checked_in_at ?? $b->starts_at)->copy()->timezone('America/Santiago');
      $outDiff = $b->checkOutDiffMinutes();
     @endphp
-    <tr data-href="{{ route('reservations.show', $b->code) }}" data-state="{{ $k }}" class="{{ in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'dim' : '' }}">
+    <tr data-href="{{ route('reservations.show', $b->code) }}" data-state="{{ $k }}" @if ($r['future']) data-future="1" style="display:none" @endif class="{{ in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'dim' : '' }}">
      <td data-label="Check-in"><b>{{ $in->format('H:i') }}</b>@if(! $in->isSameDay($date)) <small>({{ $in->locale('es')->isoFormat('ddd D') }})</small>@endif @unless($b->checked_in_at)<small>reservada</small>@endunless</td>
      <td data-label="Check-out">{{ $b->bookedEndsAt()->copy()->timezone('America/Santiago')->format('H:i') }}</td>
      <td data-label="Salida real">@if ($b->checked_out_at){{ $b->checked_out_at->copy()->timezone('America/Santiago')->format('H:i') }}@if ($outDiff) <small class="{{ $outDiff > 0 ? 'late-out' : '' }}">{{ $outDiff > 0 ? '+' : '−' }}{{ \App\Support\TimeFormat::minutes($outDiff) }}</small>@endif @else — @endif</td>
@@ -166,16 +170,14 @@ table.sheet tr.total td{background:#f3f4f6;font-weight:700;border-top:2px solid 
      <td class="n" data-label="Pagado">{{ $money($r['paid']) }}</td>
      <td class="n {{ $r['balance'] > 0 && ! in_array($k, ['cancelada', 'vencida', 'no_show'], true) ? 'owe' : '' }}" data-label="Saldo">{{ $r['balance'] > 0 ? $money($r['balance']) : '—' }}</td>
      <td>
-      @if (in_array($k, ['por_llegar', 'atrasada'], true))<a class="ag-act" href="{{ route('bookings.checkin.show', $b->code) }}">Check-in →</a>
+      @if (in_array($k, ['por_llegar', 'atrasada'], true))@if (! $r['future'] || $in->isToday())<a class="ag-act" href="{{ route('bookings.checkin.show', $b->code) }}">Check-in →</a>@endif
       @elseif ($k === 'en_alojamiento')<a class="ag-act" href="{{ route('bookings.finalize.show', $b->code) }}">Finalizar →</a>
       @elseif ($k === 'pendiente')<a class="ag-act" href="{{ route('payments.create', ['code' => $b->code]) }}">Cobrar →</a>
       @endif
      </td>
     </tr>
-   @empty
-    <tr class="zero"><td colspan="12">No hay reservas para este día.</td></tr>
-   @endforelse
-   <tr class="zero" id="agenda-empty" style="display:none"><td colspan="12">No hay reservas en este grupo.</td></tr>
+   @endforeach
+   <tr class="zero" id="agenda-empty" @if ($agendaRows->isNotEmpty()) style="display:none" @endif><td colspan="12">No hay reservas en este grupo.</td></tr>
    </tbody>
   </table>
  </div>
@@ -209,11 +211,14 @@ a.ag-act{color:#c2410c;font-weight:700;text-decoration:none;white-space:nowrap}
 document.querySelectorAll('.agenda-chip').forEach(function (chip) {
  chip.addEventListener('click', function () {
   document.querySelectorAll('.agenda-chip').forEach(function (c) { c.classList.toggle('on', c === chip); });
-  var keys = chip.dataset.keys ? chip.dataset.keys.split(',') : null, shown = 0;
+  var keys = chip.dataset.keys ? chip.dataset.keys.split(',') : null, shown = 0, future = !!chip.dataset.future;
   document.querySelectorAll('#agenda-table tbody tr[data-state]').forEach(function (tr) {
-   var ok = !keys || keys.indexOf(tr.dataset.state) !== -1; tr.style.display = ok ? '' : 'none'; if (ok) shown++;
+   var ok = future ? !!tr.dataset.future : (!tr.dataset.future && (!keys || keys.indexOf(tr.dataset.state) !== -1));
+   tr.style.display = ok ? '' : 'none'; if (ok) shown++;
   });
   var empty = document.getElementById('agenda-empty'); if (empty) empty.style.display = shown ? 'none' : '';
+  document.getElementById('agenda-title').textContent = future ? 'Próximas reservas' : 'Reservas del día';
+  document.getElementById('agenda-count').textContent = shown + (shown === 1 ? ' reserva' : ' reservas');
  });
 });
 </script>

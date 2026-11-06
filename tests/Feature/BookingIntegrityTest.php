@@ -2911,4 +2911,22 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(5000, $booking->fresh()->paidAmount());
         $this->assertNull($booking->payments()->sole()->receipt_number);
     }
+
+    public function test_el_calendario_del_dia_muestra_las_proximas_reservas_en_la_tabla_sin_check_in_anticipado(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-02 10:00'));
+        $hoy = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $futura = $this->booking(['starts_at' => Carbon::parse('2026-11-09 18:00')]);
+        foreach ([$hoy, $futura] as $b) {
+            $b->update(['booking_status' => 'CONFIRMADA']);
+        }
+
+        $page = $this->get(route('calendar.index', ['view' => 'day', 'date' => '2026-11-02']))->assertOk();
+
+        $page->assertSee('data-filter="proximas"', false)->assertSee('data-future="1"', false);
+        $html = $page->getContent();
+        $this->assertStringContainsString(route('bookings.checkin.show', $hoy->code), $html);
+        $this->assertStringNotContainsString(route('bookings.checkin.show', $futura->code), $html);
+        $this->assertSame(1, substr_count($html, '<tr data-href="'.route('reservations.show', $hoy->code).'"'));
+    }
 }

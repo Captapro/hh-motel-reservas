@@ -62,7 +62,7 @@ class CalendarController extends Controller
         // Próximas reservas desde ahora, sin importar si se mira el mes, la semana o el día.
         $futureBase = Booking::whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'])
             ->whereNull('checked_in_at')->where('starts_at', '>=', $now);
-        $soon = (clone $futureBase)->with(['room.category', 'customer'])->orderBy('starts_at')->limit(40)->get();
+        $soon = (clone $futureBase)->with(['room.category', 'customer', 'payments', 'addons'])->orderBy('starts_at')->limit(100)->get();
         $soonStats = [
             'today' => (clone $futureBase)->where('starts_at', '<=', $now->copy()->endOfDay())->count(),
             'tomorrow' => (clone $futureBase)->whereBetween('starts_at', [$now->copy()->addDay()->startOfDay(), $now->copy()->addDay()->endOfDay()])->count(),
