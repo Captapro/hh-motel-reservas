@@ -137,7 +137,7 @@ class ConversationController extends Controller
             return response()->json($action());
         } catch (RequestException $e) {
             $status = $e->response->status();
-            Log::warning('Conversaciones GHL: error '.$status);
+            Log::warning('Conversaciones GHL: error '.$status, ['path' => $e->response->effectiveUri()?->getPath(), 'mensaje' => $e->response->json('message')]);
 
             return response()->json(['error' => in_array($status, [401, 403], true)
                 ? 'GHL rechazó el permiso. Revisa que la integración tenga acceso a conversaciones y mensajes.'

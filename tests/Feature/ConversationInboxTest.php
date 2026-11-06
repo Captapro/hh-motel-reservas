@@ -84,6 +84,7 @@ class ConversationInboxTest extends TestCase
             ->assertJsonPath('can_reply', true)
             ->assertJsonPath('cata.active', false);
         $this->assertGreaterThan(1300, $response->json('window_left_minutes'));
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/contacts/c1') && $r->header('Version') === ['2021-07-28']);
     }
 
     public function test_reply_goes_by_the_conversation_channel_and_records_who_answered(): void

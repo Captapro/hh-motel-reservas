@@ -49,10 +49,11 @@ class GhlConversations
         return $this->token !== '' && $this->locationId !== '';
     }
 
-    private function http(): PendingRequest
+    /** La versión va aquí y no después: withHeaders suma valores y GHL rechaza dos versiones. */
+    private function http(string $version = self::API_VERSION): PendingRequest
     {
         return Http::withToken($this->token)
-            ->withHeaders(['Version' => self::API_VERSION, 'Accept' => 'application/json'])
+            ->withHeaders(['Version' => $version, 'Accept' => 'application/json'])
             ->baseUrl((string) config('services.ghl.base_url', self::BASE_URL))
             ->timeout(10);
     }
@@ -189,7 +190,7 @@ class GhlConversations
     /** @return array<string, mixed> */
     public function contact(string $contactId): array
     {
-        $contact = (array) $this->http()->withHeaders(['Version' => self::CONTACTS_API_VERSION])->get("/contacts/{$contactId}")->throw()->json('contact', []);
+        $contact = (array) $this->http(self::CONTACTS_API_VERSION)->get("/contacts/{$contactId}")->throw()->json('contact', []);
 
         return [
             'name' => trim(($contact['firstName'] ?? '').' '.($contact['lastName'] ?? '')) ?: (string) ($contact['contactName'] ?? ''),
