@@ -197,16 +197,30 @@
         .pill-mantencion, .pill-inactiva { background:#2a2a2a; color:#aaa; }
         .pill-activa { background:#1c2f3a; color:#7fbcdc; }
         .eta { font-size: 11.5px; color:#999; margin-top: 6px; }
-        .eta.overtime { color:#e88a9a; font-weight:600; }
-        .overdue-room { border-color:#e05252 !important; box-shadow:0 0 0 2px rgba(224,82,82,.2), 0 8px 22px rgba(224,82,82,.12); }
-        .overdue-room .overtime { color:#ff7777; font-weight:800; animation: overdue-warning 1.5s ease-in-out infinite; }
-        .overdue-room .pill-ocupada { background:#7d2635; color:#fff; }
-        @keyframes overdue-warning { 0%,100% { opacity:1; text-shadow:0 0 0 rgba(255,82,82,0); } 50% { opacity:.45; text-shadow:0 0 10px rgba(255,82,82,.9); } }
+        .eta.overtime { color:#ffc233; font-weight:600; }
+        .overdue-room { border-color:#ffc233 !important; box-shadow:0 0 0 2px rgba(255,194,51,.25), 0 8px 22px rgba(255,194,51,.12); }
+        .overdue-room .overtime { color:#ffc233; font-weight:800; animation: overdue-warning 1.5s ease-in-out infinite; }
+        .overdue-room .pill-ocupada { background:#ffc233; color:#3a2a00; }
+        @keyframes overdue-warning { 0%,100% { opacity:1; text-shadow:0 0 0 rgba(255,194,51,0); } 50% { opacity:.45; text-shadow:0 0 10px rgba(255,194,51,.9); } }
         @media (prefers-reduced-motion: reduce) { .overdue-room .overtime { animation:none; } }
         /* Por vencer: 10 minutos o menos para la hora de salida. */
         .ending-soon { border-color:#e8c76f !important; box-shadow:0 0 0 2px rgba(232,199,111,.25), 0 8px 22px rgba(232,199,111,.12); }
         .ending-soon .ending-soon-text, .compact .card .eta.ending-soon-text { color:#ffcf6e; font-weight:800; animation: overdue-warning 1.5s ease-in-out infinite; }
         .ending-soon .pill-ocupada { background:#6b5a1e; color:#fff; }
+        /* Tarjeta cerrada por vencer: toda en color, se ve desde lejos. */
+        html.compact:not(.chips) .section.ocupadas .card.ending-soon:not(.open) { background:#0a5cff !important; border-color:#0a5cff !important; }
+        html.compact:not(.chips) .section.ocupadas .card.ending-soon:not(.open) .card-head b { color:#fff; }
+        html.compact:not(.chips) .section.ocupadas .card.ending-soon:not(.open) .eta.ending-soon-text { color:#fff; font-size:14px; font-weight:800; animation:none; }
+        html.compact:not(.chips) .section.ocupadas .card.ending-soon:not(.open) .ending-rest { display:none; }
+        /* Atrasada: ámbar completo, distinta de "por salir". */
+        .late-short { display:none; }
+        html.compact:not(.chips) .section.ocupadas .card.overdue-room:not(.open) .late-long { display:none; }
+        html.compact:not(.chips) .section.ocupadas .card.overdue-room:not(.open) .late-short { display:inline; }
+        html.compact:not(.chips) .section.ocupadas .card.overdue-room:not(.open)::after { color:#fff !important; background:#3a2a00; padding:2px 8px; border-radius:999px; font-size:11.5px !important; }
+        html.compact:not(.chips) .section.ocupadas .card.ending-soon:not(.open)::after { color:#0a3fb0 !important; background:#fff; padding:2px 8px; border-radius:999px; font-size:11.5px !important; }
+        html.compact:not(.chips) .section.ocupadas .card.overdue-room:not(.open) { background:#ffc233 !important; border-color:#ffc233 !important; }
+        html.compact:not(.chips) .section.ocupadas .card.overdue-room:not(.open) .card-head b { color:#3a2a00; }
+        html.compact:not(.chips) .section.ocupadas .card.overdue-room:not(.open) .eta.overtime { color:#3a2a00; font-size:14px; font-weight:800; animation:none; }
         @media (prefers-reduced-motion: reduce) { .ending-soon .ending-soon-text { animation:none; } }
         .code { font-family: ui-monospace, monospace; font-size: 11px; margin-top:2px; color:#888; }
         a.consumo-btn { display:block; text-align:center; margin-top:6px; background:#1c2f3a; border:1px solid #3a5a72; color:#7fbcdc; text-decoration:none; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; }
@@ -312,7 +326,7 @@
         .compact .card .cat { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:500; opacity:.95; }
         .compact .card .cat::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
         .compact .card .eta { font-size:11px; color:#8a8a8a; }
-        .compact .card .eta.overtime { color:#ff8a8a; }
+        .compact .card .eta.overtime { color:#ffc233; }
         .compact .card .code { font-size:9.5px; color:#6f6f6f; }
         .compact .card a.reserve-btn { flex:1 1 0; background:transparent !important; border:1px solid rgba(255,121,24,.6) !important; color:#ffa565 !important; font-size:11.5px; font-weight:600; padding:5px 8px; border-radius:7px; transition:background .12s ease, color .12s ease; }
         .compact .card a.reserve-btn:hover { background:#ff7918 !important; color:#21170e !important; border-color:#ff7918 !important; }
@@ -326,7 +340,7 @@
         .compact .card details[open] summary { color:#ff9a4d !important; }
         .compact .card .sm svg { width:14px; height:14px; display:block; }
         /* Ocupadas en dos líneas fijas (nombre arriba, tiempo y aviso abajo), todas del mismo alto: crecen al tocarlas, para ver En aseo y Fuera de servicio sin bajar. */
-        html.compact:not(.chips) .section.ocupadas .card:not(.open) { cursor:pointer; flex-wrap:wrap; gap:3px 8px; padding-top:7px; padding-bottom:7px; min-height:62px; align-content:center; }
+        html.compact:not(.chips) .section.ocupadas .card:not(.open) { cursor:pointer; flex-wrap:wrap; gap:3px 8px; padding-top:7px; padding-bottom:7px; min-height:66px; align-content:center; }
         html.compact:not(.chips) .section.ocupadas .card:not(.open) .card-head { flex:1 1 100%; }
         html.compact:not(.chips) .section.ocupadas .card:not(.open) > :not(.card-head):not(.eta) { display:none !important; }
         html.compact:not(.chips) .section.ocupadas .card:not(.open) .eta[style], html.compact:not(.chips) .section.ocupadas .card:not(.open) .code { display:none !important; }
@@ -467,47 +481,8 @@
             .cat-filter button { font-size:13.5px; padding:8px 15px; }
         }
 </style>
+    @include('partials.hh-sound')
     <script>
-        // Un solo audio para todo el tablero. El navegador lo deja mudo hasta el primer
-        // toque o tecla en la página: por eso el tablero se actualiza sin recargar
-        // (recargar lo volvería a bloquear) y lo que no pudo sonar queda en cola.
-        (function () {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            const queue = [];
-            let ctx = null;
-            const running = () => !!ctx && ctx.state === 'running';
-            const hint = () => {
-                const el = document.getElementById('hh-sound-hint');
-                if (el) el.hidden = !AudioCtx || running();
-            };
-            const flush = () => {
-                while (running() && queue.length) queue.shift()(ctx);
-                hint();
-            };
-            const context = () => {
-                if (!ctx) {
-                    ctx = new AudioCtx();
-                    ctx.onstatechange = flush;
-                }
-                return ctx;
-            };
-            const wake = () => {
-                if (!AudioCtx) return;
-                try { context().resume().then(flush).catch(() => {}); } catch (e) { /* sin audio */ }
-            };
-            window.hhSound = function (play) {
-                if (!AudioCtx) return;
-                try {
-                    if (context().state === 'running') { play(ctx); return; }
-                    if (queue.length < 6) queue.push(play);
-                    wake();
-                    hint();
-                } catch (e) { /* sin audio: queda el aviso en pantalla */ }
-            };
-            document.addEventListener('pointerdown', wake, true);
-            document.addEventListener('keydown', wake, true);
-            document.addEventListener('DOMContentLoaded', () => { wake(); setTimeout(hint, 400); });
-        })();
         // Lo que se vuelve a preparar cada vez que el tablero se actualiza.
         window.hhBoardRenderers = [];
         window.hhOnBoardRender = function (fn) { window.hhBoardRenderers.push(fn); fn(); };
@@ -631,7 +606,8 @@
                 <div class="sidebar-empty panel-empty" id="ocupadas-empty" @if ($grouped['ocupadas']->isNotEmpty()) hidden @endif>Ningun Playroom ocupado ahora.</div>
                 @if ($grouped['ocupadas']->isNotEmpty())
                     <div class="grid">
-                        @foreach ($grouped['ocupadas'] as $entry)
+                        {{-- Las que salen en 10 minutos o menos, y las atrasadas, van primero. --}}
+                        @foreach ($grouped['ocupadas']->sortBy(fn ($entry) => ($entry['status']['eta_minutes'] ?? 9999) <= 10 ? $entry['status']['eta_minutes'] ?? 9999 : 9999) as $entry)
                             @include('rooms._card', ['entry' => $entry])
                         @endforeach
                     </div>
@@ -1012,6 +988,8 @@
     // Suena una vez por estadía cuando entra en "por vencer". Si el navegador aún no
     // deja sonar, queda en cola y suena al primer toque o tecla.
     hhOnBoardRender(function () {
+        // Recepción tiene la barra de aviso, que repite el sonido hasta confirmarlo.
+        if (window.hhEndingBar) return;
         let warned = [];
         try { warned = JSON.parse(localStorage.getItem('hh-ending-soon-warned') || '[]'); } catch (e) {}
         const fresh = [...document.querySelectorAll('.card[data-ending-soon]')].map(c => c.dataset.endingSoon).filter(code => !warned.includes(code));

@@ -35,6 +35,7 @@
         $navigation[] = ['admin.categories.index', 'admin.categories.*,admin.rooms.*,admin.furniture.*,admin.rates.*,admin.offers.*,admin.upsells.*,admin.coupons.*,admin.staff.*,admin.shifts.*,admin.help.*,admin.customers.*,admin.products.*,admin.combos.*,admin.core_extras.*,admin.historical.*,admin.access.*,admin.ghl.*,admin.cleanup.*', 'Administración', 'M12 3v3 M12 18v3 M3 12h3 M18 12h3 M6 6l2 2 M16 16l2 2 M6 18l2-2 M16 8l2-2 M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0'];
     }
 @endphp
+<script>try { if (localStorage.getItem('hh-rail-compact') === '1') document.documentElement.classList.add('hh-rail-compact'); } catch (e) {}</script>
 <aside class="hh-rail" aria-label="Navegación principal">
     <a class="hh-rail-brand" href="{{ route(auth()->user()?->homeRoute() ?? 'rooms.board') }}" aria-label="HH Motel — Tablero"><b>HH</b><span>MOTEL<small>Recepción</small></span></a>
     <nav>
@@ -46,5 +47,17 @@
             </a>
         @endforeach
     </nav>
+    <button type="button" class="hh-rail-toggle" id="hh-rail-toggle" aria-label="Comprimir o expandir el menú" title="Comprimir o expandir el menú">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>Comprimir</span>
+    </button>
     <div class="hh-rail-footer">HH · Recepción</div>
 </aside>
+<script>
+    document.getElementById('hh-rail-toggle').addEventListener('click', function () {
+        const compact = document.documentElement.classList.toggle('hh-rail-compact');
+        try { localStorage.setItem('hh-rail-compact', compact ? '1' : '0'); } catch (e) {}
+        // El tablero recalcula el ancho de sus tarjetas.
+        window.dispatchEvent(new Event('resize'));
+    });
+</script>

@@ -75,9 +75,9 @@
     @else
         @if ($status['occupancy'] === 'ocupada' && $status['current_booking'])
             @if ($status['eta_minutes'] < 0)
-                <div class="eta overtime">Pasó su horario hace {{ \App\Support\TimeFormat::minutes($status['eta_minutes']) }}</div>
+                <div class="eta overtime"><span class="late-long">Pasó su horario hace</span><span class="late-short">Atrasada</span> {{ \App\Support\TimeFormat::minutes($status['eta_minutes']) }}</div>
             @elseif ($endingSoon)
-                <div class="eta ending-soon-text">⏰ Sale en {{ \App\Support\TimeFormat::minutes($status['eta_minutes']) }} — avisar a la pieza u ofrecer +1 hora</div>
+                <div class="eta ending-soon-text">⏰ Sale en {{ \App\Support\TimeFormat::minutes($status['eta_minutes']) }}<span class="ending-rest"> — avisar a la pieza u ofrecer +1 hora</span></div>
             @else
                 <div class="eta">Libera en {{ \App\Support\TimeFormat::minutes($status['eta_minutes']) }}</div>
             @endif

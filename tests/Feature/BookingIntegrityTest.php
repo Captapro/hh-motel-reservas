@@ -2768,6 +2768,24 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('96302', $payment->fresh()->receipt_number);
     }
 
+    public function test_ending_soon_lists_only_stays_about_to_leave_or_recently_late(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-05 11:00'));
+        $soon = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $soon->update(['booking_status' => 'CHECK_IN', 'checked_in_at' => Carbon::parse('2026-10-05 12:00'), 'ends_at' => Carbon::parse('2026-10-05 15:08')]);
+        $this->travelTo(Carbon::parse('2026-10-05 15:00'));
+
+        $list = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('rooms.ending_soon'))->assertOk()->json();
+        $this->assertSame([$soon->code], array_column($list, 'code'));
+        $this->assertSame(8, $list[0]['minutes']);
+
+        // Atrasada: sigue en la lista con minutos negativos, y deja de salir después de 1 hora o al hacer check-out.
+        $this->travelTo(Carbon::parse('2026-10-05 15:20'));
+        $this->assertSame(-12, $this->getJson(route('rooms.ending_soon'))->json('0.minutes'));
+        $this->travelTo(Carbon::parse('2026-10-05 16:30'));
+        $this->assertSame([], $this->getJson(route('rooms.ending_soon'))->json());
+    }
+
     public function test_temporary_notes_leave_after_24_hours_and_only_admins_pin_them(): void
     {
         (require database_path('migrations/2026_11_04_120000_create_shift_notes_tables.php'))->up();

@@ -237,6 +237,7 @@ Route::middleware(['auth', 'section'])->group(function () {
 
     Route::get('/habitaciones', [RoomBoardController::class, 'index'])->name('rooms.board');
     Route::get('/habitaciones/pases', [RoomBoardController::class, 'passScans'])->name('rooms.pass_scans');
+    Route::get('/habitaciones/por-vencer', [RoomBoardController::class, 'endingSoon'])->name('rooms.ending_soon');
     Route::get('/habitaciones/proximas', [RoomBoardController::class, 'upcoming'])->name('rooms.upcoming');
     Route::get('/habitaciones/{room}/reservas', [RoomBoardController::class, 'bookings'])->name('rooms.bookings');
     Route::post('/habitaciones/{room}/estado', [RoomBoardController::class, 'updateStatus'])->name('rooms.status');

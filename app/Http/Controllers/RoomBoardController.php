@@ -100,6 +100,30 @@ class RoomBoardController extends Controller
      */
     public const NEW_BOOKING_ALERT_MINUTES = 20;
 
+    /** Estadías que salen en 10 minutos o menos, o atrasadas hasta 1 hora: la barra de aviso de recepción. */
+    public function endingSoon(): JsonResponse
+    {
+        $stays = Booking::with('room')
+            ->where('booking_status', 'CHECK_IN')
+            ->whereNotNull('checked_in_at')
+            ->whereNull('checked_out_at')
+            ->whereBetween('ends_at', [now()->subHour(), now()->addMinutes(10)])
+            ->orderBy('ends_at')
+            ->get();
+
+        return response()->json($stays->map(function (Booking $booking) {
+            $minutes = (int) ceil(now()->diffInMinutes($booking->ends_at, false));
+
+            return [
+                'code' => $booking->code,
+                'room' => $booking->room?->name,
+                'minutes' => $minutes,
+                'time' => TimeFormat::minutes($minutes),
+                'url' => route('reservations.show', $booking->code),
+            ];
+        })->values());
+    }
+
     public function passScans(): JsonResponse
     {
         $recent = PassScans::recent();

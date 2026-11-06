@@ -116,7 +116,7 @@
         <a class="hh-new-btn hh-alt-btn" href="https://eboleta.sii.cl/emitir/" target="hh_sii_boleta" rel="noopener" data-sii-boleta title="Abre el SII en una ventana al lado del sistema">Emitir boleta</a>
         @auth
             @if (auth()->user()->isAdministrador() && ($hhShiftAlerts = \App\Models\ShiftHandover::pendingReviewCount()) > 0)
-                <a href="{{ route('cash.shifts') }}" style="background:#3a1c22; color:#e88a9a; font-weight:600;">⚠ Turnos con diferencias ({{ $hhShiftAlerts }})</a>
+                <a href="{{ route('cash.shifts') }}" style="background:#ffc233; color:#3a2a00; font-weight:700;">⚠ Turnos con diferencias ({{ $hhShiftAlerts }})</a>
             @endif
             <a href="{{ route('account.password') }}" title="Cambiar mi contraseña" style="color:#aaa; font-size:12.5px; padding:0 4px;">{{ auth()->user()->name }} · 🔑</a>
             @if (auth()->user()->isSoporte())
@@ -210,6 +210,9 @@
 @auth
     @if (auth()->user()->isRecepcion() || auth()->user()->isAdministrador())
         @include('partials.staff-notice-alert')
+    @endif
+    @if (auth()->user()->isRecepcion() && ! $hhRound)
+        @include('partials.ending-soon-bar')
     @endif
     @include('partials.id-scanner')
     @unless ($hhRound)

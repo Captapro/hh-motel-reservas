@@ -147,6 +147,17 @@ a.bookings-btn.empty { color: #bbbfc5; border-color: #67696f; }
 .compact .card details[open] { display: block; }
 .compact :is(.eta, .cat, .pill) { font-size: 11px; }
 .compact :is(a.reserve-btn, a.checkout-btn, .checkin-btn, a.consumo-btn, a.bookings-btn, summary) { font-size: 12px; padding: 7px; }
+/* Menú comprimido a mano: solo íconos, con el nombre al pasar el mouse. */
+.hh-rail-toggle { display: flex; align-items: center; gap: 12px; margin-top: auto; padding: 10px; border: 0; border-radius: 8px; background: none; color: #85878c; font: inherit; font-size: 12px; cursor: pointer; }
+.hh-rail-toggle:hover { color: #fff; background: #252525; }
+.hh-rail-toggle + .hh-rail-footer { margin-top: 0; padding-top: 8px; }
+html.hh-rail-compact { --hh-rail-width: 66px; }
+html.hh-rail-compact .hh-rail { padding: 19px 7px; }
+html.hh-rail-compact .hh-rail-brand { padding: 0 7px 24px; }
+html.hh-rail-compact .hh-rail-brand span, html.hh-rail-compact .hh-rail-link span, html.hh-rail-compact .hh-rail-footer, html.hh-rail-compact .hh-rail-toggle span { display: none; }
+html.hh-rail-compact .hh-rail-link, html.hh-rail-compact .hh-rail-toggle { justify-content: center; padding: 13px 8px; }
+html.hh-rail-compact .hh-rail-toggle svg { transform: rotate(180deg); }
+@media (max-width: 1200px) { .hh-rail-toggle { display: none; } }
 @media (max-width: 1200px) {
     :root { --hh-rail-width: 66px; }
     .hh-rail { padding: 19px 7px; }
