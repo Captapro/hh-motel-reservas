@@ -50,6 +50,7 @@ return [
     ],
 
     'ghl' => [
+        'base_url' => env('GHL_BASE_URL', 'https://services.leadconnectorhq.com'),
         'private_token' => env('GHL_PRIVATE_TOKEN'),
         'location_id' => env('GHL_LOCATION_ID'),
         'custom_field_pago_id' => env('GHL_CUSTOM_FIELD_PAGO_ID'),

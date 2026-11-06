@@ -31,6 +31,10 @@
         $navigation[] = ['admin_app.index', 'admin_app.*', 'App admin', 'M7 2h10v20H7z M11 18h2'];
         $navigation[] = ['admin.mercadopago.index', 'admin.mercadopago.*', 'Mercado Pago', 'M2 6h20v12H2z M2 10h20 M6 15h4 M15 15h3'];
     }
+    // Conversaciones: solo Soporte mientras se construye y se prueba.
+    if (auth()->user()?->isSoporte()) {
+        $navigation[] = ['admin.conversations.index', 'admin.conversations.*', 'Conversaciones', 'M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z'];
+    }
     if (auth()->user()?->isAdministrador()) {
         $navigation[] = ['admin.categories.index', 'admin.categories.*,admin.rooms.*,admin.furniture.*,admin.rates.*,admin.offers.*,admin.upsells.*,admin.coupons.*,admin.staff.*,admin.shifts.*,admin.help.*,admin.customers.*,admin.products.*,admin.combos.*,admin.core_extras.*,admin.historical.*,admin.access.*,admin.ghl.*,admin.cleanup.*', 'Administración', 'M12 3v3 M12 18v3 M3 12h3 M18 12h3 M6 6l2 2 M16 16l2 2 M6 18l2-2 M16 8l2-2 M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0'];
     }

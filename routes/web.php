@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\CustomerBehaviorController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\ExtrasByMonthController;
 use App\Http\Controllers\Admin\FurnitureController;
+use App\Http\Controllers\Admin\ConversationController;
 use App\Http\Controllers\Admin\GhlTestController;
 use App\Http\Controllers\Admin\HistoricalCustomersController;
 use App\Http\Controllers\Admin\HistoricalImportController;
@@ -453,5 +454,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
 
         Route::get('/integraciones/ghl', [GhlTestController::class, 'index'])->middleware('role:soporte')->name('ghl.index');
         Route::post('/integraciones/ghl/probar', [GhlTestController::class, 'test'])->middleware('role:soporte')->name('ghl.test');
+
+        Route::middleware('role:soporte')->prefix('conversaciones')->name('conversations.')->group(function () {
+            Route::get('/', [ConversationController::class, 'index'])->name('index');
+            Route::get('/lista', [ConversationController::class, 'list'])->name('list');
+            Route::get('/{conversation}', [ConversationController::class, 'show'])->where('conversation', '[A-Za-z0-9]+')->name('show');
+            Route::post('/{conversation}/responder', [ConversationController::class, 'reply'])->where('conversation', '[A-Za-z0-9]+')->middleware('throttle:30,1,conversations.reply')->name('reply');
+            Route::post('/{conversation}/cata', [ConversationController::class, 'cata'])->where('conversation', '[A-Za-z0-9]+')->name('cata');
+        });
     }); // fin role:administrador
 });
