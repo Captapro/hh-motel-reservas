@@ -505,7 +505,10 @@
                                         <span>N° operación <b>{{ $payment->mercadoPagoOperation() }}</b></span>
                                         <button type="button" onclick="navigator.clipboard.writeText('{{ $payment->mercadoPagoOperation() }}').then(() => { this.textContent = 'Copiado ✓'; })">Copiar</button>
                                     @endif
-                                    <a href="https://www.mercadopago.cl/activities" target="_blank" rel="noopener">Abrir actividad en Mercado Pago ↗</a>
+                                    @if (auth()->user()->isAdministrador())
+                                        @php $paidAt = $payment->created_at->copy()->timezone('America/Santiago'); @endphp
+                                        <a href="{{ route('admin.mercadopago.index', ['mes' => $paidAt->format('Y-m'), 'dia' => $paidAt->toDateString(), 'voucher' => $payment->voucher_number ?: null]) }}">Ver operación en Mercado Pago →</a>
+                                    @endif
                                 </div>
                             @endif
                             @php $hasDoc = filled($payment->voucher_number) || filled($payment->receipt_number); @endphp

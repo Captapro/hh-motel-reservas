@@ -196,7 +196,7 @@ class MercadoPagoHistory
             ->map(fn ($g) => (int) $g->sum('amount'));
         $byDay = $rows->groupBy(fn ($r) => $r['at']->toDateString());
 
-        return $byDay->keys()->merge($cards->keys())->unique()->sortDesc()->values()
+        return self::markCompensated($byDay->keys()->merge($cards->keys())->unique()->sortDesc()->values()
             ->map(function (string $day) use ($byDay, $cards, $tz) {
                 $approved = $byDay->get($day, collect())->where('status', 'approved')->where('channel', '!=', 'Otro');
 
@@ -208,7 +208,29 @@ class MercadoPagoHistory
                     'machine' => (int) $approved->where('point', true)->sum('amount'),
                     'system' => $cards->get($day, 0),
                 ];
-            });
+            }));
+    }
+
+    /**
+     * Un cobro hecho antes de medianoche y anotado después deja la misma diferencia
+     * con signo contrario en dos días seguidos: se marca como compensada, no como faltante.
+     */
+    public static function markCompensated(Collection $days): Collection
+    {
+        $diffs = $days->mapWithKeys(fn (array $d) => [$d['day']->toDateString() => $d['machine'] - $d['system']]);
+
+        return $days->map(function (array $d) use ($diffs) {
+            $diff = $diffs->get($d['day']->toDateString());
+            $next = $d['day']->copy()->addDay();
+            $previous = $d['day']->copy()->subDay();
+            $partner = match (true) {
+                $diff > 0 && $diffs->get($next->toDateString()) === -$diff => $next,
+                $diff < 0 && $diffs->get($previous->toDateString()) === -$diff => $previous,
+                default => null,
+            };
+
+            return $d + ['compensated_with' => $partner];
+        });
     }
 
     /** @return array<int, array<string, mixed>> */

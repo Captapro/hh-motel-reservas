@@ -109,7 +109,7 @@
         @if ($data['days']->isNotEmpty())
             <details class="card mp-days">
                 <summary style="cursor:pointer; font-weight:600; font-size:14.5px;">Días del mes ({{ $data['days']->count() }}) — aprieta un día para ver su detalle</summary>
-                <p class="sub" style="margin:8px 0;">"Máquina" es lo que cobró la máquina de Mercado Pago; "Caja (tarjeta)" es lo que recepción registró como débito o crédito ese día. Hasta octubre la caja se llevaba en planilla, por eso aparece en $0; desde el 1 de noviembre se cuadra acá.</p>
+                <p class="sub" style="margin:8px 0;">"Máquina" es lo que cobró la máquina de Mercado Pago; "Caja (tarjeta)" es lo que recepción registró como débito o crédito ese día. Hasta octubre la caja se llevaba en planilla, por eso aparece en $0; desde el 1 de noviembre se cuadra acá. En verde, un cobro que se anotó al día siguiente: la plata está y se compensa entre esos dos días.</p>
                 <table class="tbl-compact">
                     <thead><tr><th>Día</th><th class="num">Movimientos</th><th class="num">Cobrado</th><th class="num">Neto</th><th class="num">Máquina</th><th class="num">Caja (tarjeta)</th><th class="num">Diferencia</th></tr></thead>
                     <tbody>
@@ -122,7 +122,10 @@
                                 <td class="num">{{ $money($d['net']) }}</td>
                                 <td class="num">{{ $money($d['machine']) }}</td>
                                 <td class="num">{{ $money($d['system']) }}</td>
-                                <td class="num {{ $diff === 0 ? 'mp-ok' : 'mp-bad' }}">{{ $diff === 0 ? 'Cuadra' : ($diff > 0 ? '+' : '−').$money(abs($diff)) }}</td>
+                                <td class="num {{ $diff === 0 || $d['compensated_with'] ? 'mp-ok' : 'mp-bad' }}">
+                                    {{ $diff === 0 ? 'Cuadra' : ($diff > 0 ? '+' : '−').$money(abs($diff)) }}
+                                    @if ($d['compensated_with'])<br><small>Compensa con {{ $d['compensated_with']->locale('es')->isoFormat('ddd D') }}</small>@endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

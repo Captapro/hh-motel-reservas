@@ -28,7 +28,15 @@ class MercadoPagoController extends Controller
             $error = 'Mercado Pago no está conectado (falta la credencial en el servidor).';
         } else {
             try {
-                $data = $history->month($first, $day);
+                // Desde una reserva se llega con el voucher: el cobro puede ser de un día
+                // anterior al que se anotó, así que se abre el día real de la máquina.
+                $voucher = (int) request('voucher');
+                $data = $history->month($first, $voucher ? null : $day);
+                if ($voucher) {
+                    $charge = $data['rows']->first(fn (array $r) => $r['point'] && (int) $r['voucher'] === $voucher);
+                    $day = $charge ? $charge['at']->toDateString() : $day;
+                    $data['rows'] = $data['rows']->filter(fn (array $r) => $r['at']->toDateString() === $day)->values();
+                }
             } catch (Throwable $e) {
                 Log::warning('Mercado Pago: no se pudo leer el historial', ['error' => $e->getMessage()]);
                 $error = 'Mercado Pago no respondió. Intenta de nuevo en un minuto.';
