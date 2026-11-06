@@ -2735,6 +2735,34 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(['PLUS 101', 'PLUS 202', 'PLUS 302', 'PLUS 207', 'PLUS 311'], $order);
     }
 
+    public function test_a_stay_must_end_an_hour_before_the_next_reservation_of_the_room(): void
+    {
+        $this->booking(['starts_at' => Carbon::parse('2026-10-05 18:00')]);
+        $checker = app(AvailabilityChecker::class);
+        $day = fn (string $time) => Carbon::parse('2026-10-05 '.$time);
+
+        $this->assertTrue($checker->isAvailable($this->room, $day('13:00'), $day('16:00')));
+        $this->assertTrue($checker->isAvailable($this->room, $day('14:00'), $day('17:00')));
+        $this->assertFalse($checker->isAvailable($this->room, $day('14:15'), $day('17:15')));
+        $this->assertTrue($checker->hasReservationSoon($this->room, $day('16:00')));
+        $this->assertFalse($checker->hasReservationSoon($this->room, $day('19:00')));
+    }
+
+    public function test_board_offers_a_south_room_before_a_front_room_with_a_reservation(): void
+    {
+        $room = function (int $id, string $name, ?string $wing) {
+            $model = new Room(['room_category_id' => 1, 'name' => $name, 'wing' => $wing]);
+            $model->id = $id;
+
+            return $model;
+        };
+        $rooms = collect([$room(1, 'PLUS 201', 'norte'), $room(2, 'PLUS 207', 'sur'), $room(3, 'PLUS 307', 'sur')]);
+
+        $this->assertSame([1], Room::offeredNow($rooms));
+        $this->assertSame([2], Room::offeredNow($rooms, [1]));
+        $this->assertSame([1], Room::offeredNow($rooms, [1, 2, 3])); // sin alternativa, se sigue ofreciendo
+    }
+
     public function test_south_wing_only_enters_when_the_category_runs_out_of_first_floor_and_north(): void
     {
         $room = function (int $id, int $category, string $name, ?string $wing) {

@@ -10,6 +10,7 @@ use App\Models\Room;
 use App\Models\StaffNotice;
 use App\Models\RoomCategory;
 use App\Models\Staff;
+use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Pricing\RateRuleResolver;
 use App\Support\PassScans;
@@ -48,8 +49,12 @@ class RoomBoardController extends Controller
                 || ! $e['room']->isFloorWingEnabled($setting)
         );
 
-        // Primer piso y ala norte siempre a la vista; el ala sur entra cuando se acaban.
-        $offeredRoomIds = Room::offeredNow($disponibles->map(fn (array $e) => $e['room']));
+        // Primer piso y ala norte siempre a la vista; el ala sur entra cuando se acaban
+        // o cuando lo que queda ahí tiene una reserva cercana.
+        $soon = now()->addHours(AvailabilityChecker::RESERVED_SOON_HOURS);
+        $reservedRoomIds = $disponibles->filter(fn (array $e) => $e['status']['next_booking']?->starts_at->lt($soon))
+            ->map(fn (array $e) => $e['room']->id)->values()->all();
+        $offeredRoomIds = Room::offeredNow($disponibles->map(fn (array $e) => $e['room']), $reservedRoomIds);
 
         $grouped = [
             // "ocupada" a mano: un cliente adentro sin reserva en el sistema (p. ej. entró con la planilla).

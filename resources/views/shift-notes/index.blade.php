@@ -52,6 +52,8 @@
         .flag-hint { color:#6b7280; font-size:12.5px; }
         .note-delete button.unpin { color:#c2410c; }
         .note-delete { margin-top:6px; }
+        .note-edit textarea { display:block; width:280px; max-width:70vw; margin-top:6px; padding:6px 8px; background:#fff; color:#1f2937; border:1px solid #d1d5db; border-radius:7px; font:inherit; font-size:12.5px; }
+        .note-edit button { width:auto; margin-top:6px; background:#ff7918; color:#21170e; border:none; border-radius:7px; padding:6px 12px; font-size:12.5px; font-weight:700; cursor:pointer; }
         .note-delete button { background:none; border:none; padding:0; color:#b42318; font-size:12.5px; font-weight:700; cursor:pointer; }
         .resolve button { background:#ff7918; color:#21170e; border:none; border-radius:7px; padding:0 10px; font-weight:700; cursor:pointer; }
         .search { display:flex; flex:1 1 520px; flex-wrap:wrap; gap:8px; align-items:center; }
@@ -160,6 +162,17 @@
                                         <form method="POST" action="{{ route('shift_notes.resolve', $note) }}" class="resolve">
                                             @csrf
                                             <input type="text" name="resolution" maxlength="500" placeholder="Qué se hizo" aria-label="Qué se hizo" required>
+                                            <button type="submit">Guardar</button>
+                                        </form>
+                                    </details>
+                                @endif
+                                @if (auth()->user()->isAdministrador())
+                                    <details class="resolve-box note-edit">
+                                        <summary>Editar</summary>
+                                        <form method="POST" action="{{ route('shift_notes.update', $note) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <textarea name="body" rows="5" maxlength="1000" aria-label="Texto de la novedad" required>{{ $note->body }}</textarea>
                                             <button type="submit">Guardar</button>
                                         </form>
                                     </details>

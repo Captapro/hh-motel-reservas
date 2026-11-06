@@ -4,6 +4,7 @@ namespace App\Services\Booking;
 
 use App\Models\Room;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Comprueba disponibilidad y margen de aseo. Las operaciones de reserva deben
@@ -12,6 +13,12 @@ use Carbon\Carbon;
  */
 class AvailabilityChecker
 {
+    /** Tiempo libre antes de una reserva que aún no llega: no siempre hay mucamas para un aseo rápido. */
+    public const RESERVATION_GAP_MINUTES = 60;
+
+    /** Al asignar sola una habitación, se evitan las que tienen una reserva dentro de estas horas. */
+    public const RESERVED_SOON_HOURS = 24;
+
     public function hasGuestInside(Room $room, ?int $excludeBookingId = null): bool
     {
         return $room->bookings()
@@ -31,6 +38,14 @@ class AvailabilityChecker
         $bufferStart = $startsAt->copy()->subMinutes($room->buffer_minutes);
         $bufferEnd = $endsAt->copy()->addMinutes($room->buffer_minutes);
 
+        $tooCloseToNextReservation = $this->waitingReservations($room, $excludeBookingId)
+            ->where('starts_at', '>=', $startsAt)
+            ->where('starts_at', '<', $endsAt->copy()->addMinutes(self::RESERVATION_GAP_MINUTES))
+            ->exists();
+        if ($tooCloseToNextReservation) {
+            return false;
+        }
+
         return ! $room->bookings()
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
             ->when($excludeBookingId, fn ($q) => $q->where('id', '!=', $excludeBookingId))
@@ -40,5 +55,22 @@ class AvailabilityChecker
                 ->orWhere('checked_in_at', '<', $bufferEnd))
             ->where('ends_at', '>', $bufferStart)
             ->exists();
+    }
+
+    /** Si la habitación tiene una reserva por llegar poco después de esta hora. */
+    public function hasReservationSoon(Room $room, Carbon $after): bool
+    {
+        return $this->waitingReservations($room)
+            ->where('starts_at', '>=', $after)
+            ->where('starts_at', '<', $after->copy()->addHours(self::RESERVED_SOON_HOURS))
+            ->exists();
+    }
+
+    private function waitingReservations(Room $room, ?int $excludeBookingId = null): HasMany
+    {
+        return $room->bookings()
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'])
+            ->when($excludeBookingId, fn ($q) => $q->where('id', '!=', $excludeBookingId))
+            ->whereNull('checked_in_at');
     }
 }

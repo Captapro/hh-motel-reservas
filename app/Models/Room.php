@@ -75,15 +75,19 @@ class Room extends Model
     /**
      * De los Playrooms libres, los que se ofrecen ahora: todo el primer piso y
      * el ala norte. El ala sur entra de a uno por categoría, solo cuando esa
-     * categoría ya no tiene nada libre en el primer piso ni en el norte.
+     * categoría ya no tiene nada libre en el primer piso ni en el norte. Las que
+     * tienen una reserva cercana solo se ofrecen si la categoría no tiene otra.
      *
      * @param  Collection<int, Room>  $rooms
+     * @param  list<int>  $reservedRoomIds
      * @return list<int>
      */
-    public static function offeredNow(Collection $rooms): array
+    public static function offeredNow(Collection $rooms, array $reservedRoomIds = []): array
     {
-        return $rooms->groupBy('room_category_id')->flatMap(function (Collection $group) {
+        return $rooms->groupBy('room_category_id')->flatMap(function (Collection $group) use ($reservedRoomIds) {
             $sorted = $group->sortBy(fn (Room $room) => $room->rentOrder())->values();
+            $unreserved = $sorted->reject(fn (Room $room) => in_array($room->id, $reservedRoomIds, true))->values();
+            $sorted = $unreserved->isNotEmpty() ? $unreserved : $sorted;
             $front = $sorted->reject(fn (Room $room) => $room->wing === 'sur');
 
             return $front->isNotEmpty() ? $front : $sorted->take(1);

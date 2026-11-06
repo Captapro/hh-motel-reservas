@@ -11,8 +11,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 
 /**
- * Cuaderno de novedades: lo que un turno le deja al siguiente. Lo escrito no se
- * edita; solo administración puede eliminarlo, y queda en el registro de cambios.
+ * Cuaderno de novedades: lo que un turno le deja al siguiente. Solo administración
+ * puede editarlo o eliminarlo, y el texto anterior queda en el registro de cambios.
  * Las temporales salen de la aleta a las 24 horas; las fijas y las pendientes se
  * quedan hasta quitarlas o resolverlas. En el libro quedan todas.
  */

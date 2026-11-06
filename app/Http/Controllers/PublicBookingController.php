@@ -498,9 +498,10 @@ class PublicBookingController extends Controller
             $roomQuery->whereKey($roomId);
         }
 
-        // Si el cliente no eligió una pieza concreta, se sigue el orden de arriendo (Room::wingPriority).
+        // Si el cliente no eligió una pieza concreta, va primero una sin reserva cercana, aunque sea del
+        // ala sur, para no apretar el aseo; entre ellas se sigue el orden de arriendo (Room::wingPriority).
         return $roomQuery->orderBy('name')->get()
-            ->sortBy(fn (Room $r) => $r->wingPriority())->values()
+            ->sortBy(fn (Room $r) => [(int) $availability->hasReservationSoon($r, $endsAt), $r->wingPriority()])->values()
             ->first(fn (Room $r) => $availability->isAvailable($r, $startsAt, $endsAt));
     }
 }

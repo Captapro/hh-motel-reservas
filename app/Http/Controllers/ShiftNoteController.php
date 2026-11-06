@@ -101,6 +101,30 @@ class ShiftNoteController extends Controller
         return back()->with('status', 'La novedad ya no está fija.');
     }
 
+    /**
+     * Solo administración: el texto anterior y quién lo había leído quedan en el registro de cambios.
+     * Se borran las lecturas para que el equipo confirme el texto nuevo.
+     */
+    public function update(Request $request, ShiftNote $note): RedirectResponse
+    {
+        abort_unless($request->user()->isAdministrador(), 403);
+
+        $validated = $request->validate(['body' => ['required', 'string', 'max:1000']], ['body.required' => 'Escribe la novedad.']);
+
+        if ($validated['body'] === $note->body) {
+            return back();
+        }
+
+        AuditLog::record($request->user()->id, 'novedad.editada', 'ShiftNote', $note->id, [
+            'texto' => $note->body,
+            'leida_por' => $note->readers()->pluck('name')->all(),
+        ], ['texto' => $validated['body']]);
+        $note->update($validated);
+        $note->readers()->detach();
+
+        return back()->with('status', 'Novedad actualizada.');
+    }
+
     /** Solo administración: queda la copia del texto en el registro de cambios. */
     public function destroy(Request $request, ShiftNote $note): RedirectResponse
     {

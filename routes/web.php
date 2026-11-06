@@ -110,7 +110,7 @@ Route::post('/catalogo/reservar', [PublicBookingController::class, 'store'])->mi
 Route::get('/catalogo/pagar/{token}', [MercadoPagoController::class, 'pay'])->middleware('throttle:10,1,catalog.pay')->name('catalog.pay');
 Route::post('/webhooks/mercadopago', [MercadoPagoController::class, 'webhook'])->middleware('throttle:120,1,webhooks.mercadopago')->name('webhooks.mercadopago');
 Route::post('/webhooks/ghl/marketing-baja', [GhlWebhookController::class, 'marketingOptOut'])->middleware('throttle:60,1,webhooks.ghl')->name('webhooks.ghl.marketing_optout');
-Route::post('/webhooks/ghl/atencion', [AttentionRequestController::class, 'store'])->middleware('throttle:60,1,webhooks.ghl')->name('webhooks.ghl.attention');
+Route::post('/webhooks/ghl/atencion', [AttentionRequestController::class, 'store'])->middleware('throttle:60,1,webhooks.ghl.attention')->name('webhooks.ghl.attention');
 Route::get('/catalogo/reservado/{token}', [PublicBookingController::class, 'booked'])->name('catalog.booked');
 // El pase PDF se manda directo al cliente por WhatsApp (ver el botón de
 // "instrucciones de pago" en reservations/show) -- tiene que poder abrirlo
@@ -199,6 +199,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/novedades/leidas', [ShiftNoteController::class, 'markRead'])->name('shift_notes.read');
     Route::post('/novedades/{note}/resolver', [ShiftNoteController::class, 'resolve'])->name('shift_notes.resolve');
     Route::post('/novedades/{note}/quitar-fija', [ShiftNoteController::class, 'unpin'])->name('shift_notes.unpin');
+    Route::patch('/novedades/{note}', [ShiftNoteController::class, 'update'])->name('shift_notes.update');
     Route::delete('/novedades/{note}', [ShiftNoteController::class, 'destroy'])->name('shift_notes.destroy');
     Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1,customers.lookup')->name('customers.lookup');
     Route::get('/clientes/nombres', fn (NameSuggestions $names) => response()->json($names->lists())->header('Cache-Control', 'private, max-age=3600'))->name('customers.names');
