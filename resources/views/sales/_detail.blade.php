@@ -50,8 +50,8 @@
 <div class="sd-sec">Precio</div>
 <dl class="sd-dl">
     <dt>Tarifa</dt><dd>{{ $booking->rate_rule_name_snapshot ?: '—' }}</dd>
-    <dt>Precio base</dt><dd>{{ $money($booking->price_original) }}</dd>
-    @if ($booking->extra_guests_fee > 0)<dt>Personas extra</dt><dd>{{ $money($booking->extra_guests_fee) }}</dd>@endif
+    <dt>Playroom · {{ $booking->duration_minutes / 60 }} h</dt><dd>{{ $money($booking->basePrice()) }}</dd>
+    @if ($booking->extra_guests_fee > 0)<dt>Adicional · {{ $booking->extraGuests() }} {{ $booking->extraGuests() === 1 ? 'persona' : 'personas' }}</dt><dd>{{ $money($booking->extra_guests_fee) }}</dd>@endif
     @if ($booking->discount_amount > 0)<dt>Descuento{{ $booking->coupon_code_snapshot ? ' ('.$booking->coupon_code_snapshot.')' : '' }}</dt><dd>− {{ $money($booking->discount_amount) }}</dd>@endif
     <dt>Playroom</dt><dd><b>{{ $money($booking->price_final) }}</b></dd>
 </dl>

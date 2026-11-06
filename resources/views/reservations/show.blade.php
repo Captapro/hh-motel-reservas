@@ -457,7 +457,10 @@
         {{-- ===== Columna central: el dinero y los pagos ===== --}}
         <div class="col">
             <div class="card">
-                <div class="row"><span class="muted">Precio original</span><span>${{ number_format($booking->price_original, 0, ',', '.') }}</span></div>
+                <div class="row"><span class="muted">Playroom · {{ $booking->duration_minutes / 60 }} h</span><span>${{ number_format($booking->basePrice(), 0, ',', '.') }}</span></div>
+                @if ($booking->extra_guests_fee > 0)
+                    <div class="row"><span class="muted">Adicional · {{ $booking->extraGuests() }} {{ $booking->extraGuests() === 1 ? 'persona' : 'personas' }}</span><span>${{ number_format($booking->extra_guests_fee, 0, ',', '.') }}</span></div>
+                @endif
                 @if ($booking->coupon_code_snapshot)
                     <div class="row"><span class="muted">Promoción ({{ $booking->coupon_code_snapshot }})</span><span>-${{ number_format($booking->discount_amount, 0, ',', '.') }}</span></div>
                     @if (\Illuminate\Support\Facades\Schema::hasTable('coupon_proofs') && \App\Models\CouponProof::where('booking_id', $booking->id)->exists())

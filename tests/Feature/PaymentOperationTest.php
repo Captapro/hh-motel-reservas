@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Models\Room;
+use App\Models\RoomCategory;
 use App\Services\Payments\MercadoPagoHistory;
 use Carbon\Carbon;
 use Tests\TestCase;
@@ -41,6 +44,15 @@ class PaymentOperationTest extends TestCase
         $this->assertSame('2026-11-06', $days['2026-11-05']['compensated_with']->toDateString());
         $this->assertNull($days['2026-11-03']['compensated_with']);
         $this->assertNull($days['2026-11-01']['compensated_with']);
+    }
+
+    public function test_price_splits_the_playroom_from_the_extra_guests(): void
+    {
+        $room = (new Room)->setRelation('category', new RoomCategory(['base_capacity' => 2]));
+        $booking = (new Booking(['price_original' => 49500, 'extra_guests_fee' => 17500, 'guests_count' => 3]))->setRelation('room', $room);
+
+        $this->assertSame(32000, $booking->basePrice());
+        $this->assertSame(1, $booking->extraGuests());
     }
 
     public function test_only_online_payments_have_a_mercado_pago_operation_number(): void

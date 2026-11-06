@@ -290,6 +290,18 @@ class Booking extends Model
         return ! in_array($this->booking_status, ['CHECK_IN', 'FINALIZADA'], true) && $this->checked_in_at === null;
     }
 
+    /** Valor del Playroom por el tiempo: price_original ya incluye a las personas adicionales. */
+    public function basePrice(): int
+    {
+        return max(0, (int) $this->price_original - (int) $this->extra_guests_fee);
+    }
+
+    /** Personas sobre la capacidad base de la categoría. */
+    public function extraGuests(): int
+    {
+        return max(0, (int) $this->guests_count - (int) $this->room?->category?->base_capacity);
+    }
+
     public function addonsTotal(): int
     {
         return (int) $this->addons()->sum('amount');
