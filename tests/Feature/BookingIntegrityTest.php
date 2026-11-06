@@ -421,6 +421,10 @@ class BookingIntegrityTest extends TestCase
 
         $this->assertSame(0, $this->get(route('cash.show'))->assertOk()->assertSee('Efectivo del mes')->assertSee('noviembre')->viewData('monthCashSales'));
         $this->assertSame(1000, $this->get(route('cash.show', '2026-10-15'))->assertOk()->viewData('monthCashSales'));
+        \App\Models\CashMovement::create(['type' => 'ingreso', 'amount' => 500]);
+        \App\Models\CashMovement::create(['type' => 'egreso', 'amount' => 200]);
+        $this->assertSame(300, $this->get(route('cash.show'))->assertSee('Total acumulado del mes')->viewData('monthCashTotal'));
+        $this->assertSame(1000, $this->get(route('cash.show', '2026-10-15'))->assertOk()->viewData('monthCashTotal'));
     }
 
     public function test_sale_detail_panel_shows_payments_and_consumptions(): void

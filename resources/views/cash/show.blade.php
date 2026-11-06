@@ -168,21 +168,21 @@
                 @endif
 
                 <details class="more">
-                    <summary>Cómo se calcula el efectivo por depositar</summary>
+                    <summary>Efectivo acumulado de {{ $day->copy()->locale('es')->translatedFormat('F') }}</summary>
                     <table class="g">
-                        <tr><td>Recibido en reservas</td><td class="n">{{ $m($totalCashFromSales) }}</td></tr>
-                        <tr><td>+ Ingresos manuales</td><td class="n">{{ $m($totalIngresos) }}</td></tr>
-                        <tr><td>− Depósitos y egresos</td><td class="n">{{ $m($totalEgresos) }}</td></tr>
-                        <tr class="total"><td>Por depositar</td><td class="n">{{ $m($saldoEnCaja) }}</td></tr>
+                        <tr><td>Efectivo recibido en reservas</td><td class="n">{{ $m($monthCashSales) }}</td></tr>
+                        <tr><td>+ Efectivo agregado a mano</td><td class="n">{{ $m($monthIngresos) }}</td></tr>
+                        <tr><td>− Depósitos y egresos</td><td class="n">{{ $m($monthEgresos) }}</td></tr>
+                        <tr class="total"><td>Total acumulado del mes</td><td class="n">{{ $m($monthCashTotal) }}</td></tr>
                     </table>
                 </details>
 
                 <details class="more">
                     <summary>De qué reservas viene lo cobrado</summary>
                     <table class="g">
-                        <tr class="{{ $collectedSameDay === 0 ? 'zero' : '' }}"><td>De reservas de este día</td><td class="n">{{ $m($collectedSameDay) }}</td></tr>
+                        <tr class="{{ $collectedSameDay === 0 ? 'zero' : '' }}"><td>Pagos de estadías de este día</td><td class="n">{{ $m($collectedSameDay) }}</td></tr>
                         <tr class="{{ $collectedAdvance === 0 ? 'zero' : '' }}"><td>Anticipos de reservas futuras</td><td class="n">{{ $m($collectedAdvance) }}</td></tr>
-                        <tr class="{{ $collectedLate === 0 ? 'zero' : '' }}"><td>Saldos de estadías anteriores</td><td class="n">{{ $m($collectedLate) }}</td></tr>
+                        <tr class="{{ $collectedLate === 0 ? 'zero' : '' }}"><td>Pagos de estadías de días anteriores</td><td class="n">{{ $m($collectedLate) }}</td></tr>
                     </table>
                 @if ($advancePayments->isNotEmpty())
                     <details class="adv">

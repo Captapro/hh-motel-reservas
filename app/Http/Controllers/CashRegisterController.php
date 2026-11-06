@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Caja: efectivo recibido que falta depositar (se va guardando en la caja
- * fuerte y baja al registrar el depósito) más el detalle día a día de qué entró
+ * Caja: efectivo acumulado del mes (parte de cero cada mes y baja al registrar
+ * un depósito o egreso) más el detalle día a día de qué entró
  * y qué salió — pagos en efectivo de reservas + movimientos manuales de
  * caja chica (ingresos y egresos que no vienen de una reserva).
  */
@@ -24,17 +24,15 @@ class CashRegisterController extends Controller
 
         $cashMethodId = PaymentMethod::where('code', 'efectivo')->value('id');
 
-        $balance = CashMovement::balance();
-        $totalCashFromSales = $balance['sales'];
-        $totalIngresos = $balance['ingresos'];
-        $totalEgresos = $balance['egresos'];
-        $saldoEnCaja = $balance['saldo'];
-
-        // Ventas en efectivo del mes del día elegido: al empezar un mes nuevo parte de cero.
+        // Efectivo del mes del día elegido: al empezar un mes nuevo parte de cero.
+        $month = [$day->copy()->startOfMonth(), $day->copy()->endOfMonth()];
         $monthCashSales = (int) Payment::where('payment_method_id', $cashMethodId)
             ->where('status', 'aprobado')
-            ->whereBetween('created_at', [$day->copy()->startOfMonth(), $day->copy()->endOfMonth()])
+            ->whereBetween('created_at', $month)
             ->sum('amount');
+        $monthMovements = CashMovement::whereBetween('created_at', $month)->get(['type', 'amount']);
+        $monthIngresos = (int) $monthMovements->where('type', 'ingreso')->sum('amount');
+        $monthEgresos = (int) $monthMovements->where('type', 'egreso')->sum('amount');
 
         // Detalle del día elegido, para el desglose día a día.
         $dayPayments = Payment::with(['booking.room', 'booking.customer'])
@@ -107,11 +105,10 @@ class CashRegisterController extends Controller
             'collectedLate' => $late->sum('amount'),
             'advancePayments' => $advance->values(),
             'day' => $day,
-            'saldoEnCaja' => $saldoEnCaja,
             'monthCashSales' => $monthCashSales,
-            'totalCashFromSales' => $totalCashFromSales,
-            'totalIngresos' => $totalIngresos,
-            'totalEgresos' => $totalEgresos,
+            'monthIngresos' => $monthIngresos,
+            'monthEgresos' => $monthEgresos,
+            'monthCashTotal' => $monthCashSales + $monthIngresos - $monthEgresos,
             'timeline' => $timeline,
             'dayCashIn' => $dayCashIn,
             'dayCashSales' => (int) $dayPayments->sum('amount'),
