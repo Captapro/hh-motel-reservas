@@ -55,9 +55,25 @@
     <div class="hh-rail-footer">HH · Recepción</div>
 </aside>
 <script>
-    document.getElementById('hh-rail-toggle').addEventListener('click', function () {
-        document.documentElement.classList.toggle('hh-rail-compact');
+    (function () {
+        const root = document.documentElement.classList;
+        const rail = document.querySelector('.hh-rail');
+        let timer = null;
         // El tablero recalcula el ancho de sus tarjetas.
-        window.dispatchEvent(new Event('resize'));
-    });
+        const changed = () => window.dispatchEvent(new Event('resize'));
+        const close = () => {
+            clearTimeout(timer);
+            if (root.contains('hh-rail-compact')) return;
+            root.add('hh-rail-compact');
+            changed();
+        };
+        document.getElementById('hh-rail-toggle').addEventListener('click', () => {
+            root.toggle('hh-rail-compact');
+            changed();
+        });
+        // Abierto, se comprime solo al sacar el mouse o al tocar fuera del menú.
+        rail.addEventListener('mouseleave', () => { timer = setTimeout(close, 700); });
+        rail.addEventListener('mouseenter', () => clearTimeout(timer));
+        document.addEventListener('pointerdown', (event) => { if (!rail.contains(event.target)) close(); });
+    })();
 </script>
