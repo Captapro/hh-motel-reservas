@@ -115,6 +115,10 @@
         <a class="hh-new-btn hh-alt-btn" href="{{ route('reservations.create') }}">+ Reserva</a>
         <a class="hh-new-btn hh-alt-btn" href="https://eboleta.sii.cl/emitir/" target="hh_sii_boleta" rel="noopener" data-sii-boleta title="Abre el SII en una ventana al lado del sistema">Emitir boleta</a>
         @auth
+            @if (auth()->user()->isRecepcion() || auth()->user()->isAdministrador())
+                @include('partials.hh-sound')
+                <button type="button" id="hh-sound-btn" data-state="on" aria-label="Sonido de alarmas" title="Sonido de alarmas">🔊</button>
+            @endif
             @if (auth()->user()->isAdministrador() && ($hhShiftAlerts = \App\Models\ShiftHandover::pendingReviewCount()) > 0)
                 <a href="{{ route('cash.shifts') }}" style="background:#ffc233; color:#3a2a00; font-weight:700;">⚠ Turnos con diferencias ({{ $hhShiftAlerts }})</a>
             @endif

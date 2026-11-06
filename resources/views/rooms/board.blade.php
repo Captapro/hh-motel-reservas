@@ -10,8 +10,6 @@
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body { background:#111; color:#eee; font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; }
-        #hh-sound-hint { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:60; border:0; border-radius:999px; padding:10px 18px; background:#ff7918; color:#21170e; font:inherit; font-size:14px; font-weight:800; box-shadow:0 8px 24px rgba(0,0,0,.35); cursor:pointer; }
-        #hh-sound-hint[hidden] { display:none; }
         .page-inner { max-width: 1700px; width:100%; margin: 0; padding: 24px 24px 60px; }
         .flash-status { background:#0f2b22; border:1px solid #1c9169; color:#6ee7b7; padding:12px 16px; border-radius:9px; font-size:14px; font-weight:600; margin-bottom:20px; }
         .topline { margin-bottom: 14px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
@@ -503,7 +501,6 @@
 </head>
 <body>
     @include('partials.navbar')
-    <button type="button" id="hh-sound-hint" hidden>🔔 Sonido bloqueado: toca aquí para activarlo</button>
     <div class="page-inner">
     @if (session('status'))
         <div class="flash-status">{{ session('status') }}</div>
