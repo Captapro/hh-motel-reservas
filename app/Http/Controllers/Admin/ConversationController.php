@@ -74,12 +74,12 @@ class ConversationController extends Controller
                 $result['items'] = array_values(array_filter($result['items'], fn (array $item) => ! $item['team']));
             }
 
-            if (($data['vista'] ?? null) === 'esperando') {
-                $result['items'] = array_values(array_filter($result['items'], fn (array $item) => ! $item['closed']));
-            }
-
-            if (($data['vista'] ?? null) === 'por_atender') {
-                $result['items'] = array_values(array_filter($result['items'], fn (array $item) => $item['pending']));
+            // Por atender y Esperando cliente son seguimiento: parten del punto de partida.
+            $view = $data['vista'] ?? null;
+            if (in_array($view, ['por_atender', 'esperando'], true)) {
+                $result['items'] = array_values(array_filter($result['items'], fn (array $item) => $view === 'por_atender'
+                    ? $item['pending']
+                    : ! $item['closed'] && $item['at'] >= $result['since']));
                 // Vienen de la más nueva a la más vieja: pasado el punto de partida no hay nada más.
                 $result['next'] = ($result['next'] ?? 0) >= $result['since'] ? $result['next'] : null;
             }

@@ -153,8 +153,23 @@ class ConversationInboxTest extends TestCase
             ->assertJsonCount(2, 'items')->assertJsonPath('items.1.pending', false);
     }
 
+    public function test_waiting_for_client_also_starts_from_the_starting_point(): void
+    {
+        OperationalSetting::current()->update(['conversations_since' => now()->subHour()]);
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+            ['id' => 'nuevo', 'fullName' => 'Nuevo', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'outbound', 'lastMessageDate' => now()->getTimestampMs()],
+            ['id' => 'viejo', 'fullName' => 'Viejo', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'outbound', 'lastMessageDate' => now()->subDay()->getTimestampMs()],
+        ]])]);
+
+        $this->actingAs(User::factory()->create(['role' => 'soporte']))
+            ->getJson(route('admin.conversations.list', ['vista' => 'esperando']))
+            ->assertJsonCount(1, 'items')->assertJsonPath('items.0.id', 'nuevo');
+        $this->getJson(route('admin.conversations.list'))->assertJsonCount(2, 'items');
+    }
+
     public function test_closed_conversation_leaves_follow_up_until_a_new_message_arrives(): void
     {
+        OperationalSetting::current()->update(['conversations_since' => now()->subDay()]);
         $this->thread();
         $lastMessageAt = now()->subHour()->getTimestampMs();
         $reply = fn (int $at) => Http::response(['conversations' => [
