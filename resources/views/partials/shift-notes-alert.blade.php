@@ -1,5 +1,5 @@
-{{-- Aleta de novedades: no ocupa lugar en la pantalla. Se abre sola al entrar, y si la cierran sin
-     confirmar queda latiendo en el borde derecho hasta apretar "Leí y entendí". --}}
+{{-- Aleta de novedades: no ocupa lugar en la pantalla. El panel nunca se abre solo: solo con la aleta,
+     que late en el borde derecho mientras haya algo sin confirmar con "Leí y entendí". --}}
 @php
     $hhPreview = $hostView ?? false;
     // Administración y soporte las ven sin aviso insistente: no les toca confirmar la lectura.
@@ -24,7 +24,7 @@
         @media (prefers-reduced-motion: reduce) { #shift-notes-flap.unread { animation:none; } }
     </style>
     <button type="button" id="shift-notes-flap" class="{{ $hhAlerts ? 'unread' : 'quiet' }}" aria-controls="shift-notes-panel" aria-label="Novedades: {{ $hhCount }}">🔔 <span>Novedades ({{ $hhCount }})</span></button>
-    <aside id="shift-notes-panel" aria-labelledby="shift-notes-title" @unless ($hhAlerts) hidden @endunless>
+    <aside id="shift-notes-panel" aria-labelledby="shift-notes-title" hidden>
         <div style="display:flex; align-items:flex-start; gap:10px; padding:16px 16px 10px;">
             <div style="flex:1;">
                 <div id="shift-notes-title" style="font-size:17px; font-weight:800;">🔔 Novedades del turno ({{ $hhCount }})</div>
@@ -71,12 +71,8 @@
     <script>
         (function () {
             const panel = document.getElementById('shift-notes-panel');
-            const KEY = 'hh-notes-minimized:{{ $hhNotes->max('id') }}:{{ $hhUpcoming->count() }}';
-            const hasUnread = {{ $hhAlerts ? 'true' : 'false' }};
-            const remember = (on) => { try { on ? sessionStorage.setItem(KEY, '1') : sessionStorage.removeItem(KEY); } catch (e) {} };
-            try { if (hasUnread) panel.hidden = sessionStorage.getItem(KEY) === '1'; } catch (e) {}
-            document.getElementById('shift-notes-flap').addEventListener('click', () => { panel.hidden = false; remember(false); });
-            document.getElementById('shift-notes-close').addEventListener('click', () => { panel.hidden = true; remember(true); });
+            document.getElementById('shift-notes-flap').addEventListener('click', () => { panel.hidden = false; });
+            document.getElementById('shift-notes-close').addEventListener('click', () => { panel.hidden = true; });
         })();
     </script>
 @endif
