@@ -35,7 +35,9 @@
             bar.innerHTML = showing.map((item) => '<div class="hh-attention-row">'
                 + '<div class="hh-attention-text">💬 ' + esc(item.name) + ' requiere atención'
                 + '<small>' + esc(item.phone) + ' · ' + esc(item.since) + (item.reason ? ' · ' + esc(item.reason) : '') + '</small></div>'
-                + '<a href="' + esc(item.whatsapp) + '" target="hh-whatsapp" rel="noopener">Abrir WhatsApp</a>'
+                + (item.conversation
+                    ? '<a href="' + esc(item.conversation) + '">Abrir conversación</a>'
+                    : '<a href="' + esc(item.whatsapp) + '" target="hh-whatsapp" rel="noopener">Abrir WhatsApp</a>')
                 + '<button type="button" data-copy="' + esc(item.phone) + '">Copiar número</button>'
                 + '<button type="button" data-attend="' + esc(item.attend_url) + '">✓ Atendido</button></div>').join('');
             bar.hidden = showing.length === 0;

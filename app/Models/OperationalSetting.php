@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
     'piso_1_enabled',
     'piso_2_norte_enabled', 'piso_2_sur_enabled',
     'piso_3_norte_enabled', 'piso_3_sur_enabled',
+    'conversations_since',
 ])]
 class OperationalSetting extends Model
 {
@@ -23,6 +24,7 @@ class OperationalSetting extends Model
             'piso_2_sur_enabled' => 'boolean',
             'piso_3_norte_enabled' => 'boolean',
             'piso_3_sur_enabled' => 'boolean',
+            'conversations_since' => 'datetime',
         ];
     }
 

@@ -34,7 +34,7 @@
         .cv-time { color:var(--muted); font-size:11px; font-weight:400; flex:none; }
         .cv-prev { color:var(--muted); font-size:12.5px; margin-top:3px; display:flex; gap:6px; justify-content:space-between; }
         .cv-prev > span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .cv-badge { background:var(--accent); color:#fff; border-radius:10px; font-size:10.5px; padding:1px 6px; flex:none; }
+        .cv-badge { background:var(--accent); width:9px; height:9px; border-radius:50%; flex:none; align-self:center; }
         .cv-head { padding:16px 20px 12px; border-bottom:1px solid var(--line); }
         .cv-head-title { display:flex; align-items:center; gap:10px; }
         .cv-head-title strong { font-size:20px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -65,9 +65,18 @@
         .cv-side dt { color:var(--muted); font-size:12px; margin-top:12px; }
         .cv-side dd { margin:4px 0 0; background:var(--soft); border-radius:12px; padding:9px 12px; overflow-wrap:anywhere; }
         .cv-side a { color:#a84a06; font-weight:600; text-decoration:none; }
+        .cv-side label { display:block; color:var(--muted); font-size:12px; margin-top:12px; }
+        .cv-side input { display:block; width:100%; margin-top:4px; background:var(--soft); border:1px solid transparent; border-radius:12px; padding:9px 12px; font-size:14px; color:var(--ink); }
+        .cv-side input:focus { outline:none; border-color:var(--accent); background:#fff; }
+        .cv-side .cv-save { width:100%; margin-top:12px; padding:10px; }
+        .cv-side .cv-team { width:100%; margin-top:8px; }
+        .cv-side .cv-saved { color:var(--muted); font-size:12.5px; margin-top:6px; min-height:16px; }
+        .cv-item-tag { font-size:10px; font-weight:700; color:#3e3d3a; background:var(--soft); border-radius:6px; padding:1px 5px; margin-left:5px; }
         .cv-side .note { color:var(--muted); font-size:12.5px; }
         .cv-error { background:var(--warn-bg); color:var(--warn); font-size:13px; padding:9px 16px; }
         #cv-back { display:none; }
+        /* El aviso de atención va arriba aquí, para no tapar la caja de respuesta. */
+        #hh-attention-bar { bottom:auto; top:10px; }
         @media (max-width:1040px) { .cv { grid-template-columns:290px minmax(0,1fr); } .cv-info { display:none; } }
         @media (max-width:760px) {
             .cv { grid-template-columns:minmax(0,1fr); padding:10px; }
@@ -101,6 +110,7 @@
                     <button type="button" class="cv-chip" data-view="por_atender">Por atender</button>
                     <button type="button" class="cv-chip" data-view="esperando">Esperando cliente</button>
                     <button type="button" class="cv-chip is-on" data-view="todas">Todas</button>
+                    <button type="button" class="cv-chip" data-view="equipo">Equipo</button>
                 </div>
             </div>
             <div id="cv-list-error" class="cv-error" hidden></div>
@@ -186,10 +196,16 @@
             item.dataset.id = c.id;
             const body = el('div', 'cv-item-body');
             const top = el('div', 'cv-item-top');
-            top.append(el('span', '', c.name), el('span', 'cv-time', c.when));
+            const title = el('span', '', c.name);
+            if (c.team) title.append(el('span', 'cv-item-tag', 'Equipo'));
+            top.append(title, el('span', 'cv-time', c.when));
             const prev = el('div', 'cv-prev');
             prev.append(el('span', '', c.preview));
-            if (c.unread > 0) prev.append(el('span', 'cv-badge', c.unread));
+            if (c.pending) {
+                const mark = el('span', 'cv-badge');
+                mark.title = 'Por atender';
+                prev.append(mark);
+            }
             body.append(top, prev);
             item.append(dot(c.channel), body);
             item.addEventListener('click', () => openConversation(c));
@@ -270,12 +286,39 @@
 
         function renderSide(data) {
             const side = $('cv-side');
+            // Mientras se edita la ficha, la actualización automática no la pisa.
+            if (side.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
             const list = el('dl');
             const row = (label, value) => { if (value) list.append(el('dt', '', label), el('dd', '', value)); };
-            row('Nombre', data.contact?.name);
             row('Teléfono', data.contact?.phone);
-            row('Correo', data.contact?.email);
-            const content = [el('h3', '', 'Ficha'), list];
+            const form = el('form');
+            const input = (label, name, value, type = 'text') => {
+                const wrap = el('label', '', label);
+                const field = el('input');
+                field.name = name;
+                field.type = type;
+                field.value = value || '';
+                field.maxLength = name === 'email' ? 120 : 80;
+                wrap.append(field);
+                form.append(wrap);
+            };
+            if (data.contact) {
+                input('Nombre', 'first_name', data.contact.first_name);
+                input('Apellido', 'last_name', data.contact.last_name);
+                input('Correo', 'email', data.contact.email, 'email');
+                const save = el('button', 'cv-send cv-save', 'Guardar');
+                save.type = 'submit';
+                const saved = el('div', 'cv-saved');
+                form.append(save, saved);
+                form.addEventListener('submit', event => saveContact(event, form, save, saved));
+            }
+            const content = [el('h3', '', 'Ficha'), form, list];
+            if (data.contact) {
+                const team = el('button', 'cv-btn cv-team', data.team ? 'Quitar de Equipo' : 'Marcar como Equipo');
+                team.type = 'button';
+                team.addEventListener('click', () => toggleTeam(team, !data.team));
+                content.push(team);
+            }
             if (data.customer) {
                 row('Reservas en HH', String(data.customer.bookings));
                 const profile = el('a', '', 'Ver cliente en HH');
@@ -294,6 +337,38 @@
                 content.push(el('div', 'note', 'Sin ficha de cliente en HH con este teléfono.'));
             }
             side.replaceChildren(...content);
+        }
+
+        async function saveContact(event, form, button, saved) {
+            event.preventDefault();
+            const id = state.open;
+            button.disabled = true;
+            saved.textContent = '';
+            try {
+                await api(`${urls.base}/${id}/ficha`, { method: 'PUT', body: JSON.stringify(Object.fromEntries(new FormData(form))) });
+                saved.textContent = '✓ Guardado en GHL';
+                document.activeElement?.blur();
+                threads.delete(id);
+                refreshThread();
+                loadList();
+            } catch (error) {
+                saved.textContent = error.message;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function toggleTeam(button, on) {
+            const id = state.open;
+            button.disabled = true;
+            try {
+                await api(`${urls.base}/${id}/equipo`, { method: 'POST', body: JSON.stringify({ on }) });
+                await refreshThread();
+                loadList();
+            } catch (error) {
+                showError('cv-chat-error', error.message);
+                button.disabled = false;
+            }
         }
 
         function fetchThread(id, contact) {
@@ -419,7 +494,22 @@
         fit();
         window.addEventListener('resize', fit);
 
+        async function openNotice(id) {
+            try {
+                const data = await api(urls.list + '?aviso=' + id);
+                if (data.items.length) {
+                    openConversation(data.items[0]);
+                } else {
+                    showError('cv-chat-error', 'No encontré una conversación con ese cliente en GHL.');
+                }
+            } catch (error) {
+                showError('cv-chat-error', error.message);
+            }
+        }
+
         loadList();
+        const notice = @json($notice);
+        if (notice) openNotice(notice);
         setInterval(() => {
             if (document.hidden) return;
             refreshThread();

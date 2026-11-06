@@ -99,6 +99,42 @@ class GhlConversations
         return ['items' => $items, 'next' => count($raw) === 30 ? ($last['lastMessageDate'] ?? null) : null];
     }
 
+    /**
+     * Conversaciones de varios contactos a la vez, las más recientes primero.
+     *
+     * @param  array<int, string>  $contactIds
+     * @return array{items: array<int, array<string, mixed>>, next: null}
+     */
+    public function searchContacts(array $contactIds): array
+    {
+        $responses = Http::pool(fn (Pool $pool) => array_map(
+            fn (string $id) => $this->configure($pool->as($id), self::API_VERSION)->get('/conversations/search', [
+                'locationId' => $this->locationId,
+                'contactId' => $id,
+                'limit' => 5,
+            ]),
+            $contactIds,
+        ));
+
+        $items = collect($responses)
+            ->flatMap(function ($response) {
+                if ($response instanceof Throwable) {
+                    throw $response;
+                }
+
+                return (array) $response->throw()->json('conversations', []);
+            })
+            // Igual que en la bandeja: si GHL ignorara el filtro, aquí no se cuela nadie más.
+            ->filter(fn (array $c) => in_array($c['contactId'] ?? null, $contactIds, true))
+            ->unique('id')
+            ->sortByDesc(fn (array $c) => $c['lastMessageDate'] ?? 0)
+            ->map(fn (array $c) => $this->summary($c))
+            ->values()
+            ->all();
+
+        return ['items' => $items, 'next' => null];
+    }
+
     /** @return array<string, mixed> */
     private function summary(array $c): array
     {
@@ -111,7 +147,7 @@ class GhlConversations
             'channel' => $this->channelOf((string) ($c['lastMessageType'] ?? $c['type'] ?? '')),
             'preview' => (string) ($c['lastMessageBody'] ?? ''),
             'direction' => (string) ($c['lastMessageDirection'] ?? ''),
-            'unread' => (int) ($c['unreadCount'] ?? 0),
+            'at' => (int) ($date ?? 0),
             'when' => $date ? $this->shortDate(Carbon::createFromTimestampMs($date)) : '',
         ];
     }
@@ -252,11 +288,24 @@ class GhlConversations
     private function contactCard(array $contact): array
     {
         return [
+            'id' => (string) ($contact['id'] ?? ''),
+            'first_name' => (string) ($contact['firstName'] ?? ''),
+            'last_name' => (string) ($contact['lastName'] ?? ''),
             'name' => trim(($contact['firstName'] ?? '').' '.($contact['lastName'] ?? '')) ?: (string) ($contact['contactName'] ?? ''),
             'phone' => (string) ($contact['phone'] ?? ''),
             'email' => (string) ($contact['email'] ?? ''),
             'tags' => array_values((array) ($contact['tags'] ?? [])),
         ];
+    }
+
+    /** Nombre, apellido y correo. El teléfono no se toca: es la llave del cliente. */
+    public function updateContact(string $contactId, string $firstName, ?string $lastName, ?string $email): void
+    {
+        $this->http(self::CONTACTS_API_VERSION)->put("/contacts/{$contactId}", array_filter([
+            'firstName' => $firstName,
+            'lastName' => $lastName,
+            'email' => $email,
+        ], fn ($value) => $value !== null && $value !== ''))->throw();
     }
 
     private function channelOf(string $type): ?string

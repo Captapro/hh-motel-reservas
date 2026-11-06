@@ -461,6 +461,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
             Route::get('/{conversation}', [ConversationController::class, 'show'])->where('conversation', '[A-Za-z0-9]+')->name('show');
             Route::post('/{conversation}/responder', [ConversationController::class, 'reply'])->where('conversation', '[A-Za-z0-9]+')->middleware('throttle:30,1,conversations.reply')->name('reply');
             Route::post('/{conversation}/cata', [ConversationController::class, 'cata'])->where('conversation', '[A-Za-z0-9]+')->name('cata');
+            Route::post('/{conversation}/equipo', [ConversationController::class, 'team'])->where('conversation', '[A-Za-z0-9]+')->name('team');
+            Route::put('/{conversation}/ficha', [ConversationController::class, 'updateContact'])->where('conversation', '[A-Za-z0-9]+')->name('contact');
         });
     }); // fin role:administrador
 });

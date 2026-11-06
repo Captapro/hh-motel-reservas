@@ -39,14 +39,18 @@ class AttentionRequestController extends Controller
         return response()->json(['result' => 'avisado']);
     }
 
-    public function pending(): JsonResponse
+    public function pending(Request $request): JsonResponse
     {
+        // Conversaciones todavía es solo de Soporte: el resto sigue yendo a WhatsApp.
+        $inbox = $request->user()->isSoporte();
+
         return response()->json(AttentionRequest::open()->orderBy('created_at')->limit(10)->get()->map(fn (AttentionRequest $a) => [
             'id' => $a->id,
             'name' => $a->name ?: $a->phone,
             'phone' => $a->phone,
             'reason' => $a->reason,
             'whatsapp' => $a->whatsappUrl(),
+            'conversation' => $inbox ? route('admin.conversations.index', ['aviso' => $a->id]) : null,
             'since' => $a->created_at->copy()->timezone('America/Santiago')->format('H:i'),
             'attend_url' => route('attention.attend', $a),
         ])->values());

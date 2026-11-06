@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttentionRequest;
 use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Models\OperationalSetting;
+use App\Models\TeamContact;
 use App\Services\Integrations\GhlClient;
 use App\Services\Integrations\GhlConversations;
 use Illuminate\Http\Client\ConnectionException;
@@ -26,29 +29,77 @@ class ConversationController extends Controller
     /** Con esta etiqueta Cata no contesta (filtro de los canales del agente en GHL). */
     private const NO_BOT_TAG = 'hh_no_bot';
 
-    /** Con esta etiqueta Cata tampoco contesta: el cliente está dentro del motel. */
+    /** Con esta etiqueta Cata tampoco contesta: el cliente tiene una reserva vigente, desde que la crea hasta que se cierra. */
     private const STAY_TAG = 'hh_estadia_activa';
 
     public function index(GhlConversations $ghl): View
     {
-        return view('admin.conversations.index', ['configured' => $ghl->isConfigured()]);
+        return view('admin.conversations.index', ['configured' => $ghl->isConfigured(), 'notice' => request()->integer('aviso') ?: null]);
     }
 
     public function list(Request $request, GhlConversations $ghl): JsonResponse
     {
         $data = $request->validate([
-            'vista' => ['nullable', Rule::in(['por_atender', 'esperando', 'todas'])],
+            'vista' => ['nullable', Rule::in(['por_atender', 'esperando', 'todas', 'equipo'])],
             'canal' => ['nullable', Rule::in(array_keys(GhlConversations::CHANNELS))],
             'q' => ['nullable', 'string', 'max:80'],
             'antes' => ['nullable', 'integer', 'min:1'],
+            'aviso' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        return $this->guarded(fn () => $ghl->search(
-            $data['vista'] ?? 'todas',
-            $data['canal'] ?? null,
-            $data['q'] ?? null,
-            isset($data['antes']) ? (int) $data['antes'] : null,
-        ));
+        // Un aviso de atención abre la conversación de ese cliente, sin poner su teléfono en la dirección.
+        if (isset($data['aviso'])) {
+            $phone = AttentionRequest::find($data['aviso'])?->phone;
+
+            return $phone ? $this->guarded(fn () => $ghl->search('todas', null, $phone)) : response()->json(['items' => [], 'next' => null]);
+        }
+
+        $team = TeamContact::pluck('ghl_contact_id')->all();
+
+        if (($data['vista'] ?? null) === 'equipo') {
+            return $this->guarded(fn () => $this->withTeam($team === [] ? ['items' => [], 'next' => null] : $ghl->searchContacts(array_slice($team, 0, 30)), $team));
+        }
+
+        return $this->guarded(function () use ($ghl, $data, $team) {
+            $result = $this->withTeam($ghl->search(
+                $data['vista'] ?? 'todas',
+                $data['canal'] ?? null,
+                $data['q'] ?? null,
+                isset($data['antes']) ? (int) $data['antes'] : null,
+            ), $team);
+
+            // Al buscar se ve todo; en la bandeja, el equipo va aparte de los clientes.
+            if (empty($data['q'])) {
+                $result['items'] = array_values(array_filter($result['items'], fn (array $item) => ! $item['team']));
+            }
+
+            if (($data['vista'] ?? null) === 'por_atender') {
+                $result['items'] = array_values(array_filter($result['items'], fn (array $item) => $item['pending']));
+                // Vienen de la más nueva a la más vieja: pasado el punto de partida no hay nada más.
+                $result['next'] = ($result['next'] ?? 0) >= $result['since'] ? $result['next'] : null;
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Marca equipo y seguimiento. Por atender = lo último lo escribió el
+     * cliente después del punto de partida: los no leídos de GHL arrastran
+     * historia y no sirven para esto.
+     *
+     * @param  array<int, string>  $team
+     */
+    private function withTeam(array $result, array $team): array
+    {
+        $since = OperationalSetting::current()->conversations_since?->getTimestampMs() ?? 0;
+
+        $result['items'] = array_map(fn (array $item) => $item + [
+            'team' => in_array($item['contact_id'], $team, true),
+            'pending' => $item['direction'] === 'inbound' && $item['at'] >= $since,
+        ], $result['items']);
+
+        return $result + ['since' => $since];
     }
 
     public function show(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
@@ -58,7 +109,11 @@ class ConversationController extends Controller
         return $this->guarded(function () use ($conversation, $ghl, $data) {
             $thread = $ghl->open($conversation, $data['contacto'] ?? null);
 
-            return $thread + ['cata' => $this->cataState($thread['contact']), 'customer' => $this->customerCard($thread['contact'])];
+            return $thread + [
+                'cata' => $this->cataState($thread['contact']),
+                'customer' => $this->customerCard($thread['contact']),
+                'team' => $thread['contact_id'] !== '' && TeamContact::where('ghl_contact_id', $thread['contact_id'])->exists(),
+            ];
         });
     }
 
@@ -83,17 +138,62 @@ class ConversationController extends Controller
         $data = $request->validate(['on' => ['required', 'boolean']]);
 
         return $this->guarded(function () use ($request, $conversation, $ghl, $client, $data) {
-            $contactId = $ghl->thread($conversation)['contact_id'];
-
-            if ($contactId === '') {
-                throw new RuntimeException('No se pudo identificar el contacto.');
-            }
+            $contactId = $this->contactOf($conversation, $ghl);
 
             $data['on'] ? $client->removeTags($contactId, [self::NO_BOT_TAG]) : $client->addTags($contactId, [self::NO_BOT_TAG]);
             AuditLog::record($request->user()->id, $data['on'] ? 'conversacion.cata_encendida' : 'conversacion.cata_apagada', 'GhlConversation', $conversation, null, null);
 
             return ['ok' => true];
         });
+    }
+
+    public function updateContact(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
+    {
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:80'],
+            'last_name' => ['nullable', 'string', 'max:80'],
+            'email' => ['nullable', 'email', 'max:120'],
+        ], ['first_name.required' => 'El nombre no puede quedar vacío.', 'email.email' => 'Ese correo no es válido.']);
+
+        return $this->guarded(function () use ($request, $conversation, $ghl, $data) {
+            $contactId = $this->contactOf($conversation, $ghl);
+            $old = $ghl->contact($contactId);
+            $ghl->updateContact($contactId, trim($data['first_name']), trim((string) ($data['last_name'] ?? '')) ?: null, $data['email'] ?? null);
+            AuditLog::record($request->user()->id, 'conversacion.ficha_editada', 'GhlConversation', $conversation,
+                ['nombre' => $old['first_name'], 'apellido' => $old['last_name'], 'correo' => $old['email']],
+                ['nombre' => $data['first_name'], 'apellido' => $data['last_name'] ?? null, 'correo' => $data['email'] ?? null]);
+
+            return ['ok' => true];
+        });
+    }
+
+    public function team(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
+    {
+        $data = $request->validate(['on' => ['required', 'boolean']]);
+
+        return $this->guarded(function () use ($request, $conversation, $ghl, $data) {
+            $contactId = $this->contactOf($conversation, $ghl);
+
+            if ($data['on']) {
+                TeamContact::firstOrCreate(['ghl_contact_id' => $contactId], ['created_by' => $request->user()->id]);
+            } else {
+                TeamContact::where('ghl_contact_id', $contactId)->delete();
+            }
+            AuditLog::record($request->user()->id, $data['on'] ? 'conversacion.marcada_equipo' : 'conversacion.quitada_equipo', 'GhlConversation', $conversation, null, null);
+
+            return ['ok' => true];
+        });
+    }
+
+    private function contactOf(string $conversation, GhlConversations $ghl): string
+    {
+        $contactId = $ghl->thread($conversation)['contact_id'];
+
+        if ($contactId === '') {
+            throw new RuntimeException('No se pudo identificar el contacto.');
+        }
+
+        return $contactId;
     }
 
     /** @return array{active: bool, reason: ?string} */
@@ -103,7 +203,7 @@ class ConversationController extends Controller
 
         return match (true) {
             in_array(self::NO_BOT_TAG, $tags, true) => ['active' => false, 'reason' => 'Apagada para este cliente'],
-            in_array(self::STAY_TAG, $tags, true) => ['active' => false, 'reason' => 'En pausa: el cliente tiene una estadía activa'],
+            in_array(self::STAY_TAG, $tags, true) => ['active' => false, 'reason' => 'En pausa: tiene una reserva vigente'],
             default => ['active' => true, 'reason' => null],
         };
     }

@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\AttentionRequest;
 use App\Models\AuditLog;
+use App\Models\OperationalSetting;
+use App\Models\TeamContact;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +25,12 @@ class ConversationInboxTest extends TestCase
             '2026_08_18_120001_add_role_to_users_table.php',
             '2026_10_23_210000_allow_soporte_role_on_users.php',
             '2026_08_18_120018_create_audit_logs_table.php',
+            '2026_11_05_130000_create_attention_requests_table.php',
+            '2026_11_06_180000_create_team_contacts_table.php',
+            '2026_09_16_040100_create_operational_settings_table.php',
+            '2026_09_17_002913_add_floor_toggles_to_operational_settings.php',
+            '2026_09_21_135116_split_floor_toggles_by_wing_in_operational_settings.php',
+            '2026_11_06_190000_add_conversations_since_to_operational_settings.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -105,6 +114,78 @@ class ConversationInboxTest extends TestCase
         // Si la pista no calza, manda el contacto real de la conversación.
         $this->getJson(route('admin.conversations.show', ['conversation' => 'abc', 'contacto' => 'otro']))
             ->assertOk()->assertJsonPath('contact.name', 'Ana');
+    }
+
+    public function test_attention_alert_leads_soporte_to_the_conversation_and_reception_to_whatsapp(): void
+    {
+        $alert = AttentionRequest::create(['phone' => '+56911112222', 'name' => 'Ana']);
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+            ['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs()],
+        ]])]);
+        $soporte = User::factory()->create(['role' => 'soporte']);
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))
+            ->assertJsonPath('0.conversation', null);
+
+        $link = $this->actingAs($soporte)->getJson(route('attention.pending'))->json('0.conversation');
+        $this->assertStringEndsWith('/admin/conversaciones?aviso='.$alert->id, $link);
+        $this->assertStringNotContainsString('56911112222', $link);
+
+        $this->getJson(route('admin.conversations.list', ['aviso' => $alert->id]))->assertOk()->assertJsonPath('items.0.id', 'abc');
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), '/conversations/search') && $r['query'] === '+56911112222');
+    }
+
+    public function test_only_what_the_client_wrote_after_the_starting_point_is_pending(): void
+    {
+        OperationalSetting::current()->update(['conversations_since' => now()->subHour()]);
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+            ['id' => 'nuevo', 'fullName' => 'Nuevo', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs(), 'unreadCount' => 9],
+            ['id' => 'viejo', 'fullName' => 'Viejo', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->subDay()->getTimestampMs(), 'unreadCount' => 9],
+        ]])]);
+
+        $user = User::factory()->create(['role' => 'soporte']);
+
+        $this->actingAs($user)->getJson(route('admin.conversations.list', ['vista' => 'por_atender']))
+            ->assertJsonCount(1, 'items')->assertJsonPath('items.0.id', 'nuevo');
+        $this->getJson(route('admin.conversations.list'))
+            ->assertJsonCount(2, 'items')->assertJsonPath('items.1.pending', false);
+    }
+
+    public function test_team_contacts_leave_the_inbox_and_go_to_their_own_filter(): void
+    {
+        $this->thread();
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+            ['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Equipo Uno', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs()],
+            ['id' => 'def', 'contactId' => 'c2', 'fullName' => 'Cliente', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs()],
+        ]])]);
+        $user = User::factory()->create(['role' => 'soporte']);
+
+        $this->actingAs($user)->postJson(route('admin.conversations.team', 'abc'), ['on' => true])->assertOk();
+        $this->assertSame('c1', TeamContact::sole()->ghl_contact_id);
+
+        $this->getJson(route('admin.conversations.list'))->assertJsonCount(1, 'items')->assertJsonPath('items.0.id', 'def');
+        $this->getJson(route('admin.conversations.list', ['q' => 'Equipo']))->assertJsonCount(2, 'items')->assertJsonPath('items.0.team', true);
+        $this->getJson(route('admin.conversations.list', ['vista' => 'equipo']))->assertOk()->assertJsonCount(1, 'items')->assertJsonPath('items.0.id', 'abc');
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'contactId=c1'));
+
+        $this->postJson(route('admin.conversations.team', 'abc'), ['on' => false])->assertOk();
+        $this->assertSame(0, TeamContact::count());
+    }
+
+    public function test_contact_card_saves_name_and_email_but_never_the_phone(): void
+    {
+        $this->thread();
+        Http::fake([self::GHL.'/contacts/c1' => function (Request $r) {
+            return Http::response(['contact' => ['id' => 'c1', 'firstName' => 'Ana', 'phone' => '', 'tags' => []]]);
+        }]);
+        $user = User::factory()->create(['role' => 'soporte']);
+
+        $this->actingAs($user)->putJson(route('admin.conversations.contact', 'abc'), ['first_name' => ''])->assertUnprocessable();
+
+        $this->putJson(route('admin.conversations.contact', 'abc'), ['first_name' => 'Ana', 'last_name' => 'Soto', 'email' => 'ana@example.com', 'phone' => '+56900000000'])->assertOk();
+
+        Http::assertSent(fn (Request $r) => $r->method() === 'PUT' && $r['lastName'] === 'Soto' && $r['email'] === 'ana@example.com' && ! isset($r['phone']));
+        $this->assertSame($user->id, AuditLog::where('action', 'conversacion.ficha_editada')->sole()->user_id);
     }
 
     public function test_reply_goes_by_the_conversation_channel_and_records_who_answered(): void
