@@ -106,6 +106,21 @@ class AbandonedBookingTest extends TestCase
         $this->assertSame('PLUS 101', $sent[0]['habitacion']);
     }
 
+    public function test_no_reminder_when_the_client_already_reserved_again(): void
+    {
+        $this->booking();
+        $this->travel(4)->minutes();
+        $this->booking(['booking_status' => 'CONFIRMADA', 'payment_status' => 'PAGADA', 'expires_at' => null]);
+
+        $this->travel(1)->minutes();
+        $this->artisan('app:reservas-expirar');
+        $this->travel(6)->minutes();
+        $this->artisan('app:reservas-expirar');
+
+        $this->assertCount(0, $this->sentTo('pago-pendiente'));
+        $this->assertCount(0, $this->sentTo('reserva-vencida'));
+    }
+
     public function test_expired_booking_is_offered_again_once_with_the_same_slot_prefilled(): void
     {
         $booking = $this->booking();

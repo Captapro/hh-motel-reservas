@@ -12,8 +12,8 @@ use Throwable;
  * liberación de retenciones vencidas (app:reservas-expirar, cada 30 s) y
  * avisa a GHL por webhook para que su flujo mande el WhatsApp:
  *
- *  - pago_pendiente: a la reserva le quedan 5 minutos de retención y sigue
- *    sin pagar ("te mantenemos la reserva hasta las HH:MM").
+ *  - pago_pendiente: a la reserva le quedan 5 minutos de retención, sigue sin
+ *    pagar y el cliente no reservó de nuevo ("te mantenemos la reserva hasta las HH:MM").
  *  - reserva_vencida: la retención venció sin pago, el horario todavía no
  *    pasa y el cliente no volvió a reservar ("¿te la reservamos de nuevo?").
  *
@@ -49,7 +49,7 @@ class GhlAbandonedBookings
             ->get()
             ->each(function (Booking $booking) use ($url) {
                 $booking->update(['payment_reminder_sent_at' => now()]);
-                if ($booking->balanceDue() > 0 && filled($booking->customer?->phone_e164)) {
+                if ($booking->balanceDue() > 0 && filled($booking->customer?->phone_e164) && ! $this->reservedAgain($booking)) {
                     $this->send('pago_pendiente', $url, $booking);
                 }
             });
@@ -85,7 +85,13 @@ class GhlAbandonedBookings
             return false;
         }
 
-        return ! Booking::where('customer_id', $booking->customer_id)
+        return ! $this->reservedAgain($booking);
+    }
+
+    /** El cliente hizo otra reserva vigente después: ya no hay nada que rescatar de esta. */
+    private function reservedAgain(Booking $booking): bool
+    {
+        return Booking::where('customer_id', $booking->customer_id)
             ->where('id', '!=', $booking->id)
             ->where('created_at', '>=', $booking->created_at)
             ->whereNotIn('booking_status', ['EXPIRADA', 'CANCELADA'])
