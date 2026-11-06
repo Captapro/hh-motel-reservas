@@ -289,6 +289,18 @@ Route::middleware(['auth', 'section'])->group(function () {
 }); // fin del grupo auth
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(function () {
+    // Conversaciones: quién entra se configura en Perfiles y accesos.
+    Route::prefix('conversaciones')->name('conversations.')->group(function () {
+        Route::get('/', [ConversationController::class, 'index'])->name('index');
+        Route::get('/lista', [ConversationController::class, 'list'])->name('list');
+        Route::get('/{conversation}', [ConversationController::class, 'show'])->where('conversation', '[A-Za-z0-9]+')->name('show');
+        Route::post('/{conversation}/responder', [ConversationController::class, 'reply'])->where('conversation', '[A-Za-z0-9]+')->middleware('throttle:30,1,conversations.reply')->name('reply');
+        Route::post('/{conversation}/cata', [ConversationController::class, 'cata'])->where('conversation', '[A-Za-z0-9]+')->name('cata');
+        Route::post('/{conversation}/equipo', [ConversationController::class, 'team'])->where('conversation', '[A-Za-z0-9]+')->name('team');
+        Route::post('/{conversation}/alta', [ConversationController::class, 'close'])->where('conversation', '[A-Za-z0-9]+')->name('close');
+        Route::put('/{conversation}/ficha', [ConversationController::class, 'updateContact'])->where('conversation', '[A-Za-z0-9]+')->name('contact');
+    });
+
     // Analista IA: solo quienes estén autorizados en Personal. El contexto del
     // negocio y borrar todo el historial quedan para el administrador.
     Route::middleware('ai:analista')->group(function () {
@@ -454,16 +466,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
 
         Route::get('/integraciones/ghl', [GhlTestController::class, 'index'])->middleware('role:soporte')->name('ghl.index');
         Route::post('/integraciones/ghl/probar', [GhlTestController::class, 'test'])->middleware('role:soporte')->name('ghl.test');
-
-        Route::middleware('role:soporte')->prefix('conversaciones')->name('conversations.')->group(function () {
-            Route::get('/', [ConversationController::class, 'index'])->name('index');
-            Route::get('/lista', [ConversationController::class, 'list'])->name('list');
-            Route::get('/{conversation}', [ConversationController::class, 'show'])->where('conversation', '[A-Za-z0-9]+')->name('show');
-            Route::post('/{conversation}/responder', [ConversationController::class, 'reply'])->where('conversation', '[A-Za-z0-9]+')->middleware('throttle:30,1,conversations.reply')->name('reply');
-            Route::post('/{conversation}/cata', [ConversationController::class, 'cata'])->where('conversation', '[A-Za-z0-9]+')->name('cata');
-            Route::post('/{conversation}/equipo', [ConversationController::class, 'team'])->where('conversation', '[A-Za-z0-9]+')->name('team');
-            Route::post('/{conversation}/alta', [ConversationController::class, 'close'])->where('conversation', '[A-Za-z0-9]+')->name('close');
-            Route::put('/{conversation}/ficha', [ConversationController::class, 'updateContact'])->where('conversation', '[A-Za-z0-9]+')->name('contact');
-        });
     }); // fin role:administrador
 });

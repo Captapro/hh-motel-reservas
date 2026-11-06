@@ -23,7 +23,8 @@ use Throwable;
 
 /**
  * Conversaciones de WhatsApp, Instagram, Facebook y correo dentro del panel.
- * Por ahora solo para Soporte, mientras se construye y se prueba.
+ * Quién entra se define en Perfiles y accesos; los chats del equipo quedan
+ * solo para administración.
  */
 class ConversationController extends Controller
 {
@@ -35,7 +36,11 @@ class ConversationController extends Controller
 
     public function index(GhlConversations $ghl): View
     {
-        return view('admin.conversations.index', ['configured' => $ghl->isConfigured(), 'notice' => request()->integer('aviso') ?: null]);
+        return view('admin.conversations.index', [
+            'configured' => $ghl->isConfigured(),
+            'notice' => request()->integer('aviso') ?: null,
+            'seesTeam' => $this->seesTeam(request()),
+        ]);
     }
 
     public function list(Request $request, GhlConversations $ghl): JsonResponse
@@ -52,16 +57,20 @@ class ConversationController extends Controller
         if (isset($data['aviso'])) {
             $phone = AttentionRequest::find($data['aviso'])?->phone;
 
-            return $phone ? $this->guarded(fn () => $ghl->search('todas', null, $phone)) : response()->json(['items' => [], 'next' => null]);
+            return $phone
+                ? $this->guarded(fn () => $this->visibleTo($request, $this->withTeam($ghl->search('todas', null, $phone), TeamContact::pluck('ghl_contact_id')->all())))
+                : response()->json(['items' => [], 'next' => null]);
         }
 
         $team = TeamContact::pluck('ghl_contact_id')->all();
 
         if (($data['vista'] ?? null) === 'equipo') {
+            abort_unless($this->seesTeam($request), 403);
+
             return $this->guarded(fn () => $this->withTeam($team === [] ? ['items' => [], 'next' => null] : $ghl->searchContacts(array_slice($team, 0, 30)), $team));
         }
 
-        return $this->guarded(function () use ($ghl, $data, $team) {
+        return $this->guarded(function () use ($request, $ghl, $data, $team) {
             $result = $this->withTeam($ghl->search(
                 $data['vista'] ?? 'todas',
                 $data['canal'] ?? null,
@@ -69,10 +78,10 @@ class ConversationController extends Controller
                 isset($data['antes']) ? (int) $data['antes'] : null,
             ), $team);
 
-            // Al buscar se ve todo; en la bandeja, el equipo va aparte de los clientes.
-            if (empty($data['q'])) {
-                $result['items'] = array_values(array_filter($result['items'], fn (array $item) => ! $item['team']));
-            }
+            // Al buscar, administración ve todo; en la bandeja, el equipo va aparte de los clientes.
+            $result = empty($data['q'])
+                ? ['items' => array_values(array_filter($result['items'], fn (array $item) => ! $item['team']))] + $result
+                : $this->visibleTo($request, $result);
 
             // Por atender y Esperando cliente son seguimiento: parten del punto de partida.
             $view = $data['vista'] ?? null;
@@ -86,6 +95,21 @@ class ConversationController extends Controller
 
             return $result;
         });
+    }
+
+    /** Los chats del equipo pueden ser internos: los anfitriones no los ven. */
+    private function seesTeam(Request $request): bool
+    {
+        return $request->user()->isAdministrador();
+    }
+
+    private function visibleTo(Request $request, array $result): array
+    {
+        if (! $this->seesTeam($request)) {
+            $result['items'] = array_values(array_filter($result['items'], fn (array $item) => ! $item['team']));
+        }
+
+        return $result;
     }
 
     /**
@@ -119,8 +143,9 @@ class ConversationController extends Controller
     {
         $data = $request->validate(['contacto' => ['nullable', 'string', 'alpha_num', 'max:64']]);
 
-        return $this->guarded(function () use ($conversation, $ghl, $data) {
+        return $this->guarded(function () use ($request, $conversation, $ghl, $data) {
             $thread = $ghl->open($conversation, $data['contacto'] ?? null);
+            $this->guardTeam($request, $thread['contact_id']);
 
             return $thread + [
                 'cata' => $this->cataState($thread['contact']),
@@ -137,6 +162,7 @@ class ConversationController extends Controller
         $message = trim($data['message']);
 
         return $this->guarded(function () use ($request, $conversation, $ghl, $message) {
+            $this->contactOf($request, $conversation, $ghl);
             $channel = $ghl->reply($conversation, $message);
             AuditLog::record($request->user()->id, 'conversacion.respondida', 'GhlConversation', $conversation, null, [
                 'canal' => $channel,
@@ -152,7 +178,7 @@ class ConversationController extends Controller
         $data = $request->validate(['on' => ['required', 'boolean']]);
 
         return $this->guarded(function () use ($request, $conversation, $ghl, $client, $data) {
-            $contactId = $this->contactOf($conversation, $ghl);
+            $contactId = $this->contactOf($request, $conversation, $ghl);
 
             $data['on'] ? $client->removeTags($contactId, [self::NO_BOT_TAG]) : $client->addTags($contactId, [self::NO_BOT_TAG]);
             AuditLog::record($request->user()->id, $data['on'] ? 'conversacion.cata_encendida' : 'conversacion.cata_apagada', 'GhlConversation', $conversation, null, null);
@@ -170,7 +196,7 @@ class ConversationController extends Controller
         ], ['first_name.required' => 'El nombre no puede quedar vacío.', 'email.email' => 'Ese correo no es válido.']);
 
         return $this->guarded(function () use ($request, $conversation, $ghl, $data) {
-            $contactId = $this->contactOf($conversation, $ghl);
+            $contactId = $this->contactOf($request, $conversation, $ghl);
             $old = $ghl->contact($contactId);
             $ghl->updateContact($contactId, trim($data['first_name']), trim((string) ($data['last_name'] ?? '')) ?: null, $data['email'] ?? null);
             AuditLog::record($request->user()->id, 'conversacion.ficha_editada', 'GhlConversation', $conversation,
@@ -183,10 +209,11 @@ class ConversationController extends Controller
 
     public function team(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
     {
+        abort_unless($this->seesTeam($request), 403);
         $data = $request->validate(['on' => ['required', 'boolean']]);
 
         return $this->guarded(function () use ($request, $conversation, $ghl, $data) {
-            $contactId = $this->contactOf($conversation, $ghl);
+            $contactId = $this->contactOf($request, $conversation, $ghl);
 
             if ($data['on']) {
                 TeamContact::firstOrCreate(['ghl_contact_id' => $contactId], ['created_by' => $request->user()->id]);
@@ -204,7 +231,7 @@ class ConversationController extends Controller
         $data = $request->validate(['on' => ['required', 'boolean']]);
 
         return $this->guarded(function () use ($request, $conversation, $ghl, $data) {
-            $this->contactOf($conversation, $ghl);
+            $this->contactOf($request, $conversation, $ghl);
 
             if ($data['on']) {
                 ClosedConversation::updateOrCreate(['ghl_conversation_id' => $conversation], ['closed_at' => now(), 'closed_by' => $request->user()->id]);
@@ -217,7 +244,7 @@ class ConversationController extends Controller
         });
     }
 
-    private function contactOf(string $conversation, GhlConversations $ghl): string
+    private function contactOf(Request $request, string $conversation, GhlConversations $ghl): string
     {
         $contactId = $ghl->thread($conversation)['contact_id'];
 
@@ -225,7 +252,16 @@ class ConversationController extends Controller
             throw new RuntimeException('No se pudo identificar el contacto.');
         }
 
+        $this->guardTeam($request, $contactId);
+
         return $contactId;
+    }
+
+    private function guardTeam(Request $request, string $contactId): void
+    {
+        if (! $this->seesTeam($request) && TeamContact::where('ghl_contact_id', $contactId)->exists()) {
+            throw new RuntimeException('Esta conversación es interna del equipo.');
+        }
     }
 
     /** @return array{active: bool, reason: ?string} */
@@ -253,7 +289,7 @@ class ConversationController extends Controller
         $last = $customer->bookings()->latest('starts_at')->first();
 
         return [
-            'url' => route('admin.customers.show', $customer),
+            'url' => auth()->user()->canAccess('clientes') ? route('admin.customers.show', $customer) : null,
             'bookings' => $customer->bookings()->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])->count(),
             'last_booking' => $last ? [
                 'code' => $last->code,

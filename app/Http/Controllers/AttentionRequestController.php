@@ -41,8 +41,8 @@ class AttentionRequestController extends Controller
 
     public function pending(Request $request): JsonResponse
     {
-        // Conversaciones todavía es solo de Soporte: el resto sigue yendo a WhatsApp.
-        $inbox = $request->user()->isSoporte();
+        // Quien tiene Conversaciones atiende ahí; el resto sigue yendo a WhatsApp.
+        $inbox = $request->user()->canAccess('conversaciones');
 
         return response()->json(AttentionRequest::open()->orderBy('created_at')->limit(10)->get()->map(fn (AttentionRequest $a) => [
             'id' => $a->id,

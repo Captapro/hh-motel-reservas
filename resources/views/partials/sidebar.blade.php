@@ -31,8 +31,7 @@
         $navigation[] = ['admin_app.index', 'admin_app.*', 'App admin', 'M7 2h10v20H7z M11 18h2'];
         $navigation[] = ['admin.mercadopago.index', 'admin.mercadopago.*', 'Mercado Pago', 'M2 6h20v12H2z M2 10h20 M6 15h4 M15 15h3'];
     }
-    // Conversaciones: solo Soporte mientras se construye y se prueba.
-    if (auth()->user()?->isSoporte()) {
+    if (auth()->user()?->canAccess('conversaciones')) {
         $navigation[] = ['admin.conversations.index', 'admin.conversations.*', 'Conversaciones', 'M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z'];
     }
     if (auth()->user()?->isAdministrador()) {

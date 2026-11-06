@@ -54,17 +54,35 @@ class ConversationInboxTest extends TestCase
         ]);
     }
 
-    public function test_only_soporte_enters(): void
+    public function test_hosts_and_administration_enter_but_marketing_does_not(): void
     {
-        Http::fake();
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => []])]);
 
-        foreach (['recepcion', 'administrador'] as $role) {
-            $user = User::factory()->create(['role' => $role]);
-            $this->actingAs($user)->get(route('admin.conversations.index'))->assertForbidden();
-            $this->actingAs($user)->post(route('admin.conversations.reply', 'abc'), ['message' => 'Hola'])->assertForbidden();
+        foreach (['recepcion', 'administrador', 'soporte'] as $role) {
+            $this->actingAs(User::factory()->create(['role' => $role]))->getJson(route('admin.conversations.list'))->assertOk();
         }
 
-        Http::assertNothingSent();
+        $marketing = User::factory()->create(['role' => 'marketing']);
+        $this->actingAs($marketing)->getJson(route('admin.conversations.list'))->assertForbidden();
+        $this->actingAs($marketing)->postJson(route('admin.conversations.reply', 'abc'), ['message' => 'Hola'])->assertForbidden();
+    }
+
+    public function test_hosts_never_see_or_mark_team_conversations(): void
+    {
+        $this->thread();
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+            ['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Equipo', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs()],
+        ]])]);
+        TeamContact::create(['ghl_contact_id' => 'c1']);
+        $host = User::factory()->create(['role' => 'recepcion']);
+
+        $this->actingAs($host)->getJson(route('admin.conversations.list', ['vista' => 'equipo']))->assertForbidden();
+        $this->getJson(route('admin.conversations.list', ['q' => 'Equipo']))->assertJsonCount(0, 'items');
+        $this->getJson(route('admin.conversations.show', 'abc'))->assertStatus(422);
+        $this->postJson(route('admin.conversations.reply', 'abc'), ['message' => 'Hola'])->assertStatus(422);
+        $this->postJson(route('admin.conversations.team', 'abc'), ['on' => false])->assertForbidden();
+        $this->assertSame(1, TeamContact::count());
+        Http::assertNotSent(fn (Request $r) => $r->method() === 'POST');
     }
 
     public function test_list_keeps_only_the_requested_view_and_channel_even_if_ghl_ignores_the_filter(): void
@@ -118,18 +136,16 @@ class ConversationInboxTest extends TestCase
             ->assertOk()->assertJsonPath('contact.name', 'Ana');
     }
 
-    public function test_attention_alert_leads_soporte_to_the_conversation_and_reception_to_whatsapp(): void
+    public function test_attention_alert_leads_to_the_conversation_and_without_access_to_whatsapp(): void
     {
         $alert = AttentionRequest::create(['phone' => '+56911112222', 'name' => 'Ana']);
         Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
             ['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs()],
         ]])]);
-        $soporte = User::factory()->create(['role' => 'soporte']);
-
-        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))
+        $this->actingAs(User::factory()->create(['role' => 'marketing']))->getJson(route('attention.pending'))
             ->assertJsonPath('0.conversation', null);
 
-        $link = $this->actingAs($soporte)->getJson(route('attention.pending'))->json('0.conversation');
+        $link = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->json('0.conversation');
         $this->assertStringEndsWith('/admin/conversaciones?aviso='.$alert->id, $link);
         $this->assertStringNotContainsString('56911112222', $link);
 

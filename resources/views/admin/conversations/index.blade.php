@@ -45,6 +45,8 @@
         .cv-pill.human { background:var(--accent-soft); color:#a84a06; }
         .cv-btn { background:var(--panel); color:var(--ink); border:1px solid #cfcdc6; border-radius:12px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer; }
         .cv-btn[hidden] { display:none; }
+        #cv-close { margin-left:auto; }
+        #cv-close.is-primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; padding:9px 16px; }
         .cv-msgs { flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:10px; }
         .cv-msg { max-width:72%; background:var(--soft); color:var(--ink); border-radius:16px; padding:10px 13px; font-size:14.5px; line-height:1.35; white-space:pre-wrap; overflow-wrap:anywhere; align-self:flex-start; }
         .cv-msg.mine { align-self:flex-end; background:var(--accent); color:#fff; }
@@ -110,7 +112,9 @@
                     <button type="button" class="cv-chip" data-view="por_atender">Por atender</button>
                     <button type="button" class="cv-chip" data-view="esperando">Esperando cliente</button>
                     <button type="button" class="cv-chip is-on" data-view="todas">Todas</button>
-                    <button type="button" class="cv-chip" data-view="equipo">Equipo</button>
+                    @if ($seesTeam)
+                        <button type="button" class="cv-chip" data-view="equipo">Equipo</button>
+                    @endif
                 </div>
             </div>
             <div id="cv-list-error" class="cv-error" hidden></div>
@@ -151,6 +155,7 @@
             base: @json(url('/admin/conversaciones')),
         };
         const csrf = @json(csrf_token());
+        const seesTeam = @json($seesTeam);
         const labels = { whatsapp: 'WhatsApp', instagram: 'Instagram', facebook: 'Facebook', email: 'Correo' };
         const icons = {
             whatsapp: '<path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/>',
@@ -284,6 +289,7 @@
             close.hidden = false;
             close.textContent = data.closed ? 'Reabrir' : 'Dar de alta';
             close.dataset.on = data.closed ? '0' : '1';
+            close.classList.toggle('is-primary', !data.closed);
 
             $('cv-form').hidden = !data.can_reply;
             $('cv-blocked').hidden = data.can_reply;
@@ -320,7 +326,7 @@
                 form.addEventListener('submit', event => saveContact(event, form, save, saved));
             }
             const content = [el('h3', '', 'Ficha'), form, list];
-            if (data.contact) {
+            if (data.contact && seesTeam) {
                 const team = el('button', 'cv-btn cv-team', data.team ? 'Quitar de Equipo' : 'Marcar como Equipo');
                 team.type = 'button';
                 team.addEventListener('click', () => toggleTeam(team, !data.team));
@@ -328,9 +334,11 @@
             }
             if (data.customer) {
                 row('Reservas en HH', String(data.customer.bookings));
-                const profile = el('a', '', 'Ver cliente en HH');
-                profile.href = data.customer.url;
-                content.push(profile);
+                if (data.customer.url) {
+                    const profile = el('a', '', 'Ver cliente en HH');
+                    profile.href = data.customer.url;
+                    content.push(profile);
+                }
                 if (data.customer.last_booking) {
                     const last = data.customer.last_booking;
                     list.append(el('dt', '', 'Última reserva'));

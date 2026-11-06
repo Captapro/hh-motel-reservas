@@ -27,11 +27,12 @@ class AccessSections
         'analytics' => ['Analytics', 'admin.analytics.index', ['admin.analytics.*']],
         'opiniones' => ['Opiniones', 'admin.reviews.index', ['admin.reviews.*']],
         'claves' => ['Claves de acceso (chapas digitales)', 'access_codes.index', ['access_codes.*']],
+        'conversaciones' => ['Conversaciones (WhatsApp, Instagram, Facebook y correo)', 'admin.conversations.index', ['admin.conversations.*']],
     ];
 
     /** Punto de partida: lo que cada perfil ve si nadie lo ha configurado. */
     public const DEFAULTS = [
-        'recepcion' => ['tablero' => true, 'calendario' => true, 'clientes' => true, 'caja' => true, 'operaciones' => true],
+        'recepcion' => ['tablero' => true, 'calendario' => true, 'clientes' => true, 'caja' => true, 'operaciones' => true, 'conversaciones' => true],
         'marketing' => ['clientes' => true, 'analytics' => true, 'opiniones' => true],
     ];
 
