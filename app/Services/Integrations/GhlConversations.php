@@ -231,6 +231,10 @@ class GhlConversations
                 'attachments' => array_values(array_filter((array) ($m['attachments'] ?? []), fn ($url) => is_string($url) && str_starts_with($url, 'https://'))),
                 'when' => isset($m['dateAdded']) ? $this->shortDate(Carbon::parse($m['dateAdded'])) : '',
                 'status' => (string) ($m['status'] ?? ''),
+                'source' => (string) ($m['source'] ?? ''),
+                // Solo los nombres de los campos, para ver qué manda GHL en plantillas con botón.
+                'fields' => array_values(array_diff(array_keys($m), ['id', 'body', 'contactId', 'conversationId', 'locationId'])),
+                'meta_fields' => array_keys((array) ($m['meta'] ?? [])),
             ])->all(),
         ] + $this->replyState($channel, $lastInbound['dateAdded'] ?? null);
     }

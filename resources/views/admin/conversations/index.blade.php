@@ -261,7 +261,7 @@
                     link.rel = 'noopener noreferrer';
                     msg.append(link);
                 });
-                msg.append(el('small', '', m.when));
+                msg.append(el('small', '', m.source === 'workflow' ? `${m.when} · Mensaje automático` : m.when));
                 return msg;
             }));
             if (!data.messages.length) box.append(el('div', 'cv-empty', 'Sin mensajes para mostrar.'));
