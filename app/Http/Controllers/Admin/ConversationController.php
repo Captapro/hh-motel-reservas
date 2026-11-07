@@ -39,6 +39,7 @@ class ConversationController extends Controller
         return view('admin.conversations.index', [
             'configured' => $ghl->isConfigured(),
             'notice' => request()->integer('aviso') ?: null,
+            'pendingBooking' => preg_match('/^[A-Za-z0-9-]{1,40}$/', (string) request()->query('reserva')) ? request()->query('reserva') : null,
             'pendingOpen' => preg_match('/^[A-Za-z0-9]{1,64}$/', (string) request()->query('abrir')) ? request()->query('abrir') : null,
             'pendingTeam' => request()->boolean('equipo') && $this->seesTeam(request()),
             'seesTeam' => $this->seesTeam(request()),
@@ -53,6 +54,7 @@ class ConversationController extends Controller
             'q' => ['nullable', 'string', 'max:80'],
             'antes' => ['nullable', 'integer', 'min:1'],
             'aviso' => ['nullable', 'integer', 'min:1'],
+            'reserva' => ['nullable', 'string', 'alpha_dash', 'max:40'],
         ]);
 
         // Un aviso de atención abre la conversación de ese cliente, sin poner su teléfono en la dirección.
@@ -65,6 +67,15 @@ class ConversationController extends Controller
         }
 
         $team = TeamContact::pluck('ghl_contact_id')->all();
+
+        // Desde una reserva: el teléfono se resuelve aquí para que no viaje en la dirección.
+        if (isset($data['reserva'])) {
+            $customer = Booking::with('customer')->where('code', $data['reserva'])->first()?->customer;
+
+            return $customer
+                ? $this->guarded(fn () => $this->visibleTo($request, $ghl->withFollowUp($this->conversationsOf($ghl, $customer), $team)))
+                : response()->json(['items' => [], 'next' => null]);
+        }
 
         if (($data['vista'] ?? null) === 'equipo') {
             abort_unless($this->seesTeam($request), 403);
@@ -102,6 +113,14 @@ class ConversationController extends Controller
 
             return $result;
         });
+    }
+
+    /** @return array{items: array<int, array<string, mixed>>, next: ?int} */
+    private function conversationsOf(GhlConversations $ghl, Customer $customer): array
+    {
+        $found = $customer->ghl_contact_id ? $ghl->searchContacts([$customer->ghl_contact_id]) : ['items' => [], 'next' => null];
+
+        return $found['items'] === [] && $customer->phone_e164 ? $ghl->search('todas', null, $customer->phone_e164) : $found;
     }
 
     /** Los chats del equipo pueden ser internos: los anfitriones no los ven. */

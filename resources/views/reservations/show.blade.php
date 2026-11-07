@@ -41,6 +41,7 @@
         a.board-btn:hover { border-color:#ff7918; color:#ff7918; }
         a.pay-btn { display:block; text-align:center; background:#ff7918; color:#fff; padding:13px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none; }
         a.pay-btn-inline { margin-top:14px; }
+        a.conversation-btn { display:inline-block; background:#0a5cff; border:1px solid #0a5cff; color:#fff; padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:700; text-decoration:none; }
         a.whatsapp-btn { display:inline-block; background:#25d366; border:1px solid #25d366; color:#0b2816; padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:700; text-decoration:none; }
         .payment-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; margin:-4px 0 16px; }
         button.copy-btn { background:#2a2a2a; border:1px solid #444; color:#eee; padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
@@ -324,6 +325,12 @@
             @endif
             <button type="button" class="copy-btn" onclick="hhCopyText('whatsapp-message-text', this); hhMarkInstructionsSent();">Copiar texto</button>
             <a class="whatsapp-btn" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener">Contactar por WhatsApp</a>
+        </div>
+    @endif
+
+    @if (auth()->user()->canAccess('conversaciones') && ($booking->customer->ghl_contact_id || $booking->customer->phone_e164))
+        <div class="payment-actions">
+            <a class="conversation-btn" href="{{ route('admin.conversations.index', ['reserva' => $booking->code]) }}">Ir a la conversación</a>
         </div>
     @endif
 

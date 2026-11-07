@@ -28,7 +28,6 @@
     }
     // Mercado Pago: historial de la cuenta del motel, solo administrador y soporte.
     if (auth()->user()?->isAdministrador()) {
-        $navigation[] = ['admin_app.index', 'admin_app.*', 'App admin', 'M7 2h10v20H7z M11 18h2'];
         $navigation[] = ['admin.mercadopago.index', 'admin.mercadopago.*', 'Mercado Pago', 'M2 6h20v12H2z M2 10h20 M6 15h4 M15 15h3'];
     }
     if (auth()->user()?->canAccess('conversaciones')) {

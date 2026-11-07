@@ -171,4 +171,41 @@ class ConversationStayStatusTest extends TestCase
 
         $this->assertSame([], $this->pendingWith([['id' => 'fuera', 'contactId' => 'c1', 'phone' => '+56911111111', 'lastMessageDate' => now()->getTimestampMs()]]));
     }
+
+    public function test_booking_opens_the_conversation_of_its_customer(): void
+    {
+        $this->customer->update(['ghl_contact_id' => 'c1']);
+        $this->booking('HH-CHAT', 'CONFIRMADA', '+1 day');
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+            ['id' => 'abc', 'contactId' => 'c1', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDate' => now()->getTimestampMs()],
+        ]])]);
+
+        $this->actingAs(User::factory()->create(['role' => 'soporte']))
+            ->getJson(route('admin.conversations.list', ['reserva' => 'HH-CHAT']))
+            ->assertOk()
+            ->assertJsonPath('items.0.id', 'abc');
+    }
+
+    public function test_booking_without_ghl_contact_finds_the_conversation_by_phone(): void
+    {
+        $this->booking('HH-FONO', 'CONFIRMADA', '+1 day');
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+            ['id' => 'abc', 'contactId' => 'c1', 'phone' => '+56911111111', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDate' => now()->getTimestampMs()],
+        ]])]);
+
+        $this->actingAs(User::factory()->create(['role' => 'soporte']))
+            ->getJson(route('admin.conversations.list', ['reserva' => 'HH-FONO']))
+            ->assertOk()
+            ->assertJsonPath('items.0.id', 'abc');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/conversations/search') && ($request['query'] ?? null) === '+56911111111');
+    }
+
+    public function test_unknown_booking_opens_nothing(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'soporte']))
+            ->getJson(route('admin.conversations.list', ['reserva' => 'HH-NOEXISTE']))
+            ->assertOk()
+            ->assertJsonPath('items', []);
+    }
 }
