@@ -50,6 +50,7 @@
 @endphp
 @if ($hhLight)
     <style>{!! file_get_contents(public_path('css/hh-light.css')) !!}</style>
+    <style>#hh-host-view-btn { width:auto; margin:0; background:#111827; border:1px solid #111827; border-radius:6px; color:#fff; cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; padding:6px 10px; }</style>
 @endif
 <script>
     // Si la explicación se saldría por la derecha de la pantalla, se abre hacia la izquierda.
@@ -126,7 +127,7 @@
             @if (auth()->user()->isSoporte())
                 <form method="POST" action="{{ route('host_view.start') }}" style="display:inline;">
                     @csrf
-                    <button type="submit" style="background:none; border:1px solid #444; border-radius:6px; color:#aaa; cursor:pointer; font:inherit; font-size:12.5px; padding:6px 10px;">Ver como anfitrión</button>
+                    <button type="submit" id="hh-host-view-btn">Ver como anfitrión</button>
                 </form>
             @endif
             @if ($hostView ?? false)
