@@ -91,6 +91,10 @@ class ConversationController extends Controller
                 $result['items'] = array_values(array_filter($result['items'], fn (array $item) => $view === 'por_atender'
                     ? $item['pending']
                     : ! $item['closed'] && $item['at'] >= $result['waiting_since']));
+                // Quien está en la habitación va primero en lo que hay que atender.
+                if ($view === 'por_atender') {
+                    $result['items'] = collect($result['items'])->sortBy(fn (array $item) => $item['in_room'] === null)->values()->all();
+                }
                 // Vienen de la más nueva a la más vieja: pasado el punto de partida no hay nada más.
                 $floor = $view === 'esperando' ? $result['waiting_since'] : $result['since'];
                 $result['next'] = ($result['next'] ?? 0) >= $floor ? $result['next'] : null;

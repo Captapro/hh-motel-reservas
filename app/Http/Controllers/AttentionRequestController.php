@@ -82,7 +82,8 @@ class AttentionRequestController extends Controller
         $rows = $waiting->take(self::WAITING_ROWS)->map(fn (array $item) => [
             'id' => 'conversacion-'.$item['id'].'-'.$item['at'],
             'kind' => 'inbox',
-            'title' => $item['name'].' espera respuesta',
+            'urgent' => $item['in_room'] !== null,
+            'title' => $item['in_room'] !== null ? $item['name'].' escribe desde la habitación '.$item['in_room'] : $item['name'].' espera respuesta',
             'detail' => ($item['team'] ? 'Equipo · ' : '').self::CHANNEL_LABELS[$item['channel']].' · '.Carbon::createFromTimestampMs($item['at'])->timezone('America/Santiago')->format('H:i'),
             'conversation' => $this->waitingLink($item),
         ])->all();

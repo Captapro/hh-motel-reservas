@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\OperationalSetting;
 use App\Models\Room;
 use App\Models\RoomCategory;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -42,7 +44,12 @@ class ConversationStayStatusTest extends TestCase
             '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
             '2026_09_22_012032_add_room_check_to_bookings_table.php',
             '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
+            '2026_11_05_130000_create_attention_requests_table.php',
             '2026_11_06_180000_create_team_contacts_table.php',
+            '2026_09_16_040100_create_operational_settings_table.php',
+            '2026_09_17_002913_add_floor_toggles_to_operational_settings.php',
+            '2026_09_21_135116_split_floor_toggles_by_wing_in_operational_settings.php',
+            '2026_11_06_190000_add_conversations_since_to_operational_settings.php',
             '2026_11_06_200000_create_closed_conversations_table.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
@@ -120,5 +127,48 @@ class ConversationStayStatusTest extends TestCase
         $this->booking('HH-FIN', 'FINALIZADA', '-2 days', ['checked_out_at' => now()->subDays(2)]);
 
         $this->assertSame('Ya salió', $this->card()['current']['state']);
+    }
+
+    private function pendingWith(array $conversations): array
+    {
+        Cache::flush();
+        OperationalSetting::current()->update(['conversations_since' => now()->subDay()]);
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => array_map(fn (array $c) => $c + [
+            'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound',
+        ], $conversations)])]);
+
+        return $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->assertOk()->json();
+    }
+
+    public function test_guest_in_the_room_alerts_first_and_without_waiting(): void
+    {
+        $this->booking('HH-DENTRO', 'CHECK_IN', '-1 hour', ['checked_in_at' => now()->subHour()]);
+
+        $rows = $this->pendingWith([
+            ['id' => 'otro', 'contactId' => 'c2', 'phone' => '+56922222222', 'lastMessageDate' => now()->subMinutes(10)->getTimestampMs()],
+            ['id' => 'dentro', 'contactId' => 'c1', 'phone' => '+56911111111', 'lastMessageDate' => now()->getTimestampMs()],
+        ]);
+
+        $this->assertCount(2, $rows);
+        $this->assertTrue($rows[0]['urgent']);
+        $this->assertSame('Ana escribe desde la habitación PLUS 101', $rows[0]['title']);
+        $this->assertFalse($rows[1]['urgent']);
+    }
+
+    public function test_instagram_guest_is_found_by_ghl_contact_when_there_is_no_phone(): void
+    {
+        $this->customer->update(['ghl_contact_id' => 'c1']);
+        $this->booking('HH-DENTRO', 'CHECK_IN', '-1 hour', ['checked_in_at' => now()->subHour()]);
+
+        $rows = $this->pendingWith([['id' => 'dentro', 'contactId' => 'c1', 'lastMessageType' => 'TYPE_INSTAGRAM', 'lastMessageDate' => now()->getTimestampMs()]]);
+
+        $this->assertTrue($rows[0]['urgent']);
+    }
+
+    public function test_after_leaving_the_room_there_is_no_priority(): void
+    {
+        $this->booking('HH-FIN', 'FINALIZADA', '-5 hours', ['checked_out_at' => now()->subHour()]);
+
+        $this->assertSame([], $this->pendingWith([['id' => 'fuera', 'contactId' => 'c1', 'phone' => '+56911111111', 'lastMessageDate' => now()->getTimestampMs()]]));
     }
 }

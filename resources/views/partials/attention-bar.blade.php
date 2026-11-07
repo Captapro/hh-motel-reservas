@@ -4,6 +4,9 @@
     #hh-attention-bar { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:9989; display:flex; flex-direction:column; gap:6px; width:min(640px, calc(100vw - 24px)); }
     #hh-attention-bar[hidden] { display:none; }
     .hh-attention-row { display:flex; align-items:center; gap:10px; padding:10px 12px 10px 16px; border-radius:12px; background:#111827; color:#fff; font-size:15px; font-weight:800; box-shadow:0 8px 24px rgba(0,0,0,.35); border:2px solid #ffc233; }
+    .hh-attention-row.is-urgent { border-color:#0a5cff; background:#0a5cff; }
+    .hh-attention-row.is-urgent a { background:#fff; color:#0a3fb0; }
+    .hh-attention-row.is-urgent small { color:#dbe7ff; }
     .hh-attention-row .hh-attention-text { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
     .hh-attention-row small { display:block; font-size:12.5px; font-weight:600; color:#d1d5db; }
     .hh-attention-row a, .hh-attention-row button { flex:none; width:auto; margin:0; padding:8px 12px; border-radius:9px; font:inherit; font-size:13.5px; font-weight:800; cursor:pointer; text-decoration:none; }
@@ -43,7 +46,7 @@
         }
 
         function inboxRow(item) {
-            return '<div class="hh-attention-row"><div class="hh-attention-text">💬 ' + esc(item.title)
+            return '<div class="hh-attention-row' + (item.urgent ? ' is-urgent' : '') + '"><div class="hh-attention-text">' + (item.urgent ? '🛎️ ' : '💬 ') + esc(item.title)
                 + (item.detail ? '<small>' + esc(item.detail) + '</small>' : '') + '</div>'
                 + '<a href="' + esc(item.conversation) + '">Abrir conversación</a></div>';
         }
@@ -97,8 +100,9 @@
                 const seen = announced();
                 const isNew = handoffs.some((item) => !before.includes(item.id)) || waiting.some((id) => !seen.includes(id));
                 remember(waiting);
-                // El traspaso insiste cada minuto; un mensaje en espera suena una sola vez.
-                if (isNew || (handoffs.length && Date.now() - lastBeep >= 58000)) beep();
+                // Traspasos y clientes en la habitación insisten cada minuto; los demás suenan una vez.
+                const insists = handoffs.length || all.some((item) => item.urgent);
+                if (isNew || (insists && Date.now() - lastBeep >= 58000)) beep();
             } catch (e) { /* sin red: se reintenta */ }
         }
         poll();

@@ -81,6 +81,7 @@
         .cv-side .cv-team { width:100%; margin-top:8px; }
         .cv-side .cv-saved { color:var(--muted); font-size:12.5px; margin-top:6px; min-height:16px; }
         .cv-item-tag { font-size:10px; font-weight:700; color:#3e3d3a; background:var(--soft); border-radius:6px; padding:1px 5px; margin-left:5px; }
+        .cv-item-tag.is-room { background:#0a5cff; color:#fff; }
         .cv-side .note { color:var(--muted); font-size:12.5px; }
         .cv-error { background:var(--warn-bg); color:var(--warn); font-size:13px; padding:9px 16px; }
         #cv-back { display:none; }
@@ -218,6 +219,7 @@
             const title = el('span', '', c.name);
             if (c.team) title.append(el('span', 'cv-item-tag', 'Equipo'));
             if (c.closed) title.append(el('span', 'cv-item-tag', 'De alta'));
+            if (c.in_room) title.append(el('span', 'cv-item-tag is-room', `En ${c.in_room}`));
             top.append(title, el('span', 'cv-time', c.when));
             const prev = el('div', 'cv-prev');
             prev.append(el('span', '', c.preview));

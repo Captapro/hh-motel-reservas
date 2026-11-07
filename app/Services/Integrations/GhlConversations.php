@@ -2,6 +2,7 @@
 
 namespace App\Services\Integrations;
 
+use App\Models\Booking;
 use App\Models\ClosedConversation;
 use App\Models\OperationalSetting;
 use App\Models\TeamContact;
@@ -144,13 +145,15 @@ class GhlConversations
         $since = OperationalSetting::current()->conversations_since?->getTimestampMs() ?? 0;
 
         $closures = ClosedConversation::whereIn('ghl_conversation_id', array_column($result['items'], 'id'))->pluck('closed_at', 'ghl_conversation_id');
+        $rooms = $this->occupiedRooms();
 
-        $result['items'] = array_map(function (array $item) use ($team, $since, $closures) {
+        $result['items'] = array_map(function (array $item) use ($team, $since, $closures, $rooms) {
             // Un mensaje posterior al alta la devuelve al seguimiento sola.
             $closed = isset($closures[$item['id']]) && $closures[$item['id']]->getTimestampMs() >= $item['at'];
 
             return $item + [
                 'team' => in_array($item['contact_id'], $team, true),
+                'in_room' => $rooms[$item['contact_id']] ?? $rooms[$item['phone']] ?? null,
                 'closed' => $closed,
                 'pending' => ! $closed && $item['direction'] === 'inbound' && $item['at'] >= $since,
             ];
@@ -160,8 +163,28 @@ class GhlConversations
     }
 
     /**
+     * Habitación de quien está dentro ahora, por contacto de GHL y por teléfono:
+     * en Instagram y Facebook la conversación puede no traer teléfono.
+     *
+     * @return array<string, string>
+     */
+    private function occupiedRooms(): array
+    {
+        return Booking::with(['customer', 'room'])
+            ->where('booking_status', 'CHECK_IN')
+            ->whereNull('checked_out_at')
+            ->get()
+            ->flatMap(fn (Booking $booking) => array_fill_keys(
+                array_filter([$booking->customer?->phone_e164, $booking->customer?->ghl_contact_id]),
+                (string) $booking->room?->name,
+            ))
+            ->all();
+    }
+
+    /**
      * Quienes llevan rato esperando, para el aviso de todas las pantallas.
      * Incluye al equipo: quien llama decide si esa persona puede verlo.
+     * Quien está en la habitación va primero y sin esperar: Cata no le contesta.
      * El correo queda fuera porque no se responde desde el sistema. Si GHL
      * falla, simplemente no hay aviso: nunca debe romper el tablero.
      *
@@ -184,7 +207,11 @@ class GhlConversations
 
             $limit = now()->subMinutes(self::ALERT_AFTER_MINUTES)->getTimestampMs();
 
-            return array_values(array_filter($items, fn (array $item) => $item['pending'] && $item['channel'] !== 'email' && $item['at'] <= $limit));
+            return collect($items)
+                ->filter(fn (array $item) => $item['pending'] && $item['channel'] !== 'email' && ($item['in_room'] !== null || $item['at'] <= $limit))
+                ->sortBy(fn (array $item) => $item['in_room'] === null)
+                ->values()
+                ->all();
         });
     }
 
