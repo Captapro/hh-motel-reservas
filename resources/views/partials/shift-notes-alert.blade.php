@@ -20,6 +20,15 @@
         #shift-notes-flap span { writing-mode:vertical-rl; transform:rotate(180deg); }
         #shift-notes-panel { position:fixed; right:0; top:0; bottom:0; z-index:9996; width:min(380px, 100vw); display:flex; flex-direction:column; background:#1c1c1c; border-left:2px solid #ff7918; color:#eee; font-family:-apple-system,'Segoe UI',sans-serif; }
         #shift-notes-panel[hidden] { display:none; }
+        /* Con clases y no en línea: el tema claro reescribe los colores en línea y aquí el panel sigue oscuro. */
+        #shift-notes-panel .hh-note-sub { font-size:13px; color:#c7c7c7; margin-top:2px; }
+        #shift-notes-panel .hh-note-close { width:auto; margin:0; flex:none; background:none; border:1px solid #666; color:#eee; border-radius:7px; padding:4px 10px; cursor:pointer; }
+        #shift-notes-panel .hh-note-card { padding:10px 12px; margin-bottom:8px; border-radius:9px; background:#141414; color:#eee; border-left:4px solid #666; }
+        #shift-notes-panel .hh-note-card.is-urgent { border-left-color:#ff7918; }
+        #shift-notes-panel .hh-note-card.is-read { opacity:.8; }
+        #shift-notes-panel .hh-note-meta { font-size:12px; color:#b5b5b5; margin-bottom:3px; }
+        #shift-notes-panel .hh-note-body { font-size:14.5px; line-height:1.4; white-space:pre-wrap; color:#eee; }
+        #shift-notes-panel .hh-note-booking { display:flex; gap:10px; padding:8px 12px; margin-bottom:6px; border-radius:9px; background:#141414; color:#eee; text-decoration:none; font-size:14px; }
         @keyframes hhNotesPulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,121,24,.6); } 50% { box-shadow:0 0 0 9px rgba(255,121,24,0); } }
         @media (prefers-reduced-motion: reduce) { #shift-notes-flap.unread { animation:none; } }
     </style>
@@ -28,16 +37,16 @@
         <div style="display:flex; align-items:flex-start; gap:10px; padding:16px 16px 10px;">
             <div style="flex:1;">
                 <div id="shift-notes-title" style="font-size:17px; font-weight:800;">🔔 Novedades del turno ({{ $hhCount }})</div>
-                <div style="font-size:13px; color:#aaa; margin-top:2px;">{{ $hhAdmin ? 'Lo que hay para el turno.' : ($hhAlerts ? 'Léelas y confirma.' : 'Ya las leíste. Salen solas al terminar el día.') }} <a href="{{ route('shift_notes.index') }}" style="color:#ff9a4d;">Ver el libro completo</a></div>
+                <div class="hh-note-sub">{{ $hhAdmin ? 'Lo que hay para el turno.' : ($hhAlerts ? 'Léelas y confirma.' : 'Ya las leíste. Salen solas al terminar el día.') }} <a href="{{ route('shift_notes.index') }}" style="color:#ff9a4d;">Ver el libro completo</a></div>
             </div>
-            <button type="button" id="shift-notes-close" aria-label="Minimizar" style="width:auto; margin:0; flex:none; background:none; border:1px solid #444; color:#ccc; border-radius:7px; padding:4px 10px; cursor:pointer;">✕</button>
+            <button type="button" id="shift-notes-close" aria-label="Minimizar" class="hh-note-close">✕</button>
         </div>
         <div style="flex:1; min-height:0; overflow-y:auto; padding:0 16px;">
             @if ($hhUpcoming->isNotEmpty())
                 <div style="font-size:12px; font-weight:800; color:#ff9a4d; margin:2px 0 6px;">Reservas próximas 24 horas</div>
                 @foreach ($hhUpcoming as $booking)
                     @php $hhAt = $booking->starts_at->copy()->timezone('America/Santiago'); @endphp
-                    <a href="{{ route('reservations.show', $booking->code) }}" style="display:flex; gap:10px; padding:8px 12px; margin-bottom:6px; border-radius:9px; background:#141414; color:#eee; text-decoration:none; font-size:14px;">
+                    <a href="{{ route('reservations.show', $booking->code) }}" class="hh-note-booking">
                         <b style="flex:none;">{{ $hhAt->isToday() ? '' : 'mañana ' }}{{ $hhAt->format('H:i') }}</b>
                         <span>{{ $booking->room?->name }} · {{ $booking->customer?->name }}</span>
                     </a>
@@ -47,13 +56,13 @@
                 <div style="font-size:12px; font-weight:800; color:#ff9a4d; margin:12px 0 6px;">Novedades</div>
             @endif
             @foreach ($hhAll as $note)
-                <div style="padding:10px 12px; margin-bottom:8px; border-radius:9px; background:#141414; border-left:4px solid {{ $note->urgent ? '#ff7918' : '#555' }}; {{ $hhNotes->contains('id', $note->id) ? '' : 'opacity:.65;' }}">
-                    <div style="font-size:12px; color:#999; margin-bottom:3px;">
+                <div class="hh-note-card{{ $note->urgent ? ' is-urgent' : '' }}{{ $hhNotes->contains('id', $note->id) ? '' : ' is-read' }}">
+                    <div class="hh-note-meta">
                         @if ($note->pinned)<b style="color:#ffb379;">📌 Fija · </b>@endif
                         @if ($note->urgent)<b style="color:#ff9a4d;">Urgente · </b>@endif
                         {{ $note->category }}@if ($note->room) · {{ $note->room->name }}@endif · {{ $note->authorName() }} · {{ $note->created_at->timezone('America/Santiago')->format('d/m H:i') }}
                     </div>
-                    <div style="font-size:14.5px; line-height:1.4; white-space:pre-wrap;">{{ $note->body }}</div>
+                    <div class="hh-note-body">{{ $note->body }}</div>
                 </div>
             @endforeach
         </div>

@@ -41,6 +41,9 @@ class GhlConversations
     /** Horas que WhatsApp deja responder libremente desde el último mensaje del cliente. */
     public const WHATSAPP_WINDOW_HOURS = 24;
 
+    /** Horas que se espera al cliente desde nuestro último mensaje; después sale solo del seguimiento. */
+    public const WAITING_CLIENT_HOURS = 12;
+
     /** Minutos que espera un mensaje antes de avisar: Cata suele contestar antes. */
     public const ALERT_AFTER_MINUTES = 3;
 
@@ -137,7 +140,7 @@ class GhlConversations
             ];
         }, $result['items']);
 
-        return $result + ['since' => $since];
+        return $result + ['since' => $since, 'waiting_since' => max($since, now()->subHours(self::WAITING_CLIENT_HOURS)->getTimestampMs())];
     }
 
     /**

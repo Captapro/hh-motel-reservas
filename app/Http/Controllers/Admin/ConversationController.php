@@ -90,9 +90,10 @@ class ConversationController extends Controller
             if (in_array($view, ['por_atender', 'esperando'], true)) {
                 $result['items'] = array_values(array_filter($result['items'], fn (array $item) => $view === 'por_atender'
                     ? $item['pending']
-                    : ! $item['closed'] && $item['at'] >= $result['since']));
+                    : ! $item['closed'] && $item['at'] >= $result['waiting_since']));
                 // Vienen de la más nueva a la más vieja: pasado el punto de partida no hay nada más.
-                $result['next'] = ($result['next'] ?? 0) >= $result['since'] ? $result['next'] : null;
+                $floor = $view === 'esperando' ? $result['waiting_since'] : $result['since'];
+                $result['next'] = ($result['next'] ?? 0) >= $floor ? $result['next'] : null;
             }
 
             return $result;

@@ -46,7 +46,7 @@
         .cv-btn { background:var(--panel); color:var(--ink); border:1px solid #cfcdc6; border-radius:12px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer; }
         .cv-btn[hidden] { display:none; }
         #cv-close { margin-left:auto; }
-        #cv-close.is-primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; padding:9px 16px; }
+        #cv-close.is-primary { background:#0a5cff; border-color:#0a5cff; color:#fff; font-weight:700; padding:9px 16px; }
         .cv-msgs { flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:10px; }
         .cv-msg { max-width:72%; background:var(--soft); color:var(--ink); border-radius:16px; padding:10px 13px; font-size:14.5px; line-height:1.35; white-space:pre-wrap; overflow-wrap:anywhere; align-self:flex-start; }
         .cv-msg.mine { align-self:flex-end; background:var(--accent); color:#fff; }

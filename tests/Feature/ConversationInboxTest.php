@@ -266,6 +266,23 @@ class ConversationInboxTest extends TestCase
         $this->getJson(route('admin.conversations.list'))->assertJsonCount(2, 'items');
     }
 
+    public function test_waiting_for_client_lasts_twelve_hours_and_a_new_message_brings_it_back(): void
+    {
+        OperationalSetting::current()->update(['conversations_since' => now()->subDays(3)]);
+        $ghl = fn (string $direction, string $ago) => ['contactId' => 'c1', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => $direction, 'lastMessageDate' => now()->modify($ago)->getTimestampMs()];
+        Http::fake([self::GHL.'/conversations/search*' => function (Request $r) use ($ghl) {
+            return Http::response(['conversations' => str_contains($r->url(), 'inbound')
+                ? [['id' => 'volvio'] + $ghl('inbound', '-1 hour')]
+                : [['id' => 'reciente'] + $ghl('outbound', '-11 hours'), ['id' => 'vencida'] + $ghl('outbound', '-13 hours')]]);
+        }]);
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+
+        $this->getJson(route('admin.conversations.list', ['vista' => 'esperando']))
+            ->assertJsonCount(1, 'items')->assertJsonPath('items.0.id', 'reciente');
+        $this->getJson(route('admin.conversations.list', ['vista' => 'por_atender']))
+            ->assertJsonCount(1, 'items')->assertJsonPath('items.0.id', 'volvio');
+    }
+
     public function test_closed_conversation_leaves_follow_up_until_a_new_message_arrives(): void
     {
         OperationalSetting::current()->update(['conversations_since' => now()->subDay()]);
