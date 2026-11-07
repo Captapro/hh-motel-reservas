@@ -45,8 +45,8 @@
         .cv-pill.human { background:var(--accent-soft); color:#a84a06; }
         .cv-btn { background:var(--panel); color:var(--ink); border:1px solid #cfcdc6; border-radius:12px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer; }
         .cv-btn[hidden] { display:none; }
-        #cv-close { margin-left:auto; }
-        #cv-close.is-primary { background:#0a5cff; border-color:#0a5cff; color:#fff; font-weight:700; padding:9px 16px; }
+        #cv-close { margin-left:auto; flex:none; white-space:nowrap; }
+        #cv-close.is-primary { background:#0a5cff; border-color:#0a5cff; color:#fff; font-size:14.5px; font-weight:800; padding:11px 20px; box-shadow:0 2px 8px rgba(10,92,255,.35); }
         .cv-msgs { flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:10px; }
         .cv-msg { max-width:72%; background:var(--soft); color:var(--ink); border-radius:16px; padding:10px 13px; font-size:14.5px; line-height:1.35; white-space:pre-wrap; overflow-wrap:anywhere; align-self:flex-start; }
         .cv-msg.mine { align-self:flex-end; background:var(--accent); color:#fff; }
@@ -135,11 +135,11 @@
                     <button type="button" class="cv-btn" id="cv-back" aria-label="Volver a la bandeja">←</button>
                     <span id="cv-channel-dot"></span>
                     <strong id="cv-name">Elige una conversación</strong>
+                    <button type="button" class="cv-btn" id="cv-close" hidden></button>
                 </div>
                 <div class="cv-head-row">
                     <span id="cv-state"></span>
                     <button type="button" class="cv-btn" id="cv-cata" hidden></button>
-                    <button type="button" class="cv-btn" id="cv-close" hidden></button>
                 </div>
             </div>
             <div id="cv-chat-error" class="cv-error" hidden></div>
