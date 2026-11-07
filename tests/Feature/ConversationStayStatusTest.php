@@ -1,0 +1,124 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Booking;
+use App\Models\Customer;
+use App\Models\Room;
+use App\Models\RoomCategory;
+use App\Models\User;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class ConversationStayStatusTest extends TestCase
+{
+    private const GHL = 'https://services.leadconnectorhq.com';
+
+    private Room $room;
+
+    private Customer $customer;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->assertSame('sqlite', DB::connection()->getDriverName());
+        foreach ([
+            '0001_01_01_000000_create_users_table.php',
+            '2026_08_18_120001_add_role_to_users_table.php',
+            '2026_10_23_210000_allow_soporte_role_on_users.php',
+            '2026_08_18_120018_create_audit_logs_table.php',
+            '2026_08_18_120002_create_room_categories_table.php',
+            '2026_08_18_120003_create_rooms_table.php',
+            '2026_08_18_120004_create_rate_rules_table.php',
+            '2026_08_18_120008_create_coupons_table.php',
+            '2026_08_18_120010_create_customers_table.php',
+            '2026_08_18_120011_create_bookings_table.php',
+            '2026_10_26_030000_add_origin_to_bookings_table.php',
+            '2026_10_26_200000_add_short_stay_to_bookings_table.php',
+            '2026_09_28_120000_add_pass_token_to_bookings_table.php',
+            '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
+            '2026_09_22_012032_add_room_check_to_bookings_table.php',
+            '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
+            '2026_11_06_180000_create_team_contacts_table.php',
+            '2026_11_06_200000_create_closed_conversations_table.php',
+        ] as $migration) {
+            (require database_path('migrations/'.$migration))->up();
+        }
+        config(['services.ghl.private_token' => 'token-prueba', 'services.ghl.location_id' => 'loc1']);
+        $category = RoomCategory::create(['name' => 'PLUS', 'is_active' => true]);
+        $this->room = Room::create(['name' => 'PLUS 101', 'room_category_id' => $category->id, 'operational_status' => 'activa']);
+        $this->customer = Customer::create(['name' => 'Ana Pérez', 'phone_e164' => '+56911111111']);
+        Http::fake([
+            self::GHL.'/conversations/abc/messages*' => Http::response(['messages' => ['messages' => [
+                ['id' => 'm1', 'direction' => 'inbound', 'messageType' => 'TYPE_WHATSAPP', 'body' => 'Hola', 'contactId' => 'c1', 'dateAdded' => now()->toIso8601String()],
+            ]]]),
+            self::GHL.'/conversations/abc' => Http::response(['id' => 'abc', 'contactId' => 'c1', 'type' => 'TYPE_PHONE']),
+            self::GHL.'/contacts/c1' => Http::response(['contact' => ['firstName' => 'Ana', 'phone' => '+56911111111', 'tags' => []]]),
+        ]);
+    }
+
+    private function booking(string $code, string $status, string $start, array $overrides = []): Booking
+    {
+        $startsAt = Carbon::parse($start);
+
+        return Booking::create(array_merge([
+            'code' => $code, 'pass_token' => Str::random(40),
+            'customer_id' => $this->customer->id, 'room_id' => $this->room->id, 'origin' => 'catalogo',
+            'starts_at' => $startsAt, 'ends_at' => $startsAt->copy()->addHours(3),
+            'duration_minutes' => 180, 'guests_count' => 2,
+            'booking_status' => $status, 'payment_status' => 'PAGADA',
+            'price_original' => 30000, 'price_final' => 30000,
+        ], $overrides));
+    }
+
+    private function card(): array
+    {
+        return $this->actingAs(User::factory()->create(['role' => 'soporte']))
+            ->getJson(route('admin.conversations.show', 'abc'))
+            ->assertOk()
+            ->json('customer');
+    }
+
+    public function test_confirmed_booking_wins_over_an_expired_twin_at_the_same_time(): void
+    {
+        $this->booking('HH-CONF', 'CONFIRMADA', '+1 day');
+        $this->booking('HH-EXP', 'EXPIRADA', '+1 day');
+
+        $card = $this->card();
+
+        $this->assertSame('HH-CONF', $card['current']['code']);
+        $this->assertSame('Próximo a llegar', $card['current']['state']);
+        $this->assertSame(1, $card['bookings']);
+        $this->assertEqualsCanonicalizing(['HH-CONF', 'HH-EXP'], array_column($card['recent'], 'code'));
+    }
+
+    public function test_person_in_the_room_shows_first_even_with_a_later_booking(): void
+    {
+        $this->booking('HH-DENTRO', 'CHECK_IN', '-1 hour', ['checked_in_at' => now()->subHour()]);
+        $this->booking('HH-LUEGO', 'CONFIRMADA', '+3 days');
+
+        $card = $this->card();
+
+        $this->assertSame('HH-DENTRO', $card['current']['code']);
+        $this->assertSame('En la habitación', $card['current']['state']);
+    }
+
+    public function test_nearest_upcoming_booking_is_the_current_one(): void
+    {
+        $this->booking('HH-LEJOS', 'CONFIRMADA', '+9 days');
+        $this->booking('HH-CERCA', 'CONFIRMADA', '+2 days');
+        $this->booking('HH-ANTES', 'FINALIZADA', '-9 days', ['checked_out_at' => now()->subDays(9)]);
+
+        $this->assertSame('HH-CERCA', $this->card()['current']['code']);
+    }
+
+    public function test_finished_stay_says_the_person_already_left(): void
+    {
+        $this->booking('HH-FIN', 'FINALIZADA', '-2 days', ['checked_out_at' => now()->subDays(2)]);
+
+        $this->assertSame('Ya salió', $this->card()['current']['state']);
+    }
+}

@@ -2,10 +2,15 @@
 
 namespace App\Services\Integrations;
 
+use App\Models\ClosedConversation;
+use App\Models\OperationalSetting;
+use App\Models\TeamContact;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
@@ -35,6 +40,14 @@ class GhlConversations
 
     /** Horas que WhatsApp deja responder libremente desde el último mensaje del cliente. */
     public const WHATSAPP_WINDOW_HOURS = 24;
+
+    /** Minutos que espera un mensaje antes de avisar: Cata suele contestar antes. */
+    public const ALERT_AFTER_MINUTES = 3;
+
+    private const ALERTS_CACHE_KEY = 'conversations.alerts';
+
+    /** Todas las pantallas consultan seguido: GHL se pregunta una vez cada este tiempo. */
+    private const ALERTS_CACHE_SECONDS = 30;
 
     private readonly string $token;
 
@@ -100,6 +113,68 @@ class GhlConversations
     }
 
     /**
+     * Marca equipo y seguimiento. Por atender = lo último lo escribió el
+     * cliente después del punto de partida: los no leídos de GHL arrastran
+     * historia y no sirven para esto.
+     *
+     * @param  array{items: array<int, array<string, mixed>>, next: ?int}  $result
+     * @param  array<int, string>  $team
+     */
+    public function withFollowUp(array $result, array $team): array
+    {
+        $since = OperationalSetting::current()->conversations_since?->getTimestampMs() ?? 0;
+
+        $closures = ClosedConversation::whereIn('ghl_conversation_id', array_column($result['items'], 'id'))->pluck('closed_at', 'ghl_conversation_id');
+
+        $result['items'] = array_map(function (array $item) use ($team, $since, $closures) {
+            // Un mensaje posterior al alta la devuelve al seguimiento sola.
+            $closed = isset($closures[$item['id']]) && $closures[$item['id']]->getTimestampMs() >= $item['at'];
+
+            return $item + [
+                'team' => in_array($item['contact_id'], $team, true),
+                'closed' => $closed,
+                'pending' => ! $closed && $item['direction'] === 'inbound' && $item['at'] >= $since,
+            ];
+        }, $result['items']);
+
+        return $result + ['since' => $since];
+    }
+
+    /**
+     * Quienes llevan rato esperando, para el aviso de todas las pantallas.
+     * Incluye al equipo: quien llama decide si esa persona puede verlo.
+     * El correo queda fuera porque no se responde desde el sistema. Si GHL
+     * falla, simplemente no hay aviso: nunca debe romper el tablero.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function alerts(): array
+    {
+        if (! $this->isConfigured()) {
+            return [];
+        }
+
+        return Cache::remember(self::ALERTS_CACHE_KEY, self::ALERTS_CACHE_SECONDS, function () {
+            try {
+                $items = $this->withFollowUp($this->search('por_atender'), TeamContact::pluck('ghl_contact_id')->all())['items'];
+            } catch (Throwable $e) {
+                Log::warning('Conversaciones: no se pudo revisar Por atender', ['mensaje' => $e->getMessage()]);
+
+                return [];
+            }
+
+            $limit = now()->subMinutes(self::ALERT_AFTER_MINUTES)->getTimestampMs();
+
+            return array_values(array_filter($items, fn (array $item) => $item['pending'] && $item['channel'] !== 'email' && $item['at'] <= $limit));
+        });
+    }
+
+    public function forgetAlerts(): void
+    {
+        Cache::forget(self::ALERTS_CACHE_KEY);
+    }
+
+    /**
      * Conversaciones de varios contactos a la vez, las más recientes primero.
      *
      * @param  array<int, string>  $contactIds
@@ -143,6 +218,7 @@ class GhlConversations
         return [
             'id' => (string) ($c['id'] ?? ''),
             'contact_id' => (string) ($c['contactId'] ?? ''),
+            'phone' => (string) ($c['phone'] ?? ''),
             'name' => trim((string) ($c['fullName'] ?? $c['contactName'] ?? '')) ?: ((string) ($c['phone'] ?? $c['email'] ?? 'Sin nombre')),
             'channel' => $this->channelOf((string) ($c['lastMessageType'] ?? $c['type'] ?? '')),
             'preview' => (string) ($c['lastMessageBody'] ?? ''),
@@ -232,9 +308,6 @@ class GhlConversations
                 'when' => isset($m['dateAdded']) ? $this->shortDate(Carbon::parse($m['dateAdded'])) : '',
                 'status' => (string) ($m['status'] ?? ''),
                 'source' => (string) ($m['source'] ?? ''),
-                // Solo los nombres de los campos, para ver qué manda GHL en plantillas con botón.
-                'fields' => array_values(array_diff(array_keys($m), ['id', 'body', 'contactId', 'conversationId', 'locationId'])),
-                'meta_fields' => array_keys((array) ($m['meta'] ?? [])),
             ])->all(),
         ] + $this->replyState($channel, $lastInbound['dateAdded'] ?? null);
     }

@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AttentionRequest;
 use App\Models\AuditLog;
+use App\Models\Booking;
 use App\Models\ClosedConversation;
 use App\Models\Customer;
-use App\Models\OperationalSetting;
 use App\Models\TeamContact;
 use App\Services\Integrations\GhlClient;
 use App\Services\Integrations\GhlConversations;
@@ -39,6 +39,8 @@ class ConversationController extends Controller
         return view('admin.conversations.index', [
             'configured' => $ghl->isConfigured(),
             'notice' => request()->integer('aviso') ?: null,
+            'pendingOpen' => preg_match('/^[A-Za-z0-9]{1,64}$/', (string) request()->query('abrir')) ? request()->query('abrir') : null,
+            'pendingTeam' => request()->boolean('equipo') && $this->seesTeam(request()),
             'seesTeam' => $this->seesTeam(request()),
         ]);
     }
@@ -58,7 +60,7 @@ class ConversationController extends Controller
             $phone = AttentionRequest::find($data['aviso'])?->phone;
 
             return $phone
-                ? $this->guarded(fn () => $this->visibleTo($request, $this->withTeam($ghl->search('todas', null, $phone), TeamContact::pluck('ghl_contact_id')->all())))
+                ? $this->guarded(fn () => $this->visibleTo($request, $ghl->withFollowUp($ghl->search('todas', null, $phone), TeamContact::pluck('ghl_contact_id')->all())))
                 : response()->json(['items' => [], 'next' => null]);
         }
 
@@ -67,11 +69,11 @@ class ConversationController extends Controller
         if (($data['vista'] ?? null) === 'equipo') {
             abort_unless($this->seesTeam($request), 403);
 
-            return $this->guarded(fn () => $this->withTeam($team === [] ? ['items' => [], 'next' => null] : $ghl->searchContacts(array_slice($team, 0, 30)), $team));
+            return $this->guarded(fn () => $ghl->withFollowUp($team === [] ? ['items' => [], 'next' => null] : $ghl->searchContacts(array_slice($team, 0, 30)), $team));
         }
 
         return $this->guarded(function () use ($request, $ghl, $data, $team) {
-            $result = $this->withTeam($ghl->search(
+            $result = $ghl->withFollowUp($ghl->search(
                 $data['vista'] ?? 'todas',
                 $data['canal'] ?? null,
                 $data['q'] ?? null,
@@ -112,33 +114,6 @@ class ConversationController extends Controller
         return $result;
     }
 
-    /**
-     * Marca equipo y seguimiento. Por atender = lo último lo escribió el
-     * cliente después del punto de partida: los no leídos de GHL arrastran
-     * historia y no sirven para esto.
-     *
-     * @param  array<int, string>  $team
-     */
-    private function withTeam(array $result, array $team): array
-    {
-        $since = OperationalSetting::current()->conversations_since?->getTimestampMs() ?? 0;
-
-        $closures = ClosedConversation::whereIn('ghl_conversation_id', array_column($result['items'], 'id'))->pluck('closed_at', 'ghl_conversation_id');
-
-        $result['items'] = array_map(function (array $item) use ($team, $since, $closures) {
-            // Un mensaje posterior al alta la devuelve al seguimiento sola.
-            $closed = isset($closures[$item['id']]) && $closures[$item['id']]->getTimestampMs() >= $item['at'];
-
-            return $item + [
-                'team' => in_array($item['contact_id'], $team, true),
-                'closed' => $closed,
-                'pending' => ! $closed && $item['direction'] === 'inbound' && $item['at'] >= $since,
-            ];
-        }, $result['items']);
-
-        return $result + ['since' => $since];
-    }
-
     public function show(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
     {
         $data = $request->validate(['contacto' => ['nullable', 'string', 'alpha_num', 'max:64']]);
@@ -164,6 +139,7 @@ class ConversationController extends Controller
         return $this->guarded(function () use ($request, $conversation, $ghl, $message) {
             $this->contactOf($request, $conversation, $ghl);
             $channel = $ghl->reply($conversation, $message);
+            $ghl->forgetAlerts();
             AuditLog::record($request->user()->id, 'conversacion.respondida', 'GhlConversation', $conversation, null, [
                 'canal' => $channel,
                 'mensaje' => $message,
@@ -238,6 +214,7 @@ class ConversationController extends Controller
             } else {
                 ClosedConversation::where('ghl_conversation_id', $conversation)->delete();
             }
+            $ghl->forgetAlerts();
             AuditLog::record($request->user()->id, $data['on'] ? 'conversacion.dada_de_alta' : 'conversacion.reabierta', 'GhlConversation', $conversation, null, null);
 
             return ['ok' => true];
@@ -286,18 +263,50 @@ class ConversationController extends Controller
             return null;
         }
 
-        $last = $customer->bookings()->latest('starts_at')->first();
+        $bookings = $customer->bookings()->orderByDesc('starts_at')->orderByDesc('id')->get();
+        $closed = ['CANCELADA', 'EXPIRADA'];
+        $current = $bookings->first(fn (Booking $b) => $this->isInRoom($b))
+            ?? $bookings->filter(fn (Booking $b) => in_array($b->booking_status, ['PENDIENTE_PAGO', 'RETENIDA', 'CONFIRMADA'], true) && $b->ends_at->gte(now()))->last()
+            ?? $bookings->first(fn (Booking $b) => ! in_array($b->booking_status, $closed, true))
+            ?? $bookings->first();
 
         return [
             'url' => auth()->user()->canAccess('clientes') ? route('admin.customers.show', $customer) : null,
-            'bookings' => $customer->bookings()->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])->count(),
-            'last_booking' => $last ? [
-                'code' => $last->code,
-                'url' => route('reservations.show', $last->code),
-                'date' => $last->starts_at->timezone('America/Santiago')->format('d/m/Y H:i'),
-                'status' => $last->booking_status,
-            ] : null,
+            'bookings' => $bookings->whereNotIn('booking_status', $closed)->count(),
+            'current' => $current ? $this->bookingRow($current) : null,
+            'recent' => $bookings->take(5)->map(fn (Booking $b) => $this->bookingRow($b))->values()->all(),
         ];
+    }
+
+    private function isInRoom(Booking $booking): bool
+    {
+        return $booking->booking_status === 'CHECK_IN' && ! $booking->checked_out_at;
+    }
+
+    private function bookingRow(Booking $booking): array
+    {
+        return [
+            'code' => $booking->code,
+            'url' => route('reservations.show', $booking->code),
+            'date' => $booking->starts_at->timezone('America/Santiago')->format('d/m/Y H:i'),
+            'state' => $this->stayState($booking),
+        ];
+    }
+
+    /** Dónde está la persona respecto de esa reserva, dicho como lo diría recepción. */
+    private function stayState(Booking $booking): string
+    {
+        if ($booking->checked_out_at) {
+            return 'Ya salió';
+        }
+
+        return match ($booking->agendaState()['key']) {
+            'en_alojamiento' => 'En la habitación',
+            'finalizada' => 'Ya salió',
+            'por_llegar' => 'Próximo a llegar',
+            'atrasada' => 'Atrasado, aún sin ingreso',
+            default => $booking->agendaState()['label'],
+        };
     }
 
     private function guarded(callable $action): JsonResponse

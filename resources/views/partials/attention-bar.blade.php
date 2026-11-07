@@ -18,6 +18,12 @@
         const url = @json(route('attention.pending'));
         const token = @json(csrf_token());
         const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        // En Conversaciones los mensajes ya están en pantalla: ahí solo suena.
+        const onInbox = location.pathname.startsWith('/admin/conversaciones');
+        const isHandoff = (item) => item.kind !== 'inbox';
+        const announcedKey = 'hh-inbox-announced';
+        const announced = () => { try { return JSON.parse(sessionStorage.getItem(announcedKey)) || []; } catch (e) { return []; } };
+        const remember = (ids) => { try { sessionStorage.setItem(announcedKey, JSON.stringify(ids)); } catch (e) { /* sin memoria: puede volver a sonar */ } };
         let showing = [];
         let lastBeep = 0;
 
@@ -32,15 +38,25 @@
         }
 
         function render() {
-            bar.innerHTML = showing.map((item) => '<div class="hh-attention-row">'
+            bar.innerHTML = showing.map((item) => isHandoff(item) ? handoffRow(item) : inboxRow(item)).join('');
+            bar.hidden = showing.length === 0;
+        }
+
+        function inboxRow(item) {
+            return '<div class="hh-attention-row"><div class="hh-attention-text">💬 ' + esc(item.title)
+                + (item.detail ? '<small>' + esc(item.detail) + '</small>' : '') + '</div>'
+                + '<a href="' + esc(item.conversation) + '">Abrir conversación</a></div>';
+        }
+
+        function handoffRow(item) {
+            return '<div class="hh-attention-row">'
                 + '<div class="hh-attention-text">💬 ' + esc(item.name) + ' requiere atención'
                 + '<small>' + esc(item.phone) + ' · ' + esc(item.since) + (item.reason ? ' · ' + esc(item.reason) : '') + '</small></div>'
                 + (item.conversation
                     ? '<a href="' + esc(item.conversation) + '">Abrir conversación</a>'
                     : '<a href="' + esc(item.whatsapp) + '" target="hh-whatsapp" rel="noopener">Abrir WhatsApp</a>')
                 + '<button type="button" data-copy="' + esc(item.phone) + '">Copiar número</button>'
-                + '<button type="button" data-attend="' + esc(item.attend_url) + '">✓ Atendido</button></div>').join('');
-            bar.hidden = showing.length === 0;
+                + '<button type="button" data-attend="' + esc(item.attend_url) + '">✓ Atendido</button></div>';
         }
 
         bar.addEventListener('click', async (event) => {
@@ -69,14 +85,20 @@
             try {
                 const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
                 if (!response.ok) return;
-                const before = showing.map((item) => item.id);
-                const next = await response.json();
+                const before = showing.filter(isHandoff).map((item) => item.id);
+                const all = await response.json();
+                const next = onInbox ? all.filter(isHandoff) : all;
                 if (JSON.stringify(next) !== JSON.stringify(showing)) {
                     showing = next;
                     render();
                 }
-                const isNew = showing.some((item) => !before.includes(item.id));
-                if (showing.length && (isNew || Date.now() - lastBeep >= 58000)) beep();
+                const handoffs = all.filter(isHandoff);
+                const waiting = all.filter((item) => !isHandoff(item)).map((item) => item.id);
+                const seen = announced();
+                const isNew = handoffs.some((item) => !before.includes(item.id)) || waiting.some((id) => !seen.includes(id));
+                remember(waiting);
+                // El traspaso insiste cada minuto; un mensaje en espera suena una sola vez.
+                if (isNew || (handoffs.length && Date.now() - lastBeep >= 58000)) beep();
             } catch (e) { /* sin red: se reintenta */ }
         }
         poll();

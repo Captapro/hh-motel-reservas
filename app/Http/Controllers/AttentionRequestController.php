@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttentionRequest;
+use App\Services\Integrations\GhlConversations;
 use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -14,6 +16,10 @@ use Illuminate\Support\Str;
  */
 class AttentionRequestController extends Controller
 {
+    private const WAITING_ROWS = 3;
+
+    private const CHANNEL_LABELS = ['whatsapp' => 'WhatsApp', 'instagram' => 'Instagram', 'facebook' => 'Facebook'];
+
     /** Webhook de GHL, autenticado con GHL_INBOUND_SECRET en la URL (?token=...). */
     public function store(Request $request): JsonResponse
     {
@@ -39,12 +45,14 @@ class AttentionRequestController extends Controller
         return response()->json(['result' => 'avisado']);
     }
 
-    public function pending(Request $request): JsonResponse
+    public function pending(Request $request, GhlConversations $ghl): JsonResponse
     {
         // Quien tiene Conversaciones atiende ahí; el resto sigue yendo a WhatsApp.
         $inbox = $request->user()->canAccess('conversaciones');
 
-        return response()->json(AttentionRequest::open()->orderBy('created_at')->limit(10)->get()->map(fn (AttentionRequest $a) => [
+        $handoffs = AttentionRequest::open()->orderBy('created_at')->limit(10)->get();
+
+        $rows = $handoffs->map(fn (AttentionRequest $a) => [
             'id' => $a->id,
             'name' => $a->name ?: $a->phone,
             'phone' => $a->phone,
@@ -53,7 +61,49 @@ class AttentionRequestController extends Controller
             'conversation' => $inbox ? route('admin.conversations.index', ['aviso' => $a->id]) : null,
             'since' => $a->created_at->copy()->timezone('America/Santiago')->format('H:i'),
             'attend_url' => route('attention.attend', $a),
-        ])->values());
+        ])->values();
+
+        return response()->json($inbox ? $rows->concat($this->waitingRows($ghl, $handoffs->pluck('phone')->all(), $request->user()->isAdministrador())) : $rows);
+    }
+
+    /**
+     * Mensajes sin responder. Se muestran hasta tres para no tapar el tablero;
+     * quien ya tiene aviso de traspaso no se repite. Los chats del equipo son
+     * solo para administración, igual que en la bandeja.
+     *
+     * @param  array<int, string>  $handoffPhones
+     */
+    private function waitingRows(GhlConversations $ghl, array $handoffPhones, bool $seesTeam): array
+    {
+        $waiting = collect($ghl->alerts())
+            ->reject(fn (array $item) => in_array($item['phone'], $handoffPhones, true) || ($item['team'] && ! $seesTeam))
+            ->values();
+
+        $rows = $waiting->take(self::WAITING_ROWS)->map(fn (array $item) => [
+            'id' => 'conversacion-'.$item['id'].'-'.$item['at'],
+            'kind' => 'inbox',
+            'title' => $item['name'].' espera respuesta',
+            'detail' => ($item['team'] ? 'Equipo · ' : '').self::CHANNEL_LABELS[$item['channel']].' · '.Carbon::createFromTimestampMs($item['at'])->timezone('America/Santiago')->format('H:i'),
+            'conversation' => $this->waitingLink($item),
+        ])->all();
+
+        $more = $waiting->count() - self::WAITING_ROWS;
+        if ($more > 0) {
+            $rows[] = [
+                'id' => 'conversaciones-mas',
+                'kind' => 'inbox',
+                'title' => $more === 1 ? '1 conversación más por atender' : $more.' conversaciones más por atender',
+                'detail' => '',
+                'conversation' => $this->waitingLink($waiting[self::WAITING_ROWS]),
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function waitingLink(array $item): string
+    {
+        return route('admin.conversations.index', ['abrir' => $item['id']] + ($item['team'] ? ['equipo' => 1] : []));
     }
 
     public function attend(Request $request, AttentionRequest $attention): JsonResponse

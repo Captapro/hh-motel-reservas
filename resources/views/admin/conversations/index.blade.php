@@ -66,6 +66,7 @@
         .cv-side dl { margin:0 0 12px; }
         .cv-side dt { color:var(--muted); font-size:12px; margin-top:12px; }
         .cv-side dd { margin:4px 0 0; background:var(--soft); border-radius:12px; padding:9px 12px; overflow-wrap:anywhere; }
+        .cv-side dd.cv-stay { background:#fff0e4; color:#a84a06; font-weight:700; }
         .cv-side a { color:#a84a06; font-weight:600; text-decoration:none; }
         .cv-side label { display:block; color:var(--muted); font-size:12px; margin-top:12px; }
         .cv-side input { display:block; width:100%; margin-top:4px; background:var(--soft); border:1px solid transparent; border-radius:12px; padding:9px 12px; font-size:14px; color:var(--ink); }
@@ -261,7 +262,7 @@
                     link.rel = 'noopener noreferrer';
                     msg.append(link);
                 });
-                msg.append(el('small', '', m.source === 'workflow' ? `${m.when} · Mensaje automático` : m.when));
+                msg.append(el('small', '', m.source === 'workflow' ? `${m.when} · Mensaje automático · si lleva botón, solo se ve en WhatsApp` : m.when));
                 return msg;
             }));
             if (!data.messages.length) box.append(el('div', 'cv-empty', 'Sin mensajes para mostrar.'));
@@ -333,20 +334,25 @@
                 content.push(team);
             }
             if (data.customer) {
+                if (data.customer.current) {
+                    list.prepend(el('dd', 'cv-stay', `${data.customer.current.state} · ${data.customer.current.date}`));
+                    list.prepend(el('dt', '', 'Estado actual'));
+                }
                 row('Reservas en HH', String(data.customer.bookings));
+                if (data.customer.recent.length) {
+                    list.append(el('dt', '', 'Últimas reservas'));
+                    data.customer.recent.forEach(booking => {
+                        const dd = el('dd');
+                        const link = el('a', '', booking.code);
+                        link.href = booking.url;
+                        dd.append(link, ` · ${booking.date} · ${booking.state}`);
+                        list.append(dd);
+                    });
+                }
                 if (data.customer.url) {
                     const profile = el('a', '', 'Ver cliente en HH');
                     profile.href = data.customer.url;
                     content.push(profile);
-                }
-                if (data.customer.last_booking) {
-                    const last = data.customer.last_booking;
-                    list.append(el('dt', '', 'Última reserva'));
-                    const dd = el('dd');
-                    const link = el('a', '', last.code);
-                    link.href = last.url;
-                    dd.append(link, ` · ${last.date} · ${last.status}`);
-                    list.append(dd);
                 }
             } else {
                 content.push(el('div', 'note', 'Sin ficha de cliente en HH con este teléfono.'));
@@ -537,7 +543,24 @@
             }
         }
 
-        loadList();
+        async function openPending(id, view) {
+            const chip = document.querySelector(`#cv-views [data-view="${view}"]`);
+            if (chip) pick($('cv-views'), chip, () => { state.view = view; });
+            try {
+                const data = await api(urls.list + '?vista=' + view);
+                const item = data.items.find(i => i.id === id);
+                if (item) openConversation(item);
+            } catch (error) {
+                showError('cv-chat-error', error.message);
+            }
+        }
+
+        const pendingOpen = @json($pendingOpen);
+        if (pendingOpen) {
+            openPending(pendingOpen, @json($pendingTeam) ? 'equipo' : 'por_atender');
+        } else {
+            loadList();
+        }
         const notice = @json($notice);
         if (notice) openNotice(notice);
         setInterval(() => {

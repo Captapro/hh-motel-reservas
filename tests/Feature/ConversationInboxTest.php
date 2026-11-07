@@ -9,6 +9,7 @@ use App\Models\OperationalSetting;
 use App\Models\TeamContact;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -150,7 +151,89 @@ class ConversationInboxTest extends TestCase
         $this->assertStringNotContainsString('56911112222', $link);
 
         $this->getJson(route('admin.conversations.list', ['aviso' => $alert->id]))->assertOk()->assertJsonPath('items.0.id', 'abc');
-        Http::assertSent(fn (Request $r) => str_contains($r->url(), '/conversations/search') && $r['query'] === '+56911112222');
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), '/conversations/search') && ($r['query'] ?? null) === '+56911112222');
+    }
+
+    private function waiting(array $conversations): void
+    {
+        Cache::flush();
+        OperationalSetting::current()->update(['conversations_since' => now()->subDay()]);
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => array_map(fn (array $c) => $c + [
+            'contactId' => 'c-'.$c['id'], 'fullName' => 'Cliente '.$c['id'], 'lastMessageType' => 'TYPE_WHATSAPP',
+            'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->subMinutes(10)->getTimestampMs(),
+        ], $conversations)])]);
+    }
+
+    public function test_client_waiting_for_an_answer_shows_on_every_screen_after_a_few_minutes(): void
+    {
+        $this->waiting([
+            ['id' => 'espera'],
+            ['id' => 'reciente', 'lastMessageDate' => now()->subMinute()->getTimestampMs()],
+            ['id' => 'correo', 'lastMessageType' => 'TYPE_EMAIL'],
+            ['id' => 'equipo', 'contactId' => 'c-equipo'],
+            ['id' => 'alta'],
+        ]);
+        TeamContact::create(['ghl_contact_id' => 'c-equipo']);
+        ClosedConversation::create(['ghl_conversation_id' => 'alta', 'closed_at' => now()]);
+
+        $rows = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->assertOk()->json();
+
+        $this->assertCount(1, $rows, 'Recepción no ve al equipo.');
+        $this->assertSame('Cliente espera espera respuesta', $rows[0]['title']);
+        $this->assertStringEndsWith('/admin/conversaciones?abrir=espera', $rows[0]['conversation']);
+
+        $rows = $this->actingAs(User::factory()->create(['role' => 'soporte']))->getJson(route('attention.pending'))->json();
+
+        $this->assertCount(2, $rows, 'Administración también ve cuando escribe el equipo.');
+        $this->assertStringStartsWith('Equipo · WhatsApp', $rows[1]['detail']);
+        $this->assertStringEndsWith('/admin/conversaciones?abrir=equipo&equipo=1', $rows[1]['conversation']);
+    }
+
+    public function test_marketing_gets_no_waiting_alert_and_handoffs_are_not_repeated(): void
+    {
+        $this->waiting([['id' => 'traspaso', 'phone' => '+56911112222'], ['id' => 'otra', 'phone' => '+56933334444']]);
+        AttentionRequest::create(['phone' => '+56911112222', 'name' => 'Ana']);
+
+        $this->actingAs(User::factory()->create(['role' => 'marketing']))->getJson(route('attention.pending'))->assertJsonCount(1);
+
+        $rows = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->json();
+        $this->assertCount(2, $rows);
+        $this->assertSame('Cliente otra espera respuesta', $rows[1]['title']);
+    }
+
+    public function test_many_waiting_clients_fit_in_a_summary_row(): void
+    {
+        $this->waiting(array_map(fn (int $n) => ['id' => 'c'.$n], range(1, 5)));
+
+        $rows = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->json();
+
+        $this->assertCount(4, $rows);
+        $this->assertSame('2 conversaciones más por atender', $rows[3]['title']);
+    }
+
+    public function test_ghl_failure_never_breaks_the_screens(): void
+    {
+        Cache::flush();
+        Http::fake([self::GHL.'/conversations/search*' => Http::response([], 500)]);
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->assertOk()->assertJsonCount(0);
+    }
+
+    public function test_replying_clears_the_alert_right_away(): void
+    {
+        Cache::flush();
+        OperationalSetting::current()->update(['conversations_since' => now()->subDay()]);
+        $waiting = [['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->subMinutes(10)->getTimestampMs()]];
+        Http::fake([self::GHL.'/conversations/search*' => function () use (&$waiting) {
+            return Http::response(['conversations' => $waiting]);
+        }]);
+        $this->thread();
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->assertJsonCount(1);
+
+        $waiting = [];
+        $this->postJson(route('admin.conversations.reply', 'abc'), ['message' => 'Hola'])->assertOk();
+
+        $this->getJson(route('attention.pending'))->assertJsonCount(0);
     }
 
     public function test_only_what_the_client_wrote_after_the_starting_point_is_pending(): void
