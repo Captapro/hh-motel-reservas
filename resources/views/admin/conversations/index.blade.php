@@ -59,6 +59,12 @@
         .cv-reply textarea { flex:1; resize:none; height:46px; background:var(--soft); border:1px solid var(--line); border-radius:14px; padding:12px 14px; font-size:14.5px; color:var(--ink); }
         .cv-send { background:var(--accent); color:#fff; border:0; border-radius:14px; padding:0 20px; font-size:14px; font-weight:700; cursor:pointer; }
         .cv-send:disabled { opacity:.5; }
+        .cv-attach { width:46px; flex:none; background:var(--soft); border:1px solid var(--line); border-radius:14px; font-size:18px; cursor:pointer; }
+        .cv-file { display:flex; align-items:center; gap:8px; margin:10px 16px 0; padding:7px 12px; background:var(--soft); border-radius:12px; font-size:13px; }
+        .cv-file[hidden] { display:none; }
+        .cv-file span { flex:1; min-width:0; overflow-wrap:anywhere; }
+        .cv-file button { background:none; border:0; cursor:pointer; color:var(--muted); font-size:14px; }
+        .cv-msg audio { display:block; width:240px; max-width:100%; margin-top:6px; }
         .cv-blocked { border-top:1px solid var(--line); background:var(--warn-bg); padding:13px 18px; font-size:13.5px; color:var(--warn); }
         .cv-empty { color:var(--muted); font-size:13.5px; padding:26px 14px; text-align:center; }
         .cv-side { padding:18px 16px; overflow-y:auto; font-size:14px; }
@@ -138,7 +144,13 @@
             <div id="cv-chat-error" class="cv-error" hidden></div>
             <div class="cv-msgs" id="cv-msgs"></div>
             <div class="cv-blocked" id="cv-blocked" hidden></div>
+            <div class="cv-file" id="cv-file-chip" hidden>
+                <span id="cv-file-name"></span>
+                <button type="button" id="cv-file-clear" aria-label="Quitar archivo">✕</button>
+            </div>
             <form class="cv-reply" id="cv-form" hidden>
+                <input type="file" id="cv-file" hidden accept=".jpg,.jpeg,.png,.mp4,.mp3,.m4a,.aac,.amr,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+                <button class="cv-attach" id="cv-attach" type="button" aria-label="Adjuntar archivo" title="Imagen, documento, audio o video · máximo 5 MB">📎</button>
                 <textarea id="cv-text" placeholder="Escribe tu respuesta…" maxlength="2000" aria-label="Respuesta"></textarea>
                 <button class="cv-send" id="cv-send" type="submit">Enviar</button>
             </form>
@@ -256,6 +268,13 @@
             box.replaceChildren(...data.messages.map(m => {
                 const msg = el('div', 'cv-msg' + (m.mine ? ' mine' : ''), m.body);
                 m.attachments.forEach(url => {
+                    if (/\.(ogg|oga|opus|mp3|m4a|aac|wav)(\?|$)/i.test(url)) {
+                        const audio = el('audio');
+                        audio.controls = true;
+                        audio.preload = 'none';
+                        audio.src = url;
+                        msg.append(audio);
+                    }
                     const link = el('a', '', 'Ver adjunto');
                     link.href = url;
                     link.target = '_blank';
@@ -429,6 +448,8 @@
             state.contact = c.contact_id;
             state.seen = '';
             showError('cv-chat-error', '');
+            $('cv-file').value = '';
+            $('cv-file-chip').hidden = true;
             $('cv').classList.add('is-open');
             $('cv-name').textContent = c.name;
             $('cv-state').replaceChildren();
@@ -475,15 +496,40 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('cv-form').requestSubmit(); }
         });
 
+        const clearFile = () => {
+            $('cv-file').value = '';
+            $('cv-file-chip').hidden = true;
+        };
+        $('cv-attach').addEventListener('click', () => $('cv-file').click());
+        $('cv-file-clear').addEventListener('click', clearFile);
+        $('cv-file').addEventListener('change', () => {
+            const file = $('cv-file').files[0];
+            if (!file) return clearFile();
+            if (file.size > 5 * 1024 * 1024) {
+                clearFile();
+                return showError('cv-chat-error', 'El archivo pesa más de 5 MB.');
+            }
+            showError('cv-chat-error', '');
+            $('cv-file-name').textContent = file.name;
+            $('cv-file-chip').hidden = false;
+        });
+
         $('cv-form').addEventListener('submit', async e => {
             e.preventDefault();
             const message = $('cv-text').value.trim();
-            if (!message || !state.open || state.sending) return;
+            const file = $('cv-file').files[0];
+            if ((!message && !file) || !state.open || state.sending) return;
             state.sending = true;
             $('cv-send').disabled = true;
             try {
-                await api(`${urls.base}/${state.open}/responder`, { method: 'POST', body: JSON.stringify({ message }) });
+                const body = new FormData();
+                body.append('message', message);
+                if (file) body.append('file', file);
+                const response = await fetch(`${urls.base}/${state.open}/responder`, { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf }, body });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || data.message || 'No se pudo enviar. Intenta de nuevo.');
                 $('cv-text').value = '';
+                clearFile();
                 showError('cv-chat-error', '');
                 await refreshThread(true);
                 loadList();

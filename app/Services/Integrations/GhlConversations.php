@@ -7,6 +7,7 @@ use App\Models\OperationalSetting;
 use App\Models\TeamContact;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Pool;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -27,6 +28,21 @@ class GhlConversations
     private const API_VERSION = '2021-04-15';
 
     private const CONTACTS_API_VERSION = '2021-07-28';
+
+    /** Enviar archivos está documentado solo en esta versión. */
+    private const MEDIA_API_VERSION = 'v3';
+
+    /** Extensión permitida => tipo de archivo para WhatsApp. */
+    public const MEDIA_TYPES = [
+        'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image',
+        'mp4' => 'video',
+        'mp3' => 'audio', 'm4a' => 'audio', 'aac' => 'audio', 'amr' => 'audio',
+        'pdf' => 'document', 'doc' => 'document', 'docx' => 'document', 'xls' => 'document',
+        'xlsx' => 'document', 'ppt' => 'document', 'pptx' => 'document', 'txt' => 'document',
+    ];
+
+    /** Límite de GHL por archivo. */
+    public const MAX_FILE_KB = 5120;
 
     private const TZ = 'America/Santiago';
 
@@ -342,7 +358,7 @@ class GhlConversations
      * Envía por el mismo canal de la conversación. El contacto y el canal
      * salen siempre de GHL, nunca de lo que mande el navegador.
      */
-    public function reply(string $conversationId, string $message): string
+    public function reply(string $conversationId, string $message, ?UploadedFile $file = null): string
     {
         $thread = $this->thread($conversationId);
 
@@ -350,13 +366,48 @@ class GhlConversations
             throw new RuntimeException($thread['reply_blocked'] ?? 'No se pudo identificar a quién responder.');
         }
 
-        $this->http()->post('/conversations/messages', [
+        $payload = array_filter([
             'type' => self::CHANNELS[$thread['channel']][1],
             'contactId' => $thread['contact_id'],
             'message' => $message,
-        ])->throw();
+        ], fn (string $value) => $value !== '');
+
+        if ($file) {
+            $payload += $this->mediaPayload($thread['channel'], $conversationId, $file);
+        }
+
+        $this->http($file ? self::MEDIA_API_VERSION : self::API_VERSION)->post('/conversations/messages', $payload)->throw();
 
         return (string) $thread['channel'];
+    }
+
+    /** WhatsApp pide el archivo en su propio objeto; los demás canales, como adjunto. */
+    private function mediaPayload(string $channel, string $conversationId, UploadedFile $file): array
+    {
+        $url = $this->upload($conversationId, $file);
+
+        if ($channel !== 'whatsapp') {
+            return ['attachments' => [$url]];
+        }
+
+        return ['whatsapp' => ['type' => 'media', 'media' => [
+            'type' => self::MEDIA_TYPES[strtolower($file->getClientOriginalExtension())] ?? 'document',
+            'url' => $url,
+            'name' => $file->getClientOriginalName(),
+        ]]];
+    }
+
+    private function upload(string $conversationId, UploadedFile $file): string
+    {
+        $uploaded = $this->http(self::MEDIA_API_VERSION)
+            ->attach('fileAttachment', (string) file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+            ->post('/conversations/messages/upload', ['conversationId' => $conversationId, 'locationId' => $this->locationId])
+            ->throw()
+            ->json('uploadedFiles', []);
+
+        $url = collect((array) $uploaded)->flatten()->first(fn ($value) => is_string($value) && str_starts_with($value, 'https://'));
+
+        return $url ?? throw new RuntimeException('GHL no devolvió el archivo. Intenta de nuevo.');
     }
 
     /** @return array<string, mixed> */

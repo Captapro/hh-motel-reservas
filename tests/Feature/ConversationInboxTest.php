@@ -9,6 +9,7 @@ use App\Models\OperationalSetting;
 use App\Models\TeamContact;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -354,6 +355,53 @@ class ConversationInboxTest extends TestCase
         Http::assertSent(fn (Request $r) => $r->url() === self::GHL.'/conversations/messages'
             && $r['type'] === 'IG' && $r['contactId'] === 'c1' && $r['message'] === 'Te ayudo');
         $this->assertSame($user->id, AuditLog::where('action', 'conversacion.respondida')->sole()->user_id);
+    }
+
+    private function fakeUpload(): void
+    {
+        Http::fake([self::GHL.'/conversations/messages/upload' => Http::response(['uploadedFiles' => ['foto.jpg' => 'https://files.test/foto.jpg']])]);
+    }
+
+    public function test_whatsapp_sends_a_file_as_media_with_its_type(): void
+    {
+        $this->fakeUpload();
+        $this->thread();
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('admin.conversations.reply', 'abc'), ['file' => UploadedFile::fake()->create('audio.mp3', 100, 'audio/mpeg')], ['Accept' => 'application/json'])
+            ->assertOk();
+
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/conversations/messages')
+            && $r->header('Version') === ['v3']
+            && $r['whatsapp']['media']['type'] === 'audio'
+            && $r['whatsapp']['media']['url'] === 'https://files.test/foto.jpg'
+            && ! isset($r['message']));
+        $this->assertSame('audio.mp3', AuditLog::where('action', 'conversacion.respondida')->first()->new_value['adjunto'] ?? null);
+    }
+
+    public function test_instagram_sends_a_file_as_attachment_together_with_the_text(): void
+    {
+        $this->fakeUpload();
+        $this->thread('TYPE_INSTAGRAM');
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('admin.conversations.reply', 'abc'), ['message' => 'Mira', 'file' => UploadedFile::fake()->image('foto.jpg')], ['Accept' => 'application/json'])
+            ->assertOk();
+
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/conversations/messages')
+            && $r['message'] === 'Mira' && $r['attachments'] === ['https://files.test/foto.jpg'] && ! isset($r['whatsapp']));
+    }
+
+    public function test_files_too_big_or_of_another_type_and_empty_replies_are_rejected(): void
+    {
+        $this->thread();
+        $user = User::factory()->create(['role' => 'recepcion']);
+        $send = fn (array $data) => $this->actingAs($user)->post(route('admin.conversations.reply', 'abc'), $data, ['Accept' => 'application/json']);
+
+        $send(['file' => UploadedFile::fake()->create('video.mp4', 6000)])->assertStatus(422)->assertJsonPath('errors.file.0', 'El archivo pesa más de 5 MB.');
+        $send(['file' => UploadedFile::fake()->create('virus.exe', 10)])->assertStatus(422)->assertJsonPath('errors.file.0', 'Ese tipo de archivo no se puede enviar.');
+        $send([])->assertStatus(422)->assertJsonPath('errors.message.0', 'Escribe un mensaje o adjunta un archivo.');
+        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), '/upload'));
     }
 
     public function test_whatsapp_reply_is_blocked_after_24_hours(): void

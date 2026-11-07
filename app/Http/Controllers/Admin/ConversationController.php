@@ -134,17 +134,26 @@ class ConversationController extends Controller
 
     public function reply(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
     {
-        $data = $request->validate(['message' => ['required', 'string', 'max:2000']]);
-        $message = trim($data['message']);
+        $data = $request->validate([
+            'message' => ['nullable', 'required_without:file', 'string', 'max:2000'],
+            'file' => ['nullable', 'file', 'max:'.GhlConversations::MAX_FILE_KB, 'extensions:'.implode(',', array_keys(GhlConversations::MEDIA_TYPES))],
+        ], [
+            'message.required_without' => 'Escribe un mensaje o adjunta un archivo.',
+            'file.max' => 'El archivo pesa más de 5 MB.',
+            'file.extensions' => 'Ese tipo de archivo no se puede enviar.',
+        ]);
+        $message = trim((string) ($data['message'] ?? ''));
+        $file = $request->file('file');
 
-        return $this->guarded(function () use ($request, $conversation, $ghl, $message) {
+        return $this->guarded(function () use ($request, $conversation, $ghl, $message, $file) {
             $this->contactOf($request, $conversation, $ghl);
-            $channel = $ghl->reply($conversation, $message);
+            $channel = $ghl->reply($conversation, $message, $file);
             $ghl->forgetAlerts();
-            AuditLog::record($request->user()->id, 'conversacion.respondida', 'GhlConversation', $conversation, null, [
+            AuditLog::record($request->user()->id, 'conversacion.respondida', 'GhlConversation', $conversation, null, array_filter([
                 'canal' => $channel,
                 'mensaje' => $message,
-            ]);
+                'adjunto' => $file?->getClientOriginalName(),
+            ]));
 
             return ['ok' => true];
         });
