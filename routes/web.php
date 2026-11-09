@@ -300,6 +300,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
         Route::post('/{conversation}/equipo', [ConversationController::class, 'team'])->where('conversation', '[A-Za-z0-9]+')->name('team');
         Route::post('/{conversation}/alta', [ConversationController::class, 'close'])->where('conversation', '[A-Za-z0-9]+')->name('close');
         Route::put('/{conversation}/ficha', [ConversationController::class, 'updateContact'])->where('conversation', '[A-Za-z0-9]+')->name('contact');
+        Route::post('/reserva/{code}/enviar', [ConversationController::class, 'sendForBooking'])->where('code', '[A-Za-z0-9-]+')->middleware('throttle:30,1,conversations.booking_send')->name('booking_send');
     });
 
     // Analista IA: solo quienes estén autorizados en Personal. El contexto del

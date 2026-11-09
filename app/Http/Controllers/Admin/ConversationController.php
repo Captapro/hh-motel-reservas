@@ -191,6 +191,39 @@ class ConversationController extends Controller
         });
     }
 
+    /**
+     * Desde la ficha de una reserva: manda el mensaje (datos de pago o pedido de reseña) directo a la
+     * conversación del cliente, sin copiar y pegar en WhatsApp. Usa su chat de WhatsApp más reciente;
+     * si no tiene o la ventana de 24 h está cerrada, lo dice para que se use el botón de WhatsApp.
+     */
+    public function sendForBooking(Request $request, string $code, GhlConversations $ghl): JsonResponse
+    {
+        $data = $request->validate([
+            'message' => ['required', 'string', 'max:2000'],
+            'kind' => ['required', Rule::in(['pago', 'resena'])],
+        ], ['message.required' => 'El mensaje está vacío.']);
+        $booking = Booking::with('customer')->where('code', $code)->firstOrFail();
+
+        return $this->guarded(function () use ($request, $ghl, $booking, $data) {
+            $chat = collect($this->conversationsOf($ghl, $booking->customer)['items'])
+                ->where('channel', 'whatsapp')->sortByDesc('at')->first();
+            if (! $chat) {
+                throw new RuntimeException('Este cliente no tiene conversación de WhatsApp en el sistema. Usa "Contactar por WhatsApp".');
+            }
+            $this->contactOf($request, $chat['id'], $ghl);
+            $ghl->reply($chat['id'], trim($data['message']));
+            $ghl->forgetAlerts();
+            if ($data['kind'] === 'pago') {
+                $booking->update(['payment_instructions_sent_at' => now()]);
+            }
+            AuditLog::record($request->user()->id, 'conversacion.respondida', 'GhlConversation', $chat['id'], null, [
+                'canal' => 'whatsapp', 'mensaje' => trim($data['message']), 'reserva' => $booking->code, 'tipo' => $data['kind'],
+            ]);
+
+            return ['ok' => true, 'conversation' => route('admin.conversations.index', ['abrir' => $chat['id']])];
+        });
+    }
+
     public function cata(Request $request, string $conversation, GhlConversations $ghl, GhlClient $client): JsonResponse
     {
         $data = $request->validate(['on' => ['required', 'boolean']]);

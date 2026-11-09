@@ -51,6 +51,7 @@ class ConversationStayStatusTest extends TestCase
             '2026_09_21_135116_split_floor_toggles_by_wing_in_operational_settings.php',
             '2026_11_06_190000_add_conversations_since_to_operational_settings.php',
             '2026_11_06_200000_create_closed_conversations_table.php',
+            '2026_09_22_001051_add_payment_instructions_sent_at_to_bookings_table.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -207,5 +208,38 @@ class ConversationStayStatusTest extends TestCase
             ->getJson(route('admin.conversations.list', ['reserva' => 'HH-NOEXISTE']))
             ->assertOk()
             ->assertJsonPath('items', []);
+    }
+
+    public function test_a_booking_message_goes_straight_to_the_clients_whatsapp_conversation(): void
+    {
+        $booking = $this->booking('HH-PAGO', 'PENDIENTE_PAGO', '+1 day', ['payment_status' => 'NO_PAGADA']);
+        Http::fake([
+            self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+                ['id' => 'ig1', 'contactId' => 'c1', 'phone' => '+56911111111', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_INSTAGRAM', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs()],
+                ['id' => 'abc', 'contactId' => 'c1', 'phone' => '+56911111111', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->subMinute()->getTimestampMs()],
+            ]]),
+            self::GHL.'/conversations/messages' => Http::response(['messageId' => 'x']),
+        ]);
+        $user = User::factory()->create(['role' => 'recepcion']);
+
+        $this->actingAs($user)->postJson(route('admin.conversations.booking_send', 'HH-PAGO'), ['message' => 'Tu reserva HH-PAGO', 'kind' => 'pago'])
+            ->assertOk()->assertJsonPath('ok', true);
+
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/conversations/messages') && $r['type'] === 'WhatsApp' && $r['message'] === 'Tu reserva HH-PAGO' && $r['contactId'] === 'c1');
+        $this->assertNotNull($booking->fresh()->payment_instructions_sent_at);
+
+        $this->actingAs(User::factory()->create(['role' => 'marketing']))
+            ->postJson(route('admin.conversations.booking_send', 'HH-PAGO'), ['message' => 'x', 'kind' => 'pago'])->assertForbidden();
+    }
+
+    public function test_without_a_whatsapp_conversation_it_says_to_use_the_whatsapp_button(): void
+    {
+        $this->booking('HH-SIN', 'FINALIZADA', '-1 day');
+        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => []])]);
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->postJson(route('admin.conversations.booking_send', 'HH-SIN'), ['message' => 'Reseña', 'kind' => 'resena'])
+            ->assertStatus(422)->assertJsonPath('error', 'Este cliente no tiene conversación de WhatsApp en el sistema. Usa "Contactar por WhatsApp".');
+        Http::assertNotSent(fn ($r) => str_ends_with($r->url(), '/conversations/messages'));
     }
 }

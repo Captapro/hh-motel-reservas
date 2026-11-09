@@ -44,6 +44,17 @@
         a.conversation-btn { display:inline-block; background:#0a5cff; border:1px solid #0a5cff; color:#fff; padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:700; text-decoration:none; }
         a.whatsapp-btn { display:inline-block; background:#25d366; border:1px solid #25d366; color:#0b2816; padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:700; text-decoration:none; }
         .payment-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; margin:-4px 0 16px; }
+        .chat-send { margin:-8px 0 16px; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+        .chat-send[hidden] { display:none; }
+        .chat-send textarea { width:min(560px, 100%); min-height:180px; background:#1c1c1c; border:1px solid #444; color:#eee; border-radius:9px; padding:10px 12px; font:inherit; font-size:13px; }
+        .chat-send .chat-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+        .chat-send button.send { background:#0a5cff; border:1px solid #0a5cff; color:#fff; padding:8px 16px; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+        .chat-send button.send:disabled { opacity:.6; }
+        .chat-send .chat-result { font-size:12.5px; }
+        .chat-send .chat-result.ok { color:#5ad48a; }
+        .chat-send .chat-result.err { color:#f3b8b8; }
+        .chat-send .chat-result a { color:#7fb0ff; }
+        button.chat-open { background:#0a5cff; border:1px solid #0a5cff; color:#fff; padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
         button.copy-btn { background:#2a2a2a; border:1px solid #444; color:#eee; padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
         button.copy-btn:hover { border-color:#ff7918; color:#ff7918; }
         .sent-tag { display:flex; align-items:center; background:#0f2b22; border:1px solid #1c9169; color:#6ee7b7; font-size:12px; font-weight:600; padding:6px 12px; border-radius:20px; margin-right:auto; }
@@ -311,6 +322,10 @@
         // mandarlo en vez de que salga prellenado.
         $whatsappContactUrl = 'https://wa.me/'.preg_replace('/[^0-9]/', '', (string) $booking->customer->phone_e164);
     @endphp
+    @php
+        // Con la bandeja de Conversaciones, el mensaje se manda directo al WhatsApp del cliente.
+        $canChat = auth()->user()->canAccess('conversaciones') && ($booking->customer->ghl_contact_id || $booking->customer->phone_e164);
+    @endphp
     @if ($booking->balanceDue() > 0)
         <textarea id="whatsapp-message-text" class="visually-hidden" readonly>{{ $whatsappMessage }}</textarea>
         @if ($bankLines)
@@ -325,7 +340,19 @@
             @endif
             <button type="button" class="copy-btn" onclick="hhCopyText('whatsapp-message-text', this); hhMarkInstructionsSent();">Copiar texto</button>
             <a class="whatsapp-btn" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener">Contactar por WhatsApp</a>
+            @if ($canChat)
+                <button type="button" class="chat-open" onclick="hhToggleChat('chat-pago')">Enviar por la conversación</button>
+            @endif
         </div>
+        @if ($canChat)
+            <div class="chat-send" id="chat-pago" hidden>
+                <textarea aria-label="Mensaje de pago para el cliente">{{ $whatsappMessage }}</textarea>
+                <div class="chat-row">
+                    <span class="chat-result"></span>
+                    <button type="button" class="send" onclick="hhSendChat('chat-pago', 'pago', this)">Enviar al WhatsApp del cliente</button>
+                </div>
+            </div>
+        @endif
     @endif
 
     @if (auth()->user()->canAccess('conversaciones') && ($booking->customer->ghl_contact_id || $booking->customer->phone_e164))
@@ -344,7 +371,19 @@
         {{-- Abre el chat con el mensaje ya escrito: solo queda apretar enviar. --}}
         <div class="payment-actions">
             <a class="whatsapp-btn" href="{{ $whatsappContactUrl.'?text='.rawurlencode($reviewMessage) }}" target="_blank" rel="noopener">Pedir reseña por WhatsApp</a>
+            @if ($canChat)
+                <button type="button" class="chat-open" onclick="hhToggleChat('chat-resena')">Pedir reseña por la conversación</button>
+            @endif
         </div>
+        @if ($canChat)
+            <div class="chat-send" id="chat-resena" hidden>
+                <textarea aria-label="Pedido de reseña para el cliente">{{ $reviewMessage }}</textarea>
+                <div class="chat-row">
+                    <span class="chat-result"></span>
+                    <button type="button" class="send" onclick="hhSendChat('chat-resena', 'resena', this)">Enviar al WhatsApp del cliente</button>
+                </div>
+            </div>
+        @endif
     @endif
 
     @if (session('status'))
@@ -795,6 +834,38 @@
                     document.querySelector('.payment-actions').prepend(tag);
                 }
             }).catch(() => { hhInstructionsMarked = false; });
+        }
+
+        // Envío directo por la bandeja de Conversaciones: el mensaje se puede editar antes de enviarlo.
+        function hhToggleChat(id) {
+            const box = document.getElementById(id);
+            box.hidden = !box.hidden;
+            if (!box.hidden) box.querySelector('textarea').focus();
+        }
+        async function hhSendChat(id, kind, btn) {
+            const box = document.getElementById(id);
+            const result = box.querySelector('.chat-result');
+            const message = box.querySelector('textarea').value.trim();
+            if (!message) return;
+            btn.disabled = true;
+            result.className = 'chat-result';
+            result.textContent = 'Enviando…';
+            try {
+                const response = await fetch(@json(route('admin.conversations.booking_send', $booking->code)), {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, kind }),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || data.message || 'No se pudo enviar.');
+                result.className = 'chat-result ok';
+                result.innerHTML = '✓ Enviado. <a href="' + data.conversation + '">Ver conversación</a>';
+                if (kind === 'pago') hhMarkInstructionsSent();
+            } catch (error) {
+                result.className = 'chat-result err';
+                result.textContent = error.message;
+                btn.disabled = false;
+            }
         }
 
         // navigator.clipboard falla callado en varios navegadores/contextos
