@@ -177,46 +177,53 @@ class ConversationInboxTest extends TestCase
         ], $conversations)])]);
     }
 
-    public function test_client_waiting_for_an_answer_shows_on_every_screen_after_a_few_minutes(): void
+    public function test_only_messages_a_person_must_see_alert_and_right_away(): void
     {
         $this->waiting([
-            ['id' => 'espera'],
-            ['id' => 'reciente', 'lastMessageDate' => now()->subMinute()->getTimestampMs()],
-            ['id' => 'correo', 'lastMessageType' => 'TYPE_EMAIL'],
+            ['id' => 'bot', 'phone' => '+56900000001'],
+            ['id' => 'traspaso', 'phone' => '+56911112222', 'lastMessageDate' => now()->subMinute()->getTimestampMs()],
+            ['id' => 'traspaso-viejo', 'phone' => '+56933334444'],
+            ['id' => 'reserva', 'tags' => ['hh_estadia_activa']],
+            ['id' => 'correo', 'lastMessageType' => 'TYPE_EMAIL', 'tags' => ['hh_estadia_activa']],
             ['id' => 'equipo', 'contactId' => 'c-equipo'],
-            ['id' => 'alta'],
+            ['id' => 'alta', 'tags' => ['hh_no_bot']],
         ]);
         TeamContact::create(['ghl_contact_id' => 'c-equipo']);
         ClosedConversation::create(['ghl_conversation_id' => 'alta', 'closed_at' => now()]);
+        // Ya atendido el traspaso, pero dentro de las 8 h en que Cata no le contesta: igual avisa.
+        AttentionRequest::create(['phone' => '+56911112222', 'name' => 'Ana', 'attended_at' => now()]);
+        $old = AttentionRequest::create(['phone' => '+56933334444', 'name' => 'Beto', 'attended_at' => now()]);
+        $old->forceFill(['created_at' => now()->subHours(9)])->save();
 
         $rows = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->assertOk()->json();
 
-        $this->assertCount(1, $rows, 'Recepción no ve al equipo.');
-        $this->assertSame('Cliente espera espera respuesta', $rows[0]['title']);
-        $this->assertStringEndsWith('/admin/conversaciones?abrir=espera', $rows[0]['conversation']);
+        $this->assertSame(['Cliente traspaso te escribió', 'Cliente reserva te escribió'], array_column($rows, 'title'), 'Lo que atiende Cata no avisa; recepción no ve al equipo.');
+        $this->assertStringStartsWith('Traspasado por Cata · WhatsApp', $rows[0]['detail']);
+        $this->assertStringStartsWith('Reserva vigente · WhatsApp', $rows[1]['detail']);
+        $this->assertStringEndsWith('/admin/conversaciones?abrir=traspaso', $rows[0]['conversation']);
 
         $rows = $this->actingAs(User::factory()->create(['role' => 'soporte']))->getJson(route('attention.pending'))->json();
 
-        $this->assertCount(2, $rows, 'Administración también ve cuando escribe el equipo.');
-        $this->assertStringStartsWith('Equipo · WhatsApp', $rows[1]['detail']);
-        $this->assertStringEndsWith('/admin/conversaciones?abrir=equipo&equipo=1', $rows[1]['conversation']);
+        $this->assertCount(3, $rows, 'Administración también ve cuando escribe el equipo.');
+        $this->assertStringStartsWith('Equipo · WhatsApp', $rows[2]['detail']);
+        $this->assertStringEndsWith('/admin/conversaciones?abrir=equipo&equipo=1', $rows[2]['conversation']);
     }
 
     public function test_marketing_gets_no_waiting_alert_and_handoffs_are_not_repeated(): void
     {
-        $this->waiting([['id' => 'traspaso', 'phone' => '+56911112222'], ['id' => 'otra', 'phone' => '+56933334444']]);
+        $this->waiting([['id' => 'traspaso', 'phone' => '+56911112222'], ['id' => 'otra', 'phone' => '+56933334444', 'tags' => ['hh_estadia_activa']]]);
         AttentionRequest::create(['phone' => '+56911112222', 'name' => 'Ana']);
 
         $this->actingAs(User::factory()->create(['role' => 'marketing']))->getJson(route('attention.pending'))->assertJsonCount(1);
 
         $rows = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->json();
         $this->assertCount(2, $rows);
-        $this->assertSame('Cliente otra espera respuesta', $rows[1]['title']);
+        $this->assertSame('Cliente otra te escribió', $rows[1]['title']);
     }
 
     public function test_many_waiting_clients_fit_in_a_summary_row(): void
     {
-        $this->waiting(array_map(fn (int $n) => ['id' => 'c'.$n], range(1, 5)));
+        $this->waiting(array_map(fn (int $n) => ['id' => 'c'.$n, 'tags' => ['hh_estadia_activa']], range(1, 5)));
 
         $rows = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->json();
 
@@ -236,7 +243,7 @@ class ConversationInboxTest extends TestCase
     {
         Cache::flush();
         OperationalSetting::current()->update(['conversations_since' => now()->subDay()]);
-        $waiting = [['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->subMinutes(10)->getTimestampMs()]];
+        $waiting = [['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Ana', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'tags' => ['hh_no_bot'], 'lastMessageDate' => now()->subMinutes(10)->getTimestampMs()]];
         Http::fake([self::GHL.'/conversations/search*' => function () use (&$waiting) {
             return Http::response(['conversations' => $waiting]);
         }]);

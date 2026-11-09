@@ -145,7 +145,7 @@ class ConversationStayStatusTest extends TestCase
         $this->booking('HH-DENTRO', 'CHECK_IN', '-1 hour', ['checked_in_at' => now()->subHour()]);
 
         $rows = $this->pendingWith([
-            ['id' => 'otro', 'contactId' => 'c2', 'phone' => '+56922222222', 'lastMessageDate' => now()->subMinutes(10)->getTimestampMs()],
+            ['id' => 'otro', 'contactId' => 'c2', 'phone' => '+56922222222', 'tags' => ['hh_no_bot'], 'lastMessageDate' => now()->subMinutes(10)->getTimestampMs()],
             ['id' => 'dentro', 'contactId' => 'c1', 'phone' => '+56911111111', 'lastMessageDate' => now()->getTimestampMs()],
         ]);
 

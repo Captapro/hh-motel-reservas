@@ -2,6 +2,7 @@
 
 namespace App\Services\Integrations;
 
+use App\Models\AttentionRequest;
 use App\Models\Booking;
 use App\Models\ClosedConversation;
 use App\Models\OperationalSetting;
@@ -61,8 +62,14 @@ class GhlConversations
     /** Horas que se espera al cliente desde nuestro último mensaje; después sale solo del seguimiento. */
     public const WAITING_CLIENT_HOURS = 12;
 
-    /** Minutos que espera un mensaje antes de avisar: Cata suele contestar antes. */
-    public const ALERT_AFTER_MINUTES = 3;
+    /**
+     * Horas en que un chat traspasado sigue siendo de una persona: Cata duerme 8 h en esa
+     * conversación después del traspaso. En ese rato cada mensaje del cliente avisa al tiro.
+     */
+    public const HANDOFF_HOURS = 8;
+
+    /** Con estas etiquetas Cata no contesta: el mensaje lo tiene que ver una persona. */
+    public const HUMAN_TAGS = ['hh_estadia_activa' => 'reserva', 'hh_no_bot' => 'cata_apagada'];
 
     private const ALERTS_CACHE_KEY = 'conversations.alerts';
 
@@ -182,11 +189,13 @@ class GhlConversations
     }
 
     /**
-     * Quienes llevan rato esperando, para el aviso de todas las pantallas.
-     * Incluye al equipo: quien llama decide si esa persona puede verlo.
-     * Quien está en la habitación va primero y sin esperar: Cata no le contesta.
-     * El correo queda fuera porque no se responde desde el sistema. Si GHL
-     * falla, simplemente no hay aviso: nunca debe romper el tablero.
+     * Mensajes que tiene que ver una persona, para el aviso de todas las pantallas (al tiro,
+     * sin esperar). Decisión del usuario (2026-11-09): lo que atiende Cata no avisa; sí avisa
+     * quien está en la habitación, el equipo, un chat traspasado por Cata (las 8 h en que Cata
+     * no le contesta, aunque ya se esté conversando con él) y quien tiene a Cata pausada
+     * (reserva vigente o Cata apagada para ese cliente). Quien llama decide si puede ver al
+     * equipo. El correo queda fuera porque no se responde desde el sistema. Si GHL falla,
+     * simplemente no hay aviso: nunca debe romper el tablero.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -205,14 +214,37 @@ class GhlConversations
                 return [];
             }
 
-            $limit = now()->subMinutes(self::ALERT_AFTER_MINUTES)->getTimestampMs();
+            $handedOff = AttentionRequest::where('created_at', '>=', now()->subHours(self::HANDOFF_HOURS))->pluck('phone')->all();
 
             return collect($items)
-                ->filter(fn (array $item) => $item['pending'] && $item['channel'] !== 'email' && ($item['in_room'] !== null || $item['at'] <= $limit))
+                ->filter(fn (array $item) => $item['pending'] && $item['channel'] !== 'email')
+                ->map(fn (array $item) => $item + ['why' => $this->humanReason($item, $handedOff)])
+                ->filter(fn (array $item) => $item['why'] !== null)
                 ->sortBy(fn (array $item) => $item['in_room'] === null)
                 ->values()
                 ->all();
         });
+    }
+
+    /** Por qué este mensaje lo tiene que ver una persona; null = lo atiende Cata. */
+    private function humanReason(array $item, array $handedOff): ?string
+    {
+        if ($item['in_room'] !== null) {
+            return 'habitacion';
+        }
+        if ($item['team']) {
+            return 'equipo';
+        }
+        if ($item['phone'] !== '' && in_array($item['phone'], $handedOff, true)) {
+            return 'traspaso';
+        }
+        foreach (self::HUMAN_TAGS as $tag => $reason) {
+            if (in_array($tag, $item['tags'], true)) {
+                return $reason;
+            }
+        }
+
+        return null;
     }
 
     public function forgetAlerts(): void
@@ -271,6 +303,7 @@ class GhlConversations
             'direction' => (string) ($c['lastMessageDirection'] ?? ''),
             'at' => (int) ($date ?? 0),
             'when' => $date ? $this->shortDate(Carbon::createFromTimestampMs($date)) : '',
+            'tags' => array_values(array_filter((array) ($c['tags'] ?? []), 'is_string')),
         ];
     }
 

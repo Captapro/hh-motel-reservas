@@ -20,6 +20,8 @@ class AttentionRequestController extends Controller
 
     private const CHANNEL_LABELS = ['whatsapp' => 'WhatsApp', 'instagram' => 'Instagram', 'facebook' => 'Facebook'];
 
+    private const REASON_LABELS = ['equipo' => 'Equipo · ', 'traspaso' => 'Traspasado por Cata · ', 'reserva' => 'Reserva vigente · ', 'cata_apagada' => 'Cata apagada · '];
+
     /** Webhook de GHL, autenticado con GHL_INBOUND_SECRET en la URL (?token=...). */
     public function store(Request $request): JsonResponse
     {
@@ -67,7 +69,7 @@ class AttentionRequestController extends Controller
     }
 
     /**
-     * Mensajes sin responder. Se muestran hasta tres para no tapar el tablero;
+     * Mensajes que tiene que ver una persona (ver GhlConversations::alerts). Hasta tres para no tapar el tablero;
      * quien ya tiene aviso de traspaso no se repite. Los chats del equipo son
      * solo para administración, igual que en la bandeja.
      *
@@ -83,8 +85,8 @@ class AttentionRequestController extends Controller
             'id' => 'conversacion-'.$item['id'].'-'.$item['at'],
             'kind' => 'inbox',
             'urgent' => $item['in_room'] !== null,
-            'title' => $item['in_room'] !== null ? $item['name'].' escribe desde la habitación '.$item['in_room'] : $item['name'].' espera respuesta',
-            'detail' => ($item['team'] ? 'Equipo · ' : '').self::CHANNEL_LABELS[$item['channel']].' · '.Carbon::createFromTimestampMs($item['at'])->timezone('America/Santiago')->format('H:i'),
+            'title' => $item['in_room'] !== null ? $item['name'].' escribe desde la habitación '.$item['in_room'] : $item['name'].' te escribió',
+            'detail' => (self::REASON_LABELS[$item['why']] ?? '').self::CHANNEL_LABELS[$item['channel']].' · '.Carbon::createFromTimestampMs($item['at'])->timezone('America/Santiago')->format('H:i'),
             'conversation' => $this->waitingLink($item),
         ])->all();
 
