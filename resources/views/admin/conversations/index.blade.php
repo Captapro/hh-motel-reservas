@@ -65,6 +65,16 @@
         .cv-file[hidden] { display:none; }
         .cv-file span { flex:1; min-width:0; overflow-wrap:anywhere; }
         .cv-file button { background:none; border:0; cursor:pointer; color:var(--muted); font-size:14px; }
+        .cv-reply { position:relative; }
+        .cv-attach[hidden] { display:none; }
+        .cv-attach.is-on { background:#fee2e2; border-color:#ef4444; color:#b91c1c; font-size:13px; font-weight:800; width:auto; padding:0 12px; }
+        .cv-emojis { position:absolute; left:16px; bottom:66px; z-index:6; display:grid; grid-template-columns:repeat(8, 38px); gap:2px; padding:8px; background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.15); }
+        .cv-emojis[hidden] { display:none; }
+        .cv-emojis button { width:38px; height:38px; font-size:21px; background:none; border:0; border-radius:9px; cursor:pointer; }
+        .cv-emojis button:hover { background:var(--soft); }
+        .cv-file audio { height:32px; max-width:230px; }
+        .cv-file audio[hidden] { display:none; }
+        @media (max-width:600px) { .cv-attach { width:38px; font-size:16px; } .cv-reply { gap:6px; padding:10px; } .cv-emojis { left:8px; grid-template-columns:repeat(6, 38px); } }
         .cv-msg audio { display:block; width:240px; max-width:100%; margin-top:6px; }
         .cv-blocked { border-top:1px solid var(--line); background:var(--warn-bg); padding:13px 18px; font-size:13.5px; color:var(--warn); }
         .cv-empty { color:var(--muted); font-size:13.5px; padding:26px 14px; text-align:center; }
@@ -150,11 +160,16 @@
             <div class="cv-blocked" id="cv-blocked" hidden></div>
             <div class="cv-file" id="cv-file-chip" hidden>
                 <span id="cv-file-name"></span>
+                <audio id="cv-file-audio" controls preload="metadata" hidden></audio>
                 <button type="button" id="cv-file-clear" aria-label="Quitar archivo">✕</button>
             </div>
             <form class="cv-reply" id="cv-form" hidden>
-                <input type="file" id="cv-file" hidden accept=".jpg,.jpeg,.png,.mp4,.mp3,.m4a,.aac,.amr,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+                <input type="file" id="cv-file" hidden accept=".jpg,.jpeg,.png,.mp4,.mp3,.m4a,.aac,.amr,.ogg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
                 <button class="cv-attach" id="cv-attach" type="button" aria-label="Adjuntar archivo" title="Imagen, documento, audio o video · máximo 5 MB">📎</button>
+                <button class="cv-attach" id="cv-emoji" type="button" aria-label="Emojis" aria-expanded="false" title="Emojis">😊</button>
+                <button class="cv-attach" id="cv-dictate" type="button" aria-label="Dictar por voz" title="Dictar: hablas y se escribe" hidden>🎤</button>
+                <button class="cv-attach" id="cv-record" type="button" aria-label="Grabar nota de voz" title="Grabar nota de voz (máx. 2 minutos)" hidden>🎙️</button>
+                <div class="cv-emojis" id="cv-emojis" role="menu" hidden></div>
                 <textarea id="cv-text" placeholder="Escribe tu respuesta…" maxlength="2000" aria-label="Respuesta"></textarea>
                 <button class="cv-send" id="cv-send" type="submit">Enviar</button>
             </form>
@@ -504,6 +519,10 @@
         const clearFile = () => {
             $('cv-file').value = '';
             $('cv-file-chip').hidden = true;
+            const audio = $('cv-file-audio');
+            if (audio.src) URL.revokeObjectURL(audio.src);
+            audio.removeAttribute('src');
+            audio.hidden = true;
         };
         $('cv-attach').addEventListener('click', () => $('cv-file').click());
         $('cv-file-clear').addEventListener('click', clearFile);
@@ -518,6 +537,132 @@
             $('cv-file-name').textContent = file.name;
             $('cv-file-chip').hidden = false;
         });
+
+        // ===== Emojis, dictado y notas de voz =====
+        const insertText = (text) => {
+            const box = $('cv-text');
+            const start = box.selectionStart ?? box.value.length;
+            const end = box.selectionEnd ?? box.value.length;
+            box.value = (box.value.slice(0, start) + text + box.value.slice(end)).slice(0, 2000);
+            const at = Math.min(start + text.length, box.value.length);
+            box.focus();
+            box.setSelectionRange(at, at);
+        };
+
+        const EMOJIS = ['😊','😉','😍','🥰','😘','😂','🤭','😏','🔥','❤️','💕','✨','🙌','👏','👍','🙏','👋','🥂','🍾','🎉','🎁','💋','😈','🛁','🛏️','🌙','📍','🕐','📅','💳','✅','❌','⚠️','📸','🎶','😅'];
+        const emojiBox = $('cv-emojis');
+        emojiBox.innerHTML = EMOJIS.map(e => `<button type="button" role="menuitem">${e}</button>`).join('');
+        const toggleEmojis = (open) => {
+            emojiBox.hidden = !open;
+            $('cv-emoji').setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+        $('cv-emoji').addEventListener('click', () => toggleEmojis(emojiBox.hidden));
+        emojiBox.addEventListener('click', e => {
+            const b = e.target.closest('button');
+            if (b) insertText(b.textContent);
+        });
+        document.addEventListener('click', e => {
+            if (!emojiBox.hidden && !e.target.closest('#cv-emojis, #cv-emoji')) toggleEmojis(false);
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleEmojis(false); });
+
+        // Dictado: el navegador transcribe y el texto queda en la caja para revisarlo antes de enviar.
+        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let dictation = null;
+        if (Speech) {
+            const button = $('cv-dictate');
+            button.hidden = false;
+            const stopDictation = () => {
+                if (!dictation) return;
+                const current = dictation;
+                dictation = null;
+                current.stop();
+                button.classList.remove('is-on');
+                button.textContent = '🎤';
+            };
+            button.addEventListener('click', () => {
+                if (dictation) return stopDictation();
+                const rec = new Speech();
+                rec.lang = 'es-CL';
+                rec.continuous = true;
+                rec.interimResults = false;
+                rec.onresult = (event) => {
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (!event.results[i].isFinal) continue;
+                        const said = event.results[i][0].transcript.trim();
+                        if (!said) continue;
+                        const box = $('cv-text');
+                        const before = box.value.slice(0, box.selectionStart ?? box.value.length);
+                        insertText((before && !/\s$/.test(before) ? ' ' : '') + said);
+                    }
+                };
+                rec.onerror = (event) => {
+                    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') showError('cv-chat-error', 'El navegador no dio permiso para usar el micrófono.');
+                    stopDictation();
+                };
+                rec.onend = () => { if (dictation === rec) { try { rec.start(); } catch (e) { stopDictation(); } } };
+                dictation = rec;
+                button.classList.add('is-on');
+                button.textContent = '⏹ Dictando';
+                showError('cv-chat-error', '');
+                try { rec.start(); } catch (e) { stopDictation(); }
+            });
+        }
+
+        // Nota de voz: se graba, se escucha y se envía como audio. Chrome graba webm y el
+        // servidor lo pasa a ogg (el formato de notas de voz de WhatsApp); Safari graba m4a.
+        const VOICE_TYPES = [['audio/ogg;codecs=opus', 'ogg'], ['audio/mp4', 'm4a'], ['audio/webm;codecs=opus', 'webm'], ['audio/webm', 'webm']];
+        const voiceType = window.MediaRecorder && navigator.mediaDevices?.getUserMedia
+            ? VOICE_TYPES.find(([type]) => MediaRecorder.isTypeSupported(type)) : null;
+        if (voiceType) {
+            const button = $('cv-record');
+            button.hidden = false;
+            let recorder = null, chunks = [], started = 0, timer = null;
+            const clock = () => {
+                const s = Math.floor((Date.now() - started) / 1000);
+                button.textContent = `⏹ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+                if (s >= 120) recorder?.stop();
+            };
+            button.addEventListener('click', async () => {
+                if (recorder) return recorder.stop();
+                let stream;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                } catch (e) {
+                    return showError('cv-chat-error', 'El navegador no dio permiso para usar el micrófono.');
+                }
+                showError('cv-chat-error', '');
+                clearFile();
+                chunks = [];
+                recorder = new MediaRecorder(stream, { mimeType: voiceType[0] });
+                recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+                recorder.onstop = () => {
+                    clearInterval(timer);
+                    stream.getTracks().forEach(t => t.stop());
+                    recorder = null;
+                    button.classList.remove('is-on');
+                    button.textContent = '🎙️';
+                    const seconds = Math.round((Date.now() - started) / 1000);
+                    if (!chunks.length || seconds < 1) return;
+                    const blob = new Blob(chunks, { type: voiceType[0].split(';')[0] });
+                    if (blob.size > 5 * 1024 * 1024) return showError('cv-chat-error', 'La nota de voz quedó muy larga (más de 5 MB).');
+                    const file = new File([blob], `nota-de-voz.${voiceType[1]}`, { type: blob.type });
+                    const list = new DataTransfer();
+                    list.items.add(file);
+                    $('cv-file').files = list.files;
+                    $('cv-file-name').textContent = `🎙️ Nota de voz · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+                    const audio = $('cv-file-audio');
+                    audio.src = URL.createObjectURL(blob);
+                    audio.hidden = false;
+                    $('cv-file-chip').hidden = false;
+                };
+                recorder.start();
+                started = Date.now();
+                button.classList.add('is-on');
+                clock();
+                timer = setInterval(clock, 500);
+            });
+        }
 
         $('cv-form').addEventListener('submit', async e => {
             e.preventDefault();

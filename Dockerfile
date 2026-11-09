@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
         libgmp-dev \
         unzip \
         git \
+        ffmpeg \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql pgsql zip gd mbstring opcache gmp \
     && a2enmod rewrite headers expires deflate \

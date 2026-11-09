@@ -10,9 +10,11 @@ use App\Models\TeamContact;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
 
 class ConversationInboxTest extends TestCase
@@ -396,6 +398,37 @@ class ConversationInboxTest extends TestCase
             && $r['whatsapp']['media']['url'] === 'https://files.test/foto.jpg'
             && ! isset($r['message']));
         $this->assertSame('audio.mp3', AuditLog::where('action', 'conversacion.respondida')->first()->new_value['adjunto'] ?? null);
+    }
+
+    public function test_a_voice_note_recorded_in_chrome_goes_to_whatsapp_as_ogg(): void
+    {
+        $this->fakeUpload();
+        $this->thread();
+        Process::fake(function (PendingProcess $process) {
+            $out = end($process->command);
+            file_put_contents($out, 'OggS');
+
+            return Process::result();
+        });
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('admin.conversations.reply', 'abc'), ['file' => UploadedFile::fake()->create('nota-de-voz.webm', 40, 'audio/webm')], ['Accept' => 'application/json'])
+            ->assertOk();
+
+        Process::assertRan(fn (PendingProcess $process) => $process->command[0] === 'ffmpeg' && in_array('copy', $process->command, true));
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/conversations/messages/upload') && str_contains((string) $r->body(), 'nota-de-voz.ogg'));
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/conversations/messages') && $r['whatsapp']['media']['type'] === 'audio' && $r['whatsapp']['media']['name'] === 'nota-de-voz.ogg');
+    }
+
+    public function test_a_voice_note_that_cannot_be_converted_says_so(): void
+    {
+        $this->thread();
+        Process::fake(fn () => Process::result(exitCode: 1));
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('admin.conversations.reply', 'abc'), ['file' => UploadedFile::fake()->create('nota-de-voz.webm', 40, 'audio/webm')], ['Accept' => 'application/json'])
+            ->assertStatus(422)->assertJsonPath('error', 'No se pudo preparar la nota de voz. Intenta de nuevo o adjunta el audio.');
+        Http::assertNotSent(fn (Request $r) => str_ends_with($r->url(), '/conversations/messages'));
     }
 
     public function test_instagram_sends_a_file_as_attachment_together_with_the_text(): void

@@ -38,7 +38,8 @@ class GhlConversations
     public const MEDIA_TYPES = [
         'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image',
         'mp4' => 'video',
-        'mp3' => 'audio', 'm4a' => 'audio', 'aac' => 'audio', 'amr' => 'audio',
+        // ogg/opus = nota de voz de WhatsApp (las que se graban en la bandeja).
+        'mp3' => 'audio', 'm4a' => 'audio', 'aac' => 'audio', 'amr' => 'audio', 'ogg' => 'audio',
         'pdf' => 'document', 'doc' => 'document', 'docx' => 'document', 'xls' => 'document',
         'xlsx' => 'document', 'ppt' => 'document', 'pptx' => 'document', 'txt' => 'document',
     ];

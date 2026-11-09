@@ -11,6 +11,7 @@ use App\Models\Customer;
 use App\Models\TeamContact;
 use App\Services\Integrations\GhlClient;
 use App\Services\Integrations\GhlConversations;
+use App\Support\VoiceNote;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
@@ -159,7 +160,7 @@ class ConversationController extends Controller
     {
         $data = $request->validate([
             'message' => ['nullable', 'required_without:file', 'string', 'max:2000'],
-            'file' => ['nullable', 'file', 'max:'.GhlConversations::MAX_FILE_KB, 'extensions:'.implode(',', array_keys(GhlConversations::MEDIA_TYPES))],
+            'file' => ['nullable', 'file', 'max:'.GhlConversations::MAX_FILE_KB, 'extensions:'.implode(',', [...array_keys(GhlConversations::MEDIA_TYPES), ...VoiceNote::CONVERT_EXTENSIONS])],
         ], [
             'message.required_without' => 'Escribe un mensaje o adjunta un archivo.',
             'file.max' => 'El archivo pesa más de 5 MB.',
@@ -170,7 +171,15 @@ class ConversationController extends Controller
 
         return $this->guarded(function () use ($request, $conversation, $ghl, $message, $file) {
             $this->contactOf($request, $conversation, $ghl);
-            $channel = $ghl->reply($conversation, $message, $file);
+            $converted = $file && VoiceNote::needsConversion($file) ? VoiceNote::toOgg($file) : null;
+            $file = $converted ?? $file;
+            try {
+                $channel = $ghl->reply($conversation, $message, $file);
+            } finally {
+                if ($converted) {
+                    @unlink($converted->getRealPath());
+                }
+            }
             $ghl->forgetAlerts();
             AuditLog::record($request->user()->id, 'conversacion.respondida', 'GhlConversation', $conversation, null, array_filter([
                 'canal' => $channel,
