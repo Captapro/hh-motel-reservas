@@ -444,6 +444,45 @@
                 </details>
             @endif
 
+            @if (auth()->user()->isAdministrador() && $booking->booking_status === 'FINALIZADA')
+                @php
+                    $fixPayments = $booking->payments->where('status', 'aprobado');
+                    $fixCoupons = \App\Models\Coupon::where('auto_apply', false)->where('is_active', true)->whereNull('customer_id')->orderBy('internal_name')->get(['id', 'code', 'internal_name', 'auto_apply']);
+                    $fixErrors = $errors->has('price_final') || $errors->has('payments') || $errors->has('reason');
+                @endphp
+                <details style="margin:0 0 12px;" @if ($fixErrors) open @endif>
+                    <summary style="display:inline-block; cursor:pointer; padding:8px 14px; border:1px solid #ff7918; border-radius:8px; background:#fff; color:#c2410c; font-size:13px; font-weight:700;">Corregir venta cerrada (administrador)</summary>
+                    <form method="POST" action="{{ route('bookings.sale_correction', $booking->code) }}" style="display:grid; gap:10px; margin-top:10px; max-width:460px;">
+                        @csrf
+                        <label style="font-size:12px;">Lo que de verdad se cobró por la estadía (sin consumos) · tarifa ${{ number_format($booking->price_original, 0, ',', '.') }}<br>
+                            <input type="number" name="price_final" min="0" max="{{ $booking->price_original }}" required value="{{ old('price_final', $booking->price_final) }}" style="width:100%;">
+                        </label>
+                        <label style="font-size:12px;">Cupón que se aplicó (opcional)<br>
+                            <select name="coupon_id" style="width:100%;">
+                                <option value="">— Sin cupón / como está —</option>
+                                @foreach ($fixCoupons as $c)
+                                    <option value="{{ $c->id }}" @selected((string) old('coupon_id', $booking->coupon_id) === (string) $c->id)>{{ $c->internal_name }}{{ $c->code ? ' ('.$c->code.')' : '' }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        @foreach ($fixPayments as $p)
+                            @php $isCash = $p->paymentMethod?->code === 'efectivo'; @endphp
+                            <label style="font-size:12px;">Pago {{ $p->paymentMethod?->name }}{{ $p->voucher_number ? ' · voucher '.$p->voucher_number : '' }}{{ $p->receipt_number ? ' · boleta '.$p->receipt_number : '' }}{{ $isCash ? ' (efectivo: no se corrige aquí)' : '' }}<br>
+                                <input type="number" name="payments[{{ $p->id }}]" min="0" value="{{ old('payments.'.$p->id, $p->amount) }}" @disabled($isCash) style="width:100%;">
+                            </label>
+                        @endforeach
+                        <label style="font-size:12px;">Motivo<br>
+                            <input type="text" name="reason" required maxlength="300" value="{{ old('reason') }}" placeholder="Ej.: descuento estudiante aplicado en recepción, voucher 33 por $16.000" style="width:100%;">
+                        </label>
+                        <button type="submit" class="col-btn">Guardar corrección</button>
+                    </form>
+                    @foreach (['price_final', 'payments', 'reason'] as $field)
+                        @error($field)<div class="delay-late" style="font-size:12px; margin-top:6px;">{{ $message }}</div>@enderror
+                    @endforeach
+                    <div class="muted" style="font-size:12px; margin-top:6px;">Solo guarda si lo pagado queda igual a lo vendido (precio + consumos). Queda registrado quién lo corrigió y por qué.</div>
+                </details>
+            @endif
+
             @if (! $booking->checked_in_at && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
                 <a class="checkin-btn" href="{{ route('bookings.checkin.show', $booking->code) }}">Marcar check-in — ofrecer consumo →</a>
             @endif

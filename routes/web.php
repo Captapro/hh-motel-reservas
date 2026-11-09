@@ -218,6 +218,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/ventas/planilla/{sale}', [HistoricalSaleDetailController::class, 'show'])->name('sales.historical');
     Route::get('/ventas/{date?}', [DailySalesController::class, 'show'])->name('sales.daily');
     Route::post('/reservas/{code}/horas-reales', [BookingRealTimesController::class, 'update'])->middleware('role:administrador')->name('bookings.real_times');
+    Route::post('/reservas/{code}/corregir-venta', [App\Http\Controllers\BookingSaleCorrectionController::class, 'update'])->middleware('role:administrador')->name('bookings.sale_correction');
     Route::post('/reservas/{code}/pagos/{payment}/devolver', [PaymentRefundController::class, 'store'])->middleware('role:administrador')->name('payments.refund');
     Route::put('/pagos/{payment}/documento', [PaymentDocumentController::class, 'update'])->name('payments.document');
     Route::get('/resumen-mensual/{month?}', [MonthlySalesController::class, 'show'])->name('sales.monthly');

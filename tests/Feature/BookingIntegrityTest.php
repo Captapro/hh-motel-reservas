@@ -3029,4 +3029,48 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('catalog.booked', $booking->pass_token))->assertOk()
             ->assertSee('Prefiero pagar por transferencia')->assertSee('HH Prueba')->assertSee('123456');
     }
+
+    public function test_admin_corrects_a_closed_sale_only_when_paid_equals_sold(): void
+    {
+        foreach (['2026_09_22_020000_add_blacklist_to_customers_and_segment_rules.php', '2026_09_22_030000_add_window_and_stars_to_customer_segment_rules.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        $efectivo = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $students = Coupon::create(['code' => 'ESTUDIANTES +18', 'internal_name' => 'Estudiantes +18', 'is_active' => true, 'discount_type' => 'fixed', 'discount_value' => 5000]);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $card = Payment::create(['booking_id' => $booking->id, 'payment_method_id' => $debito->id, 'amount' => 20000, 'status' => 'aprobado', 'voucher_number' => '33']);
+        $url = route('bookings.sale_correction', $booking->code);
+        $fix = ['price_final' => 15000, 'coupon_id' => $students->id, 'payments' => [$card->id => 15000], 'reason' => 'Descuento estudiante dado en recepción'];
+
+        // Abierta: no se corrige.
+        $this->post($url, $fix)->assertSessionHasErrors('price_final');
+        $booking->update(['booking_status' => 'FINALIZADA', 'payment_status' => 'PAGADA', 'checked_in_at' => $booking->starts_at, 'checked_out_at' => $booking->ends_at]);
+
+        // Recepción no tiene el botón.
+        $admin = auth()->user();
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))->post($url, $fix)->assertForbidden();
+        $this->actingAs($admin);
+
+        // Si lo pagado no calza con lo vendido, no guarda nada.
+        $this->post($url, ['payments' => [$card->id => 16000]] + $fix)->assertSessionHasErrors('payments');
+        $this->assertSame(20000, (int) $booking->fresh()->price_final);
+        $this->assertSame(20000, (int) $card->fresh()->amount);
+
+        // Calza: precio real, cupón, pago corregido y registro con motivo.
+        $this->post($url, $fix)->assertRedirect(route('reservations.show', $booking->code));
+        $booking->refresh();
+        $this->assertSame([15000, 5000, 'ESTUDIANTES +18'], [(int) $booking->price_final, (int) $booking->discount_amount, $booking->coupon_code_snapshot]);
+        $this->assertSame(15000, (int) $card->fresh()->amount);
+        $this->assertSame(0, $booking->balanceDue());
+        $this->assertSame(1, CouponRedemption::where('booking_id', $booking->id)->count());
+        $this->assertSame(1, AuditLog::where('action', 'reserva.corregir_venta')->count());
+
+        $this->get(route('reservations.show', $booking->code))->assertOk()->assertSee('Corregir venta cerrada');
+
+        // El efectivo no se toca aquí.
+        $cash = Payment::create(['booking_id' => $booking->id, 'payment_method_id' => $efectivo->id, 'amount' => 1000, 'status' => 'aprobado']);
+        $this->post($url, ['price_final' => 15000, 'payments' => [$cash->id => 0], 'reason' => 'prueba efectivo'])->assertSessionHasErrors('payments');
+        $this->assertSame(1000, (int) $cash->fresh()->amount);
+    }
 }
