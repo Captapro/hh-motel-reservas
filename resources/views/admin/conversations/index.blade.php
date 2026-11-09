@@ -65,7 +65,9 @@
         .cv-file[hidden] { display:none; }
         .cv-file span { flex:1; min-width:0; overflow-wrap:anywhere; }
         .cv-file button { background:none; border:0; cursor:pointer; color:var(--muted); font-size:14px; }
-        .cv-reply { position:relative; }
+        /* Con los botones de emoji, dictado y nota de voz: si no cabe, la caja de texto pasa a su propia línea. */
+        .cv-reply { position:relative; flex-wrap:wrap; }
+        .cv-reply textarea { flex:1 1 240px; min-width:0; }
         .cv-attach[hidden] { display:none; }
         .cv-attach.is-on { background:#fee2e2; border-color:#ef4444; color:#b91c1c; font-size:13px; font-weight:800; width:auto; padding:0 12px; }
         .cv-emojis { position:absolute; left:16px; bottom:66px; z-index:6; display:grid; grid-template-columns:repeat(8, 38px); gap:2px; padding:8px; background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.15); }
