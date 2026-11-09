@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Console\Commands\ExpirarReservasPendientes;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\AuditLog;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Integrations\GhlClient;
 use App\Services\Integrations\GhlOpportunitySync;
@@ -12,6 +13,7 @@ use App\Services\Integrations\GhlReviewRequests;
 use App\Services\Marketing\MetaConversions;
 use App\Support\Phone;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
@@ -87,9 +89,26 @@ class GhlTestController extends Controller
                 'pixel' => filled(config('services.meta.pixel_id')),
                 'capi' => MetaConversions::enabled(),
                 'sent' => Booking::whereNotNull('meta_purchase_sent_at')->count(),
+                'past' => MetaConversions::pastPurchasesQuery(Carbon::parse(self::PAST_SALES_SINCE, 'America/Santiago'))->count(),
+                'pastWithContact' => MetaConversions::pastPurchasesQuery(Carbon::parse(self::PAST_SALES_SINCE, 'America/Santiago'))
+                    ->whereHas('customer', fn ($q) => $q->where(fn ($q) => $q->where(fn ($q) => $q->whereNotNull('phone_e164')->where('phone_e164', '!=', ''))->orWhere(fn ($q) => $q->whereNotNull('email')->where('email', '!=', ''))))->count(),
                 'last' => Cache::get(MetaConversions::LAST_RESULT_KEY),
             ],
         ];
+    }
+
+    /** Desde aquí el sistema se usa en recepción: antes las ventas vivían en planillas sin teléfono. */
+    private const PAST_SALES_SINCE = '2026-11-01';
+
+    /** Envío único de las ventas pagadas que quedaron sin avisar a Meta. */
+    public function sendPastSalesToMeta(MetaConversions $meta): RedirectResponse
+    {
+        $result = $meta->sendPastPurchases(Carbon::parse(self::PAST_SALES_SINCE, 'America/Santiago'));
+        AuditLog::record(auth()->id(), 'meta.ventas_pasadas', 'Booking', 0, null, $result);
+
+        return redirect()->route('admin.ghl.index')->with('status', $result['error']
+            ? 'No se pudieron enviar: '.$result['error'].($result['sent'] ? " (alcanzaron a salir {$result['sent']})" : '')
+            : "Listo: {$result['sent']} ventas enviadas a Meta. {$result['skipped']} sin teléfono ni correo no se pueden enviar.");
     }
 
     public function test(Request $request, GhlClient $client, GhlReviewRequests $reviews): View

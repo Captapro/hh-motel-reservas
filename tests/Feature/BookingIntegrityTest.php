@@ -3089,4 +3089,33 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame([41500, 8800, 40549], [$row['amount'], $row['refunded'], $row['net']]);
         $this->assertSame([41500, 41500], [$data['totals']['gross'], $data['totals']['point']]);
     }
+
+    public function test_past_paid_sales_are_sent_to_meta_once_with_their_real_time(): void
+    {
+        config(['services.meta.pixel_id' => '123', 'services.meta.capi_token' => 'token-prueba']);
+        Http::fake(['graph.facebook.com/*' => Http::response(['events_received' => 2])]);
+        $this->travelTo(Carbon::parse('2026-10-15 12:00'));
+        $phone = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00'), 'origin' => 'catalogo']);
+        $noContact = Customer::create(['name' => 'Sin Datos', 'phone_e164' => null, 'document_type' => 'rut', 'rut' => '22222222-2']);
+        $none = $this->booking(['starts_at' => Carbon::parse('2026-11-09 12:00'), 'customer' => $noContact]);
+        $old = $this->booking(['starts_at' => Carbon::parse('2026-10-19 12:00')]);
+        Booking::whereKey([$phone->id, $none->id, $old->id])->update(['payment_status' => 'PAGADA', 'booking_status' => 'FINALIZADA', 'meta_purchase_sent_at' => null]);
+        $this->travelTo(Carbon::parse('2026-11-20 12:00'));
+
+        $result = app(MetaConversions::class)->sendPastPurchases(Carbon::parse('2026-11-01'));
+
+        $this->assertSame(['sent' => 1, 'skipped' => 1, 'error' => null], $result);
+        Http::assertSent(function ($r) use ($phone) {
+            $event = $r['data'][0] ?? [];
+
+            return count($r['data']) === 1 && $event['event_id'] === 'purchase-'.$phone->code
+                && $event['event_time'] === Carbon::parse('2026-11-02 12:00')->timestamp
+                && $event['action_source'] === 'physical_store';
+        });
+        $this->assertNotNull($phone->fresh()->meta_purchase_sent_at);
+        $this->assertNull($old->fresh()->meta_purchase_sent_at, 'Antes del 1-nov no se envía.');
+
+        // Una segunda vez no repite nada.
+        $this->assertSame(['sent' => 0, 'skipped' => 1, 'error' => null], app(MetaConversions::class)->sendPastPurchases(Carbon::parse('2026-11-01')));
+    }
 }

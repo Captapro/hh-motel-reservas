@@ -2,6 +2,9 @@
 @section('title', 'Integración GHL')
 @section('content')
     <h1>Integración con GoHighLevel</h1>
+    @if (session('status'))
+        <div class="card" style="border-color:#2e5a72; color:#9edaff;">{{ session('status') }}</div>
+    @endif
     <p class="sub">Cada reserva nueva crea/actualiza el contacto en GHL y le pone un tag "Reservó:{fecha}" -- reemplaza el de la reserva anterior, no se acumulan. Prueba acá con un número tuyo antes de confiar en que la sincronización automática funciona.</p>
 
     <div class="card">
@@ -21,6 +24,13 @@
         @endif
         <p style="margin:6px 0 2px; color:{{ $meta['pixel'] ? '#6ee7b7' : '#f3b8b8' }};">{{ $meta['pixel'] ? '✓ Píxel de Meta en el catálogo' : '✗ Sin píxel de Meta (META_PIXEL_ID)' }}</p>
         <p style="margin:2px 0; color:{{ $meta['capi'] ? '#6ee7b7' : '#f3b8b8' }};">{{ $meta['capi'] ? '✓ Ventas a Meta desde el servidor activas ('.$meta['sent'].' enviadas)' : '✗ Falta META_CAPI_TOKEN en Render: las ventas no se le avisan a Meta desde el servidor' }}</p>
+        @if ($meta['capi'] && $meta['past'] > 0)
+            <form method="POST" action="{{ route('admin.ghl.meta_past') }}" style="margin:8px 0 4px;" onsubmit="return confirm('¿Enviar a Meta las ventas pagadas desde el 1 de noviembre que aún no se le avisan? Se hace una sola vez por venta.');">
+                @csrf
+                <span style="color:#c1c3c7;">{{ $meta['past'] }} ventas pagadas desde el 1-nov aún sin avisar ({{ $meta['pastWithContact'] }} con teléfono o correo, las únicas que Meta puede reconocer).</span>
+                <button type="submit" style="margin-left:8px; background:#0a5cff; color:#fff; border:0; border-radius:7px; padding:6px 12px; font-weight:700; cursor:pointer;">Enviar ventas pasadas a Meta</button>
+            </form>
+        @endif
         @if ($meta['last'])
             <p style="margin:2px 0; color:{{ $meta['last']['error'] ? '#f3b8b8' : '#c1c3c7' }};">Último aviso: {{ $meta['last']['booking'] }} a las {{ \Illuminate\Support\Carbon::parse($meta['last']['at'])->timezone('America/Santiago')->format('d-m H:i') }} — {{ $meta['last']['error'] ? 'Meta respondió '.$meta['last']['status'].': '.$meta['last']['error'] : 'recibido' }}</p>
         @endif

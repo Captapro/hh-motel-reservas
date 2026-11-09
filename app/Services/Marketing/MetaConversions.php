@@ -3,6 +3,7 @@
 namespace App\Services\Marketing;
 
 use App\Models\Booking;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -82,7 +83,59 @@ class MetaConversions
         }
     }
 
-    public function purchasePayload(Booking $booking): array
+    /**
+     * Envío único de ventas pagadas que quedaron sin avisar (p. ej. las anteriores al token).
+     * Cada una va con su hora real. Meta acepta ventas en el local de hasta 62 días y ventas
+     * web de hasta 7: las del catálogo más antiguas van como venta en el local. Solo se mandan
+     * las que tienen teléfono o correo (sin eso Meta no puede reconocer a nadie). En lotes de 200.
+     *
+     * @return array{sent: int, skipped: int, error: ?string}
+     */
+    public function sendPastPurchases(Carbon $since): array
+    {
+        $result = ['sent' => 0, 'skipped' => 0, 'error' => null];
+        if (! self::enabled()) {
+            return ['error' => 'Falta META_CAPI_TOKEN.'] + $result;
+        }
+
+        $bookings = self::pastPurchasesQuery($since)->with(['customer', 'room.category', 'trackingData', 'addons'])->get();
+        $withContact = $bookings->filter(fn (Booking $b) => filled($b->customer?->phone_e164) || filled($b->customer?->email));
+        $result['skipped'] = $bookings->count() - $withContact->count();
+
+        foreach ($withContact->chunk(200) as $chunk) {
+            $response = Http::timeout(30)->post(self::GRAPH_URL.'/'.config('services.meta.pixel_id').'/events', array_filter([
+                'data' => $chunk->map(fn (Booking $b) => $this->purchasePayload($b, self::saleTime($b)))->values()->all(),
+                'test_event_code' => config('services.meta.test_event_code'),
+                'access_token' => config('services.meta.capi_token'),
+            ]));
+            if (! $response->successful()) {
+                $result['error'] = 'Meta respondió '.$response->status().': '.mb_substr((string) $response->json('error.message', $response->body()), 0, 300);
+                break;
+            }
+            Booking::whereKey($chunk->modelKeys())->update(['meta_purchase_sent_at' => now()]);
+            $result['sent'] += $chunk->count();
+        }
+
+        return $result;
+    }
+
+    /** Ventas pagadas y cerradas o en curso, desde $since y dentro de lo que Meta acepta (60 días), aún sin avisar. */
+    public static function pastPurchasesQuery(Carbon $since)
+    {
+        return Booking::query()
+            ->where('payment_status', 'PAGADA')
+            ->whereNull('meta_purchase_sent_at')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
+            ->where('starts_at', '>=', $since->copy()->max(now()->subDays(60)))
+            ->where('starts_at', '<=', now());
+    }
+
+    private static function saleTime(Booking $booking): Carbon
+    {
+        return ($booking->checked_in_at ?? $booking->starts_at)->copy()->min(now());
+    }
+
+    public function purchasePayload(Booking $booking, ?Carbon $at = null): array
     {
         $customer = $booking->customer;
         $tracking = $booking->origin === 'catalogo' ? $booking->trackingData : null;
@@ -101,11 +154,12 @@ class MetaConversions
             'client_user_agent' => $tracking?->user_agent,
         ]);
 
-        $online = $booking->origin === 'catalogo';
+        // Una venta del catálogo de hace más de 7 días ya no entra como web: va como venta en el local.
+        $online = $booking->origin === 'catalogo' && (! $at || $at->gt(now()->subDays(7)));
 
         return array_filter([
             'event_name' => 'Purchase',
-            'event_time' => now()->timestamp,
+            'event_time' => ($at ?? now())->timestamp,
             'event_id' => self::purchaseEventId($booking),
             'action_source' => $online ? 'website' : 'physical_store',
             'event_source_url' => $online ? route('catalog.booked', $booking->pass_token) : null,
