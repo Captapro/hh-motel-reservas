@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\BookingGuest;
 use App\Models\Coupon;
+use App\Support\CouponCode;
 use App\Models\CouponRedemption;
 use App\Models\Customer;
 use App\Models\OperationalSetting;
@@ -148,9 +149,7 @@ class BookingService
             $pricing['extra_guests_fee'] = max(0, $pricing['extra_guests_fee'] - $offer['waived']);
             $priceOriginal = $offer['price_original'];
         } elseif (! empty($data['coupon_code'])) {
-            $coupon = Coupon::where('auto_apply', false)
-                ->whereRaw('UPPER(code) = ?', [mb_strtoupper(trim($data['coupon_code']))])
-                ->lockForUpdate()->first();
+            $coupon = CouponCode::find(Coupon::where('auto_apply', false)->lockForUpdate(), $data['coupon_code']);
             if (! $coupon) {
                 throw new PricingException('El código de cupón no existe.');
             }

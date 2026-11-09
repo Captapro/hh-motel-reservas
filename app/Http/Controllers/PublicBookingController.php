@@ -9,6 +9,7 @@ use App\Exceptions\RoomNotAvailableException;
 use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Coupon;
+use App\Support\CouponCode;
 use App\Models\Customer;
 use App\Models\OperationalSetting;
 use App\Models\Product;
@@ -56,9 +57,7 @@ class PublicBookingController extends Controller
         $selectedCategoryId = (int) $request->query('categoria', $categories->first()?->id);
         $selectedRoomId = $request->integer('room_id') ?: null;
         $selectedCoupon = $request->filled('cupon')
-            ? Coupon::where('auto_apply', false)->where('is_active', true)
-                ->whereRaw('UPPER(code) = ?', [mb_strtoupper(trim($request->query('cupon')))])
-                ->first()
+            ? CouponCode::find(Coupon::where('auto_apply', false)->where('is_active', true), (string) $request->query('cupon'))
             : null;
 
         $durationsByCategory = RateRulePrice::whereHas('rateRule', fn ($q) => $q->where('is_active', true))
