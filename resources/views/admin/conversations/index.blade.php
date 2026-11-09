@@ -67,11 +67,13 @@
         .cv-file button { background:none; border:0; cursor:pointer; color:var(--muted); font-size:14px; }
         /* Con los botones de emoji, dictado y nota de voz: si no cabe, la caja de texto pasa a su propia línea. */
         .cv-reply { position:relative; flex-wrap:wrap; }
-        .cv-reply textarea { flex:1 1 240px; min-width:0; }
+        .cv-tools { display:flex; gap:10px; }
+        .cv-write { display:flex; gap:10px; flex:1 1 300px; min-width:0; }
+        .cv-write textarea { flex:1 1 auto; min-width:0; }
         .cv-attach[hidden] { display:none; }
         .cv-attach.cv-labeled { width:auto; padding:0 12px; font-size:13px; font-weight:700; color:var(--ink); white-space:nowrap; }
         .cv-send { min-height:46px; }
-        @media (max-width:1100px) { .cv-lbl { display:none; } .cv-attach.cv-labeled { width:46px; padding:0; font-size:18px; } .cv-reply textarea { flex-basis:150px; } }
+        @media (max-width:600px) { .cv-lbl { display:none; } .cv-attach.cv-labeled { width:38px; padding:0; font-size:16px; } .cv-tools, .cv-write { gap:6px; } }
         .cv-attach.is-on { background:#fee2e2; border-color:#ef4444; color:#b91c1c; font-size:13px; font-weight:800; width:auto; padding:0 12px; }
         .cv-emojis { position:absolute; left:16px; bottom:66px; z-index:6; display:grid; grid-template-columns:repeat(8, 38px); gap:2px; padding:8px; background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.15); }
         .cv-emojis[hidden] { display:none; }
@@ -170,13 +172,17 @@
             </div>
             <form class="cv-reply" id="cv-form" hidden>
                 <input type="file" id="cv-file" hidden accept=".jpg,.jpeg,.png,.mp4,.mp3,.m4a,.aac,.amr,.ogg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+                <div class="cv-tools">
                 <button class="cv-attach" id="cv-attach" type="button" aria-label="Adjuntar archivo" title="Imagen, documento, audio o video · máximo 5 MB">📎</button>
                 <button class="cv-attach" id="cv-emoji" type="button" aria-label="Emojis" aria-expanded="false" title="Emojis">😊</button>
                 <button class="cv-attach cv-labeled" id="cv-dictate" type="button" aria-label="Dictar: hablas y se escribe como texto" title="Dictar: hablas y se escribe como texto" hidden>🗣️<span class="cv-lbl"> Dictar</span></button>
+                </div>
                 <div class="cv-emojis" id="cv-emojis" role="menu" hidden></div>
+                <div class="cv-write">
                 <textarea id="cv-text" placeholder="Escribe tu respuesta…" maxlength="2000" aria-label="Respuesta"></textarea>
                 <button class="cv-attach cv-labeled" id="cv-record" type="button" aria-label="Grabar nota de voz" title="Grabar nota de voz y enviarla como audio (máx. 2 minutos)" hidden>🎙️<span class="cv-lbl"> Audio</span></button>
                 <button class="cv-send" id="cv-send" type="submit">Enviar</button>
+                </div>
             </form>
         </section>
 
