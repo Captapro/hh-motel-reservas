@@ -53,7 +53,12 @@ class MercadoPagoHistory
             $id = (string) ($mp['id'] ?? '');
             $status = (string) ($mp['status'] ?? '');
             $code = (string) ($mp['external_reference'] ?? '');
-            $amount = (int) round((float) ($mp['transaction_amount'] ?? 0));
+            // Devolución parcial (p. ej. desde la máquina, el mismo día): el pago sigue "approved"
+            // pero parte volvió al cliente. Lo que cuenta es lo que quedó cobrado.
+            $gross = (int) round((float) ($mp['transaction_amount'] ?? 0));
+            $refunded = (int) round((float) ($mp['transaction_amount_refunded'] ?? collect($mp['refunds'] ?? [])->sum('amount')));
+            $refunded = $status === 'approved' ? min($gross, max(0, $refunded)) : 0;
+            $amount = $gross - $refunded;
             $fee = (int) round(collect($mp['fee_details'] ?? [])->sum('amount'));
             $isPoint = str_contains(strtoupper((string) ($mp['point_of_interaction']['type'] ?? '')), 'POINT');
             $booking = $code !== '' ? $bookings->get($code) : null;
@@ -65,10 +70,11 @@ class MercadoPagoHistory
                 'id' => $id,
                 'at' => Carbon::parse($mp['date_approved'] ?? $mp['date_created'] ?? 'now')->timezone($tz),
                 'status' => $status,
-                'status_label' => self::STATUS[$status] ?? $status,
+                'status_label' => (self::STATUS[$status] ?? $status).($refunded > 0 ? ' · devuelto $'.number_format($refunded, 0, ',', '.').' de $'.number_format($gross, 0, ',', '.') : ''),
                 'amount' => $amount,
+                'refunded' => $refunded,
                 'fee' => $fee,
-                'net' => (int) round((float) ($mp['transaction_details']['net_received_amount'] ?? ($amount - $fee))),
+                'net' => (int) round((float) ($mp['transaction_details']['net_received_amount'] ?? ($gross - $fee))) - $refunded,
                 'type' => self::TYPE[$mp['payment_type_id'] ?? ''] ?? (string) ($mp['payment_type_id'] ?? '—'),
                 // La máquina también manda una referencia ("Venta presencial"): solo es reserva online si el código es de una reserva.
                 'channel' => $booking || $isBookingCode ? 'Reserva online' : ($isPoint ? 'Máquina (Point)' : (! empty($mp['pos_id']) ? 'QR' : 'Otro')),

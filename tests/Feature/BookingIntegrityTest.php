@@ -3073,4 +3073,20 @@ class BookingIntegrityTest extends TestCase
         $this->post($url, ['price_final' => 15000, 'payments' => [$cash->id => 0], 'reason' => 'prueba efectivo'])->assertSessionHasErrors('payments');
         $this->assertSame(1000, (int) $cash->fresh()->amount);
     }
+
+    public function test_a_partial_refund_from_the_machine_counts_only_what_stayed_charged(): void
+    {
+        config(['services.mercadopago.access_token' => 'tok']);
+        $this->travelTo(Carbon::parse('2026-11-03 20:00'));
+        Http::fake(['api.mercadopago.com/v1/payments/search*' => Http::response(['paging' => ['total' => 1], 'results' => [
+            ['id' => 7, 'status' => 'approved', 'transaction_amount' => 50300, 'transaction_amount_refunded' => 8800, 'date_approved' => '2026-11-03T18:11:00-03:00',
+                'payment_type_id' => 'debit_card', 'point_of_interaction' => ['type' => 'POINT'], 'fee_details' => [['amount' => 951]],
+                'transaction_details' => ['net_received_amount' => 49349]],
+        ]])]);
+
+        $data = $this->get(route('admin.mercadopago.index', ['mes' => '2026-11']))->assertOk()->assertSee('devuelto $8.800 de $50.300')->viewData('data');
+        $row = $data['rows']->first();
+        $this->assertSame([41500, 8800, 40549], [$row['amount'], $row['refunded'], $row['net']]);
+        $this->assertSame([41500, 41500], [$data['totals']['gross'], $data['totals']['point']]);
+    }
 }
