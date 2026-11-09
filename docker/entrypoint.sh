@@ -43,7 +43,9 @@ php artisan event:cache || true
 php artisan view:cache || true
 
 # Todo lo anterior corrió como root: Apache (www-data) tiene que poder escribir logs, caché y sesiones.
-chown -R www-data:www-data /app/storage /app/bootstrap/cache
+# Fotos reducidas del catálogo: Apache las entrega directo desde public/img-cache.
+mkdir -p /app/public/img-cache
+chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public/img-cache
 
 # Barrido de retenciones: cada 30 s libera las reservas del catálogo que no pagaron a tiempo
 # (además se libera al crear reservas y al abrir el tablero). Los errores van a los logs de Render.

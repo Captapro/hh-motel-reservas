@@ -25,6 +25,17 @@ class ImageResizeTest extends TestCase
         $this->assertSame('/images/rooms/101/1.jpg', Img::url('/images/rooms/101/1.jpg', 640));
         $this->assertSame('https://otro.com/a.jpg', Img::url('https://otro.com/a.jpg', 640));
 
+        // Ya reducida: la página apunta directo al archivo y Apache la entrega sin PHP.
+        $base = Img::cacheBase($external, 640);
+        @mkdir(dirname($base), 0775, true);
+        file_put_contents($base.'.jpg', 'x');
+        try {
+            $this->assertSame('/img-cache/'.basename($base).'.jpg', Img::url($external, 600));
+            $this->assertStringContainsString('/img?', Img::url($external, 1280));
+        } finally {
+            @unlink($base.'.jpg');
+        }
+
         $this->assertSame(160, Img::snap(1));
         $this->assertSame(1280, Img::snap(5000));
         $this->assertSame(640, Img::snap(500));

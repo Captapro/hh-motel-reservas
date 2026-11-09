@@ -4,8 +4,10 @@ namespace App\Support;
 
 /**
  * Las fotos antiguas del catálogo viven en el CDN de GoHighLevel como originales de ~2 MB.
- * Img::url() las pasa por /img, que las reduce al ancho pedido y las guarda; las que ya son
- * livianas (carpeta propia /images) se dejan tal cual.
+ * Img::url() las pasa por /img, que las reduce al ancho pedido y las guarda en public/img-cache.
+ * Una vez guardada, la página apunta directo al archivo y Apache lo entrega sin pasar por PHP
+ * (antes cada foto ya lista igual abría sesión y base de datos, y un catálogo con 10 fotos
+ * llenaba el servidor). Las que ya son livianas (carpeta propia /images) se dejan tal cual.
  */
 class Img
 {
@@ -13,13 +15,40 @@ class Img
 
     public const WIDTHS = [160, 320, 480, 640, 960, 1280];
 
+    public const CACHE_DIR = 'img-cache';
+
     public static function url(?string $url, int $width): string
     {
         if (! $url || ! str_starts_with($url, 'https://') || ! in_array(parse_url($url, PHP_URL_HOST), self::HOSTS, true)) {
             return (string) $url;
         }
 
-        return route('img.resize', ['u' => $url, 'w' => self::snap($width)]);
+        $width = self::snap($width);
+        $ready = self::cached($url, $width);
+        if ($ready) {
+            return '/'.self::CACHE_DIR.'/'.basename($ready);
+        }
+
+        return route('img.resize', ['u' => $url, 'w' => $width]);
+    }
+
+    /** Ruta sin extensión del archivo reducido (dentro de public/img-cache). */
+    public static function cacheBase(string $url, int $width): string
+    {
+        return public_path(self::CACHE_DIR).'/'.sha1($url).'-'.$width;
+    }
+
+    /** Archivo ya reducido, si existe. */
+    public static function cached(string $url, int $width): ?string
+    {
+        $base = self::cacheBase($url, $width);
+        foreach (['jpg', 'png'] as $ext) {
+            if (is_file($base.'.'.$ext)) {
+                return $base.'.'.$ext;
+            }
+        }
+
+        return null;
     }
 
     /** Ancho permitido más cercano por arriba (así no se pide una medida a gusto de cualquiera). */

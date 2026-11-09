@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Reduce y guarda las fotos externas del catálogo. Solo acepta imágenes de los hosts permitidos
+ * Reduce y guarda las fotos externas del catálogo en public/img-cache (desde ahí Apache las
+ * entrega directo; esta ruta solo trabaja la primera vez). Solo acepta imágenes de los hosts permitidos
  * (nunca una URL cualquiera) y anchos de una lista fija. Si algo falla, redirige al original,
  * así una foto nunca queda rota.
  */
@@ -25,11 +26,11 @@ class ImageResizeController extends Controller
         }
         $width = Img::snap((int) $request->query('w', 640));
 
-        $dir = storage_path('app/img-cache');
+        $base = Img::cacheBase($url, $width);
+        $dir = dirname($base);
         if (! is_dir($dir)) {
             @mkdir($dir, 0775, true);
         }
-        $base = $dir.'/'.sha1($url).'-'.$width;
 
         foreach (['jpg' => 'image/jpeg', 'png' => 'image/png'] as $ext => $mime) {
             if (is_file($base.'.'.$ext)) {
@@ -38,7 +39,11 @@ class ImageResizeController extends Controller
         }
 
         // Un solo proceso reduce cada imagen; los demás esperan y la encuentran lista.
-        $lock = fopen($base.'.lock', 'c');
+        $locks = storage_path('app/img-locks');
+        if (! is_dir($locks)) {
+            @mkdir($locks, 0775, true);
+        }
+        $lock = fopen($locks.'/'.basename($base).'.lock', 'c');
         flock($lock, LOCK_EX);
         try {
             foreach (['jpg' => 'image/jpeg', 'png' => 'image/png'] as $ext => $mime) {
