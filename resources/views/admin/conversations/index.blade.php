@@ -171,9 +171,9 @@
                 <button class="cv-attach" id="cv-attach" type="button" aria-label="Adjuntar archivo" title="Imagen, documento, audio o video · máximo 5 MB">📎</button>
                 <button class="cv-attach" id="cv-emoji" type="button" aria-label="Emojis" aria-expanded="false" title="Emojis">😊</button>
                 <button class="cv-attach cv-labeled" id="cv-dictate" type="button" aria-label="Dictar: hablas y se escribe como texto" title="Dictar: hablas y se escribe como texto" hidden>🗣️ Dictar</button>
-                <button class="cv-attach cv-labeled" id="cv-record" type="button" aria-label="Grabar nota de voz" title="Grabar nota de voz y enviarla como audio (máx. 2 minutos)" hidden>🎙️ Audio</button>
                 <div class="cv-emojis" id="cv-emojis" role="menu" hidden></div>
                 <textarea id="cv-text" placeholder="Escribe tu respuesta…" maxlength="2000" aria-label="Respuesta"></textarea>
+                <button class="cv-attach cv-labeled" id="cv-record" type="button" aria-label="Grabar nota de voz" title="Grabar nota de voz y enviarla como audio (máx. 2 minutos)" hidden>🎙️ Audio</button>
                 <button class="cv-send" id="cv-send" type="submit">Enviar</button>
             </form>
         </section>
