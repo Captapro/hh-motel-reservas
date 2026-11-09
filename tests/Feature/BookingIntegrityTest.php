@@ -1018,13 +1018,14 @@ class BookingIntegrityTest extends TestCase
         $requests->sendDue();
         Http::assertNothingSent();
 
-        // 11:05: sin permiso de promociones tampoco, pero queda pendiente y sale si lo acepta.
-        $this->customer->update(['marketing_opt_in' => false]);
+        // 11:05: quien se dio de baja no recibe nada, pero queda pendiente por si vuelve a aceptar.
+        $this->customer->update(['marketing_opt_in' => false, 'marketing_opt_in_at' => now()]);
         Carbon::setTestNow(Carbon::parse('2026-11-03 14:05', 'UTC'));
         $requests->sendDue();
         Http::assertNothingSent();
         $this->assertNull($booking->fresh()->review_requested_at);
-        $this->customer->update(['marketing_opt_in' => true]);
+        // Nunca se le preguntó (sin fecha): igual recibe la invitación.
+        $this->customer->update(['marketing_opt_in' => false, 'marketing_opt_in_at' => null]);
 
         // GHL falla: no se reintenta en cada vuelta, sí a los 15 minutos, y no se pierde el pedido.
         $requests->sendDue();

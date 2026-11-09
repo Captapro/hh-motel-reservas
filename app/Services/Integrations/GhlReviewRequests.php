@@ -92,10 +92,22 @@ class GhlReviewRequests
             });
     }
 
-    /** Tiene WhatsApp y aceptó promociones: las plantillas de opinión y cupón son de marketing. */
+    /**
+     * Tiene WhatsApp y no se dio de baja. Decisión del usuario (2026-11-09): la invitación a opinar
+     * (y el cupón al opinar) va a todo cliente con teléfono, aunque no haya aceptado promociones;
+     * solo se excluye a quien se dio de baja (permiso apagado con fecha: BAJA por WhatsApp o ficha).
+     */
     public function canReceive(Booking $booking): bool
     {
-        return filled($booking->customer?->phone_e164) && (bool) $booking->customer?->marketing_opt_in;
+        return filled($booking->customer?->phone_e164) && ! $this->optedOut($booking);
+    }
+
+    /** Se dio de baja: el permiso quedó apagado con fecha (nunca preguntado = sin fecha). */
+    public function optedOut(Booking $booking): bool
+    {
+        $customer = $booking->customer;
+
+        return $customer !== null && ! $customer->marketing_opt_in && $customer->marketing_opt_in_at !== null;
     }
 
     public function isQuietHours(): bool
