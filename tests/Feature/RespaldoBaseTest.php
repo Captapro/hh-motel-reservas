@@ -24,6 +24,17 @@ class RespaldoBaseTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_scheduled_run_waits_until_both_url_and_token_exist(): void
+    {
+        config(['services.backup.drive_url' => 'https://script.google.com/macros/s/x/exec', 'services.backup.drive_token' => null]);
+        Process::fake();
+        Http::fake();
+
+        $this->artisan('app:respaldo-base', ['--programado' => true])->assertSuccessful();
+
+        Process::assertNothingRan();
+    }
+
     public function test_it_refuses_to_run_on_a_database_that_is_not_postgres(): void
     {
         config(['services.backup.drive_url' => 'https://script.google.com/macros/s/x/exec', 'services.backup.drive_token' => 'clave']);

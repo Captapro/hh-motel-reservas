@@ -41,8 +41,8 @@ class RespaldoBase extends Command
         $now = CarbonImmutable::now($tz);
 
         if ($this->option('programado')) {
-            if ((string) config('services.backup.drive_url') === '') {
-                return self::SUCCESS; // sin configurar: no molesta
+            if ((string) config('services.backup.drive_url') === '' || (string) config('services.backup.drive_token') === '') {
+                return self::SUCCESS; // sin configurar del todo (URL y clave): no molesta
             }
             if ($now->hour < (int) config('services.backup.hour', 5)) {
                 return self::SUCCESS;
