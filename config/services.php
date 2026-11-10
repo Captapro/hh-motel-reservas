@@ -85,6 +85,10 @@ return [
     // Todo apagado hasta que existan las variables en Render.
     'google' => [
         'tag_id' => env('GOOGLE_TAG_ID'),
+        // Google Analytics 4 (propiedad "HH Motel" de la cuenta Capta Pro). ID público.
+        'analytics_id' => env('GOOGLE_ANALYTICS_ID', 'G-Z1C7RB01F6'),
+        // Dominios que cuentan como un solo recorrido (sitio de la marca + catálogo).
+        'linker_domains' => ['hhmotel.cl', 'app.hhmotel.cl'],
         'ads_conversion_label' => env('GOOGLE_ADS_CONVERSION_LABEL'),
     ],
 
