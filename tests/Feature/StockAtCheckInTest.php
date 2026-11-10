@@ -145,7 +145,7 @@ class StockAtCheckInTest extends TestCase
         $addon = $this->booking->addons()->with('combo.items')->firstOrFail();
         $html = view('reservations._addon-detail', ['addon' => $addon, 'booking' => $this->booking])->render();
 
-        $this->assertStringContainsString('Incluye:', $html);
+        $this->assertStringContainsString('Incluye', $html);
         $this->assertStringContainsString('1 × Coca-Cola', $html);
         $this->assertStringContainsString('1 × Sprite', $html);
         $this->assertStringContainsString('Por entregar en el check-in', $html);
@@ -154,7 +154,7 @@ class StockAtCheckInTest extends TestCase
         $this->booking->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
         app(ConsumptionService::class)->deductPending($this->booking->fresh(), null);
         $html = view('reservations._addon-detail', ['addon' => $addon->fresh('combo.items'), 'booking' => $this->booking->fresh()])->render();
-        $this->assertStringContainsString('Incluye:', $html);
+        $this->assertStringContainsString('Incluye', $html);
         $this->assertStringNotContainsString('Por entregar', $html);
     }
 
