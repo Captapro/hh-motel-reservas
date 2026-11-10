@@ -71,6 +71,15 @@ return [
         'opportunities_since' => env('GHL_OPPORTUNITIES_SINCE', '2026-11-01'),
     ],
 
+    // Respaldo diario de la base a Google Drive (ver entregables/respaldos).
+    'backup' => [
+        // URL del script de Apps Script publicado como aplicación web y su clave.
+        'drive_url' => env('BACKUP_DRIVE_URL'),
+        'drive_token' => env('BACKUP_DRIVE_TOKEN'),
+        // Hora de Chile desde la cual se hace el respaldo del día.
+        'hour' => env('BACKUP_HOUR', 5),
+    ],
+
     // Medición de Meta: el píxel (público, el mismo de hhmotel.cl) en el catálogo y
     // la API de conversiones para avisar las ventas desde el servidor. El token
     // se genera en el Administrador de eventos y va solo en Render (META_CAPI_TOKEN).
