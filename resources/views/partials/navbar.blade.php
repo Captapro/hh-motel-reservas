@@ -84,6 +84,7 @@
         <span class="hh-brand">HH MOTEL</span>
         @php $u = auth()->user(); @endphp
         @if ($u?->canAccess('tablero'))<a href="{{ route('rooms.board') }}" class="{{ request()->routeIs('rooms.board') ? 'hh-active' : '' }}">Tablero</a>@endif
+        @if ($u?->canAccess('tablero'))<a href="{{ route('rooms.packs') }}" class="{{ request()->routeIs('rooms.packs') ? 'hh-active' : '' }}">Packs</a>@endif
         @if ($u?->canAccess('tablero') || $u?->canAccess('calendario'))<a href="{{ route('reservations.search') }}" class="{{ request()->routeIs('reservations.search') ? 'hh-active' : '' }}">Buscar reserva</a>@endif
         @if ($u?->canAccess('ventas'))<a href="{{ route('sales.monthly') }}" class="{{ request()->routeIs('sales.*') ? 'hh-active' : '' }}">Ventas</a>@endif
         @if ($u?->canAccess('caja'))<a href="{{ route('cash.show') }}" class="{{ request()->routeIs('cash.show') ? 'hh-active' : '' }}">Caja</a>@endif

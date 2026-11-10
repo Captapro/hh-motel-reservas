@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use App\Services\Notifications\AdminPush;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Marketing\MetaConversions;
+use App\Services\Notifications\AdminPush;
 use App\Services\Payments\MercadoPagoClient;
 use App\Services\Payments\MercadoPagoReconciler;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -270,6 +270,10 @@ class Booking extends Model
     public function restoreConsumedStock(): void
     {
         foreach ($this->addons as $addon) {
+            // Lo vendido por adelantado y aún no entregado nunca salió del inventario.
+            if ($addon->stock_deducted_at === null) {
+                continue;
+            }
             if ($addon->product_id) {
                 Product::where('id', $addon->product_id)->where('track_inventory', true)->increment('stock', (int) $addon->quantity);
             } elseif ($addon->combo_id && $addon->components) {

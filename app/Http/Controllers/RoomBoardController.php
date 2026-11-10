@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Models\Combo;
 use App\Models\Coupon;
 use App\Models\OperationalSetting;
 use App\Models\Room;
-use App\Models\StaffNotice;
 use App\Models\RoomCategory;
 use App\Models\Staff;
+use App\Models\StaffNotice;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Pricing\RateRuleResolver;
@@ -424,5 +425,13 @@ class RoomBoardController extends Controller
         AuditLog::record(auth()->id(), 'habitacion.enviar_aseo', 'Room', $room->id, $old, ['operational_status' => 'aseo']);
 
         return redirect()->route('rooms.board');
+    }
+
+    /** Packs a la venta con lo que incluye cada uno y cuántos quedan: consulta rápida para recepción. */
+    public function packs(): \Illuminate\Contracts\View\View
+    {
+        $combos = Combo::with('items.product')->where('is_active', true)->orderBy('display_order')->orderBy('name')->get();
+
+        return view('rooms.packs', ['combos' => $combos]);
     }
 }

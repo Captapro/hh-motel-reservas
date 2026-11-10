@@ -22,16 +22,21 @@ class ConsumptionService
             // — misma lógica que la reserva de habitaciones, a menor escala.
             $locked = Product::lockForUpdate()->findOrFail($product->id);
 
-            if ($locked->track_inventory && $locked->stock < $quantity) {
+            // El inventario baja cuando se entrega (check-in o ya en la estadía);
+            // lo vendido antes queda apartado, sin descontar todavía.
+            $deductNow = $booking->checked_in_at !== null;
+            $free = $locked->stock - $this->reservedUnits($locked->id);
+
+            if ($locked->track_inventory && $free < $quantity) {
                 $available = match (true) {
-                    $locked->stock <= 0 => 'no queda stock',
-                    $locked->stock === 1 => 'solo queda 1 unidad',
-                    default => "solo quedan {$locked->stock} unidades",
+                    $free <= 0 => 'no queda stock',
+                    $free === 1 => 'solo queda 1 unidad',
+                    default => "solo quedan {$free} unidades",
                 };
                 throw new InsufficientStockException("{$locked->name}: {$available}, pediste {$quantity}.");
             }
 
-            if ($locked->track_inventory) {
+            if ($locked->track_inventory && $deductNow) {
                 $locked->decrement('stock', $quantity);
             }
 
@@ -41,6 +46,7 @@ class ConsumptionService
                 'description' => $quantity > 1 ? "{$quantity} x {$product->name}" : $product->name,
                 'quantity' => $quantity,
                 'amount' => $product->price * $quantity,
+                'stock_deducted_at' => $deductNow ? now() : null,
                 'added_by' => $userId,
             ]);
 
@@ -85,22 +91,26 @@ class ConsumptionService
             // interbloqueos si dos combos comparten un producto.
             ksort($needs);
             $lockedProducts = [];
+            $deductNow = $booking->checked_in_at !== null;
             foreach ($needs as $productId => $needed) {
                 $locked = Product::lockForUpdate()->findOrFail($productId);
                 $lockedProducts[$productId] = $locked;
-                if ($locked->track_inventory && $locked->stock < $needed) {
+                $free = $locked->stock - $this->reservedUnits($locked->id);
+                if ($locked->track_inventory && $free < $needed) {
                     $available = match (true) {
-                        $locked->stock <= 0 => 'no queda stock',
-                        $locked->stock === 1 => 'solo queda 1 unidad',
-                        default => "solo quedan {$locked->stock} unidades",
+                        $free <= 0 => 'no queda stock',
+                        $free === 1 => 'solo queda 1 unidad',
+                        default => "solo quedan {$free} unidades",
                     };
                     throw new InsufficientStockException("{$combo->name} necesita {$locked->name} — {$available}, se necesitan {$needed}.");
                 }
             }
 
-            foreach ($needs as $productId => $needed) {
-                if ($lockedProducts[$productId]->track_inventory) {
-                    $lockedProducts[$productId]->decrement('stock', $needed);
+            if ($deductNow) {
+                foreach ($needs as $productId => $needed) {
+                    if ($lockedProducts[$productId]->track_inventory) {
+                        $lockedProducts[$productId]->decrement('stock', $needed);
+                    }
                 }
             }
 
@@ -116,6 +126,7 @@ class ConsumptionService
                 'quantity' => $quantity,
                 'amount' => $combo->price * $quantity,
                 'components' => collect($needs)->map(fn ($units, $productId) => ['product_id' => $productId, 'units' => $units])->values()->all(),
+                'stock_deducted_at' => $deductNow ? now() : null,
                 'added_by' => $userId,
             ]);
 
@@ -139,6 +150,60 @@ class ConsumptionService
         $this->afterAdd($booking, $addon, $userId);
 
         return $addon;
+    }
+
+    /**
+     * Unidades de un producto vendidas por adelantado (reservas que aún no
+     * hacen el check-in): siguen en bodega pero ya tienen dueño.
+     */
+    public function reservedUnits(int $productId): int
+    {
+        return BookingAddon::query()
+            ->whereNull('stock_deducted_at')
+            ->whereHas('booking', fn ($q) => $q->whereNull('checked_in_at')->whereIn('booking_status', ['PENDIENTE_PAGO', 'RETENIDA', 'BORRADOR', 'CONFIRMADA']))
+            ->get()
+            ->sum(fn (BookingAddon $addon) => $addon->stockNeeds()[$productId] ?? 0);
+    }
+
+    /**
+     * Al hacer el check-in se entrega lo que se vendió antes: ahí recién baja
+     * el inventario. Nunca bloquea el ingreso: si faltara stock se descuenta
+     * lo que haya y queda anotado.
+     */
+    public function deductPending(Booking $booking, ?int $userId): void
+    {
+        DB::transaction(function () use ($booking, $userId) {
+            $pending = BookingAddon::where('booking_id', $booking->id)->whereNull('stock_deducted_at')->get();
+            if ($pending->isEmpty()) {
+                return;
+            }
+
+            $needs = [];
+            foreach ($pending as $addon) {
+                foreach ($addon->stockNeeds() as $productId => $units) {
+                    $needs[$productId] = ($needs[$productId] ?? 0) + $units;
+                }
+            }
+
+            ksort($needs);
+            $short = [];
+            foreach ($needs as $productId => $units) {
+                $locked = Product::lockForUpdate()->find($productId);
+                if (! $locked || ! $locked->track_inventory) {
+                    continue;
+                }
+                $take = min($units, max(0, $locked->stock));
+                if ($take > 0) {
+                    $locked->decrement('stock', $take);
+                }
+                if ($take < $units) {
+                    $short[$locked->name] = $units - $take;
+                }
+            }
+
+            BookingAddon::whereIn('id', $pending->pluck('id'))->update(['stock_deducted_at' => now()]);
+            AuditLog::record($userId, 'reserva.consumo_entregado', 'Booking', $booking->id, null, ['addons' => $pending->pluck('id')->all(), 'faltante' => $short]);
+        });
     }
 
     private function afterAdd(Booking $booking, BookingAddon $addon, ?int $userId): void

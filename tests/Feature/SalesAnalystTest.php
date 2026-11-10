@@ -62,6 +62,7 @@ class SalesAnalystTest extends TestCase
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
             '2026_10_26_210000_create_short_stay_settings_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
+            '2026_11_10_150000_add_stock_deducted_at_to_booking_addons.php',
             '2026_08_19_090001_create_products_table.php',
             '2026_08_19_090002_add_product_id_to_booking_addons_table.php',
             '2026_08_20_110001_create_combos_table.php',

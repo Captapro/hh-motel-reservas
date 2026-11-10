@@ -53,6 +53,7 @@ class LateArrivalTest extends TestCase
             '2026_10_26_220000_create_late_arrival_settings_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
+            '2026_11_10_150000_add_stock_deducted_at_to_booking_addons.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',

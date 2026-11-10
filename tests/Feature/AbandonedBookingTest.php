@@ -45,6 +45,7 @@ class AbandonedBookingTest extends TestCase
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
+            '2026_11_10_150000_add_stock_deducted_at_to_booking_addons.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
             '2026_08_18_120018_create_audit_logs_table.php',

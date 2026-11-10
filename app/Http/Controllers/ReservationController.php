@@ -681,7 +681,7 @@ class ReservationController extends Controller
 
     public function show(string $code): View
     {
-        $booking = Booking::with(['room.category', 'customer', 'coupon', 'payments.paymentMethod', 'guests', 'addons'])
+        $booking = Booking::with(['room.category', 'customer', 'coupon', 'payments.paymentMethod', 'guests', 'addons.combo.items'])
             ->where('code', $code)
             ->firstOrFail();
 

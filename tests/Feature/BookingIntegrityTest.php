@@ -117,6 +117,7 @@ class BookingIntegrityTest extends TestCase
             '2026_08_18_120012_create_coupon_redemptions_table.php',
             '2026_08_18_120013_create_booking_guests_table.php',
             '2026_08_18_120014_create_booking_addons_table.php',
+            '2026_11_10_150000_add_stock_deducted_at_to_booking_addons.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
             '2026_08_18_120017_create_refunds_table.php',
@@ -1143,6 +1144,7 @@ class BookingIntegrityTest extends TestCase
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
         $product = Product::create(['name' => 'Agua', 'price' => 2000, 'track_inventory' => true, 'stock' => 10, 'is_active' => true]);
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $booking->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
         app(ConsumptionService::class)->addProduct($booking, $product, 3, auth()->id());
         app(PaymentService::class)->register($booking->fresh(), $method, 5000, null, null, auth()->id());
         $this->assertSame(7, $product->fresh()->stock);
@@ -1756,6 +1758,7 @@ class BookingIntegrityTest extends TestCase
         // Una estadía con check-in, finalizada, con pago y consumo también se puede limpiar (puesta en marcha).
         $product = Product::create(['name' => 'Bebida prueba', 'price' => 2000, 'track_inventory' => true, 'stock' => 10, 'is_active' => true]);
         $stay = $this->booking(['starts_at' => Carbon::parse('2026-10-19 12:00')]);
+        $stay->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
         app(ConsumptionService::class)->addProduct($stay, $product, 3, auth()->id());
         $this->assertSame(7, $product->fresh()->stock);
         app(PaymentService::class)->register($stay->fresh(), $method, $stay->fresh()->balanceDue(), null, null, auth()->id());
@@ -2474,6 +2477,7 @@ class BookingIntegrityTest extends TestCase
         (require database_path('migrations/2026_08_19_150001_add_inventory_to_products_table.php'))->up();
         $b = $this->reserve();
         $product = Product::create(['name' => 'Bebida', 'price' => 1000, 'track_inventory' => true, 'stock' => 10, 'is_active' => true]);
+        $b->update(['checked_in_at' => now(), 'booking_status' => 'CHECK_IN']);
         $request = new class($b, $product) extends Request
         {
             public function __construct(private Booking $booking, private Product $product)

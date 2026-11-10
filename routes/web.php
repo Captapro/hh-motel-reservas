@@ -248,6 +248,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/habitaciones/por-vencer', [RoomBoardController::class, 'endingSoon'])->name('rooms.ending_soon');
     Route::get('/habitaciones/proximas', [RoomBoardController::class, 'upcoming'])->name('rooms.upcoming');
     Route::get('/habitaciones/{room}/reservas', [RoomBoardController::class, 'bookings'])->name('rooms.bookings');
+    Route::get('/packs', [RoomBoardController::class, 'packs'])->name('rooms.packs');
     Route::post('/habitaciones/{room}/estado', [RoomBoardController::class, 'updateStatus'])->name('rooms.status');
     Route::post('/habitaciones/{room}/aseo-listo', [RoomBoardController::class, 'markAseoReady'])->name('rooms.aseo_ready');
     Route::get('/mucamas/actividad', [MucamaActivityController::class, 'index'])->name('mucamas.activity');

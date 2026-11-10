@@ -61,6 +61,7 @@ class RoomAseoReactivationTest extends TestCase
             '2026_11_04_160000_create_push_subscriptions_table.php',
             '2026_11_05_100000_add_pinned_to_shift_notes.php',
             '2026_08_18_120014_create_booking_addons_table.php',
+            '2026_11_10_150000_add_stock_deducted_at_to_booking_addons.php',
             '2026_08_18_120015_create_payment_methods_table.php',
             '2026_08_18_120016_create_payments_table.php',
             '2026_09_15_230000_create_room_furniture_tables.php',

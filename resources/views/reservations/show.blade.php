@@ -665,6 +665,7 @@
                     <div class="addon-sep" style="margin-top:2px;">Ya pagado</div>
                     @foreach ($consumo['paid'] as $addon)
                         <div class="row" style="opacity:.6;"><span>✓ {{ $addon->description }}</span><span>${{ number_format($addon->amount, 0, ',', '.') }}</span></div>
+                        @include('reservations._addon-detail', ['addon' => $addon, 'booking' => $booking])
                     @endforeach
                 @endif
 
@@ -672,6 +673,7 @@
                     <div class="addon-sep" style="color:#ff7918;">Orden nueva — pendiente de pago</div>
                     @foreach ($consumo['pending'] as $addon)
                         <div class="row"><span>{{ $addon->description }}</span><span>${{ number_format($addon->amount, 0, ',', '.') }}</span></div>
+                        @include('reservations._addon-detail', ['addon' => $addon, 'booking' => $booking])
                     @endforeach
                 @endif
 

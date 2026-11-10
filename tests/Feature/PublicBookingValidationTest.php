@@ -267,7 +267,7 @@ class PublicBookingValidationTest extends TestCase
     public function test_with_online_payment_the_customer_goes_straight_to_mercado_pago(): void
     {
         // Un token pegado en Render con un salto de línea al final no debe romper el cobro.
-        foreach (['2026_08_18_120014_create_booking_addons_table.php', '2026_08_18_120015_create_payment_methods_table.php', '2026_08_18_120016_create_payments_table.php'] as $file) {
+        foreach (['2026_08_18_120014_create_booking_addons_table.php', '2026_11_10_150000_add_stock_deducted_at_to_booking_addons.php', '2026_08_18_120015_create_payment_methods_table.php', '2026_08_18_120016_create_payments_table.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
         config(['services.mercadopago.access_token' => "APP_USR-token-de-prueba\n"]);

@@ -17,7 +17,7 @@ class AccessSections
 
     /** Clave => [nombre visible, ruta de entrada, patrones de nombre de ruta que la componen]. */
     public const SECTIONS = [
-        'tablero' => ['Tablero', 'rooms.board', ['rooms.board', 'rooms.upcoming', 'rooms.bookings']],
+        'tablero' => ['Tablero', 'rooms.board', ['rooms.board', 'rooms.upcoming', 'rooms.bookings', 'rooms.packs']],
         'calendario' => ['Calendario', 'calendar.index', ['calendar.*']],
         'clientes' => ['Clientes', 'admin.customers.index', ['admin.customers.*']],
         'productos' => ['Productos y combos', 'admin.products.index', ['admin.products.*', 'admin.combos.*']],

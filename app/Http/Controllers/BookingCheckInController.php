@@ -258,6 +258,9 @@ class BookingCheckInController extends Controller
             BookingGuest::create(['booking_id' => $booking->id, 'name' => $guest['name'], 'id_document' => $guest['document']]);
         }
 
+        // Lo vendido antes del check-in (packs, consumos online) se entrega ahora: recién aquí baja el inventario.
+        $consumption->deductPending($booking, auth()->id());
+
         $this->applyUpsells($booking, $validated['accepted_upsells'] ?? [], $consumption, $availability, $rateRules);
 
         $status = match (true) {
