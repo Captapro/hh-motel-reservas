@@ -33,6 +33,9 @@ class Attribution
                 'referrer' => $data['referrer'] ?? null,
                 'landing_url' => $data['landing_url'] ?? null,
                 'fbclid' => $data['fbclid'] ?? null,
+                'gclid' => $data['gclid'] ?? null,
+                'gbraid' => $data['gbraid'] ?? null,
+                'wbraid' => $data['wbraid'] ?? null,
                 'fbc' => $fbc ? mb_substr((string) $fbc, 0, 255) : null,
                 'fbp' => $fbp ? mb_substr((string) $fbp, 0, 255) : null,
                 'ip' => $request->ip(),
@@ -70,6 +73,10 @@ class Attribution
 
         if ($t->fbclid) {
             return 'Meta Ads';
+        }
+
+        if ($t->gclid || $t->gbraid || $t->wbraid) {
+            return 'Google Ads';
         }
 
         $host = strtolower((string) parse_url((string) $t->referrer, PHP_URL_HOST));

@@ -242,6 +242,17 @@
         <script>
             if (window.fbq) fbq('track', 'Purchase', {{ Js::from($pixelPurchase) }}, { eventID: {{ Js::from($pixelEventId) }} });
         </script>
+        @if (config('services.google.tag_id') && config('services.google.ads_conversion_label'))
+            {{-- Conversión de Google Ads; transaction_id evita contar dos veces la misma reserva. --}}
+            <script>
+                if (window.gtag) gtag('event', 'conversion', {
+                    send_to: {{ Js::from(config('services.google.tag_id').'/'.config('services.google.ads_conversion_label')) }},
+                    value: {{ Js::from($pixelPurchase['value']) }},
+                    currency: 'CLP',
+                    transaction_id: {{ Js::from($booking->code) }},
+                });
+            </script>
+        @endif
     @endif
 </body>
 </html>

@@ -80,6 +80,14 @@ return [
         'test_event_code' => env('META_TEST_EVENT_CODE'),
     ],
 
+    // Medición de Google: la Etiqueta de Google (GA4 "G-…" o Google Ads "AW-…") en el
+    // catálogo público y, si hay etiqueta de conversión, el aviso de cada reserva pagada.
+    // Todo apagado hasta que existan las variables en Render.
+    'google' => [
+        'tag_id' => env('GOOGLE_TAG_ID'),
+        'ads_conversion_label' => env('GOOGLE_ADS_CONVERSION_LABEL'),
+    ],
+
     'hh_payment' => [
         'bank_titular' => env('HH_BANK_TITULAR'),
         'bank_rut' => env('HH_BANK_RUT'),

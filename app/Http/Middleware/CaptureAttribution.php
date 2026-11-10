@@ -34,16 +34,24 @@ class CaptureAttribution
             ->filter()
             ->all();
         $fbclid = mb_substr(trim((string) $request->query('fbclid', '')), 0, 500);
+        // Identificadores del clic de Google Ads (gclid; gbraid/wbraid en iOS), para subir
+        // después las reservas reales como conversiones.
+        $gclid = mb_substr(trim((string) $request->query('gclid', '')), 0, 500);
+        $gbraid = mb_substr(trim((string) $request->query('gbraid', '')), 0, 500);
+        $wbraid = mb_substr(trim((string) $request->query('wbraid', '')), 0, 500);
         $referrer = (string) $request->headers->get('referer', '');
         $refHost = strtolower((string) parse_url($referrer, PHP_URL_HOST));
         $external = $refHost !== '' && $refHost !== strtolower($request->getHost());
 
-        if (! $utm && $fbclid === '' && ! $external) {
+        if (! $utm && $fbclid === '' && $gclid === '' && $gbraid === '' && $wbraid === '' && ! $external) {
             return;
         }
 
         $request->session()->put(self::SESSION_KEY, array_filter($utm + [
             'fbclid' => $fbclid,
+            'gclid' => $gclid,
+            'gbraid' => $gbraid,
+            'wbraid' => $wbraid,
             // Formato que pide Meta para el clic del anuncio: fb.1.<ms>.<fbclid>
             'fbc' => $fbclid !== '' ? 'fb.1.'.((int) floor(microtime(true) * 1000)).'.'.$fbclid : '',
             'referrer' => $external ? mb_substr($referrer, 0, 500) : '',
