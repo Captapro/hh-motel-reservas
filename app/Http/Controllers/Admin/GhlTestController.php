@@ -4,16 +4,16 @@ namespace App\Http\Controllers\Admin;
 
 use App\Console\Commands\ExpirarReservasPendientes;
 use App\Http\Controllers\Controller;
-use App\Models\Booking;
 use App\Models\AuditLog;
+use App\Models\Booking;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Integrations\GhlClient;
 use App\Services\Integrations\GhlOpportunitySync;
 use App\Services\Integrations\GhlReviewRequests;
 use App\Services\Marketing\MetaConversions;
 use App\Support\Phone;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
@@ -84,6 +84,7 @@ class GhlTestController extends Controller
                 'pending' => GhlOpportunitySync::pendingQuery()->count(),
                 'lastRun' => Cache::get(GhlOpportunitySync::LAST_RUN_KEY),
                 'error' => Cache::get(GhlOpportunitySync::ERROR_KEY),
+                'failed' => Booking::whereNotNull('ghl_sync_failed_at')->orderBy('id')->get(['code', 'ghl_sync_error', 'ghl_sync_attempts', 'ghl_sync_failed_at']),
             ],
             'meta' => [
                 'pixel' => filled(config('services.meta.pixel_id')),

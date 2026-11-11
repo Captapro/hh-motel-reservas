@@ -4,6 +4,7 @@ namespace App\Services\Integrations;
 
 use App\Models\Booking;
 use App\Services\Marketing\Attribution;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -26,6 +27,9 @@ class GhlOpportunitySync
     public const LAST_RUN_KEY = 'ghl:opps:last';
 
     private const PAUSE_KEY = 'ghl:opps:pause';
+
+    /** Una reserva que GHL rechazó espera esto antes de reintentarse (ej. por si recepción corrigió el teléfono). */
+    public const RETRY_FAILED_AFTER_MINUTES = 60;
 
     private const PIPELINE_CACHE_KEY = 'ghl:opps:pipeline';
 
@@ -59,7 +63,9 @@ class GhlOpportunitySync
         return Booking::query()
             ->where('created_at', '>=', config('services.ghl.opportunities_since'))
             ->whereHas('customer', fn ($q) => $q->whereNotNull('phone_e164')->where('phone_e164', '!=', ''))
-            ->where(fn ($q) => $q->whereNull('ghl_opportunity_state')->orWhereColumn('ghl_opportunity_state', '!=', 'booking_status'));
+            ->where(fn ($q) => $q->whereNull('ghl_opportunity_state')->orWhereColumn('ghl_opportunity_state', '!=', 'booking_status'))
+            // La que GHL rechazó se salta un rato: no puede frenar a las demás.
+            ->where(fn ($q) => $q->whereNull('ghl_sync_failed_at')->orWhere('ghl_sync_failed_at', '<=', now()->subMinutes(self::RETRY_FAILED_AFTER_MINUTES)));
     }
 
     /** Sube o actualiza hasta $limit reservas. Devuelve cuántas quedaron al día. */
@@ -78,8 +84,17 @@ class GhlOpportunitySync
 
             $pipeline = $this->pipeline();
             foreach ($bookings as $booking) {
-                $this->syncOne($booking, $pipeline);
-                $done++;
+                try {
+                    $this->syncOne($booking, $pipeline);
+                    $done++;
+                } catch (Throwable $e) {
+                    // Caída de GHL, clave mala o límite de uso: afecta a todas, se pausa y se reintenta.
+                    // Un rechazo por los datos de esta reserva (400/404/422) solo la deja a ella de lado.
+                    if ($e instanceof RequestException && ! in_array($e->response->status(), [400, 404, 422], true)) {
+                        throw $e;
+                    }
+                    $this->recordFailure($booking, $e);
+                }
             }
             Cache::forget(self::ERROR_KEY);
         } catch (Throwable $e) {
@@ -126,7 +141,19 @@ class GhlOpportunitySync
             $this->client->updateOpportunity($id, $data);
         }
 
-        $booking->forceFill(['ghl_opportunity_id' => $id, 'ghl_opportunity_state' => $booking->booking_status])->saveQuietly();
+        $booking->forceFill(['ghl_opportunity_id' => $id, 'ghl_opportunity_state' => $booking->booking_status, 'ghl_sync_failed_at' => null, 'ghl_sync_attempts' => 0, 'ghl_sync_error' => null])->saveQuietly();
+    }
+
+    /** Deja anotado por qué GHL no aceptó esta reserva y la salta por un rato. */
+    private function recordFailure(Booking $booking, Throwable $e): void
+    {
+        $message = $e instanceof RequestException ? 'GHL '.$e->response->status().': '.($e->response->json('message') ?? 'sin detalle') : $e->getMessage();
+        $booking->forceFill([
+            'ghl_sync_failed_at' => now(),
+            'ghl_sync_attempts' => ((int) $booking->ghl_sync_attempts) + 1,
+            'ghl_sync_error' => mb_substr($message, 0, 250),
+        ])->saveQuietly();
+        report($e);
     }
 
     /** Una reserva más nueva del mismo cliente ya usa (o usará) esa oportunidad: la vieja no la pisa. */

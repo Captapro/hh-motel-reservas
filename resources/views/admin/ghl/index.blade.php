@@ -19,6 +19,12 @@
         <h2 style="font-size:14px; margin:0 0 4px;">Medición: embudo de GHL y ventas a Meta</h2>
         <p class="sub" style="margin:0 0 10px;">Cada reserva con teléfono (desde el {{ \Illuminate\Support\Carbon::parse($funnel['since'])->format('d-m-Y') }}) queda como oportunidad en el embudo "{{ config('services.ghl.pipeline_name') }}" con su monto y su origen. Cada venta pagada se le avisa a Meta para medir qué anuncios venden.</p>
         <p style="margin:2px 0; color:#c1c3c7;">Embudo GHL: {{ $funnel['synced'] }} reservas subidas · {{ $funnel['pending'] }} por subir o mover de etapa{{ $funnel['lastRun'] ? ' · última pasada '.\Illuminate\Support\Carbon::parse($funnel['lastRun']['at'])->timezone('America/Santiago')->format('H:i:s') : '' }}</p>
+        @if ($funnel['failed']->isNotEmpty())
+            <p style="margin:6px 0 2px; color:#f3d9a4;">⚠ {{ $funnel['failed']->count() }} {{ $funnel['failed']->count() === 1 ? 'reserva que GHL no aceptó' : 'reservas que GHL no aceptó' }} (no frenan a las demás; se reintentan cada hora). Suele ser un teléfono mal escrito: corrígelo en la ficha del cliente.</p>
+            @foreach ($funnel['failed'] as $f)
+                <p style="margin:1px 0 1px 14px; color:#c1c3c7; font-size:12.5px;"><a href="{{ route('reservations.show', $f->code) }}" style="color:#ff9a4d;">{{ $f->code }}</a> · {{ $f->ghl_sync_error }} · {{ $f->ghl_sync_attempts }} {{ $f->ghl_sync_attempts === 1 ? 'intento' : 'intentos' }}</p>
+            @endforeach
+        @endif
         @if ($funnel['error'])
             <p style="margin:2px 0; color:#f3b8b8;">✗ {{ \Illuminate\Support\Carbon::parse($funnel['error']['at'])->timezone('America/Santiago')->format('d-m H:i') }}: {{ $funnel['error']['message'] }} (se reintenta en 10 minutos)</p>
         @endif

@@ -140,6 +140,7 @@ class BookingIntegrityTest extends TestCase
             '2026_10_04_130000_add_max_capacity_to_room_categories.php',
             '2026_08_18_120020_create_tracking_data_table.php',
             '2026_11_03_000000_add_marketing_tracking.php',
+            '2026_11_11_140000_add_ghl_sync_failure_to_bookings.php',
             '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
         ] as $file) {
             (require database_path('migrations/'.$file))->up();
