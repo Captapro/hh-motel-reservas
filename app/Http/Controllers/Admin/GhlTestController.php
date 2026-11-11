@@ -32,7 +32,32 @@ class GhlTestController extends Controller
 {
     public function index(GhlClient $client, GhlReviewRequests $reviews): View
     {
-        return view('admin.ghl.index', ['configured' => $client->isConfigured()] + $this->reviewDiagnostics($reviews));
+        return view('admin.ghl.index', ['configured' => $client->isConfigured(), 'webhookTails' => $this->webhookTails()] + $this->reviewDiagnostics($reviews));
+    }
+
+    /**
+     * Para cada webhook de GHL: ¿está puesto?, cómo termina su URL (solo los últimos 6 caracteres) y si
+     * otra variable tiene la misma URL (señal de que se pegó el flujo equivocado).
+     *
+     * @return array<string, array{set: bool, tail: string, same_as: ?string}>
+     */
+    private function webhookTails(): array
+    {
+        $vars = [
+            'GHL_WEBHOOK_RESERVA_CONFIRMADA' => 'confirmada', 'GHL_WEBHOOK_PAGO_PENDIENTE' => 'pago_pendiente',
+            'GHL_WEBHOOK_RESERVA_VENCIDA' => 'reserva_vencida', 'GHL_WEBHOOK_RESERVA_CANCELADA' => 'cancelada',
+            'GHL_WEBHOOK_RESERVA_MODIFICADA' => 'modificada', 'GHL_WEBHOOK_PEDIR_OPINION' => 'pedir_opinion',
+            'GHL_WEBHOOK_CUPON_OPINION' => 'cupon_opinion',
+        ];
+        $urls = collect($vars)->map(fn ($key) => (string) config('services.ghl.webhook_'.$key));
+        $out = [];
+        foreach ($vars as $name => $key) {
+            $url = $urls[$name];
+            $same = $url === '' ? null : $urls->filter(fn ($u, $n) => $n !== $name && $u === $url)->keys()->first();
+            $out[$name] = ['set' => $url !== '', 'tail' => $url === '' ? '' : '…'.substr($url, -6), 'same_as' => $same];
+        }
+
+        return $out;
     }
 
     /**

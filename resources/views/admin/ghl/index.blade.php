@@ -46,6 +46,11 @@
         <div style="margin:12px 0 4px; padding:10px 12px; border:1px solid #333; border-radius:8px;">
             <b>Aviso al cliente al cancelar o modificar</b>
             <p style="margin:6px 0; color:#c1c3c7;">Para armar el flujo en GHL: pulsa "Recuperar solicitudes de muestra" en el disparador del flujo y luego el botón de aquí. Manda datos inventados (teléfono falso), no llega ningún WhatsApp a nadie.</p>
+            <ul style="margin:6px 0 10px; padding-left:18px; color:#c1c3c7; font-size:12.5px;">
+                @foreach ($webhookTails as $name => $w)
+                    <li style="color:{{ ! $w['set'] ? '#f3b8b8' : ($w['same_as'] ? '#f3b8b8' : '#c1c3c7') }};">{{ $name }}: {{ $w['set'] ? 'puesta, termina en '.$w['tail'] : 'sin poner' }}{{ $w['same_as'] ? ' ⚠ es la MISMA URL que '.$w['same_as'] : '' }}</li>
+                @endforeach
+            </ul>
             @foreach (['cancelada' => config('services.ghl.webhook_cancelada'), 'modificada' => config('services.ghl.webhook_modificada')] as $kind => $hook)
                 <form method="POST" action="{{ route('admin.ghl.sample') }}" style="display:inline-block; margin-right:8px;">
                     @csrf
