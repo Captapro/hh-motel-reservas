@@ -469,6 +469,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
 
         Route::get('/integraciones/ghl', [GhlTestController::class, 'index'])->middleware('role:soporte')->name('ghl.index');
         Route::post('/integraciones/ghl/probar', [GhlTestController::class, 'test'])->middleware('role:soporte')->name('ghl.test');
+        Route::post('/integraciones/ghl/muestra-aviso', [GhlTestController::class, 'sendSample'])->middleware('role:soporte')->name('ghl.sample');
         Route::post('/integraciones/ghl/meta-ventas-pasadas', [GhlTestController::class, 'sendPastSalesToMeta'])->middleware('role:soporte')->name('ghl.meta_past');
     }); // fin role:administrador
 });

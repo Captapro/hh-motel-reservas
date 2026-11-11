@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 use Throwable;
 
@@ -111,6 +112,36 @@ class GhlTestController extends Controller
         return redirect()->route('admin.ghl.index')->with('status', $result['error']
             ? 'No se pudieron enviar: '.$result['error'].($result['sent'] ? " (alcanzaron a salir {$result['sent']})" : '')
             : "Listo: {$result['sent']} ventas enviadas a Meta. {$result['skipped']} sin teléfono ni correo no se pueden enviar.");
+    }
+
+    /**
+     * Manda a GHL una muestra con datos inventados al webhook de cancelada o modificada. Sirve para
+     * que el flujo de GHL aprenda los campos ("Recuperar solicitudes de muestra") sin tener que
+     * cancelar una reserva de verdad. El teléfono es falso: no llega ningún WhatsApp a nadie.
+     */
+    public function sendSample(Request $request): RedirectResponse
+    {
+        $kind = $request->input('kind') === 'modificada' ? 'modificada' : 'cancelada';
+        $url = config('services.ghl.webhook_'.$kind);
+        if (! filled($url)) {
+            return redirect()->route('admin.ghl.index')->withErrors(['ghl' => 'Falta GHL_WEBHOOK_RESERVA_'.strtoupper($kind === 'cancelada' ? 'CANCELADA' : 'MODIFICADA').' en Render.']);
+        }
+        $sample = [
+            'first_name' => 'Muestra', 'last_name' => '', 'email' => '', 'phone' => '+56900000000',
+            'codigo' => 'HH-MUESTRA-00001', 'habitacion' => 'NEW LITE 204', 'categoria' => 'NEW LITE',
+            'fecha' => 'Martes 10 de noviembre', 'hora_entrada' => '22:00', 'fecha_hora' => 'Martes 10 de noviembre a las 22:00',
+            'hora_salida' => '01:00', 'duracion' => '3 h', 'personas' => '2', 'total' => '$30.000', 'pagado' => '$0',
+            'saldo' => '$30.000', 'monto' => '', 'medio_pago' => '', 'token' => 'muestra',
+        ] + ($kind === 'modificada' ? ['habitacion_anterior' => 'GO 101', 'fecha_hora_anterior' => 'Martes 10 de noviembre a las 20:00 · 3 h'] : []);
+
+        try {
+            $response = Http::timeout(8)->acceptJson()->post($url, $sample);
+            $msg = $response->successful() ? "Muestra de «{$kind}» enviada a GHL (respondió {$response->status()})." : "GHL respondió {$response->status()} al enviar la muestra.";
+        } catch (Throwable $e) {
+            $msg = 'No se pudo enviar la muestra: '.$e->getMessage();
+        }
+
+        return redirect()->route('admin.ghl.index')->with('status', $msg);
     }
 
     public function test(Request $request, GhlClient $client, GhlReviewRequests $reviews): View

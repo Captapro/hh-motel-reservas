@@ -43,6 +43,17 @@
                 <button type="submit" style="margin-left:8px; background:#0a5cff; color:#fff; border:0; border-radius:7px; padding:6px 12px; font-weight:700; cursor:pointer;">Enviar ventas pasadas a Meta</button>
             </form>
         @endif
+        <div style="margin:12px 0 4px; padding:10px 12px; border:1px solid #333; border-radius:8px;">
+            <b>Aviso al cliente al cancelar o modificar</b>
+            <p style="margin:6px 0; color:#c1c3c7;">Para armar el flujo en GHL: pulsa "Recuperar solicitudes de muestra" en el disparador del flujo y luego el botón de aquí. Manda datos inventados (teléfono falso), no llega ningún WhatsApp a nadie.</p>
+            @foreach (['cancelada' => config('services.ghl.webhook_cancelada'), 'modificada' => config('services.ghl.webhook_modificada')] as $kind => $hook)
+                <form method="POST" action="{{ route('admin.ghl.sample') }}" style="display:inline-block; margin-right:8px;">
+                    @csrf
+                    <input type="hidden" name="kind" value="{{ $kind }}">
+                    <button type="submit" @disabled(! filled($hook)) style="background:#0a5cff; color:#fff; border:0; border-radius:7px; padding:6px 12px; font-weight:700; cursor:pointer; {{ filled($hook) ? '' : 'opacity:.4; cursor:not-allowed;' }}">Enviar muestra «{{ $kind }}»{{ filled($hook) ? '' : ' (falta la variable en Render)' }}</button>
+                </form>
+            @endforeach
+        </div>
         @if ($meta['last'])
             <p style="margin:2px 0; color:{{ $meta['last']['error'] ? '#f3b8b8' : '#c1c3c7' }};">Último aviso: {{ $meta['last']['booking'] }} a las {{ \Illuminate\Support\Carbon::parse($meta['last']['at'])->timezone('America/Santiago')->format('d-m H:i') }} — {{ $meta['last']['error'] ? 'Meta respondió '.$meta['last']['status'].': '.$meta['last']['error'] : 'recibido' }}</p>
         @endif
