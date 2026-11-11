@@ -1005,10 +1005,10 @@ class BookingIntegrityTest extends TestCase
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
         $next = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00')]);
         Carbon::setTestNow(Carbon::parse('2026-11-02 15:00'));
-        $booking->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 12:00'), 'checked_out_at' => Carbon::parse('2026-11-02 14:50')]);
+        $booking->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 12:00'), 'checked_out_at' => Carbon::parse('2026-11-02 14:55')]);
         $requests = app(GhlReviewRequests::class);
 
-        // Antes de los 15 minutos no se pide; después, una sola vez.
+        // Antes de los 10 minutos no se pide; después, una sola vez.
         $requests->sendDue();
         Http::assertNothingSent();
         Carbon::setTestNow(Carbon::parse('2026-11-02 15:06'));
@@ -1039,7 +1039,7 @@ class BookingIntegrityTest extends TestCase
         app(CouponValidator::class)->validate($coupon, $this->room, Carbon::parse('2026-11-05 12:00'), 60, $other, 20000);
     }
 
-    public function test_review_requests_respect_consent_night_hours_and_retry_when_ghl_fails(): void
+    public function test_review_requests_respect_consent_go_out_10_minutes_after_checkout_at_any_hour_and_retry_when_ghl_fails(): void
     {
         foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
@@ -1050,15 +1050,15 @@ class BookingIntegrityTest extends TestCase
         $booking->update(['booking_status' => 'FINALIZADA', 'checked_in_at' => Carbon::parse('2026-11-02 12:00'), 'checked_out_at' => Carbon::parse('2026-11-03 04:00', 'UTC')]);
         $requests = app(GhlReviewRequests::class);
 
-        // 01:30 en Chile: de noche no sale nada.
+        // A los 5 minutos de la salida: todavía no.
         $this->customer->update(['marketing_opt_in' => true]);
-        Carbon::setTestNow(Carbon::parse('2026-11-03 04:30', 'UTC'));
+        Carbon::setTestNow(Carbon::parse('2026-11-03 07:05', 'UTC'));
         $requests->sendDue();
         Http::assertNothingSent();
 
-        // 11:05: quien se dio de baja no recibe nada, pero queda pendiente por si vuelve a aceptar.
+        // Pasados los 10 minutos, aunque sea de madrugada: quien se dio de baja no recibe nada, pero queda pendiente por si vuelve a aceptar.
         $this->customer->update(['marketing_opt_in' => false, 'marketing_opt_in_at' => now()]);
-        Carbon::setTestNow(Carbon::parse('2026-11-03 14:05', 'UTC'));
+        Carbon::setTestNow(Carbon::parse('2026-11-03 07:11', 'UTC'));
         $requests->sendDue();
         Http::assertNothingSent();
         $this->assertNull($booking->fresh()->review_requested_at);
@@ -1070,16 +1070,16 @@ class BookingIntegrityTest extends TestCase
         $requests->sendDue();
         Http::assertSentCount(1);
         $this->assertNull($booking->fresh()->review_requested_at);
-        Carbon::setTestNow(Carbon::parse('2026-11-03 14:21', 'UTC'));
+        Carbon::setTestNow(Carbon::parse('2026-11-03 07:27', 'UTC'));
         $requests->sendDue();
         Http::assertSentCount(2);
-        Carbon::setTestNow(Carbon::parse('2026-11-03 14:37', 'UTC'));
+        Carbon::setTestNow(Carbon::parse('2026-11-03 07:43', 'UTC'));
         $requests->sendDue();
         Http::assertSentCount(3);
         $this->assertNotNull($booking->fresh()->review_requested_at);
 
         // Ya salió: no se repite.
-        Carbon::setTestNow(Carbon::parse('2026-11-03 15:00', 'UTC'));
+        Carbon::setTestNow(Carbon::parse('2026-11-03 08:00', 'UTC'));
         $requests->sendDue();
         Http::assertSentCount(3);
     }

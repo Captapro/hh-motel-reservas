@@ -12,14 +12,14 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Opiniones con premio: 15 minutos después del check-out se le pide la
+ * Opiniones con premio: 10 minutos después del check-out se le pide la
  * opinión al cliente (una vez por estadía, y nunca a quien ya opinó), y al
  * dejarla recibe un cupón personal del 10% para su próxima visita. Los
  * WhatsApp los manda GHL por webhook; sin la URL configurada no se envía
  * nada, pero el cupón igual se crea y se muestra en la página de gracias.
  *
- * Las plantillas son de marketing: solo van a quien aceptó promociones. De
- * noche no se escribe: lo que venza entre las 22:00 y las 11:00 sale a las 11:00.
+ * Sale a los 10 minutos de la salida a cualquier hora (decisión del usuario, 2026-11-11: al día
+ * siguiente es incómodo e inoportuno). Va a todo cliente con teléfono que no se dio de baja.
  * Si GHL falla se reintenta, y un teléfono o permiso agregado después igual
  * alcanza a salir dentro de las 24 horas siguientes a la salida.
  *
@@ -28,7 +28,7 @@ use Throwable;
  */
 class GhlReviewRequests
 {
-    public const MINUTES_AFTER_CHECKOUT = 15;
+    public const MINUTES_AFTER_CHECKOUT = 10;
 
     public const DISCOUNT_PERCENT = 10;
 
@@ -37,10 +37,6 @@ class GhlReviewRequests
     public const LAST_SENT_KEY_PREFIX = 'ghl:last-sent:';
 
     public const ORIGIN = 'opinion';
-
-    public const SEND_FROM_HOUR = 11;
-
-    public const SEND_UNTIL_HOUR = 22;
 
     public const WINDOW_HOURS = 24;
 
@@ -56,7 +52,7 @@ class GhlReviewRequests
     public function sendDue(): void
     {
         $url = config('services.ghl.webhook_pedir_opinion');
-        if (! filled($url) || $this->isQuietHours()) {
+        if (! filled($url)) {
             return;
         }
 
@@ -108,13 +104,6 @@ class GhlReviewRequests
         $customer = $booking->customer;
 
         return $customer !== null && ! $customer->marketing_opt_in && $customer->marketing_opt_in_at !== null;
-    }
-
-    public function isQuietHours(): bool
-    {
-        $hour = now('America/Santiago')->hour;
-
-        return $hour < self::SEND_FROM_HOUR || $hour >= self::SEND_UNTIL_HOUR;
     }
 
     /** ¿Este cliente ya dejó alguna opinión ligada a una de sus reservas? */
