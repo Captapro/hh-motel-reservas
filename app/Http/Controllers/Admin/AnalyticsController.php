@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-use App\Support\SalesProjection;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\RoomCategory;
+use App\Services\Marketing\Attribution;
+use App\Support\SalesProjection;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -33,7 +34,7 @@ class AnalyticsController extends Controller
         $prevStart = $start->copy()->subDays($spanDays);
         $prevEnd = $start->copy()->subSecond();
 
-        $all = Booking::with(['room.category', 'addons.product', 'addons.combo', 'payments.paymentMethod'])
+        $all = Booking::with(['room.category', 'addons.product', 'addons.combo', 'payments.paymentMethod', 'adOrigin', 'trackingData'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
             ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
             ->whereBetween('starts_at', [$prevStart->copy(), $end->copy()])
@@ -69,6 +70,7 @@ class AnalyticsController extends Controller
                 ->sortByDesc('value')->take(8)->values(),
 
             'byOrigin' => $this->byOrigin($current, $val),
+            'byChannel' => $this->byChannel($current, $val),
             'monthly' => $this->monthlyComparison($metric, $categoryId),
             'projection' => $this->monthProjection($categoryId),
             'operations' => $this->operations($current),
@@ -378,6 +380,31 @@ class AnalyticsController extends Controller
             })
             ->filter(fn (array $r) => $r['count'] > 0 || $r['key'] !== '')
             ->values();
+
+        return ['rows' => $rows, 'total' => $bookings->count()];
+    }
+
+    /**
+     * Ventas por canal de marketing (Meta, Google, sitio, presencial…) y, dentro de Meta,
+     * por anuncio. Usa lo que el sistema averigua en GHL por teléfono: las reservas sin
+     * ese dato quedan en su origen de siempre.
+     *
+     * @return array{rows: Collection, total: int}
+     */
+    private function byChannel(Collection $bookings, callable $val): array
+    {
+        $rows = $bookings
+            ->map(fn (Booking $b) => [$b, ...Attribution::channelOf($b)])
+            ->groupBy(fn (array $row) => $row[1])
+            ->map(function (Collection $group, string $channel) use ($val) {
+                $ads = $group->filter(fn (array $r) => $r[2] !== null)
+                    ->groupBy(fn (array $r) => $r[2])
+                    ->map(fn (Collection $g, string $ad) => ['label' => $ad, 'count' => $g->count(), 'value' => (int) $g->sum(fn (array $r) => $val($r[0]))])
+                    ->sortByDesc('value')->values();
+
+                return ['label' => $channel, 'count' => $group->count(), 'value' => (int) $group->sum(fn (array $r) => $val($r[0])), 'ads' => $ads];
+            })
+            ->sortByDesc('value')->values();
 
         return ['rows' => $rows, 'total' => $bookings->count()];
     }

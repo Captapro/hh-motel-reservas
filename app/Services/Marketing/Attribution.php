@@ -101,4 +101,26 @@ class Attribution
 
         return $booking->trackingData?->source_label ?: 'Directo';
     }
+
+    /**
+     * Canal para medir ventas: si el cliente llegó por un anuncio de Meta (según GHL) manda
+     * ese; si no, el origen de siempre (catálogo con sus utm, presencial, asistida).
+     * Devuelve [canal, detalle]: el detalle es el anuncio, si se conoce.
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    public static function channelOf(Booking $booking): array
+    {
+        $ad = $booking->adOrigin;
+        $own = self::sourceOf($booking);
+
+        // Lo que ya trae su propia marca (Google, Instagram, Meta Ads con utm) no se pisa.
+        $paidOwn = str_starts_with($own, 'Google') || str_starts_with($own, 'Meta Ads') || str_starts_with($own, 'Instagram') || str_starts_with($own, 'Facebook');
+
+        if ($ad && $ad->isFromAd() && ! $paidOwn) {
+            return ['Meta · WhatsApp', $ad->meta_ad_id ? 'Anuncio '.$ad->meta_ad_id.($ad->meta_ad_name ? ' ('.$ad->meta_ad_name.')' : '') : null];
+        }
+
+        return [$own, null];
+    }
 }

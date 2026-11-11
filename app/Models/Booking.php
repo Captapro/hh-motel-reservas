@@ -192,6 +192,12 @@ class Booking extends Model
         return $this->hasOne(TrackingData::class)->latestOfMany();
     }
 
+    /** Anuncio de Meta del que llegó el cliente, leído de GHL por su teléfono. */
+    public function adOrigin(): HasOne
+    {
+        return $this->hasOne(BookingAdOrigin::class);
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

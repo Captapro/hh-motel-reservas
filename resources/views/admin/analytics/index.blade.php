@@ -252,6 +252,22 @@
     </div>
     </div>
 
+    <div class="an-grid">
+    <div class="card t-orange span2">
+        <h3>Ventas por canal y por anuncio</h3>
+        @php $cMax = max(1, (int) $byChannel['rows']->max('value')); @endphp
+        @forelse ($byChannel['rows'] as $c)
+            <div class="bar-row"><div class="name">{{ $c['label'] }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ round($c['value'] / $cMax * 100) }}%"></div></div><div class="val">{{ $money($c['value']) }} <small>({{ $c['count'] }})</small></div></div>
+            @foreach ($c['ads'] as $ad)
+                <div class="bar-row" style="opacity:.85;"><div class="name" style="padding-left:14px;font-size:12px;">↳ {{ $ad['label'] }}</div><div class="bar-track"><div class="bar-fill alt" style="width:{{ round($ad['value'] / $cMax * 100) }}%"></div></div><div class="val">{{ $money($ad['value']) }} <small>({{ $ad['count'] }})</small></div></div>
+            @endforeach
+        @empty
+            <p class="empty">Sin ventas en el rango.</p>
+        @endforelse
+        <p class="legend" style="margin-top:8px;"><b>Meta · WhatsApp</b>: el cliente escribió por WhatsApp desde un anuncio (el sistema lo lee de GHL por su teléfono). El resto va por su origen: Google, el sitio, presencial o asistida. Entre paréntesis, cuántas reservas. Una venta puede venir de un anuncio aunque el cliente la haya cerrado en recepción; si reservó con otro teléfono no se puede enlazar.</p>
+    </div>
+    </div>
+
     <h2 class="an-title">Cobros y evolución</h2>
     <div class="an-grid">
     <div class="card t-blue">
