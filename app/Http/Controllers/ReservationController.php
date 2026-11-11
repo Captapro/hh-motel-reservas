@@ -32,6 +32,7 @@ use App\Services\Pricing\PromotionResolver;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\ShortStayPricer;
 use App\Services\Pricing\UpsellResolver;
+use App\Rules\ValidPhone;
 use App\Support\Phone;
 use App\Support\Rut;
 use App\Support\TimeFormat;
@@ -155,7 +156,7 @@ class ReservationController extends Controller
             'customer_last_name' => ['required', 'string', 'max:150'],
             // Teléfono y email son opcionales (hay clientes que no los entregan): la identidad mínima
             // es el documento. Sin teléfono el cliente no recibe WhatsApp (pase, pago, opinión).
-            'customer_phone' => ['nullable', 'string', 'max:20'],
+            'customer_phone' => ['nullable', 'string', 'max:20', new ValidPhone('Teléfono mal escrito: ')],
             'customer_email' => ['nullable', 'email'],
             'document_type' => ['required', 'in:rut,pasaporte'],
             'document_number' => ['required', 'string', 'max:30', function ($attribute, $value, $fail) use ($request) {

@@ -92,6 +92,14 @@
                         <label>Nombre</label>
                         <input name="name" value="{{ $customer->name }}" maxlength="150" required>
                     </div>
+                    @if (filled($customer->phone_e164) && \App\Support\Phone::problem($customer->phone_e164) !== null)
+                        <div style="grid-column:1/-1;">
+                            <label style="color:#e8c76f;">Teléfono — está mal escrito, corrígelo</label>
+                            <input name="phone" value="{{ old('phone', $customer->phone_e164) }}" maxlength="20" placeholder="+56 9 1234 5678">
+                            <p class="sub" style="margin:4px 0 0;color:#e8c76f;">{{ \App\Support\Phone::problem($customer->phone_e164) }} Déjalo vacío si no se conoce.</p>
+                            @error('phone')<p class="sub" style="margin:4px 0 0;color:#f3b8b8;">{{ $message }}</p>@enderror
+                        </div>
+                    @endif
                     <div>
                         <label>Correo</label>
                         <input type="email" name="email" value="{{ $customer->email }}" maxlength="255" placeholder="cliente@correo.cl">
@@ -125,7 +133,7 @@
                     <input type="checkbox" name="marketing_opt_in" value="1" @checked($customer->marketing_opt_in) style="width:auto;margin:0;">
                     Acepta recibir promociones (WhatsApp y correo)@if ($customer->marketing_opt_in_at) <span class="sub" style="margin:0;">— desde {{ $customer->marketing_opt_in_at->timezone('America/Santiago')->format('d/m/Y') }}</span>@endif
                 </label>
-                <p class="sub" style="margin:10px 0 0;">El teléfono no se edita acá — es la identidad del cliente. Al guardar, se sincroniza el correo/nombre con GHL de inmediato.</p>
+                <p class="sub" style="margin:10px 0 0;">El teléfono no se edita acá — es la identidad del cliente (solo se puede corregir si está mal escrito). Al guardar, se sincroniza el correo/nombre con GHL de inmediato.</p>
                 <div class="actions" style="margin-top:12px;"><button class="btn" type="submit">Guardar cambios</button></div>
             </form>
         </div>

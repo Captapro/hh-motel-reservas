@@ -27,6 +27,7 @@ use App\Services\Payments\MercadoPagoClient;
 use App\Services\Payments\MercadoPagoPayments;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\ShortStayPricer;
+use App\Rules\ValidPhone;
 use App\Support\Phone;
 use App\Support\Rut;
 use App\Support\TimeFormat;
@@ -122,7 +123,7 @@ class PublicBookingController extends Controller
             'guests_count' => ['required', 'integer', 'min:1', 'max:10'],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', new ValidPhone('Revisa tu número de WhatsApp: ')],
             'email' => ['required', 'email', 'max:255'],
             // Documento del titular: se verifica en persona al check-in, pero
             // pedirlo acá deja la ficha lista y agiliza la llegada.

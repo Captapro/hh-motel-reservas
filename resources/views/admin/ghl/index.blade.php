@@ -19,6 +19,12 @@
         <h2 style="font-size:14px; margin:0 0 4px;">Medición: embudo de GHL y ventas a Meta</h2>
         <p class="sub" style="margin:0 0 10px;">Cada reserva con teléfono (desde el {{ \Illuminate\Support\Carbon::parse($funnel['since'])->format('d-m-Y') }}) queda como oportunidad en el embudo "{{ config('services.ghl.pipeline_name') }}" con su monto y su origen. Cada venta pagada se le avisa a Meta para medir qué anuncios venden.</p>
         <p style="margin:2px 0; color:#c1c3c7;">Embudo GHL: {{ $funnel['synced'] }} reservas subidas · {{ $funnel['pending'] }} por subir o mover de etapa{{ $funnel['lastRun'] ? ' · última pasada '.\Illuminate\Support\Carbon::parse($funnel['lastRun']['at'])->timezone('America/Santiago')->format('H:i:s') : '' }}</p>
+        @if ($funnel['badPhones']->isNotEmpty())
+            <p style="margin:6px 0 2px; color:#f3d9a4;">⚠ {{ $funnel['badPhones']->count() }}{{ $funnel['badPhones']->count() >= 30 ? '+' : '' }} {{ $funnel['badPhones']->count() === 1 ? 'cliente con teléfono mal escrito' : 'clientes con teléfono mal escrito' }} (no llegan a GHL ni reciben WhatsApp). Abre su ficha y corrígelo:</p>
+            @foreach ($funnel['badPhones'] as $c)
+                <p style="margin:1px 0 1px 14px; color:#c1c3c7; font-size:12.5px;"><a href="{{ route('admin.customers.show', $c->id) }}" style="color:#ff9a4d;">{{ $c->name }}</a> · {{ $c->phone_e164 }}</p>
+            @endforeach
+        @endif
         @if ($funnel['failed']->isNotEmpty())
             <p style="margin:6px 0 2px; color:#f3d9a4;">⚠ {{ $funnel['failed']->count() }} {{ $funnel['failed']->count() === 1 ? 'reserva que GHL no aceptó' : 'reservas que GHL no aceptó' }} (no frenan a las demás; se reintentan cada hora). Suele ser un teléfono mal escrito: corrígelo en la ficha del cliente.</p>
             @foreach ($funnel['failed'] as $f)

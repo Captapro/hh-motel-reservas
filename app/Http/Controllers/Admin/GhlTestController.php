@@ -6,6 +6,7 @@ use App\Console\Commands\ExpirarReservasPendientes;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Models\Customer;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Integrations\GhlClient;
 use App\Services\Integrations\GhlOpportunitySync;
@@ -84,6 +85,7 @@ class GhlTestController extends Controller
                 'pending' => GhlOpportunitySync::pendingQuery()->count(),
                 'lastRun' => Cache::get(GhlOpportunitySync::LAST_RUN_KEY),
                 'error' => Cache::get(GhlOpportunitySync::ERROR_KEY),
+                'badPhones' => Customer::whereNotNull('phone_e164')->where('phone_e164', '!=', '')->orderByDesc('id')->get(['id', 'name', 'phone_e164'])->filter(fn (Customer $c) => Phone::problem($c->phone_e164) !== null)->take(30)->values(),
                 'failed' => Booking::whereNotNull('ghl_sync_failed_at')->orderBy('id')->get(['code', 'ghl_sync_error', 'ghl_sync_attempts', 'ghl_sync_failed_at']),
             ],
             'meta' => [

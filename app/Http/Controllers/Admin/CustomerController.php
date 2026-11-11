@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\CustomerSegmentRule;
+use App\Rules\ValidPhone;
 use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Integrations\GhlClient;
 use App\Services\Integrations\GhlMarketingConsent;
+use App\Support\Phone;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -212,7 +214,27 @@ class CustomerController extends Controller
             'nationality' => ['nullable', 'string', 'max:60'],
             'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
             'marketing_opt_in' => ['nullable', 'boolean'],
+            // Solo se acepta cuando el teléfono guardado está mal escrito (ver más abajo).
+            'phone' => ['nullable', 'string', 'max:20', new ValidPhone],
         ]);
+
+        // El teléfono es la identidad del cliente y no se cambia a la ligera: solo se puede corregir
+        // cuando el guardado es claramente inválido (incompleto o sin código de país real).
+        $phoneNote = '';
+        if ($request->has('phone') && filled($customer->phone_e164) && Phone::problem($customer->phone_e164) !== null) {
+            $typed = trim((string) ($validated['phone'] ?? ''));
+            $new = $typed !== '' ? Phone::toE164($typed) : null;
+            if ($new !== null && Customer::where('phone_e164', $new)->where('id', '!=', $customer->id)->exists()) {
+                return back()->withInput()->withErrors(['phone' => 'Ese teléfono ya pertenece a otro cliente. Si es la misma persona, avisa a administración para unir las fichas.']);
+            }
+            $oldPhone = $customer->phone_e164;
+            $customer->forceFill(['phone_e164' => $new, 'ghl_contact_id' => null, 'ghl_synced_at' => null])->save();
+            // Sus reservas que GHL había rechazado por el teléfono viejo se reintentan ya.
+            $customer->bookings()->update(['ghl_sync_failed_at' => null, 'ghl_sync_attempts' => 0, 'ghl_sync_error' => null]);
+            AuditLog::record(auth()->id(), 'cliente.telefono_corregir', 'Customer', $customer->id, ['phone_e164' => $oldPhone], ['phone_e164' => $new]);
+            $phoneNote = $new ? ' Teléfono corregido.' : ' Quedó sin teléfono.';
+        }
+        unset($validated['phone']);
 
         $optIn = (bool) ($validated['marketing_opt_in'] ?? false);
         unset($validated['marketing_opt_in']);
@@ -222,7 +244,7 @@ class CustomerController extends Controller
             AuditLog::record(auth()->id(), $optIn ? 'cliente.marketing_si' : 'cliente.marketing_no', 'Customer', $customer->id, null, ['via' => 'ficha']);
         }
 
-        $status = 'Datos del cliente actualizados.';
+        $status = 'Datos del cliente actualizados.'.$phoneNote;
         try {
             if ($ghl->isConfigured()) {
                 $contactId = $ghl->upsertContact($customer->phone_e164, $customer->name, $customer->email);
