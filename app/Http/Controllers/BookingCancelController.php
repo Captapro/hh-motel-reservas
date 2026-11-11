@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Services\Integrations\GhlReservationNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,9 +15,11 @@ class BookingCancelController extends Controller
     {
         $validated = $request->validate([
             'reason' => ['nullable', 'string', 'max:255'],
+            'notify_customer' => ['nullable', 'boolean'],
         ]);
+        $notify = (bool) ($validated['notify_customer'] ?? false);
 
-        return DB::transaction(function () use ($code, $validated) {
+        return DB::transaction(function () use ($code, $validated, $notify) {
             $booking = Booking::where('code', $code)->lockForUpdate()->firstOrFail();
 
             if (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'], true)) {
@@ -43,9 +46,14 @@ class BookingCancelController extends Controller
 
             AuditLog::record(auth()->id(), 'reserva.cancelar', 'Booking', $booking->id, $old, $booking->fresh()->only(['booking_status', 'notes']));
 
+            // Aviso al cliente por WhatsApp (vía GHL) solo si recepción lo marcó; después de guardar.
+            if ($notify) {
+                DB::afterCommit(fn () => app(GhlReservationNotifier::class)->cancelled($booking->fresh()));
+            }
+
             $paid = $booking->paidAmount();
 
-            return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva cancelada.'.($paid > 0 ? ' Tiene $'.number_format($paid, 0, ',', '.').' pagados: si corresponde devolverlos, usa "Devolver este pago" en Pagos registrados.' : ''));
+            return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva cancelada.'.($notify ? ' Se avisó al cliente por WhatsApp.' : '').($paid > 0 ? ' Tiene $'.number_format($paid, 0, ',', '.').' pagados: si corresponde devolverlos, usa "Devolver este pago" en Pagos registrados.' : ''));
         }, 3);
     }
 }

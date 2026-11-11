@@ -7,12 +7,12 @@ use App\Exceptions\InvalidCouponException;
 use App\Exceptions\PricingException;
 use App\Exceptions\RoomNotAvailableException;
 use App\Models\AuditLog;
-use App\Models\BookingGuest;
-use App\Models\HistoricalGuest;
 use App\Models\Booking;
+use App\Models\BookingGuest;
 use App\Models\Combo;
 use App\Models\Coupon;
 use App\Models\Customer;
+use App\Models\HistoricalGuest;
 use App\Models\OperationalSetting;
 use App\Models\Product;
 use App\Models\RateRulePrice;
@@ -21,18 +21,19 @@ use App\Models\Room;
 use App\Models\RoomCategory;
 use App\Models\Staff;
 use App\Models\UpsellOffer;
+use App\Rules\ValidPhone;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ConsumptionService;
 use App\Services\Booking\RoomBoardService;
+use App\Services\Integrations\GhlReservationNotifier;
 use App\Services\Pricing\CouponValidator;
 use App\Services\Pricing\PriceCalculator;
 use App\Services\Pricing\PromotionResolver;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\ShortStayPricer;
 use App\Services\Pricing\UpsellResolver;
-use App\Rules\ValidPhone;
 use App\Support\Phone;
 use App\Support\Rut;
 use App\Support\TimeFormat;
@@ -433,11 +434,14 @@ class ReservationController extends Controller
             'time_minute' => ['required', 'integer', 'min:0', 'max:59'],
             'duration_minutes' => ['required', 'integer'],
             'guests_count' => ['required', 'integer', 'min:1', 'max:10'],
+            'notify_customer' => ['nullable', 'boolean'],
         ]);
 
         $room = Room::findOrFail($validated['room_id']);
         $time = sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']);
         $startsAt = Carbon::parse($validated['date'].' '.$time);
+        $notifier = app(GhlReservationNotifier::class);
+        $before = $notifier->snapshot($booking);
 
         try {
             $bookingService->reschedule($booking, [
@@ -451,7 +455,17 @@ class ReservationController extends Controller
             return back()->withInput()->withErrors(['booking' => $e->getMessage()]);
         }
 
-        return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva modificada.');
+        // Aviso al cliente por WhatsApp solo si recepción lo marcó y cambió algo que él nota
+        // (Playroom, día/hora o duración); cambiar solo las personas no se avisa.
+        $booking = $booking->fresh();
+        $after = $notifier->snapshot($booking);
+        $notified = false;
+        if ($request->boolean('notify_customer') && $after !== $before) {
+            $notifier->modified($booking, $before);
+            $notified = true;
+        }
+
+        return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva modificada.'.($notified ? ' Se avisó al cliente por WhatsApp.' : ''));
     }
 
     /**

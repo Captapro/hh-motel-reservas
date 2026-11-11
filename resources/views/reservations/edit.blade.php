@@ -170,6 +170,13 @@
             </div>
         </div>
 
+        @if (app(\App\Services\Integrations\GhlReservationNotifier::class)->canNotify($booking))
+            <label style="display:flex; gap:10px; align-items:center; margin:14px 0; font-weight:700; cursor:pointer;">
+                <input type="checkbox" name="notify_customer" value="1" style="width:20px;height:20px;" checked>
+                Avisar al cliente por WhatsApp si cambia el Playroom, la hora o la duración
+            </label>
+        @endif
+
         <button type="submit" class="save">Recalcular y guardar cambios</button>
     </form>
 

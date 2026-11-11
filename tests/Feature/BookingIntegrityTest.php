@@ -346,6 +346,35 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(4000, $log->new_value['diferencia'] ?? null);
     }
 
+    public function test_cancelling_or_rescheduling_warns_the_customer_only_when_reception_ticks_the_box(): void
+    {
+        config(['services.ghl.webhook_cancelada' => 'https://services.leadconnectorhq.com/hooks/cancelada', 'services.ghl.webhook_modificada' => 'https://services.leadconnectorhq.com/hooks/modificada']);
+        Http::fake(['services.leadconnectorhq.com/*' => Http::response(['ok' => true])]);
+        $this->customer->update(['phone_e164' => '+56911112222']);
+        $this->travelTo(Carbon::parse('2026-11-02 09:00'));
+
+        // Modificar sin marcar la casilla: no se avisa; marcándola, sí, con lo de antes y lo de ahora.
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $form = ['room_id' => $this->room->id, 'date' => '2026-11-02', 'time_hour' => 14, 'time_minute' => 0, 'duration_minutes' => 60, 'guests_count' => 2];
+        $this->put(route('reservations.update', $booking->code), $form)->assertSessionHasNoErrors();
+        Http::assertNothingSent();
+        $this->put(route('reservations.update', $booking->code), ['time_hour' => 16, 'notify_customer' => 1] + $form)->assertSessionHas('status');
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/modificada') && $r['codigo'] === $booking->code
+            && str_contains($r['fecha_hora_anterior'], '14:00') && str_contains($r['fecha_ffecha_hora'] ?? $r['fecha_hora'], '16:00'));
+
+        // Cancelar: sin casilla no avisa; con casilla avisa, sin el motivo interno.
+        $this->post(route('bookings.cancel', $booking->code), ['reason' => 'Motivo interno'])->assertRedirect();
+        Http::assertSentCount(1);
+        $other = $this->booking(['starts_at' => Carbon::parse('2026-11-02 20:00')]);
+        $this->post(route('bookings.cancel', $other->code), ['reason' => 'Motivo interno', 'notify_customer' => 1])->assertRedirect();
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/cancelada') && $r['codigo'] === $other->code && ! str_contains(json_encode($r->data()), 'Motivo interno'));
+
+        // Presencial: el cliente está en recepción, no se avisa aunque se marque.
+        $walkIn = $this->booking(['starts_at' => Carbon::parse('2026-11-02 22:00'), 'walk_in' => true]);
+        $this->post(route('bookings.cancel', $walkIn->code), ['notify_customer' => 1])->assertRedirect();
+        Http::assertSentCount(2);
+    }
+
     public function test_split_payment_returns_to_the_form_with_the_rest_before_check_in(): void
     {
         $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
