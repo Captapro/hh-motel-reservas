@@ -143,6 +143,8 @@
                             <td>
                                 @if ($row['pending'])
                                     <span class="pill manual">Pendiente</span>
+                                @elseif ($row['regularized'])
+                                    <span class="pill auto" title="Salida cargada después del hecho: la pieza ya se atendió">Regularizada</span>
                                 @else
                                     <span class="pill auto">Cerrado</span>
                                 @endif

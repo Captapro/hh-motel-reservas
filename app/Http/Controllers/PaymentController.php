@@ -73,6 +73,8 @@ class PaymentController extends Controller
             'external_id' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:255'],
             'after' => ['nullable', 'in:board,checkin,pase'],
+            'overpay' => ['nullable', 'boolean'],
+            'overpay_reason' => ['nullable', 'string', 'max:200'],
             ...$referenceRules,
         ], [
             'amount.max' => 'El monto no puede superar el saldo pendiente ($'.number_format($booking->balanceDue(), 0, ',', '.').').',
@@ -87,6 +89,14 @@ class PaymentController extends Controller
         // queda igual de rastreable, sin depender de que alguien la tipee.
         $externalId = ($validated['external_id'] ?? null) ?: 'REC-'.now()->format('ymdHis').'-'.strtoupper(Str::random(4));
 
+        $overpayReason = null;
+        if ($request->boolean('overpay')) {
+            $overpayReason = trim((string) ($validated['overpay_reason'] ?? ''));
+            if ($overpayReason === '') {
+                return back()->withInput()->with('overpay_offer', true)->withErrors(['overpay_reason' => 'Escribe el motivo del cobro de más (ej. se cobró sin el descuento).']);
+            }
+        }
+
         try {
             $paymentService->register(
                 $booking,
@@ -98,9 +108,10 @@ class PaymentController extends Controller
                 $validated['voucher_number'] ?? null,
                 $validated['receipt_number'] ?? null,
                 $validated['request_token'],
+                $overpayReason,
             );
         } catch (PaymentExceedsBalanceException $e) {
-            return back()->withInput()->withErrors(['amount' => $e->getMessage()]);
+            return back()->withInput()->with('overpay_offer', true)->withErrors(['amount' => $e->getMessage()]);
         }
 
         // Pago dividido (ej. parte débito y parte efectivo): si todavía falta

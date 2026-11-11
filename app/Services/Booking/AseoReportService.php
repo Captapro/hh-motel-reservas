@@ -18,7 +18,7 @@ use Illuminate\Support\Collection;
 class AseoReportService
 {
     /**
-     * @return Collection<int, array{booking: Booking, room: Room, checkout_at: Carbon, ready_at: ?Carbon, pending: bool, cleaned_by: ?string}>
+     * @return Collection<int, array{booking: Booking, room: Room, checkout_at: Carbon, ready_at: ?Carbon, pending: bool, regularized: bool, cleaned_by: ?string}>
      */
     public function rowsBetween(Carbon $start, Carbon $end): Collection
     {
@@ -60,7 +60,10 @@ class AseoReportService
                 'room' => $booking->room,
                 'checkout_at' => $checkoutAt,
                 'ready_at' => $readyLog?->created_at,
-                'pending' => $readyLog === null,
+                // Una salida cargada después del hecho (horas corregidas, venta de planilla) no queda
+                // como pendiente: el cliente ya se fue y la pieza ya se atendió.
+                'regularized' => $readyLog === null && (bool) $booking->checkout_regularized,
+                'pending' => $readyLog === null && ! $booking->checkout_regularized,
                 // Quién hizo el aseo -- va dentro del propio audit log de
                 // "aseo listo" (new_value.cleaned_by), sin tabla aparte.
                 'cleaned_by' => $readyLog?->new_value['cleaned_by'] ?? null,

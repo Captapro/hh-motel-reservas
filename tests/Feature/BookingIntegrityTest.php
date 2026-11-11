@@ -7,12 +7,15 @@ use App\Exceptions\RoomNotAvailableException;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\BookingCancelController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\RoomBoardController;
-use App\Http\Middleware\CaptureAttribution;
 use App\Http\Middleware\ApplyHostView;
+use App\Http\Middleware\CaptureAttribution;
+use App\Models\AttentionRequest;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\BookingGuest;
+use App\Models\CashMovement;
 use App\Models\CoreExtra;
 use App\Models\Coupon;
 use App\Models\CouponProof;
@@ -28,12 +31,13 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\RateRule;
 use App\Models\Room;
-use App\Models\ShiftNote;
 use App\Models\RoomCategory;
+use App\Models\ShiftNote;
 use App\Models\Staff;
 use App\Models\TrackingData;
 use App\Models\UpsellOffer;
 use App\Models\User;
+use App\Services\Booking\AseoReportService;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
@@ -141,6 +145,7 @@ class BookingIntegrityTest extends TestCase
             '2026_08_18_120020_create_tracking_data_table.php',
             '2026_11_03_000000_add_marketing_tracking.php',
             '2026_11_11_140000_add_ghl_sync_failure_to_bookings.php',
+            '2026_11_11_170000_add_checkout_regularized_to_bookings.php',
             '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
         ] as $file) {
             (require database_path('migrations/'.$file))->up();
@@ -316,6 +321,31 @@ class BookingIntegrityTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'recepcion']))->get(route('admin.mercadopago.index'))->assertForbidden();
     }
 
+    public function test_an_overpayment_is_only_recorded_with_a_reason_and_leaves_the_difference_logged(): void
+    {
+        $efectivo = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+        $total = $booking->balanceDue();
+        $pay = fn (array $extra = []) => $this->post(route('payments.store', $booking->code), [
+            'payment_method_id' => $efectivo->id, 'amount' => $total + 4000, 'request_token' => (string) Str::uuid(), 'receipt_number' => 'B9',
+        ] + $extra);
+
+        // Sin marcar nada: se rechaza y se ofrece registrarlo igual.
+        $pay()->assertSessionHasErrors('amount')->assertSessionHas('overpay_offer');
+        $this->assertSame(0, $booking->payments()->count());
+
+        // Marcado pero sin motivo: tampoco.
+        $pay(['overpay' => 1])->assertSessionHasErrors('overpay_reason');
+        $this->assertSame(0, $booking->payments()->count());
+
+        // Con motivo: queda el pago completo y la diferencia en el historial.
+        $pay(['overpay' => 1, 'overpay_reason' => 'Se cobró sin el descuento'])->assertSessionHasNoErrors();
+        $this->assertSame($total + 4000, $booking->fresh()->paidAmount());
+        $this->assertSame('PAGADA', $booking->fresh()->payment_status);
+        $log = AuditLog::where('action', 'pago.cobro_de_mas')->first();
+        $this->assertSame(4000, $log->new_value['diferencia'] ?? null);
+    }
+
     public function test_split_payment_returns_to_the_form_with_the_rest_before_check_in(): void
     {
         $debito = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
@@ -423,8 +453,8 @@ class BookingIntegrityTest extends TestCase
 
         $this->assertSame(0, $this->get(route('cash.show'))->assertOk()->assertSee('Efectivo del mes')->assertSee('noviembre')->viewData('monthCashSales'));
         $this->assertSame(1000, $this->get(route('cash.show', '2026-10-15'))->assertOk()->viewData('monthCashSales'));
-        \App\Models\CashMovement::create(['type' => 'ingreso', 'amount' => 500]);
-        \App\Models\CashMovement::create(['type' => 'egreso', 'amount' => 200]);
+        CashMovement::create(['type' => 'ingreso', 'amount' => 500]);
+        CashMovement::create(['type' => 'egreso', 'amount' => 200]);
         $this->assertSame(300, $this->get(route('cash.show'))->assertSee('Total acumulado del mes')->viewData('monthCashTotal'));
         $this->assertSame(1000, $this->get(route('cash.show', '2026-10-15'))->assertOk()->viewData('monthCashTotal'));
     }
@@ -563,6 +593,12 @@ class BookingIntegrityTest extends TestCase
         $this->assertNotNull($booking->review_requested_at);
         $this->assertSame('activa', $this->room->fresh()->operational_status);
         $this->assertSame(1, AuditLog::where('action', 'reserva.corregir_horas')->count());
+
+        // Salida cargada después del hecho: el aseo no queda pendiente, figura como regularizada.
+        $this->assertTrue((bool) $booking->checkout_regularized);
+        $row = collect(app(AseoReportService::class)->rowsBetween(Carbon::parse('2026-10-05 00:00'), Carbon::parse('2026-10-05 23:59')))->first();
+        $this->assertFalse($row['pending']);
+        $this->assertTrue($row['regularized']);
 
         // Una estadía ya cerrada: se corrige solo la salida, y el contratado no cambia.
         $this->post($url($booking), ['checked_out_at' => '2026-10-05T18:50'] + $times)->assertSessionHasNoErrors();
@@ -2807,7 +2843,6 @@ class BookingIntegrityTest extends TestCase
         $booking = $this->booking();
         $cash = PaymentMethod::firstOrCreate(['code' => 'efectivo'], ['name' => 'Efectivo', 'is_active' => true]);
 
-
         $this->post(route('payments.store', $booking->code), ['payment_method_id' => $cash->id, 'amount' => 1000, 'request_token' => (string) Str::uuid()])
             ->assertSessionHasNoErrors();
 
@@ -2897,7 +2932,7 @@ class BookingIntegrityTest extends TestCase
         $this->actingAs($admin)->get(route('shift_notes.index'))->assertSee('Eliminar');
         $this->delete(route('shift_notes.destroy', $removable))->assertRedirect();
         $this->assertDatabaseMissing('shift_notes', ['id' => $removable->id]);
-        $this->assertStringContainsString('Escrita por error', (string) \App\Models\AuditLog::where('action', 'novedad.eliminada')->sole()->getRawOriginal('old_value'));
+        $this->assertStringContainsString('Escrita por error', (string) AuditLog::where('action', 'novedad.eliminada')->sole()->getRawOriginal('old_value'));
 
         // Soporte en vista de anfitrión ve lo mismo que ella, aunque haya escrito la novedad.
         $this->assertSame([$note->id], ShiftNote::previewAlert()->pluck('id')->all());
@@ -2962,6 +2997,83 @@ class BookingIntegrityTest extends TestCase
         $this->assertNull($booking->payments()->sole()->receipt_number);
     }
 
+    private function pedir(array $data = ['phone' => '+56 9 1111 2222', 'contact_id' => 'c1'])
+    {
+        $this->bienvenidaSchema();
+        config(['services.ghl.inbound_secret' => 'token-ghl', 'services.ghl.private_token' => 'x', 'services.ghl.location_id' => 'loc']);
+
+        return $this->postJson(route('webhooks.ghl.welcome_coupon', ['token' => 'token-ghl']), $data);
+    }
+
+    private function bienvenidaSchema(): void
+    {
+        if (! Schema::hasColumn('coupons', 'origin')) {
+            foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
+                (require database_path('migrations/'.$file))->up();
+            }
+        }
+        if (! Schema::hasColumn('coupons', 'is_public')) {
+            (require database_path('migrations/2026_11_01_030000_add_is_public_to_coupons.php'))->up();
+        }
+        if (! Schema::hasColumn('coupons', 'lead_phone')) {
+            (require database_path('migrations/2026_11_05_120000_add_lead_phone_to_coupons.php'))->up();
+        }
+    }
+
+    public function test_bienvenida_requiere_token(): void
+    {
+        $this->bienvenidaSchema();
+        config(['services.ghl.inbound_secret' => 'token-ghl']);
+        $this->postJson(route('webhooks.ghl.welcome_coupon'), ['phone' => '+56911112222'])->assertStatus(401);
+        $this->assertSame(0, Coupon::where('origin', 'bienvenida')->count());
+    }
+
+    public function test_bienvenida_persona_nueva_recibe_cupon_personal_de_15_por_ciento_y_15_dias(): void
+    {
+        Http::fake(['*' => Http::response(['ok' => true])]);
+
+        $this->pedir()->assertOk()->assertJsonPath('result', 'cupon');
+
+        $coupon = Coupon::where('lead_phone', '+56911112222')->firstOrFail();
+        $this->assertSame('bienvenida', $coupon->origin);
+        $this->assertEquals(15, $coupon->discount_value);
+        $this->assertSame(1, $coupon->max_uses_total);
+        $this->assertFalse((bool) $coupon->is_public);
+        $this->assertNull($coupon->allowed_weekdays);
+        $this->assertSame(now('America/Santiago')->addDays(15)->toDateString(), $coupon->ends_at->toDateString());
+
+        Http::assertSent(fn ($r) => $r->method() === 'PUT' && $r['customFields'][0]['key'] === 'cupon_bienvenida_codigo' && $r['customFields'][0]['field_value'] === $coupon->code);
+        Http::assertSent(fn ($r) => $r->method() === 'POST' && str_contains($r->url(), '/contacts/c1/tags') && $r['tags'] === ['hh_cupon_bienvenida']);
+    }
+
+    public function test_bienvenida_cliente_del_sistema_no_recibe_cupon(): void
+    {
+        Http::fake();
+        Customer::create(['name' => 'Cliente Prueba', 'phone_e164' => '+56911112222', 'document_type' => 'rut', 'rut' => '33333333-3', 'nationality' => 'Chilena']);
+
+        $this->pedir()->assertOk()->assertJsonPath('result', 'cliente_existente');
+
+        $this->assertSame(0, Coupon::where('origin', 'bienvenida')->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_bienvenida_un_solo_cupon_por_telefono(): void
+    {
+        Http::fake(['*' => Http::response(['ok' => true])]);
+
+        $this->pedir()->assertJsonPath('result', 'cupon');
+        $this->pedir()->assertJsonPath('result', 'ya_recibio');
+
+        $this->assertSame(1, Coupon::where('origin', 'bienvenida')->count());
+    }
+
+    public function test_bienvenida_si_ghl_falla_no_queda_cupon_y_se_puede_reintentar(): void
+    {
+        Http::fake(['*' => Http::response(['error' => 'x'], 500)]);
+        $this->pedir()->assertOk()->assertJsonPath('result', 'error');
+        $this->assertSame(0, Coupon::where('origin', 'bienvenida')->count());
+    }
+
     public function test_el_calendario_del_dia_muestra_las_proximas_reservas_en_la_tabla_sin_check_in_anticipado(): void
     {
         $this->travelTo(Carbon::parse('2026-11-02 10:00'));
@@ -2982,7 +3094,7 @@ class BookingIntegrityTest extends TestCase
 
     private function atencionSchema(): void
     {
-        if (! \Illuminate\Support\Facades\Schema::hasTable('attention_requests')) {
+        if (! Schema::hasTable('attention_requests')) {
             (require database_path('migrations/2026_11_05_130000_create_attention_requests_table.php'))->up();
         }
         config(['services.ghl.inbound_secret' => 'token-ghl']);
@@ -2992,7 +3104,7 @@ class BookingIntegrityTest extends TestCase
     {
         $this->atencionSchema();
         $this->postJson(route('webhooks.ghl.attention'), ['phone' => '+56911112222'])->assertStatus(401);
-        $this->assertSame(0, \App\Models\AttentionRequest::count());
+        $this->assertSame(0, AttentionRequest::count());
     }
 
     public function test_atencion_avisa_una_vez_y_queda_hasta_marcarla_atendida(): void
@@ -3002,7 +3114,7 @@ class BookingIntegrityTest extends TestCase
 
         $this->postJson($url, ['phone' => '+56 9 1111 2222', 'full_name' => 'Ana', 'motivo' => 'Reclamo'])->assertOk()->assertJsonPath('result', 'avisado');
         $this->postJson($url, ['phone' => '911112222', 'motivo' => 'Reclamo por cobro'])->assertOk();
-        $this->assertSame(1, \App\Models\AttentionRequest::count());
+        $this->assertSame(1, AttentionRequest::count());
 
         $list = $this->getJson(route('attention.pending'))->assertOk()->assertJsonCount(1);
         $list->assertJsonPath('0.name', 'Ana')->assertJsonPath('0.reason', 'Reclamo por cobro')->assertJsonPath('0.whatsapp', 'https://web.whatsapp.com/send?phone=56911112222');
@@ -3012,12 +3124,12 @@ class BookingIntegrityTest extends TestCase
 
         // Si vuelve a pedir atención después, es un aviso nuevo.
         $this->postJson($url, ['phone' => '+56911112222'])->assertOk();
-        $this->assertSame(2, \App\Models\AttentionRequest::count());
+        $this->assertSame(2, AttentionRequest::count());
     }
 
     public function test_catalogo_whatsapp_pide_informacion_sin_datos_de_reserva(): void
     {
-        $url = urldecode(\App\Http\Controllers\CatalogController::whatsappUrl());
+        $url = urldecode(CatalogController::whatsappUrl());
 
         $this->assertStringContainsString('Quiero más información', $url);
         $this->assertStringNotContainsString('Hora de llegada', $url);
@@ -3027,7 +3139,7 @@ class BookingIntegrityTest extends TestCase
     public function test_el_ultimo_paso_ofrece_transferencia_aunque_haya_pago_en_linea(): void
     {
         config(['services.hh_payment.bank_titular' => 'HH Prueba', 'services.hh_payment.bank_account_number' => '123456']);
-        $this->mock(\App\Services\Payments\MercadoPagoClient::class, fn ($mock) => $mock->shouldReceive('enabled')->andReturnTrue());
+        $this->mock(MercadoPagoClient::class, fn ($mock) => $mock->shouldReceive('enabled')->andReturnTrue());
         $booking = $this->booking(['starts_at' => Carbon::now()->addDay()->startOfWeek()->addWeek()->setTime(12, 0)]);
         $booking->update(['booking_status' => 'PENDIENTE_PAGO', 'expires_at' => now()->addMinutes(20)]);
 

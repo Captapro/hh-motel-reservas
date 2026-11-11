@@ -90,6 +90,7 @@ class RoomBoardController extends Controller
             'cleaningStaff' => $this->cleaningStaffNames(),
             'dailySummary' => $this->dailySummary(),
             'pendingBookings' => $this->pendingBookings(),
+            'unpaidWalkIns' => $this->unpaidWalkIns(),
         ]);
     }
 
@@ -200,6 +201,24 @@ class RoomBoardController extends Controller
 
             return $entry;
         })->sortBy(fn (array $entry) => $entry['aseo_priority']?->timestamp ?? PHP_INT_MAX)->values();
+    }
+
+    /**
+     * Reservas presenciales que llevan más de 30 min sin ningún pago y sin check-in: es lo que pasa
+     * cuando se crea la reserva en el mostrador y el cobro queda sin registrar (el cliente pagó
+     * pero nadie lo anotó, o se fue sin pagar). El tablero lo avisa para que no se pierda.
+     */
+    private function unpaidWalkIns(): Collection
+    {
+        return Booking::with(['room.category', 'customer'])
+            ->where('origin', 'presencial')
+            ->where('booking_status', 'CONFIRMADA')
+            ->where('payment_status', 'NO_PAGADA')
+            ->whereNull('checked_in_at')
+            ->where('created_at', '<=', now()->subMinutes(30))
+            ->where('created_at', '>=', now()->subHours(12))
+            ->orderBy('created_at')
+            ->get();
     }
 
     private function pendingBookings(): Collection

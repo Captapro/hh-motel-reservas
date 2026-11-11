@@ -529,12 +529,21 @@
          de administración (Categorías) -- no es responsabilidad de quien
          está en el tablero prender o apagar disponibilidad. --}}
 
-    @if ($pendingBookings->isNotEmpty())
+    @if ($pendingBookings->isNotEmpty() || $unpaidWalkIns->isNotEmpty())
     <div class="pending-row-wrap">
     <div class="pending-panel">
-        <div class="pending-head"><h2>⚠ Pendientes de gestionar</h2><span class="count">{{ $pendingBookings->count() }}</span></div>
+        <div class="pending-head"><h2>⚠ Pendientes de gestionar</h2><span class="count">{{ $pendingBookings->count() + $unpaidWalkIns->count() }}</span></div>
+        @foreach ($unpaidWalkIns as $booking)
+            <a class="pending-row age-urgent" href="{{ route('payments.create', ['code' => $booking->code, 'after' => 'board']) }}">
+                <span class="pcode">{{ $booking->code }}</span>
+                <span class="pinfo"><strong>{{ $booking->customer->name }}</strong><small>{{ $booking->room->name }} · {{ $booking->room->category->name }} · creada {{ $booking->created_at->timezone('America/Santiago')->diffForHumans() }}</small></span>
+                <span class="page">sin pago</span>
+                <span class="ptags"><span class="ptag unsent">💸 Presencial sin cobro registrado</span></span>
+                <span class="arrow">→</span>
+            </a>
+        @endforeach
         @if ($pendingBookings->isEmpty())
-            <p class="pending-empty">No hay reservas nuevas esperando confirmación de pago.</p>
+            @if ($unpaidWalkIns->isEmpty())<p class="pending-empty">No hay reservas nuevas esperando confirmación de pago.</p>@endif
         @else
             @foreach ($pendingBookings as $booking)
                 @php $ageMinutes = $booking->created_at->diffInMinutes(now()); @endphp

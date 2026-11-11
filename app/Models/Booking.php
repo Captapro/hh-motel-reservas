@@ -24,7 +24,7 @@ use Illuminate\Support\Collection;
     'notes', 'expires_at', 'consumption_offered_at', 'consumption_offered_by',
     'checked_in_at', 'checked_out_at', 'payment_instructions_sent_at',
     'room_checked_at', 'room_checked_by', 'payment_reminder_sent_at', 'abandon_notified_at', 'review_requested_at',
-    'meta_purchase_sent_at', 'ghl_opportunity_id', 'ghl_opportunity_state', 'booked_ends_at',
+    'meta_purchase_sent_at', 'ghl_opportunity_id', 'ghl_opportunity_state', 'booked_ends_at', 'checkout_regularized',
 ])]
 class Booking extends Model
 {

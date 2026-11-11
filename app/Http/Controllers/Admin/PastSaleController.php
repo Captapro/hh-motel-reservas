@@ -114,6 +114,7 @@ class PastSaleController extends Controller
                 'checked_out_at' => $endsAt,
                 // El cliente ya se fue hace rato: no se le pide opinión por WhatsApp.
                 'review_requested_at' => now(),
+                'checkout_regularized' => true,
             ]);
             if (filled($v['companion'] ?? null)) {
                 BookingGuest::create(['booking_id' => $booking->id, 'name' => $v['companion'], 'id_document' => null]);

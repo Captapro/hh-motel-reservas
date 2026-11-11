@@ -163,6 +163,18 @@
             </div>
         </div>
 
+        @if (session('overpay_offer') || old('overpay'))
+            <div class="card" style="border:1px solid #ff7918; margin-top:14px;">
+                <label style="display:flex; gap:10px; align-items:center; font-weight:800;">
+                    <input type="checkbox" name="overpay" value="1" style="width:22px;height:22px;" @checked(old('overpay'))>
+                    El cliente ya pagó este monto: registrarlo aunque supere el saldo
+                </label>
+                <div style="margin-top:8px; font-size:13px;">La diferencia queda anotada en el historial para cuadrar la caja. No se devuelve sola.</div>
+                <label for="overpay-reason" style="margin-top:8px;">Motivo (obligatorio)</label>
+                <input id="overpay-reason" type="text" name="overpay_reason" value="{{ old('overpay_reason') }}" maxlength="200" placeholder="Ej. se cobró sin el descuento de estadía corta">
+            </div>
+        @endif
+
         <div class="pay-actions">
             <button type="submit" class="primary">Registrar pago</button>
             @if ($after === 'board')

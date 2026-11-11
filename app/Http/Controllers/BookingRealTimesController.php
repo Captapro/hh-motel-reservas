@@ -74,6 +74,8 @@ class BookingRealTimesController extends Controller
             'consumption_offered_at' => $booking->consumption_offered_at ?? now(),
             'consumption_offered_by' => $booking->consumption_offered_by ?? auth()->id(),
             'review_requested_at' => $booking->review_requested_at ?? now(),
+            // La salida se cargó después del hecho: no corresponde dejarla como aseo pendiente.
+            'checkout_regularized' => true,
         ]);
         AuditLog::record(auth()->id(), 'reserva.corregir_horas', 'Booking', $booking->id, $old, $booking->fresh()->only($fields));
 

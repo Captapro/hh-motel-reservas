@@ -145,6 +145,7 @@
         .panel .short-alert label { display:flex; gap:10px; align-items:center; margin:10px 0 0; padding:9px 10px; border-radius:8px; background:#fff; color:#21170e !important; font-size:14px; font-weight:800; text-transform:none; letter-spacing:0; cursor:pointer; }
         .short-alert label input { width:22px; height:22px; flex:none; margin:0; accent-color:#ff7918; }
         .short-alert .ss-need { display:block; margin-top:8px; font-size:13px; font-weight:800; }
+        .short-alert .ss-price { display:block; margin-top:6px; font-size:15px; }
         .short-alert.ok { background:#2a1a0c; color:#ffd2ad; border:1px solid #ff7918; animation:none; }
         .short-alert.ok b { color:#fff; }
         @media (prefers-reduced-motion: reduce) { .short-alert { animation:none; } }
@@ -1071,7 +1072,7 @@
 
                 box.className = 'price-box' + (hasDiscount ? ' has-offer' : '');
                 box.innerHTML = rows + note;
-                hhShortAlert(d.short_stay || null, accepted);
+                hhShortAlert(d.short_stay || null, accepted, { full: d.price_original, final: finalPrice });
                 box.dataset.final = finalPrice;
                 hhValidateSchedule();
                 if (window.hhRefreshConsumo) window.hhRefreshConsumo();
@@ -1081,7 +1082,9 @@
 
         // La estadía no alcanza antes del cierre: recepción confirma aquí, en el
         // paso 1, que el cliente acepta salir; sin eso no se abre el paso del cliente.
-        function hhShortAlert(ss, accepted) {
+        function hhShortAlert(ss, accepted, prices) {
+            prices = prices || window.hhShortPrices || null;
+            window.hhShortPrices = prices;
             const el = document.getElementById('short-alert');
             if (!el) return;
             el.hidden = !ss;
@@ -1090,13 +1093,16 @@
             el.innerHTML = '<span class="ss-title">⏱ Estadía corta por cierre</span>'
                 + 'Quedan <b>' + ss.minutes_label + '</b> para el cierre y lo mínimo que se vende es ' + ss.duration_label + '. '
                 + 'Precio con descuento y <b>salida a las ' + ss.closes_at + '</b>.'
+                + (prices && Number(prices.final) < Number(prices.full)
+                    ? '<span class="ss-price">Precio normal <s>$' + Number(prices.full).toLocaleString('es-CL') + '</s> → <b>cobrar $' + Number(prices.final).toLocaleString('es-CL') + '</b> por esta estadía corta</span>'
+                    : (prices ? '<span class="ss-price">Cobrar <b>$' + Number(prices.final).toLocaleString('es-CL') + '</b></span>' : ''))
                 + '<label><input type="checkbox" id="short-stay-accept"' + (accepted ? ' checked' : '') + '> El cliente acepta salir a las ' + ss.closes_at + '</label>'
                 + (accepted ? '' : '<span class="ss-need">👆 Márcalo para seguir con el cliente</span>');
             document.getElementById('short-stay-accept').addEventListener('change', function () {
                 const on = this.checked;
                 document.getElementById('short-stay-flag').value = on ? '1' : '0';
                 document.querySelector('#price-box .short-stay')?.classList.toggle('short-pending', !on);
-                hhShortAlert(ss, on);
+                hhShortAlert(ss, on, prices);
                 hhValidateSchedule();
                 document.querySelector('.form-grid').closest('form').dispatchEvent(new Event('input', { bubbles: true }));
             });

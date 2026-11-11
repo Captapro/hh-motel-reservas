@@ -20,9 +20,9 @@ use Illuminate\Validation\ValidationException;
  */
 class PaymentService
 {
-    public function register(Booking $booking, PaymentMethod $method, int $amount, ?string $externalId, ?string $notes, ?int $registeredBy, ?string $voucherNumber = null, ?string $receiptNumber = null, ?string $requestToken = null): Payment
+    public function register(Booking $booking, PaymentMethod $method, int $amount, ?string $externalId, ?string $notes, ?int $registeredBy, ?string $voucherNumber = null, ?string $receiptNumber = null, ?string $requestToken = null, ?string $overpayReason = null): Payment
     {
-        return DB::transaction(function () use ($booking, $method, $amount, $externalId, $notes, $registeredBy, $voucherNumber, $receiptNumber, $requestToken) {
+        return DB::transaction(function () use ($booking, $method, $amount, $externalId, $notes, $registeredBy, $voucherNumber, $receiptNumber, $requestToken, $overpayReason) {
             // Bloqueo de fila: sin esto, dos pagos enviados casi al mismo
             // tiempo (doble clic, dos pestañas) podrían leer el mismo saldo
             // pendiente y pasar los dos la validación, sumando más de lo que
@@ -42,7 +42,10 @@ class PaymentService
                 }
             }
 
-            if ($amount > $locked->balanceDue()) {
+            // Cobro de más (el cliente pagó con un precio y después cambió): solo con motivo escrito;
+            // la diferencia queda en el historial para conciliar la caja.
+            $overpaid = max(0, $amount - $locked->balanceDue());
+            if ($overpaid > 0 && $overpayReason === null) {
                 throw new PaymentExceedsBalanceException(
                     'El monto ($'.number_format($amount, 0, ',', '.').') es mayor que el saldo pendiente ($'.number_format($locked->balanceDue(), 0, ',', '.').'). Si alguien registró otro pago recién, revisa la reserva e intenta de nuevo.'
                 );
@@ -88,6 +91,11 @@ class PaymentService
             $this->recalculateStatus($booking->fresh());
 
             AuditLog::record($registeredBy, 'pago.registrar', 'Payment', $payment->id, null, $payment->toArray());
+            if ($overpaid > 0) {
+                AuditLog::record($registeredBy, 'pago.cobro_de_mas', 'Payment', $payment->id, null, [
+                    'booking_id' => $booking->id, 'cobrado' => $amount, 'saldo' => $amount - $overpaid, 'diferencia' => $overpaid, 'motivo' => $overpayReason,
+                ]);
+            }
 
             // Aviso a GHL recién cuando la transacción quedó guardada.
             DB::afterCommit(fn () => app(GhlReservationNotifier::class)->paymentRegistered($booking->fresh(), $payment, $statusBefore));
