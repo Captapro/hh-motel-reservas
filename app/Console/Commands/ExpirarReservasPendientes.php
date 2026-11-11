@@ -10,6 +10,7 @@ use App\Services\Integrations\GhlAbandonedBookings;
 use App\Services\Integrations\GhlAdOrigin;
 use App\Services\Integrations\GhlOpportunitySync;
 use App\Services\Integrations\GhlReviewRequests;
+use App\Services\Marketing\MetaConversions;
 use App\Services\Payments\MercadoPagoReconciler;
 use App\Services\Rooms\RoomClosingLog;
 use Illuminate\Console\Command;
@@ -27,9 +28,9 @@ class ExpirarReservasPendientes extends Command
 
     public const ERROR_KEY_PREFIX = 'jobs:reservas-expirar:error:';
 
-    public const STEPS = ['mercado_pago', 'expirar', 'rescate', 'opiniones', 'fotos', 'actividad', 'embudo_ghl', 'origen_anuncio', 'cierre_playrooms'];
+    public const STEPS = ['mercado_pago', 'expirar', 'rescate', 'opiniones', 'fotos', 'actividad', 'embudo_ghl', 'origen_anuncio', 'compras_whatsapp', 'cierre_playrooms'];
 
-    public function handle(GhlAbandonedBookings $abandoned, GhlReviewRequests $reviews, InspectionPhotoStore $photos, CouponProofs $proofs, CustomerActivityTags $activity, MercadoPagoReconciler $mercadoPago, GhlOpportunitySync $opportunities, RoomClosingLog $closing, GhlAdOrigin $adOrigins): int
+    public function handle(GhlAbandonedBookings $abandoned, GhlReviewRequests $reviews, InspectionPhotoStore $photos, CouponProofs $proofs, CustomerActivityTags $activity, MercadoPagoReconciler $mercadoPago, GhlOpportunitySync $opportunities, RoomClosingLog $closing, GhlAdOrigin $adOrigins, MetaConversions $metaConversions): int
     {
         // Cada paso va por separado: si uno falla, los demás igual corren (antes un
         // error al principio dejaba sin pedir las opiniones, sin dejar rastro).
@@ -61,6 +62,10 @@ class ExpirarReservasPendientes extends Command
         // De qué anuncio llegó el cliente de cada reserva (lo lee de GHL por teléfono), cada minuto.
         if (Cache::add('ad-origin-sync', true, 60)) {
             $this->step('origen_anuncio', fn () => $adOrigins->resolvePending());
+        }
+        // Ventas de clientes de anuncios de WhatsApp, a Meta con el id de su clic (si hay cuenta de WhatsApp Business).
+        if (Cache::add('meta-wa-purchases', true, 60)) {
+            $this->step('compras_whatsapp', fn () => $metaConversions->sendPendingMessagingPurchases());
         }
         // Foto de cómo quedaron los Playrooms al cierre del día (03:00), una vez por día.
         $this->step('cierre_playrooms', fn () => $closing->takeDueSnapshot());

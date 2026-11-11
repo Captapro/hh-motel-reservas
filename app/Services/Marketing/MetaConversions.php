@@ -3,6 +3,7 @@
 namespace App\Services\Marketing;
 
 use App\Models\Booking;
+use App\Models\BookingAdOrigin;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -27,6 +28,95 @@ class MetaConversions
     public static function enabled(): bool
     {
         return filled(config('services.meta.pixel_id')) && filled(config('services.meta.capi_token'));
+    }
+
+    public const LAST_WA_RESULT_KEY = 'meta:capi:wa:last';
+
+    /** Meta acepta ventas de WhatsApp hasta 7 días después del hecho. */
+    private const WA_WINDOW_DAYS = 7;
+
+    public static function messagingEnabled(): bool
+    {
+        return self::enabled() && filled(config('services.meta.waba_id'));
+    }
+
+    /**
+     * Avisa a Meta las ventas pagadas de clientes que llegaron por un anuncio de WhatsApp, con el id
+     * de su clic (ctwa_clid) y la cuenta de WhatsApp Business: así Meta sabe qué anuncio terminó en
+     * venta y lo muestra en el Administrador de anuncios. Se manda una vez por reserva. Nunca lanza.
+     *
+     * @return int cuántas ventas se avisaron en esta pasada
+     */
+    public function sendPendingMessagingPurchases(int $limit = 15): int
+    {
+        if (! self::messagingEnabled()) {
+            return 0;
+        }
+
+        $sent = 0;
+        $origins = BookingAdOrigin::query()
+            ->whereNotNull('ctwa_clid')->whereNull('wa_purchase_sent_at')
+            ->whereHas('booking', fn ($q) => $q->where('payment_status', 'PAGADA')
+                ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
+                ->where('created_at', '>=', now()->subDays(self::WA_WINDOW_DAYS)))
+            ->with(['booking.payments', 'booking.addons', 'booking.room.category'])
+            ->orderBy('id')->limit($limit)->get();
+
+        foreach ($origins as $origin) {
+            try {
+                if (Cache::has('meta:wa:retry:'.$origin->id)) {
+                    continue;
+                }
+                $response = Http::timeout(8)->post(self::GRAPH_URL.'/'.config('services.meta.pixel_id').'/events', array_filter([
+                    'data' => [$this->messagingPurchasePayload($origin)],
+                    'test_event_code' => config('services.meta.test_event_code'),
+                    'access_token' => config('services.meta.capi_token'),
+                ]));
+
+                Cache::put(self::LAST_WA_RESULT_KEY, [
+                    'at' => now()->toIso8601String(),
+                    'booking' => $origin->booking->code,
+                    'status' => $response->status(),
+                    'error' => $response->successful() ? null : mb_substr((string) $response->json('error.message', $response->body()), 0, 300),
+                ], now()->addDays(30));
+
+                if ($response->successful()) {
+                    $origin->forceFill(['wa_purchase_sent_at' => now()])->save();
+                    $sent++;
+                } else {
+                    Cache::put('meta:wa:retry:'.$origin->id, true, now()->addMinutes(30));
+                }
+            } catch (Throwable $e) {
+                report($e);
+                Cache::put('meta:wa:retry:'.$origin->id, true, now()->addMinutes(30));
+            }
+        }
+
+        return $sent;
+    }
+
+    /** La venta de WhatsApp: sin datos personales, solo la cuenta de WhatsApp y el id del clic. */
+    public function messagingPurchasePayload(BookingAdOrigin $origin): array
+    {
+        $booking = $origin->booking;
+        $paidAt = $booking->payments->where('status', 'aprobado')->min('created_at') ?? $booking->created_at;
+
+        return [
+            'event_name' => 'Purchase',
+            'event_time' => Carbon::parse($paidAt)->min(now())->timestamp,
+            'event_id' => 'purchase-wa-'.$booking->code,
+            'action_source' => 'business_messaging',
+            'messaging_channel' => 'whatsapp',
+            'user_data' => [
+                'whatsapp_business_account_id' => (string) config('services.meta.waba_id'),
+                'ctwa_clid' => $origin->ctwa_clid,
+            ],
+            'custom_data' => [
+                'currency' => 'CLP',
+                'value' => $booking->price_final + $booking->addonsTotal(),
+                'order_id' => $booking->code,
+            ],
+        ];
     }
 
     public static function purchaseEventId(Booking $booking): string

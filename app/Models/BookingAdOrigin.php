@@ -7,12 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** Anuncio de Meta del que llegó el cliente de una reserva (ver GhlAdOrigin). */
-#[Fillable(['booking_id', 'meta_ad_id', 'meta_ad_name', 'wa_source', 'attempts', 'checked_at', 'contact_found'])]
+#[Fillable(['booking_id', 'meta_ad_id', 'meta_ad_name', 'wa_source', 'attempts', 'checked_at', 'contact_found', 'ctwa_clid', 'wa_purchase_sent_at'])]
 class BookingAdOrigin extends Model
 {
     protected function casts(): array
     {
-        return ['checked_at' => 'datetime', 'contact_found' => 'boolean'];
+        return ['checked_at' => 'datetime', 'contact_found' => 'boolean', 'wa_purchase_sent_at' => 'datetime'];
     }
 
     public function booking(): BelongsTo

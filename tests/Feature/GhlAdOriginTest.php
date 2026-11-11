@@ -42,6 +42,7 @@ class GhlAdOriginTest extends TestCase
             '2026_08_18_120020_create_tracking_data_table.php',
             '2026_11_03_000000_add_marketing_tracking.php',
             '2026_11_11_130000_create_booking_ad_origins_table.php',
+            '2026_11_11_160000_add_ctwa_to_booking_ad_origins.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -192,5 +193,37 @@ class GhlAdOriginTest extends TestCase
         $this->assertSame(2, $rows['Meta · WhatsApp']['ads'][0]['count']);
         $this->assertStringContainsString('120253089036650584', $rows['Meta · WhatsApp']['ads'][0]['label']);
         $this->assertSame(1, $rows['Presencial']['count']);
+    }
+
+    public function test_the_whatsapp_ad_click_id_is_read_from_the_contact_detail(): void
+    {
+        $booking = $this->booking('+56955224224', 'recepcion');
+        Http::fake([
+            'services.leadconnectorhq.com/contacts/c1' => Http::response(['contact' => [
+                'attributionSource' => ['sessionSource' => 'Paid Social', 'medium' => 'whatsapp', 'adId' => '120253089036650584', 'adName' => 'HH Playrooms · Santiago Centro', 'ctwaClid' => 'PRIMER-CLIC'],
+                'lastAttributionSource' => ['sessionSource' => 'Paid Social', 'medium' => 'whatsapp', 'adId' => '120253089036650584', 'ctwaClid' => 'ULTIMO-CLIC'],
+            ]]),
+            'services.leadconnectorhq.com/contacts/*' => Http::response(['contacts' => [[
+                'id' => 'c1', 'phone' => '+56955224224',
+                'attributions' => [['utmSessionSource' => 'Paid Social', 'medium' => 'whatsapp', 'utmAdId' => '120253089036650584', 'adName' => 'HH Playrooms']],
+            ]]]),
+        ]);
+
+        app(GhlAdOrigin::class)->resolvePending();
+
+        $origin = $booking->fresh()->adOrigin;
+        $this->assertSame('ULTIMO-CLIC', $origin->ctwa_clid); // el clic más reciente es el que cuenta para Meta
+        $this->assertSame('120253089036650584', $origin->meta_ad_id);
+        $this->assertSame('HH Playrooms · Santiago Centro', $origin->meta_ad_name);
+    }
+
+    public function test_a_client_who_did_not_come_from_an_ad_costs_no_detail_call(): void
+    {
+        $this->booking('+56966667777', 'recepcion');
+        $this->fakeContact('+56966667777', [['utmSessionSource' => 'Social media', 'medium' => 'whatsapp']]);
+
+        app(GhlAdOrigin::class)->resolvePending();
+
+        Http::assertSentCount(1); // solo la búsqueda por teléfono
     }
 }

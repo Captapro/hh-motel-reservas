@@ -87,6 +87,9 @@ return [
         'pixel_id' => env('META_PIXEL_ID', '1712431846730178'),
         'capi_token' => env('META_CAPI_TOKEN'),
         'test_event_code' => env('META_TEST_EVENT_CODE'),
+        // ID de la cuenta de WhatsApp Business (WABA): con él las ventas se le avisan a Meta ligadas
+        // al clic del anuncio de WhatsApp (API de conversiones para mensajería). Sin él, apagado.
+        'waba_id' => env('META_WABA_ID'),
     ],
 
     // Medición de Google: la Etiqueta de Google (GA4 "G-…" o Google Ads "AW-…") en el

@@ -39,14 +39,11 @@ class GhlAdOrigin
     /**
      * Anuncio de origen según GHL.
      *
-     * @return array{found: bool, ad_id: ?string, ad_name: ?string, source: ?string}
+     * @return array{found: bool, ad_id: ?string, ad_name: ?string, source: ?string, ctwa_clid: ?string}
      */
     public function lookup(string $phoneE164): array
     {
-        $response = Http::withToken($this->token)
-            ->withHeaders(['Version' => '2021-07-28', 'Accept' => 'application/json'])
-            ->baseUrl(self::BASE_URL)
-            ->timeout(8)
+        $response = $this->http()
             ->get('/contacts/', ['locationId' => $this->locationId, 'query' => $phoneE164, 'limit' => 5])
             ->throw();
 
@@ -55,10 +52,54 @@ class GhlAdOrigin
                 continue;
             }
 
-            return ['found' => true] + self::pickAttribution((array) ($contact['attributions'] ?? []));
+            $picked = self::pickAttribution((array) ($contact['attributions'] ?? []));
+            $fromAd = $picked['source'] === 'Paid Social' || $picked['ad_id'] !== null;
+
+            // El id del clic en el anuncio de WhatsApp (ctwaClid) solo viene en la ficha individual del
+            // contacto, no en la lista: se pide únicamente si el cliente llegó por un anuncio.
+            $ctwa = null;
+            if ($fromAd && ! empty($contact['id'])) {
+                $detail = $this->http()->get('/contacts/'.$contact['id'])->throw()->json('contact', []);
+                [$detailPick, $ctwa] = self::pickFromDetail((array) $detail);
+                $picked = [
+                    'ad_id' => $detailPick['ad_id'] ?? $picked['ad_id'],
+                    'ad_name' => $detailPick['ad_name'] ?? $picked['ad_name'],
+                    'source' => $detailPick['source'] ?? $picked['source'],
+                ];
+            }
+
+            return ['found' => true, 'ctwa_clid' => $ctwa] + $picked;
         }
 
-        return ['found' => false, 'ad_id' => null, 'ad_name' => null, 'source' => null];
+        return ['found' => false, 'ad_id' => null, 'ad_name' => null, 'source' => null, 'ctwa_clid' => null];
+    }
+
+    private function http()
+    {
+        return Http::withToken($this->token)
+            ->withHeaders(['Version' => '2021-07-28', 'Accept' => 'application/json'])
+            ->baseUrl(self::BASE_URL)
+            ->timeout(8);
+    }
+
+    /**
+     * De la ficha del contacto: el anuncio (primer contacto) y el id del clic más reciente.
+     *
+     * @return array{0: array{ad_id: ?string, ad_name: ?string, source: ?string}, 1: ?string}
+     */
+    public static function pickFromDetail(array $contact): array
+    {
+        $first = (array) ($contact['attributionSource'] ?? []);
+        $last = (array) ($contact['lastAttributionSource'] ?? []);
+        $clid = $last['ctwaClid'] ?? $first['ctwaClid'] ?? null;
+
+        $pick = [
+            'ad_id' => ! empty($first['adId']) ? mb_substr((string) $first['adId'], 0, 40) : (! empty($last['adId']) ? mb_substr((string) $last['adId'], 0, 40) : null),
+            'ad_name' => ! empty($first['adName']) ? mb_substr((string) $first['adName'], 0, 160) : (! empty($last['adName']) ? mb_substr((string) $last['adName'], 0, 160) : null),
+            'source' => ! empty($first['sessionSource']) ? mb_substr((string) $first['sessionSource'], 0, 40) : null,
+        ];
+
+        return [$pick, $clid ? mb_substr((string) $clid, 0, 600) : null];
     }
 
     /**
@@ -126,6 +167,7 @@ class GhlAdOrigin
                 'meta_ad_id' => $result['ad_id'],
                 'meta_ad_name' => $result['ad_name'],
                 'wa_source' => $result['source'],
+                'ctwa_clid' => $result['ctwa_clid'],
             ])->save();
 
             if ($result['found']) {
