@@ -3,6 +3,7 @@
 namespace App\Services\Pricing;
 
 use App\Exceptions\InvalidCouponException;
+use App\Models\Booking;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\Room;
@@ -16,6 +17,9 @@ use Carbon\Carbon;
  */
 class CouponValidator
 {
+    /** Cupones de bienvenida: solo valen en la primera visita del cliente a HH. */
+    public const FIRST_VISIT_ORIGIN = 'primera_visita';
+
     public function validate(Coupon $coupon, Room $room, Carbon $startsAt, int $durationMinutes, ?Customer $customer, int $priceOriginal, ?int $excludeBookingId = null): int
     {
         if (! $coupon->is_active) {
@@ -25,6 +29,15 @@ class CouponValidator
         // Cupón personal: solo lo usa el cliente al que se le entregó.
         if ($coupon->customer_id && $coupon->customer_id !== $customer?->id) {
             throw new InvalidCouponException('Este cupón es personal y no corresponde a este cliente.');
+        }
+
+        // Bienvenida: quien ya tiene una reserva (que no se canceló ni venció sin pagar) ya nos conoce.
+        if ($coupon->origin === self::FIRST_VISIT_ORIGIN && $customer
+            && Booking::where('customer_id', $customer->id)
+                ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
+                ->when($excludeBookingId, fn ($q) => $q->whereKeyNot($excludeBookingId))
+                ->exists()) {
+            throw new InvalidCouponException('Este cupón es solo para tu primera visita a HH.');
         }
 
         $today = $startsAt->toDateString();
