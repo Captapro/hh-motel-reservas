@@ -105,6 +105,12 @@ return [
         // Dominios que cuentan como un solo recorrido (sitio de la marca + catálogo).
         'linker_domains' => ['hhmotel.cl', 'app.hhmotel.cl'],
         'ads_conversion_label' => env('GOOGLE_ADS_CONVERSION_LABEL'),
+        // Aviso de ventas desde el servidor: una hoja de Google (Apps Script) recibe cada reserva pagada
+        // con su gclid y Google Ads la importa sola. Sin URL y clave no hace nada.
+        'upload_url' => env('GOOGLE_CONVERSIONS_URL'),
+        'upload_token' => env('GOOGLE_CONVERSIONS_TOKEN'),
+        // Nombre exacto de la acción de conversión de tipo importación en Google Ads.
+        'upload_action' => env('GOOGLE_CONVERSIONS_ACTION', 'Reserva pagada (servidor)'),
     ],
 
     'hh_payment' => [

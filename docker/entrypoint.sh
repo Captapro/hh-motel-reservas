@@ -55,6 +55,10 @@ chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public/img-cac
 # Sin BACKUP_DRIVE_URL no hace nada. Los errores van a los logs de Render y, al tercer fallo, a la campanita.
 ( sleep 120; while true; do runuser -u www-data -- php artisan app:respaldo-base --programado >/dev/null 2>>/proc/1/fd/2 || true; sleep 600; done ) &
 
+# Ventas a Google Ads: cada 10 min manda a la hoja de Apps Script las reservas pagadas que llegaron por
+# un anuncio. Sin GOOGLE_CONVERSIONS_URL y GOOGLE_CONVERSIONS_TOKEN no hace nada.
+( sleep 150; while true; do runuser -u www-data -- php artisan app:google-ventas >/dev/null 2>>/proc/1/fd/2 || true; sleep 600; done ) &
+
 # Prepara las fotos reducidas del catálogo en segundo plano, ya con el servidor arriba.
 ( sleep 25; runuser -u www-data -- php artisan app:catalogo-precalentar >/dev/null 2>&1 || true ) &
 
