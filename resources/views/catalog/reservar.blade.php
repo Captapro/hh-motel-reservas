@@ -831,5 +831,8 @@
             if (window.fbq) fbq('track', 'AddPaymentInfo');
         }, { once: true }));
     </script>
+    @unless ($selectedCoupon)
+        @include('catalog._welcome-offer', ['welcomeApplyInPage' => true])
+    @endunless
 </body>
 </html>

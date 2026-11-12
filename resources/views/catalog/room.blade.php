@@ -254,5 +254,6 @@
     <script>
         if (window.fbq) fbq('track', 'ViewContent', {{ Js::from($pixelView) }});
     </script>
+    @include('catalog._welcome-offer', ['welcomeCategory' => $room->room_category_id])
 </body>
 </html>

@@ -468,5 +468,6 @@
             document.querySelector('.deals-nav.next')?.addEventListener('click', () => scrollByCard(1));
         }
     </script>
+    @include('catalog._welcome-offer')
 </body>
 </html>

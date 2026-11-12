@@ -264,5 +264,7 @@
             </script>
         @endif
     @endif
+    {{-- Ya reservó desde este equipo: no mostrarle más la bienvenida (_welcome-offer). --}}
+    <script>try { localStorage.setItem('hh_bienvenida_lista', '1'); } catch (e) {}</script>
 </body>
 </html>
