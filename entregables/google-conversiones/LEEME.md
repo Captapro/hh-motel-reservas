@@ -15,11 +15,13 @@ Flujo: sistema (`app:google-ventas`, cada 10 min) → Apps Script (`Codigo.gs`) 
    Implementar → Nueva implementación → Aplicación web → ejecutar como "yo", acceso "cualquier persona". Copia la URL.
 3. **Render:** variables `GOOGLE_CONVERSIONS_URL` (la URL del paso 2) y `GOOGLE_CONVERSIONS_TOKEN` (la misma clave).
    Opcional: `GOOGLE_CONVERSIONS_ACTION` si el nombre de la conversión no es "Reserva pagada (servidor)".
-4. **Google Ads → Objetivos → Conversiones → Nueva:** tipo **Importar → Otros orígenes de datos o CRM → Seguimiento de
-   clics**, nombre exacto "Reserva pagada (servidor)", categoría Compra, valor distinto por conversión y recuento "Todas"
-   (la hoja ya evita repetir una reserva).
-5. **Google Ads → Objetivos → Cargas → Programaciones → Hoja de Google:** elige la hoja, frecuencia diaria.
-   Google valida el formato con la primera carga.
+4. **Google Ads → Objetivos → Conversiones → Nueva:** categoría Compra, fuente "Conectar la fuente de datos más adelante"
+   (sin conexión), nombre exacto "Reserva pagada (servidor)", principal, valor distinto por conversión, recuento "Todas".
+5. **Google Ads → Herramientas → Administrador de datos → Conectar producto → Google Sheets → Conexión directa**
+   (sin conversiones avanzadas): datos de **Conversiones** → medir conversiones **sin conexión** → acción
+   "Reserva pagada (servidor)". Autoriza con la cuenta dueña de la hoja y elige la hoja y su primera pestaña.
+   Google asigna solo `gclid`, `conversion_time`, `order_id`, `gbraid`, `wbraid`, valor y moneda. Se ejecuta cada día.
+   La pestaña "Ventas" debe ser la PRIMERA de la hoja y los encabezados van en la fila 1 (sin otra línea encima).
 
 ## Nota sobre contar dos veces
 La etiqueta del navegador ("Reserva pagada") y la importación ("Reserva pagada (servidor)") pueden contar la misma
