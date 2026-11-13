@@ -1396,6 +1396,26 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(2, $people->firstWhere('document', Rut::normalize('12.345.678-5'))['visits']);
     }
 
+    public function test_analytics_compares_a_running_period_with_the_same_stretch_before(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-12 23:30', 'America/Santiago'));
+        $method = new \ReflectionMethod(AnalyticsController::class, 'previousRange');
+        $c = new AnalyticsController;
+        $tz = 'America/Santiago';
+
+        // Este mes (1 al 12 de noviembre, en curso) vs 1 al 12 de octubre hasta la misma hora.
+        [$from, $to] = $method->invoke($c, Carbon::parse('2026-11-01', $tz)->startOfDay(), Carbon::parse('2026-11-12', $tz)->endOfDay(), 'this_month');
+        $this->assertSame(['2026-10-01 00:00', '2026-10-12 23:30'], [$from->format('Y-m-d H:i'), $to->format('Y-m-d H:i')]);
+
+        // Hoy (en curso) vs ayer hasta la misma hora, no ayer completo.
+        [$from, $to] = $method->invoke($c, Carbon::parse('2026-11-12', $tz)->startOfDay(), Carbon::parse('2026-11-12', $tz)->endOfDay(), 'today');
+        $this->assertSame(['2026-11-11 00:00', '2026-11-11 23:30'], [$from->format('Y-m-d H:i'), $to->format('Y-m-d H:i')]);
+
+        // Un mes cerrado se compara con el mes anterior completo.
+        [$from, $to] = $method->invoke($c, Carbon::parse('2026-10-01', $tz)->startOfDay(), Carbon::parse('2026-10-31', $tz)->endOfDay(), 'last_month');
+        $this->assertSame(['2026-09-01', '2026-09-30'], [$from->toDateString(), $to->toDateString()]);
+    }
+
     public function test_clients_that_return_lives_inside_analytics_for_soporte_only(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'soporte']));

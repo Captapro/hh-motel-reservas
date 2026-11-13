@@ -41,10 +41,13 @@
         </div>
     </form>
 
+    @if ($planilla)
+        <p class="planilla-note">Del {{ $planilla['from']->format('d/m') }} al {{ $planilla['until']->format('d/m/Y') }} los números salen de la <b>planilla de recepción</b> (antes del sistema): suman en reservas, venta, ticket, días de la semana y mejores días. Lo demás (horas, piezas, canales, pagos, descuentos) solo existe en el sistema.</p>
+    @endif
     <div class="kpis kpis-all">
         @php
             $kpiTips = [
-                'reservas' => 'Estadías del período con su pago completo. No cuenta canceladas, vencidas ni pendientes de pago. El % compara con el período anterior de igual largo.',
+                'reservas' => 'Estadías del período con su pago completo. No cuenta canceladas, vencidas ni pendientes de pago. El % compara con el período anterior a la misma altura: si el rango sigue en curso, hasta la misma hora (hoy vs ayer a esta hora; este mes vs los mismos días del mes pasado).',
                 'venta' => 'Suma, por cada estadía, del precio final (ya con descuentos) más los extras pagados.',
                 'ticket' => 'Venta total ÷ Reservas: lo que paga en promedio cada estadía, con extras incluidos.',
                 'descuentos' => 'Suma de los descuentos aplicados a las reservas del período (cupones, ofertas, etc.).',
@@ -57,9 +60,9 @@
                 <div class="k-value">{{ $kp['is_money'] ? $money($kp['value']) : number_format($kp['value'], 0, ',', '.') }}</div>
                 <div class="k-delta {{ $kp['delta'] === null ? 'flat' : ($kp['delta'] > 0 ? 'up' : ($kp['delta'] < 0 ? 'down' : 'flat')) }}">
                     @if ($kp['delta'] === null) sin período previo
-                    @elseif ($kp['delta'] > 0) ▲ {{ $kp['delta'] }}% vs período anterior
-                    @elseif ($kp['delta'] < 0) ▼ {{ abs($kp['delta']) }}% vs período anterior
-                    @else = vs período anterior
+                    @elseif ($kp['delta'] > 0) ▲ {{ $kp['delta'] }}% vs {{ $prevLabel }}
+                    @elseif ($kp['delta'] < 0) ▼ {{ abs($kp['delta']) }}% vs {{ $prevLabel }}
+                    @else = vs {{ $prevLabel }}
                     @endif
                 </div>
             </div>
@@ -255,21 +258,26 @@
                 $mPlotW = $mW - $mPadL - $mPadR; $mPlotH = $mH - $mPadT - $mPadB;
                 $monthlyArr = $monthly['rows']->values();
                 $mCount = max(1, $monthlyArr->count() - 1);
-                $mAxisMax = max(1, $monthly['max'] * 1.15);
+                // Eje con cifras redondas ($5 M, $10 M, $15 M) en vez de tercios del máximo.
+                $mRaw = max(1, $monthly['max']) / 3;
+                $mMag = 10 ** floor(log10($mRaw));
+                $mStep = collect([1, 2, 2.5, 5, 10])->map(fn ($k) => $k * $mMag)->first(fn ($s) => $s >= $mRaw);
+                $mAxisMax = $mStep * max(1, (int) ceil(max(1, $monthly['max']) * 1.05 / $mStep));
+                $mShort = fn ($n) => $n >= 1000000 ? '$'.rtrim(rtrim(number_format($n / 1000000, 1, ',', '.'), '0'), ',').' M' : ($n >= 1000 ? '$'.number_format($n / 1000, 0, ',', '.').' mil' : '$'.number_format($n, 0, ',', '.'));
                 $mX = fn ($i) => $mPadL + ($i / $mCount) * $mPlotW;
                 $mY = fn ($v) => $mPadT + $mPlotH - ($v / $mAxisMax) * $mPlotH;
                 $mColWidth = $mPlotW / max(1, $monthlyArr->count());
                 $mPoints = $monthlyArr->map(fn ($row, $i) => ['x' => $mX($i), 'y' => $mY($row['value']), 'row' => $row]);
                 $mLinePath = $mPoints->map(fn ($p, $i) => ($i === 0 ? 'M' : 'L').round($p['x'], 1).','.round($p['y'], 1))->implode(' ');
                 $mAreaPath = $mLinePath.' L'.round($mPoints->last()['x'], 1).','.($mPadT + $mPlotH).' L'.round($mPoints->first()['x'], 1).','.($mPadT + $mPlotH).' Z';
-                $mTicks = collect([1, 0.66, 0.33, 0])->map(fn ($f) => ['v' => $mAxisMax * $f, 'y' => $mPadT + $mPlotH - $f * $mPlotH]);
+                $mTicks = collect(range(0, (int) round($mAxisMax / $mStep)))->map(fn ($k) => ['v' => $k * $mStep, 'y' => $mPadT + $mPlotH - ($k * $mStep / $mAxisMax) * $mPlotH]);
             @endphp
             <div class="svg-chart-wrap">
                 <svg viewBox="0 0 {{ $mW }} {{ $mH }}" preserveAspectRatio="none" role="img" aria-label="Evolución mensual de {{ $metricLabel }}">
                     <g class="chart-grid">
                         @foreach ($mTicks as $tick)
                             <line x1="{{ $mPadL }}" y1="{{ $tick['y'] }}" x2="{{ $mW - $mPadR }}" y2="{{ $tick['y'] }}" />
-                            <text class="chart-axis-label" x="{{ $mPadL - 6 }}" y="{{ $tick['y'] + 3 }}" text-anchor="end">{{ $metricVal((int) $tick['v']) }}</text>
+                            <text class="chart-axis-label" x="{{ $mPadL - 6 }}" y="{{ $tick['y'] + 3 }}" text-anchor="end">{{ $mShort((int) $tick['v']) }}</text>
                         @endforeach
                     </g>
                     <path class="chart-area" d="{{ $mAreaPath }}" fill="#ff7918"></path>

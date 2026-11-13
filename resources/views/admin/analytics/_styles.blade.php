@@ -151,6 +151,7 @@
         .rank-more summary { font-size:12px; color:#c2410c; cursor:pointer; padding:6px 0; }
         .wd-table tr > :nth-child(1) { width:auto; } .wd-table tr > :nth-child(2) { width:90px; } .wd-table tr > :nth-child(3) { width:90px; }
         .rank-table td.n .sub { display:block; font-size:10.5px; color:#9ca3af; }
+        .planilla-note { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:8px; padding:8px 12px; font-size:12.5px; margin:0 0 14px; }
         .live-note { font-size:12px; color:#15803d; white-space:nowrap; }
         .kpi .k-label { color:#6b7280; }
         .kpi .k-value { color:#111827; }

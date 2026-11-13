@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\HistoricalSale;
 use App\Models\PaymentMethod;
 use App\Models\RoomCategory;
 use App\Services\Analyst\HistoricalDataService;
@@ -31,9 +32,7 @@ class AnalyticsController extends Controller
         $metric = 'revenue';
         $categoryId = (int) $request->query('category', 0) ?: null;
 
-        $spanDays = max(1, (int) ceil($start->diffInDays($end)) + 1);
-        $prevStart = $start->copy()->subDays($spanDays);
-        $prevEnd = $start->copy()->subSecond();
+        [$prevStart, $prevEnd] = $this->previousRange($start, $end, $preset);
 
         $all = Booking::with(['room.category', 'addons.product', 'addons.combo', 'payments.paymentMethod', 'adOrigin', 'trackingData'])
             ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
@@ -50,7 +49,26 @@ class AnalyticsController extends Controller
 
         $weekdayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
+        // Fechas anteriores al sistema: las tarjetas y los días salen de la planilla de
+        // recepción (antes «Mes pasado» daba todo en $0, 12-nov). Sin filtro de categoría,
+        // porque la planilla no trae las categorías de hoy.
+        $planCur = $categoryId ? null : $this->planilla($start, $end);
+        $planPrev = $categoryId ? null : $this->planilla($prevStart, $prevEnd);
+
+        $byWeekday = $this->overlay($current, $previous, fn (Booking $b) => $weekdayNames[$b->starts_at->timezone('America/Santiago')->dayOfWeekIso - 1], $val, $weekdayNames)
+            ->map(function (array $e) use ($planCur, $planPrev, $weekdayNames) {
+                $add = fn (?array $plan) => $plan ? (int) $plan['days']->filter(fn ($d) => $weekdayNames[$d['date']->dayOfWeekIso - 1] === $e['label'])->sum('total') : 0;
+
+                return ['value' => $e['value'] + $add($planCur), 'prev' => $e['prev'] + $add($planPrev)] + $e;
+            });
+
+        $systemDays = $current->groupBy(fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->toDateString())
+            ->map(fn ($g, $k) => ['date' => Carbon::parse($k), 'value' => $sum($g), 'count' => $g->count()]);
+        $planDays = $planCur ? $planCur['days']->mapWithKeys(fn ($d) => [$d['date']->toDateString() => ['date' => $d['date'], 'value' => $d['total'], 'count' => $d['stays']]]) : collect();
+
         return view('admin.analytics.index', array_merge([
+            'planilla' => $planCur,
+            'prevLabel' => $prevStart->format('d/m').($prevStart->isSameDay($prevEnd) ? '' : '–'.$prevEnd->format('d/m')).($end->isFuture() ? ' hasta las '.$prevEnd->format('H:i') : ''),
             'preset' => $preset,
             'from' => $start->toDateString(),
             'to' => $end->toDateString(),
@@ -60,22 +78,20 @@ class AnalyticsController extends Controller
             'categories' => RoomCategory::orderBy('display_order')->get(),
             'rangeLabel' => $this->rangeLabel($start, $end),
 
-            'kpis' => $this->kpis($current, $previous, $metric),
+            'kpis' => $this->withPlanilla($this->kpis($current, $previous, $metric), $current, $previous, $planCur, $planPrev),
 
             'byCategory' => $this->byCategory($current, $previous),
             'byRoom' => $this->rank($current, fn (Booking $b) => $b->room->name, $val, fn (Booking $b) => $b->room->category->name),
-            'byWeekday' => $this->overlay($current, $previous, fn (Booking $b) => $weekdayNames[$b->starts_at->timezone('America/Santiago')->dayOfWeekIso - 1], $val, $weekdayNames),
+            'byWeekday' => $byWeekday,
             'weekdayDates' => $this->weekdayDates($start, $end, $weekdayNames),
             'byHour' => $this->buckets($current, fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->hour, $val, range(0, 23)),
-            'topDays' => $current->groupBy(fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->toDateString())
-                ->map(fn ($g, $k) => ['date' => Carbon::parse($k), 'value' => $sum($g), 'count' => $g->count()])
-                ->sortByDesc('value')->take(8)->values(),
+            'topDays' => $planDays->union($systemDays)->sortByDesc('value')->take(8)->values(),
 
             'byOrigin' => $this->byOrigin($current, $val),
             'byChannel' => $this->byChannel($current, $val),
             'monthly' => $this->monthlyComparison($metric, $categoryId),
             'projection' => $this->monthProjection($categoryId),
-            'operations' => $this->operations($current) + $this->pending($start, $end, $categoryId),
+            'operations' => $this->withPlanillaOperations($this->operations($current), $planCur) + $this->pending($start, $end, $categoryId),
             'refreshedAt' => now('America/Santiago'),
             'isLive' => $end->isFuture() || $end->isToday(),
             'paymentMethods' => $this->paymentMethods($current),
@@ -174,6 +190,40 @@ class AnalyticsController extends Controller
             // Por defecto, el mes en curso hasta hoy (si es día 8, los 8 primeros días del mes).
             default => [$now->copy()->startOfMonth(), $now->copy()->endOfDay(), 'this_month'],
         };
+    }
+
+    /**
+     * Con qué se compara. Si el rango sigue en curso (incluye hoy), el anterior se corta a la
+     * misma altura: hoy hasta esta hora vs ayer hasta la misma hora, y «Este mes» del 1 al 12
+     * vs del 1 al 12 del mes pasado. Antes se comparaba un tramo a medias con uno completo
+     * y siempre salía en rojo (12-nov).
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function previousRange(Carbon $start, Carbon $end, string $preset): array
+    {
+        $now = now('America/Santiago');
+        $live = $end->gt($now);
+
+        if ($preset === 'this_month') {
+            $prevStart = $start->copy()->subMonthNoOverflow()->startOfMonth();
+            $prevEnd = $prevStart->copy()->addSeconds((int) $start->diffInSeconds($live ? $now : $end));
+
+            return [$prevStart, $prevEnd->min($prevStart->copy()->endOfMonth())];
+        }
+        $wholeMonth = $start->isSameDay($start->copy()->startOfMonth()) && $end->isSameDay($start->copy()->endOfMonth());
+        if ($preset === 'last_month' || ($wholeMonth && ! $live)) {
+            $prevStart = $start->copy()->subMonthNoOverflow()->startOfMonth();
+
+            return [$prevStart, $prevStart->copy()->endOfMonth()];
+        }
+
+        // Días calendario del rango («Hoy» = 1; antes redondeaba a 2 y comparaba con anteayer).
+        $spanDays = max(1, (int) round($start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay())) + 1);
+        $prevStart = $start->copy()->subDays($spanDays);
+        $prevEnd = $live ? $prevStart->copy()->addSeconds((int) $start->diffInSeconds($now)) : $start->copy()->subSecond();
+
+        return [$prevStart, $prevEnd];
     }
 
     private function inRange(Booking $b, Carbon $start, Carbon $end): bool
@@ -337,8 +387,11 @@ class AnalyticsController extends Controller
             $count = $rows->count();
             $source = 'sistema';
             $old = $planilla->get($month->format('Y-m'));
-            if ($count === 0 && $old) {
-                [$value, $count, $source] = [$metric === 'revenue' ? (int) $old['total'] : (int) $old['rooms'], (int) $old['rooms'], 'planilla'];
+            if ($old) {
+                // Igual que las tarjetas: planilla y sistema se suman (en producción no se pisan).
+                $value += $metric === 'revenue' ? (int) $old['total'] : (int) $old['rooms'];
+                $source = $count === 0 ? 'planilla' : 'planilla + sistema';
+                $count += (int) $old['rooms'];
             }
             // Los meses vacíos del comienzo (antes de cualquier dato) no se muestran.
             if ($monthly->isEmpty() && $count === 0 && $i > 0) {
@@ -463,6 +516,63 @@ class AnalyticsController extends Controller
             'addons' => (int) $bookings->sum(fn (Booking $b) => $b->paidAddonsAmount()),
             'cancelled' => 0,
         ];
+    }
+
+    /**
+     * Lo de la planilla de recepción dentro del rango (solo fechas cargadas en ella, que son
+     * anteriores al sistema). Null si no hay nada.
+     *
+     * @return ?array{stays: int, total: int, extras: int, from: Carbon, until: Carbon, days: Collection}
+     */
+    private function planilla(Carbon $start, Carbon $end): ?array
+    {
+        $lines = HistoricalSale::query()
+            ->whereBetween('sold_on', [$start->toDateString(), $end->toDateString()])
+            ->get(['sold_on', 'sale_type', 'detail', 'amount_main', 'amount_extras']);
+        if ($lines->isEmpty()) {
+            return null;
+        }
+        $total = fn (Collection $c) => (int) $c->sum(fn (HistoricalSale $l) => $l->total());
+
+        return [
+            'stays' => $lines->where('sale_type', 'ALOJAMIENTO')->count(),
+            'total' => $total($lines),
+            'extras' => $total($lines->filter(fn (HistoricalSale $l) => in_array($l->concept(), ['extras', 'hora_extra', 'persona_adicional', 'servicios'], true))),
+            'from' => Carbon::parse($lines->min('sold_on')),
+            'until' => Carbon::parse($lines->max('sold_on')),
+            'days' => $lines->groupBy(fn (HistoricalSale $l) => $l->sold_on->toDateString())
+                ->map(fn (Collection $g, string $d) => ['date' => Carbon::parse($d, 'America/Santiago'), 'total' => $total($g), 'stays' => $g->where('sale_type', 'ALOJAMIENTO')->count()])
+                ->values(),
+        ];
+    }
+
+    /** Suma la planilla a reservas, venta y ticket (actual y período anterior). */
+    private function withPlanilla(array $kpis, Collection $current, Collection $previous, ?array $planCur, ?array $planPrev): array
+    {
+        if (! $planCur && ! $planPrev) {
+            return $kpis;
+        }
+        $mk = function (int $now, int $prev, bool $money) {
+            return ['value' => $now, 'prev' => $prev, 'delta' => $prev > 0 ? (int) round((($now - $prev) / $prev) * 100) : null, 'is_money' => $money];
+        };
+        $count = [$kpis['reservas']['value'] + ($planCur['stays'] ?? 0), $kpis['reservas']['prev'] + ($planPrev['stays'] ?? 0)];
+        $revenue = [$kpis['venta']['value'] + ($planCur['total'] ?? 0), $kpis['venta']['prev'] + ($planPrev['total'] ?? 0)];
+
+        return [
+            'reservas' => $mk($count[0], $count[1], false),
+            'venta' => $mk($revenue[0], $revenue[1], true),
+            'ticket' => $mk($count[0] ? (int) round($revenue[0] / $count[0]) : 0, $count[1] ? (int) round($revenue[1] / $count[1]) : 0, true),
+            'descuentos' => $kpis['descuentos'],
+        ] + $kpis;
+    }
+
+    private function withPlanillaOperations(array $ops, ?array $plan): array
+    {
+        if (! $plan) {
+            return $ops;
+        }
+
+        return ['revenue' => $ops['revenue'] + $plan['total'], 'collected' => $ops['collected'] + $plan['total'], 'addons' => $ops['addons'] + $plan['extras']] + $ops;
     }
 
     /**
