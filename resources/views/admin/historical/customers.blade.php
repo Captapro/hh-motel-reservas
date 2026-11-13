@@ -5,7 +5,7 @@
     <div class="page-head">
         <div>
             <h1>Clientes que vuelven</h1>
-            <p class="sub">Quiénes repiten según las planillas de recepción cargadas. Solo soporte: aquí se ven nombres y RUT. Se cuenta por <b>RUT válido</b> y solo estadías de <b>alojamiento</b>; no incluye reservas del sistema.</p>
+            <p class="sub">Quiénes repiten según las planillas de recepción y, después de la última planilla, las reservas del sistema (se actualiza solo). Solo soporte: aquí se ven nombres y RUT. Se cuenta por <b>RUT válido</b> (titular o acompañante) y solo estadías de <b>alojamiento</b>; los clientes del sistema sin RUT no aparecen.</p>
         </div>
         <a class="link" href="{{ route('admin.historical.index') }}">← Ventas históricas</a>
     </div>
