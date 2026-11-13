@@ -29,7 +29,7 @@ class CustomerBehaviorController extends Controller
 
     public function index(Request $request): View
     {
-        [$start, $end, $isCustom] = $this->range($request);
+        [$start, $end, $preset] = $this->range($request);
         ['stays' => $stays, 'visits' => $visits, 'cutoff' => $cutoff] = app(UnifiedCustomerData::class)->load();
         $in = fn (array $r) => $r['at']->between($start, $end);
 
@@ -70,7 +70,9 @@ class CustomerBehaviorController extends Controller
         return view('admin.analytics.customers', [
             'from' => $startDay,
             'to' => $endDay,
-            'isCustom' => $isCustom,
+            'preset' => $preset,
+            'isLive' => $end->isToday() || $end->isFuture(),
+            'refreshedAt' => now(self::TZ),
             'rangeLabel' => $start->format('d/m/Y').' – '.$end->format('d/m/Y'),
             'cutoff' => $cutoff,
             'kpis' => [
@@ -252,20 +254,30 @@ class CustomerBehaviorController extends Controller
     }
 
     /** @return array{0: Carbon, 1: Carbon, 2: bool} */
+    /**
+     * Rango del estudio. Por defecto el mes en curso (antes era todo lo cargado desde febrero:
+     * con 3.000 personas, las visitas de cada día no movían nada y parecía congelado, 12-nov).
+     *
+     * @return array{0: Carbon, 1: Carbon, 2: string}
+     */
     private function range(Request $request): array
     {
         if ($request->filled('from') && $request->filled('to')) {
-            return [Carbon::parse($request->query('from'), self::TZ)->startOfDay(), Carbon::parse($request->query('to'), self::TZ)->endOfDay(), true];
+            return [Carbon::parse($request->query('from'), self::TZ)->startOfDay(), Carbon::parse($request->query('to'), self::TZ)->endOfDay(), 'custom'];
         }
         $now = now(self::TZ);
 
-        // Por defecto, todo lo cargado: desde lo más antiguo (planilla histórica o primera reserva) hasta hoy.
-        $oldest = collect([
-            HistoricalSale::min('sold_on'),
-            Booking::whereNotIn('booking_status', self::EXCLUDED)->min('starts_at'),
-        ])->filter()->map(fn ($d) => Carbon::parse($d, self::TZ))->min();
-
-        return [($oldest ?? $now->copy()->subDays(89))->copy()->startOfDay(), $now->copy()->endOfDay(), false];
+        return match ((string) $request->query('preset', 'this_month')) {
+            '30d' => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay(), '30d'],
+            'last_month' => [$now->copy()->subMonthNoOverflow()->startOfMonth(), $now->copy()->subMonthNoOverflow()->endOfMonth(), 'last_month'],
+            '90d' => [$now->copy()->subDays(89)->startOfDay(), $now->copy()->endOfDay(), '90d'],
+            // Todo lo cargado: desde lo más antiguo (planilla histórica o primera reserva) hasta hoy.
+            'all' => [(collect([
+                HistoricalSale::min('sold_on'),
+                Booking::whereNotIn('booking_status', self::EXCLUDED)->min('starts_at'),
+            ])->filter()->map(fn ($d) => Carbon::parse($d, self::TZ))->min() ?? $now->copy()->subDays(89))->copy()->startOfDay(), $now->copy()->endOfDay(), 'all'],
+            default => [$now->copy()->startOfMonth(), $now->copy()->endOfDay(), 'this_month'],
+        };
     }
 
     /** Segmento de cada cliente según las reglas ya configuradas en Clientes. */

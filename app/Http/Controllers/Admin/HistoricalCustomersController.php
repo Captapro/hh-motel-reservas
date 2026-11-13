@@ -20,6 +20,7 @@ class HistoricalCustomersController extends Controller
 
     public function index(Request $request, HistoricalCustomerAnalysis $analysis): View
     {
+        $analysis = $analysis->withSystem(); // planillas + lo que registra el sistema desde entonces
         $loaded = $analysis->loadedMonths();
         if ($loaded === null) {
             return view('admin.historical.customers', ['loaded' => null]);

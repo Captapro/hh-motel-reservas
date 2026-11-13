@@ -17,6 +17,10 @@ class SalesRecordsController extends Controller
     public function index(Request $request, HistoricalDataService $historical): View
     {
         $coverage = $historical->coverage();
+        // Lo que vende el sistema después de la última planilla también cuenta: hasta hoy.
+        if ($coverage !== null && $historical->systemDays(Carbon::parse($coverage['hasta'])->addDay(), now('America/Santiago'))->isNotEmpty()) {
+            $coverage['hasta'] = now('America/Santiago')->toDateString();
+        }
         if ($coverage === null) {
             return view('admin.analytics.records', ['coverage' => null]);
         }
@@ -39,7 +43,7 @@ class SalesRecordsController extends Controller
             'last' => $last,
             'fromMonth' => $fromMonth,
             'toMonth' => $toMonth,
-            'records' => $historical->records(Carbon::parse($fromMonth.'-01')->startOfMonth(), Carbon::parse($toMonth.'-01')->endOfMonth()),
+            'records' => $historical->records(Carbon::parse($fromMonth.'-01')->startOfMonth(), Carbon::parse($toMonth.'-01')->endOfMonth(), true),
             'partialLastMonth' => Carbon::parse($coverage['hasta'])->lt(Carbon::parse($last.'-01')->endOfMonth()->startOfDay()),
             'lastDay' => Carbon::parse($coverage['hasta']),
             'chips' => [

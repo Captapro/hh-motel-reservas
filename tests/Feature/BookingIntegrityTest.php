@@ -46,6 +46,7 @@ use App\Services\Booking\CouponProofs;
 use App\Services\Booking\PaymentService;
 use App\Services\Booking\RoomBoardService;
 use App\Services\Customers\NameSuggestions;
+use App\Services\Historical\HistoricalCustomerAnalysis;
 use App\Services\Historical\HistoricalSalesImporter;
 use App\Services\Integrations\CustomerActivityTags;
 use App\Services\Integrations\GhlAbandonedBookings;
@@ -1254,7 +1255,7 @@ class BookingIntegrityTest extends TestCase
         // Otro día: no se une a la estadía de arriba.
         $row(6, 'EXTRA CORE', 17500, ['detail' => 'GOLOSO', 'sold_on' => '2026-06-13']);
 
-        $page = $this->get(route('admin.analytics.customers'))->assertOk();
+        $page = $this->get(route('admin.analytics.customers', ['preset' => 'all']))->assertOk();
         $this->assertSame(1, $page->viewData('party')->firstWhere('label', '3 o más personas')['count']);
         $added = $page->viewData('added')->pluck('count', 'label');
         $this->assertSame([1, 1, 1], [$added['Persona adicional (goloso)'], $added['Hora extra'], $added['Consumos (bebidas, preservativos…)']]);
@@ -1365,6 +1366,34 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(['Sep. 2026', 'Oct. 2026', 'Nov. 2026'], $rows->pluck('label')->all());
         $this->assertEquals(['value' => 35000, 'count' => 1, 'source' => 'planilla'], array_intersect_key($rows->first(), array_flip(['value', 'count', 'source'])));
         $this->assertSame('sistema', $rows->last()['source']);
+    }
+
+    public function test_records_extras_and_returning_clients_keep_adding_system_days_after_the_planilla(): void
+    {
+        // Planilla hasta el 28-sep; luego una estadía pagada en el sistema el 5-oct (lunes).
+        $saleId = DB::table('historical_sales')->insertGetId(['source' => 'planilla', 'source_row' => 1, 'sold_on' => '2026-09-28', 'sale_type' => 'ALOJAMIENTO', 'amount_main' => 30000, 'amount_extras' => 0]);
+        DB::table('historical_guests')->insert(['historical_sale_id' => $saleId, 'name' => 'Cliente Fiel', 'document' => Rut::normalize('12.345.678-5'), 'document_kind' => 'rut', 'is_holder' => true]);
+        $this->customer->update(['rut' => '12345678-5', 'document_type' => 'rut']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $debit = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        Payment::create(['booking_id' => $booking->id, 'payment_method_id' => $debit->id, 'amount' => (int) $booking->price_final, 'status' => 'aprobado', 'voucher_number' => '1']);
+        $this->travelTo(Carbon::parse('2026-10-06 12:00'));
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+
+        // Récords: el día del sistema aparece junto a los de la planilla.
+        $records = $this->get(route('admin.analytics.records', ['desde' => '2026-09', 'hasta' => '2026-10']))->assertOk()->viewData('records');
+        $this->assertSame(2, $records['days_with_sales']);
+        $this->assertSame(30000 + (int) $booking->price_final, $records['total']);
+
+        // Extras por mes: octubre sale del sistema.
+        $rows = $this->get(route('admin.analytics.extras'))->assertOk()->viewData('rows');
+        $this->assertSame(['2026-09', '2026-10'], $rows->map(fn ($r) => $r['month']->format('Y-m'))->all());
+        $this->assertSame('sistema', $rows->last()['source']);
+
+        // Clientes que vuelven: la persona de la planilla volvió por el sistema.
+        $people = app(HistoricalCustomerAnalysis::class)->withSystem()
+            ->people(Carbon::parse('2026-09-01'), Carbon::parse('2026-10-31'));
+        $this->assertSame(2, $people->firstWhere('document', Rut::normalize('12.345.678-5'))['visits']);
     }
 
     public function test_clients_that_return_lives_inside_analytics_for_soporte_only(): void

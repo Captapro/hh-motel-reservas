@@ -2,6 +2,7 @@
 
 namespace App\Services\Analyst;
 
+use App\Models\Booking;
 use App\Models\HistoricalGuest;
 use App\Models\HistoricalSale;
 use App\Services\Historical\HistoricalCustomerAnalysis;
@@ -37,7 +38,7 @@ class HistoricalDataService
      * La venta del día es la de todas las líneas de la planilla con esa fecha.
      * Solo cifras, sin personas. Devuelve null si no hay ventas en el período.
      */
-    public function records(Carbon $from, Carbon $to): ?array
+    public function records(Carbon $from, Carbon $to, bool $withSystem = false): ?array
     {
         $days = HistoricalSale::query()
             ->whereBetween('sold_on', [$from->toDateString(), $to->toDateString()])
@@ -47,9 +48,11 @@ class HistoricalDataService
                 'date' => Carbon::parse($date),
                 'total' => (int) $g->sum(fn (HistoricalSale $s) => $s->total()),
                 'stays' => $g->where('sale_type', 'ALOJAMIENTO')->count(),
-            ])
-            ->filter(fn (array $d) => $d['total'] > 0)
-            ->values();
+            ]);
+        if ($withSystem) {
+            $days = $days->union($this->systemDays($from, $to));
+        }
+        $days = $days->filter(fn (array $d) => $d['total'] > 0)->sortKeys()->values();
 
         if ($days->isEmpty()) {
             return null;
@@ -74,6 +77,33 @@ class HistoricalDataService
             'lowest' => $days->sortBy('total')->first(),
             'by_weekday' => $byWeekday,
         ];
+    }
+
+    /**
+     * Venta por día del sistema (estadías pagadas completas, con sus extras pagados), solo
+     * después del último día de planilla para no contar dos veces. Así los récords siguen
+     * sumando días nuevos aunque ya no se carguen planillas (12-nov).
+     *
+     * @return Collection<string, array{date: Carbon, total: int, stays: int}>
+     */
+    public function systemDays(Carbon $from, Carbon $to): Collection
+    {
+        $last = HistoricalSale::max('sold_on');
+        $after = $last ? Carbon::parse($last, 'America/Santiago')->endOfDay() : null;
+
+        return Booking::with(['addons', 'payments'])
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
+            ->whereBetween('starts_at', [Carbon::parse($from->toDateString(), 'America/Santiago')->startOfDay(), Carbon::parse($to->toDateString(), 'America/Santiago')->endOfDay()])
+            ->when($after, fn ($q) => $q->where('starts_at', '>', $after))
+            ->where('starts_at', '<=', now())
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale())
+            ->groupBy(fn (Booking $b) => $b->starts_at->copy()->timezone('America/Santiago')->toDateString())
+            ->map(fn (Collection $g, string $date) => [
+                'date' => Carbon::parse($date),
+                'total' => (int) $g->sum(fn (Booking $b) => $b->price_final + $b->paidAddonsAmount()),
+                'stays' => $g->count(),
+            ]);
     }
 
     /**

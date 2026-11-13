@@ -14,7 +14,7 @@
     @if ($coverage === null)
         <p class="sub">Todavía no hay planillas cargadas. Súbelas en Ventas históricas y vuelve aquí.</p>
     @else
-        <p class="sub">Qué días se ha vendido más dentro de las planillas cargadas ({{ $monthName($first) }} a {{ $monthName($last) }}): en total y por día de la semana. La venta del día es todo lo anotado con esa fecha (alojamiento, hora extra, extras y demás). Son ventas de las planillas, anteriores al sistema.</p>
+        <p class="sub">Qué días se ha vendido más dentro de las planillas cargadas ({{ $monthName($first) }} a {{ $monthName($last) }}): en total y por día de la semana. La venta del día es todo lo anotado con esa fecha (alojamiento, hora extra, extras y demás). Hasta la última planilla salen de ella; después, del sistema (estadías pagadas con sus extras), así que se actualiza solo.</p>
 
         <form class="flt" method="GET" action="{{ route('admin.analytics.records') }}">
             <div class="flt-row">
@@ -43,7 +43,7 @@
 
             <h2 class="an-title">Día récord de cada día de la semana</h2>
             <div class="an-grid">
-                <div class="card t-orange span2" tabindex="0" data-tip="Entre todos los lunes (martes, miércoles…) del período, el que más vendió. La venta del día suma todo lo anotado con esa fecha en la planilla. El promedio es la venta media de ese día de la semana.">
+                <div class="card t-orange span2" tabindex="0" data-tip="Entre todos los lunes (martes, miércoles…) del período, el que más vendió. La venta del día suma todo lo anotado con esa fecha (planilla) o las estadías pagadas de ese día (sistema). El promedio es la venta media de ese día de la semana.">
                     <h3>Récord por día de la semana</h3>
                     @foreach ($records['by_weekday'] as $w)
                         @if ($w['record'])

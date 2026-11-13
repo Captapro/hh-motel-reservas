@@ -29,8 +29,11 @@
             <label>Hasta</label>
             <input type="date" name="to" value="{{ $to }}">
             <button class="go" type="submit">Aplicar</button>
-            @if ($isCustom)
-                <a class="chip" href="{{ route('admin.analytics.customers') }}">Volver a todo lo cargado</a>
+            @foreach (['this_month' => 'Este mes', '30d' => '30 días', 'last_month' => 'Mes pasado', '90d' => '90 días', 'all' => 'Todo el historial'] as $p => $pl)
+                <a class="chip {{ $preset === $p ? 'active' : '' }}" href="{{ route('admin.analytics.customers', ['preset' => $p]) }}">{{ $pl }}</a>
+            @endforeach
+            @if ($isLive)
+                <span class="live-note" title="Con un rango que incluye hoy, la página se vuelve a cargar sola cada 2 minutos.">● En vivo · {{ $refreshedAt->format('H:i') }}</span>
             @endif
         </div>
     </form>
@@ -263,4 +266,14 @@
         .chart-table thead td { font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; }
         .wrap .card a.link { color:#c2410c !important; }
     </style>
+    @if ($isLive)
+        <script>
+            // Rango con hoy: recarga sola cada 2 minutos, salvo que se esté escribiendo una fecha o la pestaña esté escondida.
+            setInterval(function () {
+                var el = document.activeElement;
+                if (document.hidden || (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT'))) return;
+                location.reload();
+            }, 120000);
+        </script>
+    @endif
 @endsection

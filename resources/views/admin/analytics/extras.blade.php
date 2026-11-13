@@ -32,7 +32,7 @@
             $firstC = $complete->first();
             $lastC = $complete->last();
         @endphp
-        <p class="sub">Venta de extras mes a mes, según las planillas cargadas, para ver cómo va creciendo. <b>Extras</b> son los consumos (bebidas, preservativos, etc.); <b>extras core</b> son hora extra, persona adicional y otros servicios. Como los meses tienen distinta cantidad de estadías, mira también los <b>extras por estadía</b>: es la cifra más justa para comparar.</p>
+        <p class="sub">Venta de extras mes a mes, para ver cómo va creciendo: las planillas cargadas y, desde el mes siguiente a la última, lo que vende el sistema (se actualiza solo). <b>Extras</b> son los consumos (bebidas, preservativos, etc.); <b>extras core</b> son hora extra, persona adicional y otros servicios. Como los meses tienen distinta cantidad de estadías, mira también los <b>extras por estadía</b>: es la cifra más justa para comparar.</p>
 
         <div class="kpis kpis-all">
             <div class="kpi" tabindex="0" data-tip="El mes con más venta de extras (consumos) entre los cargados."><div class="k-label">Mejor mes en extras</div><div class="k-value">{{ $money($best['extras']) }}</div><div class="k-delta flat">{{ $full($best['month']) }}</div></div>
@@ -84,7 +84,7 @@
                 <tbody>
                 @foreach ($rows as $r)
                     <tr>
-                        <td>{{ $full($r['month']) }}{{ $r['partial'] ? ' (hasta el '.$r['last_day']->format('d/m').')' : '' }}</td>
+                        <td>{{ $full($r['month']) }}{{ $r['partial'] ? ' (hasta el '.$r['last_day']->format('d/m').')' : '' }}@if (($r['source'] ?? '') === 'sistema') <span style="color:#9ca3af; font-size:11px;">· sistema</span>@endif</td>
                         <td class="v">{{ $r['stays'] }}</td>
                         <td class="v">{{ $money($r['extras']) }}</td>
                         <td class="v">{!! $delta($r['change_extras']) !!}</td>
@@ -97,7 +97,7 @@
                 @endforeach
                 </tbody>
             </table>
-            <p class="legend" style="margin-top:8px;">Son ventas de las planillas de recepción (anteriores al sistema). Los pagos fraccionados no se cuentan como extras.</p>
+            <p class="legend" style="margin-top:8px;">Meses de planilla: ventas anotadas por recepción. Meses del sistema: reservas con su pago completo y sus extras pagados. Los pagos fraccionados no se cuentan como extras.</p>
         </div>
 
         @if ($system->isNotEmpty())

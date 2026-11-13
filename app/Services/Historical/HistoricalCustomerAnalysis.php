@@ -3,6 +3,7 @@
 namespace App\Services\Historical;
 
 use App\Models\HistoricalGuest;
+use App\Services\Customers\UnifiedCustomerData;
 use App\Support\Rut;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -14,6 +15,21 @@ use Illuminate\Support\Collection;
  */
 class HistoricalCustomerAnalysis
 {
+    /** Si además suma las visitas registradas en el sistema después de la última planilla. */
+    private bool $withSystem = false;
+
+    /**
+     * Copia que también cuenta las visitas del sistema (por RUT del titular o acompañante),
+     * para que «Clientes que vuelven» se actualice solo después de la última planilla (12-nov).
+     */
+    public function withSystem(): static
+    {
+        $copy = clone $this;
+        $copy->withSystem = true;
+
+        return $copy;
+    }
+
     /** Primer y último mes cargados («YYYY-MM»), o null si no hay planillas. */
     public function loadedMonths(): ?array
     {
@@ -141,6 +157,19 @@ class HistoricalCustomerAnalysis
                     'holder' => $rows->contains(fn ($r) => (bool) $r->is_holder),
                     'amount' => (int) ($first->amount_main + $first->amount_extras),
                 ];
-            })->values();
+            })->values()
+            ->when($this->withSystem && $documents === null, fn (Collection $c) => $c->concat($this->systemVisits()));
+    }
+
+    /** Visitas del sistema con RUT válido, con la misma forma que las de la planilla. */
+    private function systemVisits(): Collection
+    {
+        return collect(app(UnifiedCustomerData::class)->load()['visits'])
+            ->filter(fn (array $v) => ! str_starts_with((string) $v['person'], 'c') && str_starts_with((string) $v['stay'], 'b'))
+            ->map(fn (array $v) => [
+                'doc' => $v['person'], 'name' => $v['name'], 'sale' => $v['stay'],
+                'day' => Carbon::parse($v['at']->toDateString())->startOfDay(),
+                'category' => $v['category'], 'holder' => (bool) $v['holder'], 'amount' => (int) $v['amount'],
+            ])->values();
     }
 }
