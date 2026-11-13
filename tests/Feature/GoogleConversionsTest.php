@@ -121,6 +121,22 @@ class GoogleConversionsTest extends TestCase
         Http::assertSent(fn ($request) => count($request['rows']) === 1 && $request['rows'][0]['gbraid'] === 'IOS-1');
     }
 
+    public function test_each_sale_carries_a_single_click_identifier(): void
+    {
+        $this->booking('HH-AMBOS', ['gclid' => 'CLIC-1', 'gbraid' => 'BR-1', 'wbraid' => 'WB-1']);
+        $this->booking('HH-BRAIDS', ['gbraid' => 'BR-2', 'wbraid' => 'WB-2']);
+        Http::fake(['script.google.com/*' => Http::response(['ok' => true, 'recibidos' => ['HH-AMBOS', 'HH-BRAIDS']])]);
+
+        app(GoogleConversions::class)->sendPending();
+
+        Http::assertSent(function ($request) {
+            [$a, $b] = $request['rows'];
+
+            return $a['gclid'] === 'CLIC-1' && $a['gbraid'] === '' && $a['wbraid'] === ''
+                && $b['gclid'] === '' && $b['gbraid'] === 'BR-2' && $b['wbraid'] === '';
+        });
+    }
+
     public function test_a_rejected_upload_leaves_the_sale_pending_and_reports_the_reason(): void
     {
         $booking = $this->booking('HH-G2');

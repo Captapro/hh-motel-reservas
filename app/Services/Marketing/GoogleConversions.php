@@ -93,10 +93,16 @@ class GoogleConversions
         $tracking = $booking->trackingData;
         $paidAt = $booking->payments->where('status', 'aprobado')->min('created_at') ?? $booking->created_at;
 
+        // Google acepta UN solo identificador por venta: con dos (gclid + gbraid, que en
+        // celulares llegan juntos) rechaza la fila y la venta no cuenta (12-nov).
+        $gclid = (string) $tracking->gclid;
+        $gbraid = $gclid === '' ? (string) $tracking->gbraid : '';
+        $wbraid = $gclid === '' && $gbraid === '' ? (string) $tracking->wbraid : '';
+
         return [
-            'gclid' => (string) $tracking->gclid,
-            'gbraid' => (string) $tracking->gbraid,
-            'wbraid' => (string) $tracking->wbraid,
+            'gclid' => $gclid,
+            'gbraid' => $gbraid,
+            'wbraid' => $wbraid,
             'conversion_name' => (string) config('services.google.upload_action'),
             // Hora de Chile con su desfase, como la pide Google: 2026-11-11 15:45:00-03:00
             'conversion_time' => Carbon::parse($paidAt)->min(now())->setTimezone('America/Santiago')->format('Y-m-d H:i:sP'),
