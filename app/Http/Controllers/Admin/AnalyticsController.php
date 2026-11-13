@@ -73,7 +73,9 @@ class AnalyticsController extends Controller
             'byChannel' => $this->byChannel($current, $val),
             'monthly' => $this->monthlyComparison($metric, $categoryId),
             'projection' => $this->monthProjection($categoryId),
-            'operations' => $this->operations($current),
+            'operations' => $this->operations($current) + $this->pending($start, $end, $categoryId),
+            'refreshedAt' => now('America/Santiago'),
+            'isLive' => $end->isFuture() || $end->isToday(),
             'paymentMethods' => $this->paymentMethods($current),
             'bookingStatuses' => $current->groupBy('booking_status')->map->count()->sortDesc(),
             'segments' => $this->segments(),
@@ -417,10 +419,30 @@ class AnalyticsController extends Controller
         return [
             'revenue' => $revenue,
             'collected' => $collected,
-            'balance' => max(0, $revenue - $collected),
             'addons' => (int) $bookings->sum(fn (Booking $b) => $b->paidAddonsAmount()),
             'cancelled' => 0,
         ];
+    }
+
+    /**
+     * Lo que falta por cobrar: estadías del rango (no canceladas, vencidas ni no-show) cuyo
+     * precio más consumos supera lo pagado. Antes se calculaba solo sobre las ya pagadas
+     * completas, así que siempre daba $0 (12-nov).
+     *
+     * @return array{balance: int, balance_count: int}
+     */
+    private function pending(Carbon $start, Carbon $end, ?int $categoryId): array
+    {
+        $owing = Booking::with(['payments', 'addons'])
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
+            ->when($categoryId, fn ($q) => $q->whereHas('room', fn ($r) => $r->where('room_category_id', $categoryId)))
+            ->whereBetween('starts_at', [$start->copy(), $end->copy()])
+            ->get()
+            ->map(fn (Booking $b) => max(0, $b->price_final + (int) $b->addons->sum('amount')
+                - (int) $b->payments->where('status', 'aprobado')->sum('amount')))
+            ->filter(fn (int $due) => $due > 0);
+
+        return ['balance' => (int) $owing->sum(), 'balance_count' => $owing->count()];
     }
 
     private function paymentMethods(Collection $bookings): Collection

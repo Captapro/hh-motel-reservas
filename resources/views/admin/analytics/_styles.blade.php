@@ -134,6 +134,8 @@
         .flt .chip { background:#fff; border:1px solid #d1d5db; color:#374151; }
         .export-btn { background:#fff; border:1px solid #ff7918; color:#c2410c; }
         .export-btn:hover { background:#fff7ed; border-color:#ff7918; color:#9a3412; }
+        .flt .chip.active { border-color:#ff7918; color:#c2410c; font-weight:600; }
+        .live-note { font-size:12px; color:#15803d; white-space:nowrap; }
         .kpi .k-label { color:#6b7280; }
         .kpi .k-value { color:#111827; }
         .k-delta.up, .m-delta.up { color:#2563eb; } .k-delta.down, .m-delta.down { color:#dc2626; } .k-delta.flat, .m-delta.flat { color:#6b7280; }

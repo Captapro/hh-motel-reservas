@@ -21,8 +21,11 @@
             <input type="date" name="to" value="{{ $to }}">
             <input type="hidden" name="category" value="{{ $categoryId }}">
             <button class="go" type="submit">Aplicar</button>
-            @if ($preset === 'custom')
-                <a class="chip" href="{{ route('admin.analytics.index', ['category' => $categoryId]) }}">Volver al mes actual</a>
+            @foreach (['today' => 'Hoy', '7d' => '7 días', 'this_month' => 'Este mes', 'last_month' => 'Mes pasado', '90d' => '90 días'] as $p => $pl)
+                <a class="chip {{ $preset === $p ? 'active' : '' }}" href="{{ route('admin.analytics.index', ['preset' => $p, 'category' => $categoryId]) }}">{{ $pl }}</a>
+            @endforeach
+            @if ($isLive)
+                <span class="live-note" title="Con un rango que incluye hoy, la página se vuelve a cargar sola cada minuto.">● En vivo · {{ $refreshedAt->format('H:i') }}</span>
             @endif
 
             <span style="flex:1"></span>
@@ -62,7 +65,7 @@
             </div>
         @endforeach
         @foreach (['collected' => 'Cobrado', 'balance' => 'Saldo pendiente', 'addons' => 'Venta de extras'] as $key => $label)
-            <div class="kpi" tabindex="0" data-tip="{{ ['collected' => 'Pagos aprobados que se recibieron por las estadías del período (efectivo, tarjeta, transferencia…).', 'balance' => 'Venta total − Cobrado (nunca menos de 0): lo que falta por pagar de esas estadías.', 'addons' => 'Extras pagados (consumos y upsells) de las estadías del período; ya van dentro de la Venta total.'][$key] }}"><div class="k-label">{{ $label }}</div><div class="k-value">{{ $money($operations[$key]) }}</div><div class="k-delta flat">Periodo seleccionado</div></div>
+            <div class="kpi" tabindex="0" data-tip="{{ ['collected' => 'Pagos aprobados que se recibieron por las estadías del período (efectivo, tarjeta, transferencia…).', 'balance' => 'Lo que falta por cobrar de las estadías del período que todavía no están pagadas completas (habitación + consumos − pagos). No cuenta canceladas, vencidas ni no-show. Estas reservas no suman a la venta hasta que se paguen.', 'addons' => 'Extras pagados (consumos y upsells) de las estadías del período; ya van dentro de la Venta total.'][$key] }}"><div class="k-label">{{ $label }}</div><div class="k-value">{{ $money($operations[$key]) }}</div><div class="k-delta flat">@if ($key === 'balance'){{ $operations['balance_count'] ? $operations['balance_count'].' '.($operations['balance_count'] === 1 ? 'reserva' : 'reservas').' con saldo' : 'Sin saldos' }}@else Periodo seleccionado @endif</div></div>
         @endforeach
         <div class="kpi" tabindex="0" data-tip="Clientes que hoy clasifican como «Frecuente» según las reglas de Clientes (visitas mínimas dentro de su ventana de análisis). No depende del rango elegido."><div class="k-label">Clientes por recurrencia</div><div class="k-value">{{ $segments['frecuente'] }}</div><div class="k-delta flat">Alta recurrencia</div></div>
     </div>
@@ -378,5 +381,15 @@
                 hit.addEventListener('blur', hide);
             });
         });
+
+        @if ($isLive)
+        // Si el rango incluye hoy, recarga sola cada minuto para mostrar las ventas nuevas.
+        // Espera si la persona está escribiendo una fecha o la pestaña está escondida.
+        setInterval(function () {
+            var el = document.activeElement;
+            if (document.hidden || (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT'))) return;
+            location.reload();
+        }, 60000);
+        @endif
     </script>
 @endsection

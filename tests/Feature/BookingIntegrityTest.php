@@ -1335,6 +1335,21 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame($loyal->id, $page->viewData('risk')->first()['customer']->id);
     }
 
+    public function test_analytics_pending_balance_counts_unpaid_stays_in_the_range(): void
+    {
+        $owing = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]); // fuera del rango
+        $cancelled = $this->booking(['starts_at' => Carbon::parse('2026-10-05 15:00')]);
+        $cancelled->update(['booking_status' => 'CANCELADA']);
+
+        // Antes salía siempre $0: el saldo se calculaba solo con las reservas ya pagadas completas.
+        $pending = new \ReflectionMethod(AnalyticsController::class, 'pending');
+        $result = $pending->invoke(new AnalyticsController,
+            Carbon::parse('2026-10-01', 'America/Santiago')->startOfDay(), Carbon::parse('2026-10-10', 'America/Santiago')->endOfDay(), null);
+
+        $this->assertSame(['balance' => (int) $owing->price_final, 'balance_count' => 1], $result);
+    }
+
     public function test_clients_that_return_lives_inside_analytics_for_soporte_only(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'soporte']));
