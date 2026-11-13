@@ -154,6 +154,7 @@
         .planilla-note { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:8px; padding:8px 12px; font-size:12.5px; margin:0 0 14px; }
         .fixed-badge { display:inline-block; vertical-align:middle; margin-left:6px; padding:1px 7px; border-radius:999px; background:#f3f4f6; border:1px solid #e5e7eb; color:#6b7280; font-size:10px; font-weight:600; letter-spacing:0; text-transform:none; font-family:inherit; white-space:nowrap; }
         .range-help { font-size:12px; color:#6b7280; margin:-8px 0 14px; }
+        .ch-table tr > :nth-child(1) { width:auto; } .ch-table tr > :nth-child(2) { width:70px; } .ch-table tr > :nth-child(3) { width:100px; } .ch-table tr > :nth-child(4) { width:90px; } .ch-table tr > :nth-child(5) { width:70px; } .ch-table tr > :nth-child(6) { width:150px; }
         .live-note { font-size:12px; color:#15803d; white-space:nowrap; }
         .kpi .k-label { color:#6b7280; }
         .kpi .k-value { color:#111827; }

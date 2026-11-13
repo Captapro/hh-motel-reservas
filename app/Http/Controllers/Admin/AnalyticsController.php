@@ -87,8 +87,6 @@ class AnalyticsController extends Controller
             'byHour' => $this->buckets($current, fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->hour, $val, range(0, 23)),
             'topDays' => $planDays->union($systemDays)->sortByDesc('value')->take(8)->values(),
 
-            'byOrigin' => $this->byOrigin($current, $val),
-            'byChannel' => $this->byChannel($current, $val),
             'monthly' => $this->monthlyComparison($metric, $categoryId),
             'projection' => $this->monthProjection($categoryId),
             'operations' => $this->withPlanillaOperations($this->operations($current), $planCur) + $this->pending($start, $end, $categoryId),
@@ -102,6 +100,53 @@ class AnalyticsController extends Controller
                 ->groupBy(fn ($a) => trim((string) preg_replace('/^\s*\d+\s*x\s+/iu', '', (string) $a->description)))
                 ->map(fn ($rows) => ['quantity' => (int) $rows->sum('quantity'), 'value' => (int) $rows->sum('amount')])->sortByDesc('value'),
         ]));
+    }
+
+    /**
+     * «Cómo llegan»: de dónde vienen las ventas (en línea, asistida, presencial) y por qué canal
+     * o anuncio, con su ticket y el cambio contra el período anterior a la misma altura. Sección
+     * aparte para ir midiendo la publicidad (12-nov).
+     */
+    public function channels(Request $request): View
+    {
+        [$start, $end, $preset] = $this->resolveRange($request);
+        [$prevStart, $prevEnd] = $this->previousRange($start, $end, $preset);
+
+        $all = Booking::with(['addons', 'payments', 'adOrigin', 'trackingData'])
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
+            ->whereBetween('starts_at', [$prevStart->copy(), $end->copy()])
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale());
+        $current = $all->filter(fn (Booking $b) => $this->inRange($b, $start, $end))->values();
+        $previous = $all->filter(fn (Booking $b) => $this->inRange($b, $prevStart, $prevEnd))->values();
+        $val = fn (Booking $b) => $b->price_final + $b->paidAddonsAmount();
+
+        $byChannel = $this->byChannel($current, $val);
+        $prevByChannel = $this->byChannel($previous, $val)['rows']->keyBy('label');
+        $total = max(1, (int) $byChannel['rows']->sum('value'));
+        $table = $byChannel['rows']->map(function (array $r) use ($prevByChannel, $total) {
+            $prev = (int) ($prevByChannel[$r['label']]['value'] ?? 0);
+
+            return $r + [
+                'ticket' => $r['count'] ? (int) round($r['value'] / $r['count']) : 0,
+                'share' => $r['value'] / $total,
+                'prev' => $prev,
+                'delta' => $prev > 0 ? (int) round(($r['value'] - $prev) / $prev * 100) : null,
+            ];
+        });
+
+        return view('admin.analytics.channels', [
+            'preset' => $preset,
+            'from' => $start->toDateString(),
+            'to' => $end->toDateString(),
+            'rangeLabel' => $this->rangeLabel($start, $end),
+            'prevLabel' => $prevStart->format('d/m').($prevStart->isSameDay($prevEnd) ? '' : '–'.$prevEnd->format('d/m')).($end->isFuture() ? ' hasta las '.$prevEnd->format('H:i') : ''),
+            'isLive' => $end->isFuture() || $end->isToday(),
+            'refreshedAt' => now('America/Santiago'),
+            'byOrigin' => $this->byOrigin($current, $val),
+            'byChannel' => $byChannel,
+            'table' => $table,
+        ]);
     }
 
     /**

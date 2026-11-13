@@ -1416,6 +1416,32 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(['2026-09-01', '2026-09-30'], [$from->toDateString(), $to->toDateString()]);
     }
 
+    public function test_how_customers_arrive_has_its_own_section_with_channels_and_change(): void
+    {
+        foreach (['2026_08_18_120020_create_tracking_data_table.php' => 'tracking_data', '2026_11_11_130000_create_booking_ad_origins_table.php' => 'booking_ad_origins'] as $file => $table) {
+            if (! Schema::hasTable($table)) {
+                (require database_path('migrations/'.$file))->up();
+            }
+        }
+        foreach (['2026_11_03_000000_add_marketing_tracking.php', '2026_11_10_120000_add_google_click_ids_to_tracking_data.php', '2026_11_11_160000_add_ctwa_to_booking_ad_origins.php'] as $file) {
+            try {
+                (require database_path('migrations/'.$file))->up();
+            } catch (\Throwable) {
+            }
+        }
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $debit = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        Payment::create(['booking_id' => $booking->id, 'payment_method_id' => $debit->id, 'amount' => (int) $booking->price_final, 'status' => 'aprobado', 'voucher_number' => '1']);
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+
+        $page = $this->get(route('admin.analytics.channels', ['from' => '2026-10-01', 'to' => '2026-10-31']))->assertOk()->assertSee('Cómo llegan los clientes');
+        $row = $page->viewData('table')->first();
+        $this->assertSame(1, $row['count']);
+        $this->assertSame((int) $booking->price_final, $row['value']);
+        $this->assertNull($row['delta']); // septiembre no vendió por ese canal
+        $this->assertSame(1, $page->viewData('byOrigin')['total']);
+    }
+
     public function test_clients_that_return_lives_inside_analytics_for_soporte_only(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'soporte']));

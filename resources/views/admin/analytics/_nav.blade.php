@@ -12,6 +12,7 @@
 <div class="an-nav">
     <span class="an-parent">Analytics</span><span class="an-sep">›</span>
     <a href="{{ route('admin.analytics.index') }}" @class(['on' => $on === 'analytics'])>Resumen</a>
+    <a href="{{ route('admin.analytics.channels') }}" @class(['on' => $on === 'channels'])>Cómo llegan</a>
     <a href="{{ route('admin.analytics.customers') }}" @class(['on' => $on === 'customers'])>Comportamiento de clientes</a>
     <a href="{{ route('admin.analytics.extras') }}" @class(['on' => $on === 'extras'])>Extras por mes</a>
     <a href="{{ route('admin.analytics.records') }}" @class(['on' => $on === 'records'])>Récords de venta</a>
