@@ -37,6 +37,7 @@
             @endif
         </div>
     </form>
+    <p class="range-help">Las fechas de arriba cambian todos los cuadros, salvo los marcados <span class="fixed-badge" style="margin-left:2px;">No cambia con las fechas</span></p>
 
     <div class="kpis kpis-all">
         <div class="kpi" data-tip="Personas distintas (por RUT) que vinieron en el rango, como titular o acompañante." tabindex="0"><div class="k-label">Personas que vinieron</div><div class="k-value">{{ number_format($kpis['people'], 0, ',', '.') }}</div><div class="k-delta flat">por RUT, distintas</div></div>
@@ -49,7 +50,7 @@
         <div class="kpi" data-tip="Estadías del rango (planilla + sistema)." tabindex="0"><div class="k-label">Estadías</div><div class="k-value">{{ number_format($kpis['stays'], 0, ',', '.') }}</div><div class="k-delta flat">en el rango</div></div>
         <div class="kpi" data-tip="Visitas del rango ÷ personas que vinieron." tabindex="0"><div class="k-label">Visitas por persona</div><div class="k-value">{{ str_replace('.', ',', $kpis['visits_per_person']) }}</div><div class="k-delta flat">promedio en el rango</div></div>
         <div class="kpi" data-tip="Venta del rango (Playroom + extras) ÷ estadías." tabindex="0"><div class="k-label">Venta por estadía</div><div class="k-value">{{ $money($kpis['ticket']) }}</div><div class="k-delta flat">Playroom + extras</div></div>
-        <div class="kpi" data-tip="Clientes con 2 o más visitas que llevan sin volver más de 1,5 veces su frecuencia habitual (mínimo 30 días, máximo 180). La lista está más abajo." tabindex="0"><div class="k-label">En riesgo de perderse</div><div class="k-value">{{ $kpis['at_risk'] }}</div><div class="k-delta flat">venían seguido y se atrasaron</div></div>
+        <div class="kpi" data-tip="Clientes con 2 o más visitas que llevan sin volver más de 1,5 veces su frecuencia habitual (mínimo 30 días, máximo 180). La lista está más abajo." tabindex="0"><div class="k-label">En riesgo de perderse</div><div class="k-value">{{ $kpis['at_risk'] }}</div><div class="k-delta flat">hoy, con todo su historial <span class="fixed-badge" title="Este cuadro no cambia con las fechas de arriba.">No cambia con las fechas</span></div></div>
     </div>
 
     <h2 class="an-title">Recurrencia mes a mes</h2>
@@ -179,7 +180,7 @@
             </table>
         </div>
         <div class="card t-green">
-            <h3 tabindex="0" data-tip="Personas con 2 o más visitas que llevan sin volver más de 1,5 veces lo que solían tardar (mínimo 30 días y hasta 6 meses), contando hasta hoy. No depende del rango de fechas de arriba: es una foto de hoy con todo el historial (planilla + sistema).">En riesgo de perderse — {{ $kpis['at_risk'] }} <span class="tip-i">ⓘ</span></h3>
+            <h3 tabindex="0" data-tip="Personas con 2 o más visitas que llevan sin volver más de 1,5 veces lo que solían tardar (mínimo 30 días y hasta 6 meses), contando hasta hoy. No depende del rango de fechas de arriba: es una foto de hoy con todo el historial (planilla + sistema).">En riesgo de perderse — {{ $kpis['at_risk'] }} <span class="tip-i">ⓘ</span> <span class="fixed-badge" title="Foto de hoy con todo el historial: no cambia con las fechas de arriba.">No cambia con las fechas</span></h3>
             <p class="legend">Venían seguido y llevan más tiempo del habitual sin volver (más de 1,5 veces su frecuencia, mínimo 30 días y hasta 6 meses). Planilla y sistema juntos; los más fieles primero.</p>
             <table class="chart-table">
                 <tbody>

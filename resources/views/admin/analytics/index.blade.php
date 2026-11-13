@@ -40,6 +40,7 @@
             <a class="export-btn" href="{{ route('admin.analytics.export', ['preset' => $preset, 'from' => $preset === 'custom' ? $from : null, 'to' => $preset === 'custom' ? $to : null, 'category' => $categoryId]) }}">Exportar a Excel/CSV ↓</a>
         </div>
     </form>
+    <p class="range-help">Las fechas de arriba cambian todos los cuadros, salvo los marcados <span class="fixed-badge" style="margin-left:2px;">No cambia con las fechas</span></p>
 
     @if ($planilla)
         <p class="planilla-note">Del {{ $planilla['from']->format('d/m') }} al {{ $planilla['until']->format('d/m/Y') }} los números salen de la <b>planilla de recepción</b> (antes del sistema): suman en reservas, venta, ticket, días de la semana y mejores días. Lo demás (horas, piezas, canales, pagos, descuentos) solo existe en el sistema.</p>
@@ -70,11 +71,11 @@
         @foreach (['collected' => 'Cobrado', 'balance' => 'Saldo pendiente', 'addons' => 'Venta de extras'] as $key => $label)
             <div class="kpi" tabindex="0" data-tip="{{ ['collected' => 'Pagos aprobados que se recibieron por las estadías del período (efectivo, tarjeta, transferencia…).', 'balance' => 'Lo que falta por cobrar de las estadías del período que todavía no están pagadas completas (habitación + consumos − pagos). No cuenta canceladas, vencidas ni no-show. Estas reservas no suman a la venta hasta que se paguen.', 'addons' => 'Extras pagados (consumos y upsells) de las estadías del período; ya van dentro de la Venta total.'][$key] }}"><div class="k-label">{{ $label }}</div><div class="k-value">{{ $money($operations[$key]) }}</div><div class="k-delta flat">@if ($key === 'balance'){{ $operations['balance_count'] ? $operations['balance_count'].' '.($operations['balance_count'] === 1 ? 'reserva' : 'reservas').' con saldo' : 'Sin saldos' }}@else Periodo seleccionado @endif</div></div>
         @endforeach
-        <div class="kpi" tabindex="0" data-tip="Clientes que hoy clasifican como «Frecuente» según las reglas de Clientes (visitas mínimas dentro de su ventana de análisis). No depende del rango elegido."><div class="k-label">Clientes por recurrencia</div><div class="k-value">{{ $segments['frecuente'] }}</div><div class="k-delta flat">Alta recurrencia</div></div>
+        <div class="kpi" tabindex="0" data-tip="Clientes que hoy clasifican como «Frecuente» según las reglas de Clientes (visitas mínimas dentro de su ventana de análisis). No depende del rango elegido."><div class="k-label">Clientes por recurrencia</div><div class="k-value">{{ $segments['frecuente'] }}</div><div class="k-delta flat">Hoy, con todo su historial <span class="fixed-badge" title="Este cuadro no cambia con las fechas de arriba.">No cambia con las fechas</span></div></div>
     </div>
 
     <div class="proj" tabindex="0" data-tip="Proyección = venta de los días ya cerrados ÷ esos días × días del mes (el día de hoy entra cuando termina). Nunca baja de lo vendido más lo ya agendado para el resto del mes. Es la misma cifra del resumen mensual.">
-        <h3>Proyección a fin de mes — {{ $projection['label'] }}</h3>
+        <h3>Proyección a fin de mes — {{ $projection['label'] }} <span class="fixed-badge" title="Siempre es el mes en curso, elijas las fechas que elijas.">No cambia con las fechas</span></h3>
         <div class="proj-grid">
             <div><span>Venta hasta hoy</span><b>{{ $money($projection['so_far']) }}</b></div>
             <div><span>Ya agendado (resto del mes)</span><b>{{ $money($projection['booked_rest']) }}</b></div>
@@ -248,7 +249,7 @@
     </div>
 
     <div class="card t-blue span2">
-        <h3>Por mes — últimos 12 ({{ $metricLabel }})</h3>
+        <h3>Por mes — últimos 12 ({{ $metricLabel }}) <span class="fixed-badge" title="Siempre muestra los últimos 12 meses.">No cambia con las fechas</span></h3>
         @if ($monthly['rows']->contains(fn ($m) => ($m['source'] ?? '') === 'planilla'))
             <p class="chart-note">Los meses antes del sistema vienen de la planilla histórica cargada.</p>
         @endif
