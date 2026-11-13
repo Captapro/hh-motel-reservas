@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\RoomCategory;
+use App\Services\Analyst\HistoricalDataService;
 use App\Services\Marketing\Attribution;
 use App\Support\SalesProjection;
 use Carbon\Carbon;
@@ -64,6 +65,7 @@ class AnalyticsController extends Controller
             'byCategory' => $this->byCategory($current, $previous),
             'byRoom' => $this->rank($current, fn (Booking $b) => $b->room->name, $val, fn (Booking $b) => $b->room->category->name),
             'byWeekday' => $this->overlay($current, $previous, fn (Booking $b) => $weekdayNames[$b->starts_at->timezone('America/Santiago')->dayOfWeekIso - 1], $val, $weekdayNames),
+            'weekdayDates' => $this->weekdayDates($start, $end, $weekdayNames),
             'byHour' => $this->buckets($current, fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->hour, $val, range(0, 23)),
             'topDays' => $current->groupBy(fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->toDateString())
                 ->map(fn ($g, $k) => ['date' => Carbon::parse($k), 'value' => $sum($g), 'count' => $g->count()])
@@ -79,7 +81,10 @@ class AnalyticsController extends Controller
             'paymentMethods' => $this->paymentMethods($current),
             'bookingStatuses' => $current->groupBy('booking_status')->map->count()->sortDesc(),
             'segments' => $this->segments(),
-            'extras' => $current->flatMap(fn (Booking $b) => $b->paidAddons())->groupBy('description')->map(fn ($rows) => ['quantity' => (int) $rows->sum('quantity'), 'value' => (int) $rows->sum('amount')])->sortByDesc('value'),
+            // "2 x Agua sin gas" y "Agua sin gas" son el mismo extra: se agrupan sin el "N x".
+            'extras' => $current->flatMap(fn (Booking $b) => $b->paidAddons())
+                ->groupBy(fn ($a) => trim((string) preg_replace('/^\s*\d+\s*x\s+/iu', '', (string) $a->description)))
+                ->map(fn ($rows) => ['quantity' => (int) $rows->sum('quantity'), 'value' => (int) $rows->sum('amount')])->sortByDesc('value'),
         ]));
     }
 
@@ -268,6 +273,26 @@ class AnalyticsController extends Controller
         ]);
     }
 
+    /**
+     * Qué fechas del rango (hasta hoy) caen en cada día de la semana: el gráfico suma todos
+     * los lunes, martes… y sin decir cuáles no se entendía de qué días hablaba (12-nov).
+     *
+     * @return array<string, list<string>> ['Lunes' => ['2/11', '9/11'], ...]
+     */
+    private function weekdayDates(Carbon $start, Carbon $end, array $names): array
+    {
+        $out = array_fill_keys($names, []);
+        $last = $end->copy()->min(now('America/Santiago')->endOfDay());
+        if ($last->diffInDays($start, true) > 120) {
+            return $out; // rangos largos: demasiadas fechas para mostrar
+        }
+        for ($d = $start->copy()->startOfDay(); $d->lte($last); $d->addDay()) {
+            $out[$names[$d->dayOfWeekIso - 1]][] = $d->format('j/n');
+        }
+
+        return $out;
+    }
+
     private function buckets(Collection $rows, callable $key, callable $val, array $keys): Collection
     {
         $out = array_fill_keys($keys, 0);
@@ -297,6 +322,11 @@ class AnalyticsController extends Controller
 
         $val = fn (Booking $b) => $metric === 'revenue' ? $b->price_final + $b->paidAddonsAmount() : 1;
 
+        // Meses antes del sistema: se completan con la planilla histórica cargada (solo sin
+        // filtro de categoría; la planilla no trae las categorías de hoy). Antes salían en $0.
+        $planilla = $categoryId ? collect() : app(HistoricalDataService::class)->monthsForHistory()
+            ->keyBy(fn (array $m) => $m['month']->format('Y-m'));
+
         $monthly = collect();
         $prev = null;
 
@@ -304,14 +334,25 @@ class AnalyticsController extends Controller
             $month = now('America/Santiago')->startOfMonth()->subMonths($i);
             $rows = $bookings->filter(fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->isSameMonth($month));
             $value = (int) $rows->sum($val);
+            $count = $rows->count();
+            $source = 'sistema';
+            $old = $planilla->get($month->format('Y-m'));
+            if ($count === 0 && $old) {
+                [$value, $count, $source] = [$metric === 'revenue' ? (int) $old['total'] : (int) $old['rooms'], (int) $old['rooms'], 'planilla'];
+            }
+            // Los meses vacíos del comienzo (antes de cualquier dato) no se muestran.
+            if ($monthly->isEmpty() && $count === 0 && $i > 0) {
+                continue;
+            }
 
             $delta = ($prev !== null && $prev > 0) ? (int) round((($value - $prev) / $prev) * 100) : null;
 
             $monthly->push([
                 'label' => ucfirst($month->locale('es')->isoFormat('MMM YYYY')),
-                'count' => $rows->count(),
+                'count' => $count,
                 'value' => $value,
                 'delta_pct' => $delta,
+                'source' => $source,
             ]);
             $prev = $value;
         }

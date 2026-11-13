@@ -1350,6 +1350,23 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(['balance' => (int) $owing->price_final, 'balance_count' => 1], $result);
     }
 
+    public function test_analytics_months_before_the_system_come_from_the_old_planilla(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-15 12:00'));
+        DB::table('historical_sales')->insert([
+            ['source' => 'planilla', 'source_row' => 1, 'sold_on' => '2026-09-10', 'sale_type' => 'ALOJAMIENTO', 'amount_main' => 30000, 'amount_extras' => 0],
+            ['source' => 'planilla', 'source_row' => 2, 'sold_on' => '2026-09-11', 'sale_type' => 'EXTRAS', 'amount_main' => 0, 'amount_extras' => 5000],
+        ]);
+
+        $monthly = new \ReflectionMethod(AnalyticsController::class, 'monthlyComparison');
+        $rows = $monthly->invoke(new AnalyticsController, 'revenue', null)['rows'];
+
+        // Antes salían 12 meses en $0; ahora parte en el primer mes con datos (la planilla).
+        $this->assertSame(['Sep. 2026', 'Oct. 2026', 'Nov. 2026'], $rows->pluck('label')->all());
+        $this->assertEquals(['value' => 35000, 'count' => 1, 'source' => 'planilla'], array_intersect_key($rows->first(), array_flip(['value', 'count', 'source'])));
+        $this->assertSame('sistema', $rows->last()['source']);
+    }
+
     public function test_clients_that_return_lives_inside_analytics_for_soporte_only(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'soporte']));

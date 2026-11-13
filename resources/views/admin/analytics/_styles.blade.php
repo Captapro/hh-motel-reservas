@@ -135,6 +135,22 @@
         .export-btn { background:#fff; border:1px solid #ff7918; color:#c2410c; }
         .export-btn:hover { background:#fff7ed; border-color:#ff7918; color:#9a3412; }
         .flt .chip.active { border-color:#ff7918; color:#c2410c; font-weight:600; }
+        .chart-note { font-size:12px; color:#6b7280; margin:-4px 0 8px; }
+        .wd-dates { font-size:11px; color:#9ca3af; margin-top:2px; }
+        .rank-table { width:100%; border-collapse:collapse; font-size:12.5px; table-layout:fixed; }
+        .rank-table th { font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:#6b7280; font-weight:600; text-align:left; padding:4px; border-bottom:1px solid #e5e7eb; }
+        .rank-table tr > :nth-child(1) { width:20px; } .rank-table tr > :nth-child(3) { width:44px; } .rank-table tr > :nth-child(4) { width:78px; } .rank-table tr > :nth-child(5) { width:46px; }
+        .rank-table td { padding:6px 4px; border-bottom:1px solid #f1f2f4; color:#111827; vertical-align:middle; }
+        .rank-table td.nm { line-height:1.25; overflow-wrap:anywhere; }
+        .rank-table td.nm .sub { display:block; font-size:10.5px; color:#9ca3af; }
+        .rank-table .n, .rank-table th.n { text-align:right; font-variant-numeric:tabular-nums; }
+        .rank-table td.pos { color:#9ca3af; font-size:11px; }
+        .rank-table .mini { height:3px; background:#f1f2f4; border-radius:2px; margin-top:3px; }
+        .rank-table .mini i { display:block; height:3px; background:#ff7918; border-radius:2px; }
+        .rank-table tfoot td { font-weight:600; border-bottom:none; border-top:1px solid #e5e7eb; }
+        .rank-more summary { font-size:12px; color:#c2410c; cursor:pointer; padding:6px 0; }
+        .wd-table tr > :nth-child(1) { width:auto; } .wd-table tr > :nth-child(2) { width:90px; } .wd-table tr > :nth-child(3) { width:90px; }
+        .rank-table td.n .sub { display:block; font-size:10.5px; color:#9ca3af; }
         .live-note { font-size:12px; color:#15803d; white-space:nowrap; }
         .kpi .k-label { color:#6b7280; }
         .kpi .k-value { color:#111827; }
