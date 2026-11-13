@@ -204,8 +204,10 @@
     </div>
     </div>
 
+    @if (auth()->user()?->isSoporte())
     <h2 class="an-title">Cómo llegan los clientes</h2>
     <p class="range-help" style="margin-top:0;">Ahora tiene su propia sección: <a href="{{ route('admin.analytics.channels', $preset === 'custom' ? ['from' => $from, 'to' => $to] : ['preset' => $preset]) }}">ver Cómo llegan →</a> (en línea, asistida o presencial, y ventas por canal y anuncio).</p>
+    @endif
 
     <h2 class="an-title">Cobros y evolución</h2>
     <div class="an-grid">

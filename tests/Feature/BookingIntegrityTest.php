@@ -1432,7 +1432,10 @@ class BookingIntegrityTest extends TestCase
         $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
         $debit = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
         Payment::create(['booking_id' => $booking->id, 'payment_method_id' => $debit->id, 'amount' => (int) $booking->price_final, 'status' => 'aprobado', 'voucher_number' => '1']);
+        // Por ahora solo soporte (13-nov): administración no la ve.
         $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        $this->get(route('admin.analytics.channels'))->assertForbidden();
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
 
         $page = $this->get(route('admin.analytics.channels', ['from' => '2026-10-01', 'to' => '2026-10-31']))->assertOk()->assertSee('Cómo llegan los clientes');
         $row = $page->viewData('table')->first();

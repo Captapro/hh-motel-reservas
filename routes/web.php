@@ -422,7 +422,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
 
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/exportar', [AnalyticsController::class, 'export'])->name('analytics.export');
-    Route::get('/analytics/canales', [AnalyticsController::class, 'channels'])->name('analytics.channels');
+    Route::get('/analytics/canales', [AnalyticsController::class, 'channels'])->middleware('role:soporte')->name('analytics.channels');
     Route::get('/analytics/clientes', [CustomerBehaviorController::class, 'index'])->name('analytics.customers');
     Route::get('/analytics/extras', [ExtrasByMonthController::class, 'index'])->name('analytics.extras');
     Route::get('/analytics/records', [SalesRecordsController::class, 'index'])->name('analytics.records');

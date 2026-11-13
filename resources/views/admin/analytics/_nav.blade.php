@@ -1,4 +1,4 @@
-{{-- Subcategorías de Analytics. «Clientes que vuelven» muestra nombres y RUT: solo soporte. --}}
+{{-- Subcategorías de Analytics. «Clientes que vuelven» (nombres y RUT) y «Cómo llegan» (por ahora, 13-nov): solo soporte. --}}
 @once
     <style>
         .an-nav { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
@@ -12,7 +12,9 @@
 <div class="an-nav">
     <span class="an-parent">Analytics</span><span class="an-sep">›</span>
     <a href="{{ route('admin.analytics.index') }}" @class(['on' => $on === 'analytics'])>Resumen</a>
-    <a href="{{ route('admin.analytics.channels') }}" @class(['on' => $on === 'channels'])>Cómo llegan</a>
+    @if (auth()->user()?->isSoporte())
+        <a href="{{ route('admin.analytics.channels') }}" @class(['on' => $on === 'channels'])>Cómo llegan</a>
+    @endif
     <a href="{{ route('admin.analytics.customers') }}" @class(['on' => $on === 'customers'])>Comportamiento de clientes</a>
     <a href="{{ route('admin.analytics.extras') }}" @class(['on' => $on === 'extras'])>Extras por mes</a>
     <a href="{{ route('admin.analytics.records') }}" @class(['on' => $on === 'records'])>Récords de venta</a>
