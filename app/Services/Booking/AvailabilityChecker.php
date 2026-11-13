@@ -19,6 +19,36 @@ class AvailabilityChecker
     /** Al asignar sola una habitación, se evitan las que tienen una reserva dentro de estas horas. */
     public const RESERVED_SOON_HOURS = 12;
 
+    /**
+     * Venta en línea de una pieza con gente adentro: solo si la llegada es al menos
+     * estas horas después de ahora (la pieza aún no pasa a aseo; nadie sabe cuándo salen).
+     */
+    public const OCCUPIED_ONLINE_MIN_HOURS = 2;
+
+    /** ...y al menos estos minutos después de la salida contratada de quienes están adentro. */
+    public const OCCUPIED_ONLINE_GAP_MINUTES = 60;
+
+    /**
+     * Si una venta en línea para $startsAt quedaría muy pegada a una estadía en curso.
+     * Al hacer el check-out la pieza pasa a aseo y sale de la venta, pero mientras siguen
+     * adentro sigue "activa": así se vendió la 301 para 20 min después (12-nov).
+     */
+    public function occupiedTooSoonForOnline(Room $room, Carbon $startsAt): bool
+    {
+        $stay = $room->bookings()
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'])
+            ->whereNotNull('checked_in_at')->whereNull('checked_out_at')
+            ->orderByDesc('ends_at')->first();
+        if (! $stay) {
+            return false;
+        }
+
+        $earliest = now()->addHours(self::OCCUPIED_ONLINE_MIN_HOURS);
+        $afterStay = Carbon::parse($stay->ends_at)->addMinutes(self::OCCUPIED_ONLINE_GAP_MINUTES);
+
+        return $startsAt->lt($earliest->max($afterStay));
+    }
+
     public function hasGuestInside(Room $room, ?int $excludeBookingId = null): bool
     {
         return $room->bookings()

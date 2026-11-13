@@ -9,7 +9,6 @@ use App\Exceptions\RoomNotAvailableException;
 use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Coupon;
-use App\Support\CouponCode;
 use App\Models\Customer;
 use App\Models\OperationalSetting;
 use App\Models\Product;
@@ -18,6 +17,7 @@ use App\Models\Room;
 use App\Models\RoomCategory;
 use App\Models\ShortStaySetting;
 use App\Models\UpsellOffer;
+use App\Rules\ValidPhone;
 use App\Services\Booking\AvailabilityChecker;
 use App\Services\Booking\BookingAllocationService;
 use App\Services\Booking\BookingService;
@@ -27,7 +27,7 @@ use App\Services\Payments\MercadoPagoClient;
 use App\Services\Payments\MercadoPagoPayments;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\ShortStayPricer;
-use App\Rules\ValidPhone;
+use App\Support\CouponCode;
 use App\Support\Phone;
 use App\Support\Rut;
 use App\Support\TimeFormat;
@@ -502,6 +502,8 @@ class PublicBookingController extends Controller
         // ala sur, para no apretar el aseo; entre ellas se sigue el orden de arriendo (Room::wingPriority).
         return $roomQuery->orderBy('name')->get()
             ->sortBy(fn (Room $r) => [(int) $availability->hasReservationSoon($r, $endsAt), $r->wingPriority()])->values()
-            ->first(fn (Room $r) => $availability->isAvailable($r, $startsAt, $endsAt));
+            // Una pieza con gente adentro no se vende para dentro de poco: aún no pasa a aseo.
+            ->first(fn (Room $r) => ! $availability->occupiedTooSoonForOnline($r, $startsAt)
+                && $availability->isAvailable($r, $startsAt, $endsAt));
     }
 }

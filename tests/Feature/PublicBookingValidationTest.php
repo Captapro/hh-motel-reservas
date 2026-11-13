@@ -50,6 +50,7 @@ class PublicBookingValidationTest extends TestCase
             '2026_08_18_120010_create_customers_table.php',
             '2026_09_11_090000_add_identity_fields_to_customers_table.php',
             '2026_08_18_120011_create_bookings_table.php',
+            '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
             '2026_10_26_030000_add_origin_to_bookings_table.php',
             '2026_10_26_200000_add_short_stay_to_bookings_table.php',
             '2026_10_26_210000_create_short_stay_settings_table.php',
@@ -316,5 +317,58 @@ class PublicBookingValidationTest extends TestCase
         $this->get(route('catalog.privacy'))->assertOk()->assertSee('Aviso de privacidad')->assertSee('Tus derechos');
         $this->get(route('catalog.reserve', ['categoria' => $this->category->id]))->assertOk()
             ->assertSee('name="accept_privacy"', false)->assertSee('name="marketing_opt_in"', false)->assertSee(route('catalog.privacy'), false);
+    }
+
+    /** Estadía en curso en GO 101 (checked-in, sin salida), con salida contratada a las $endsAt. */
+    private function guestInside(string $endsAt): void
+    {
+        Booking::create([
+            'code' => 'HH-TEST-INSIDE',
+            'pass_token' => 'tok-inside',
+            'customer_id' => Customer::first()->id,
+            'room_id' => $this->room->id,
+            'starts_at' => Carbon::parse('2026-10-05 12:40'),
+            'ends_at' => Carbon::parse($endsAt),
+            'duration_minutes' => 60,
+            'guests_count' => 2,
+            'booking_status' => 'CHECK_IN',
+            'payment_status' => 'PAGADA',
+            'price_original' => 20000,
+            'price_final' => 20000,
+            'checked_in_at' => Carbon::parse('2026-10-05 12:40'),
+        ]);
+    }
+
+    public function test_catalog_does_not_sell_an_occupied_room_for_shortly_after_its_stay(): void
+    {
+        // Caso 301 (12-nov): se vendió a las 20:39 para las 21:00 con gente adentro hasta las 20:46.
+        $this->travelTo(Carbon::parse('2026-10-05 13:39'));
+        $this->guestInside('2026-10-05 13:40');
+
+        $response = $this->post('/catalogo/reservar', $this->bookingPayload());
+
+        $response->assertSessionHasErrors();
+        $this->assertSame(1, Booking::count());
+    }
+
+    public function test_catalog_sends_the_booking_to_a_free_room_when_the_other_is_occupied(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-05 13:39'));
+        $this->guestInside('2026-10-05 13:40');
+        $free = Room::create(['room_category_id' => $this->category->id, 'name' => 'GO 102', 'operational_status' => 'activa']);
+
+        $this->post('/catalogo/reservar', $this->bookingPayload());
+
+        $this->assertSame($free->id, Booking::where('code', '!=', 'HH-TEST-INSIDE')->sole()->room_id);
+    }
+
+    public function test_catalog_still_sells_an_occupied_room_for_well_after_its_stay(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-05 11:39'));
+        $this->guestInside('2026-10-05 12:40');
+
+        $this->post('/catalogo/reservar', $this->bookingPayload());
+
+        $this->assertSame(2, Booking::count());
     }
 }
