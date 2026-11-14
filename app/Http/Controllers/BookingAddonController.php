@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\InsufficientStockException;
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Product;
@@ -141,5 +142,46 @@ class BookingAddonController extends Controller
         }
 
         return redirect()->route('reservations.show', $booking->code)->with('status', $message);
+    }
+
+    /**
+     * Quitar un consumo mal cargado (solo administración): por ejemplo, cervezas anotadas para
+     * «cuadrar» una diferencia que en realidad era otro cobro (caso 305, 14-nov). Pide motivo,
+     * devuelve al inventario lo que se había descontado y deja el antes en la bitácora. No se
+     * puede si la reserva ya está cerrada, ni si lo pagado quedaría mayor que lo vendido
+     * (primero hay que devolver o corregir el pago).
+     */
+    public function destroy(Request $request, string $code, int $addon): RedirectResponse
+    {
+        $validated = $request->validate(
+            ['reason' => ['required', 'string', 'min:5', 'max:300']],
+            ['reason.required' => 'Escribe el motivo para quitar el consumo.', 'reason.min' => 'Escribe el motivo para quitar el consumo.'],
+        );
+
+        return DB::transaction(function () use ($code, $addon, $validated) {
+            $booking = Booking::where('code', $code)->lockForUpdate()->firstOrFail();
+            $line = $booking->addons()->whereKey($addon)->firstOrFail();
+
+            if (in_array($booking->booking_status, self::CLOSED, true)) {
+                return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — el consumo no se puede quitar desde aquí.']);
+            }
+            $soldAfter = (int) $booking->price_final + (int) $booking->addonsTotal() - (int) $line->amount;
+            if ($booking->paidAmount() > $soldAfter) {
+                return back()->withErrors(['booking' => 'Ese consumo ya está pagado: al quitarlo quedaría un sobrepago. Devuelve o corrige el pago primero.']);
+            }
+
+            // Lo que ya salió del inventario vuelve; lo que estaba solo reservado se libera al borrar la línea.
+            if ($line->stock_deducted_at) {
+                foreach ($line->stockNeeds() as $productId => $units) {
+                    Product::whereKey($productId)->lockForUpdate()->first()?->increment('stock', $units);
+                }
+            }
+            AuditLog::record(auth()->id(), 'reserva.consumo_quitado', 'Booking', $booking->id, $line->only(['id', 'description', 'quantity', 'amount', 'product_id', 'combo_id', 'components', 'stock_deducted_at']), ['motivo' => $validated['reason']]);
+            $description = $line->description;
+            $line->delete();
+
+            return redirect()->route('reservations.show', $booking->code)
+                ->with('status', 'Consumo quitado: '.$description.'.'.($line->stock_deducted_at ? ' Se devolvió al inventario.' : ''));
+        });
     }
 }

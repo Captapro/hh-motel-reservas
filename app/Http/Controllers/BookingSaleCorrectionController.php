@@ -17,7 +17,7 @@ use Illuminate\Validation\ValidationException;
  * precio real de la estadía y el monto real de cada pago. Así la venta, la caja y el cruce con
  * Mercado Pago quedan iguales a la máquina.
  *
- * Reglas: solo estadías FINALIZADAS; los pagos en efectivo no se tocan (moverían el efectivo del
+ * Reglas: solo estadías FINALIZADAS o con check-in hecho; los pagos en efectivo no se tocan (moverían el efectivo del
  * mes); y solo se guarda si lo pagado queda exactamente igual a lo vendido (sin saldo ni sobrepago).
  * Siempre con motivo, y todo queda en la bitácora con el antes y el después.
  */
@@ -38,8 +38,11 @@ class BookingSaleCorrectionController extends Controller
         ]);
         $fail = fn (string $field, string $message) => throw ValidationException::withMessages([$field => $message]);
 
-        if ($booking->booking_status !== 'FINALIZADA') {
-            $fail('price_final', 'Solo se corrigen ventas cerradas (estadía finalizada).');
+        // También con el huésped adentro (check-in hecho): si se cobró distinto a la tarifa —un cambio
+        // de pieza con diferencia, caso 305 del 14-nov— hay que cuadrar antes de poder cerrar.
+        $inside = $booking->booking_status === 'CHECK_IN' && $booking->checked_in_at;
+        if ($booking->booking_status !== 'FINALIZADA' && ! $inside) {
+            $fail('price_final', 'Solo se corrigen ventas con check-in hecho o ya cerradas.');
         }
         $priceOriginal = (int) $booking->price_original;
         $priceFinal = (int) $v['price_final'];

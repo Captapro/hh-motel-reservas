@@ -1572,6 +1572,50 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame((int) $booking->price_final + 3000, (int) $totals['total']);
     }
 
+    public function test_admin_removes_a_wrongly_loaded_consumption_and_stock_comes_back(): void
+    {
+        (require database_path('migrations/2026_08_19_150001_add_inventory_to_products_table.php'))->up();
+        if (! Schema::hasColumn('booking_addons', 'stock_deducted_at')) {
+            (require database_path('migrations/2026_11_10_150000_add_stock_deducted_at_to_booking_addons.php'))->up();
+        }
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $method = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        app(PaymentService::class)->register($booking, $method, (int) $booking->price_final, null, null, auth()->id());
+        $booking->update(['checked_in_at' => Carbon::parse('2026-10-05 12:05'), 'booking_status' => 'CHECK_IN']);
+        $beer = Product::create(['name' => 'Cerveza', 'price' => 3000, 'track_inventory' => true, 'stock' => 8, 'is_active' => true]);
+        $addon = $booking->addons()->create(['product_id' => $beer->id, 'description' => '2 x Cerveza', 'quantity' => 2, 'amount' => 6000, 'stock_deducted_at' => now()]);
+
+        // Sin motivo no se quita.
+        $this->delete(route('addons.destroy', [$booking->code, $addon->id]), ['reason' => ''])->assertSessionHasErrors('reason');
+
+        $this->delete(route('addons.destroy', [$booking->code, $addon->id]), ['reason' => 'Se cargó para cuadrar una diferencia'])
+            ->assertRedirect(route('reservations.show', $booking->code));
+        $this->assertSame(0, $booking->addons()->count());
+        $this->assertSame(10, (int) $beer->fresh()->stock);
+        $this->assertSame(0, $booking->fresh()->balanceDue());
+        $this->assertSame(1, AuditLog::where('action', 'reserva.consumo_quitado')->count());
+
+        // Un consumo ya pagado no se quita: dejaría un sobrepago.
+        $paid = $booking->addons()->create(['description' => 'Agua', 'quantity' => 1, 'amount' => 1500]);
+        app(PaymentService::class)->register($booking->fresh(), $method, 1500, null, null, auth()->id());
+        $this->delete(route('addons.destroy', [$booking->code, $paid->id]), ['reason' => 'Prueba de sobrepago'])->assertSessionHasErrors('booking');
+        $this->assertSame(1, $booking->addons()->count());
+
+        // Con el huésped adentro, administración puede dejar el precio en lo cobrado (cambio de pieza con diferencia).
+        $paid->delete();
+        $booking->payments()->where('amount', 1500)->delete();
+        $real = (int) $booking->price_final - 1000;
+        $first = $booking->payments()->first();
+        $this->post(route('bookings.sale_correction', $booking->code), ['price_final' => $real, 'payments' => [$first->id => $real], 'reason' => 'Se cobró menos por cambio de pieza'])
+            ->assertRedirect(route('reservations.show', $booking->code));
+        $this->assertSame([$real, 0], [(int) $booking->fresh()->price_final, $booking->fresh()->balanceDue()]);
+        $paid = $booking->addons()->create(['description' => 'Agua', 'quantity' => 1, 'amount' => 1500]);
+
+        // Recepción no puede quitar consumos.
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+        $this->delete(route('addons.destroy', [$booking->code, $paid->id]), ['reason' => 'No debería poder'])->assertForbidden();
+    }
+
     public function test_room_marked_occupied_by_hand_is_not_sellable(): void
     {
         $this->post(route('rooms.status', $this->room), ['operational_status' => 'ocupada', 'operational_note' => 'Entró con la planilla'])

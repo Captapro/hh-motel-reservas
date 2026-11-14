@@ -489,14 +489,14 @@
                 </details>
             @endif
 
-            @if (auth()->user()->isAdministrador() && $booking->booking_status === 'FINALIZADA')
+            @if (auth()->user()->isAdministrador() && ($booking->booking_status === 'FINALIZADA' || ($booking->booking_status === 'CHECK_IN' && $booking->checked_in_at)))
                 @php
                     $fixPayments = $booking->payments->where('status', 'aprobado');
                     $fixCoupons = \App\Models\Coupon::where('auto_apply', false)->where('is_active', true)->whereNull('customer_id')->orderBy('internal_name')->get(['id', 'code', 'internal_name', 'auto_apply']);
                     $fixErrors = $errors->has('price_final') || $errors->has('payments') || $errors->has('reason');
                 @endphp
                 <details style="margin:0 0 12px;" @if ($fixErrors) open @endif>
-                    <summary style="display:inline-block; cursor:pointer; padding:8px 14px; border:1px solid #ff7918; border-radius:8px; background:#fff; color:#c2410c; font-size:13px; font-weight:700;">Corregir venta cerrada (administrador)</summary>
+                    <summary style="display:inline-block; cursor:pointer; padding:8px 14px; border:1px solid #ff7918; border-radius:8px; background:#fff; color:#c2410c; font-size:13px; font-weight:700;">{{ $booking->booking_status === 'FINALIZADA' ? 'Corregir venta cerrada' : 'Corregir precio cobrado' }} (administrador)</summary>
                     <form method="POST" action="{{ route('bookings.sale_correction', $booking->code) }}" style="display:grid; gap:10px; margin-top:10px; max-width:460px;">
                         @csrf
                         <label style="font-size:12px;">Lo que de verdad se cobró por la estadía (sin consumos) · tarifa ${{ number_format($booking->price_original, 0, ',', '.') }}<br>
@@ -680,6 +680,18 @@
                     @foreach ($consumo['pending'] as $addon)
                         <div class="row"><span>{{ $addon->description }}</span><span>${{ number_format($addon->amount, 0, ',', '.') }}</span></div>
                         @include('reservations._addon-detail', ['addon' => $addon, 'booking' => $booking])
+                        {{-- Consumo mal cargado: administración lo quita con motivo y vuelve al inventario. --}}
+                        @if (auth()->user()?->isAdministrador() && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'], true))
+                            <details style="margin:-6px 0 12px;">
+                                <summary style="cursor:pointer; font-size:12.5px; color:#f0a3a3;">Quitar este consumo (se cargó por error)</summary>
+                                <form method="POST" action="{{ route('addons.destroy', [$booking->code, $addon->id]) }}" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="text" id="quitar-consumo-{{ $addon->id }}" name="reason" required minlength="5" maxlength="300" placeholder="Motivo (queda registrado)" style="flex:1; min-width:180px;">
+                                    <button type="submit" class="btn" style="background:#7f1d1d; color:#fff;">Quitar y devolver al inventario</button>
+                                </form>
+                            </details>
+                        @endif
                     @endforeach
                 @endif
 
