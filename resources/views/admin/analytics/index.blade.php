@@ -88,7 +88,7 @@
     <div class="an-grid">
     <div class="card t-orange">
         <h3>Días de la semana ({{ $metricLabel }})</h3>
-        <p class="chart-note">Suma de todos los lunes, martes, etc. del rango ({{ $rangeLabel }}), con el promedio de cada día.</p>
+        <p class="chart-note">Cada fila junta todos los lunes, martes, etc. del rango ({{ $rangeLabel }}): la venta de cada fecha, el total y el promedio. Abajo del total, lo que vendieron esos mismos días en el período anterior ({{ $prevShort }}).</p>
         @php
             $wdMaxAvg = max(1, $byWeekday->max(fn ($e) => $e['value'] / max(1, count($weekdayDates[$e['label']] ?? []))));
         @endphp
@@ -98,8 +98,8 @@
             @foreach ($byWeekday as $e)
                 @php $wdDates = $weekdayDates[$e['label']] ?? []; $avg = (int) round($e['value'] / max(1, count($wdDates))); @endphp
                 <tr>
-                    <td class="nm">{{ $e['label'] }}<span class="sub">@if (! $wdDates)sin fechas en el rango @elseif (count($wdDates) > 5){{ count($wdDates) }} días, del {{ $wdDates[0] }} al {{ end($wdDates) }}@else{{ implode(', ', $wdDates) }}@endif</span></td>
-                    <td class="n">{{ $metricVal($e['value']) }}@if ($e['prev'] > 0)<span class="sub">ant. {{ $metricVal($e['prev']) }}</span>@endif</td>
+                    <td class="nm">{{ $e['label'] }}<span class="sub">@if (! $wdDates)sin fechas en el rango @elseif (count($wdDates) > 5){{ count($wdDates) }} días, del {{ $wdDates[0] }} al {{ end($wdDates) }}@else @foreach ($wdDates as $wd)<span class="wd-day">{{ $wd }}: {{ $metricVal($dayValues[$wd] ?? 0) }}@if ($wd === $todayKey) <i>(hoy, en curso)</i>@endif</span>@endforeach @endif</span></td>
+                    <td class="n">{{ $metricVal($e['value']) }}@if ($e['prev'] > 0)<span class="sub">{{ $prevShort }}: {{ $metricVal($e['prev']) }}</span>@endif</td>
                     <td class="n pct">{{ $metricVal($avg) }}<div class="mini"><i style="width:{{ round($avg / $wdMaxAvg * 100) }}%"></i></div></td>
                 </tr>
             @endforeach

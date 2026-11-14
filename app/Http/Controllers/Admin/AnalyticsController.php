@@ -84,6 +84,10 @@ class AnalyticsController extends Controller
             'byRoom' => $this->rank($current, fn (Booking $b) => $b->room->name, $val, fn (Booking $b) => $b->room->category->name),
             'byWeekday' => $byWeekday,
             'weekdayDates' => $this->weekdayDates($start, $end, $weekdayNames),
+            // Venta de cada fecha («13/11» => 873350), para mostrarla suelta bajo su día de la semana.
+            'dayValues' => $planDays->union($systemDays)->mapWithKeys(fn ($d) => [$d['date']->format('j/n') => (int) $d['value']])->all(),
+            'todayKey' => now('America/Santiago')->format('j/n'),
+            'prevShort' => $prevStart->format('j/n').($prevStart->isSameDay($prevEnd) ? '' : ' al '.$prevEnd->format('j/n')),
             'byHour' => $this->buckets($current, fn (Booking $b) => $b->starts_at->timezone('America/Santiago')->hour, $val, range(0, 23)),
             'topDays' => $planDays->union($systemDays)->sortByDesc('value')->take(8)->values(),
 
