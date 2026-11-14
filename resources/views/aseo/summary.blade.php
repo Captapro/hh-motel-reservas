@@ -36,6 +36,11 @@
         .linen-panel h3 { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#999; margin:0; }
         .linen-panel .total { font-family: ui-monospace, monospace; font-size:20px; font-weight:600; color:#7fbcdc; }
         .linen-panel .hint { font-size:11.5px; color:#777; margin-top:10px; }
+        .linen-table { width:100%; border-collapse:collapse; font-size:13.5px; margin-top:10px; }
+        .linen-table th { text-align:left; color:#888; font-size:10.5px; font-weight:500; text-transform:uppercase; padding:6px 10px; border-bottom:1px solid #333; }
+        .linen-table td { padding:6px 10px; border-bottom:1px solid #2a2a2a; }
+        .linen-table .n { text-align:right; font-variant-numeric:tabular-nums; }
+        .linen-table tfoot td { font-weight:700; border-bottom:none; border-top:2px solid #444; }
         .linen-chips { display:flex; gap:10px; flex-wrap:wrap; }
         .linen-chip { background:#111; border:1px solid #333; border-radius:8px; padding:8px 14px; font-size:13px; }
         .linen-chip b { color:#7fbcdc; font-family: ui-monospace, monospace; }
@@ -85,17 +90,15 @@
 
     <div class="linen-panel">
         <div class="topline2">
-            <h3>Carga de ropa de cama por Playroom</h3>
+            <h3>Ropa a lavar por Playroom — detalle por pieza</h3>
             <span class="total">{{ $linenTotal }} {{ Str::plural('juego', $linenTotal) }}</span>
         </div>
-        <div class="linen-chips">
-            @forelse ($linenByRoom as $entry)
-                <div class="linen-chip">{{ $entry['room']->name }} <b>× {{ $entry['count'] }}</b></div>
-            @empty
-                <div class="linen-chip">Sin salidas con cama en el rango</div>
-            @endforelse
-        </div>
-        <p class="hint">Un juego por cada salida de LITE, PLUS o MAX — las GO (201, 301) son cápsulas sin cama y solo llevan toallas. Detalle de toallas por reserva en la vista diaria.</p>
+        @if ($pieces->isEmpty())
+            <p class="hint">Sin salidas en el rango.</p>
+        @else
+            @include('partials.aseo-pieces', ['pieces' => $pieces])
+        @endif
+        <p class="hint">Un juego de cama = bajera + encimera + dúvet + 2 cabeceras, uno por cada salida de LITE, PLUS o MAX. Las GO (201, 301) son cápsulas sin cama y solo llevan toallas. Toallas = 2 por salida + 1 por cada persona adicional sobre 2. Las frazadas no se cuentan: la mucama decide si van a lavar.</p>
     </div>
 
     <div class="table-wrap">

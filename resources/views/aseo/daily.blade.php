@@ -84,36 +84,12 @@
         <div class="card manual"><div class="label">Aseo pendiente</div><div class="value">{{ $rows->where('pending', true)->count() }}</div></div>
     </div>
 
-    @php
-        $towelsOf = fn (array $row) => 2 + max(0, $row['booking']->guests_count - 2);
-        $linenSummary = $rows->groupBy(fn (array $row) => $row['room']->id)
-            ->map(fn ($group) => [
-                'room' => $group->first()['room'],
-                'exits' => $group->count(),
-                'sets' => $group->first()['room']->category->name === 'GO' ? 0 : $group->count(),
-                'towels' => $group->sum($towelsOf),
-            ])
-            ->sortBy(fn ($entry) => $entry['room']->name)->values();
-    @endphp
     <div class="linen-panel">
-        <h3>Carga de ropa de cama del día</h3>
-        @if ($linenSummary->isEmpty())
+        <h3>Ropa a lavar del día — detalle por pieza</h3>
+        @if ($pieces->isEmpty())
             <p class="hint">Sin salidas este día.</p>
         @else
-            <table class="linen-table">
-                <thead><tr><th>Playroom</th><th class="n">Salidas</th><th class="n">Juegos de sábanas</th><th class="n">Toallas</th></tr></thead>
-                <tbody>
-                    @foreach ($linenSummary as $entry)
-                        <tr>
-                            <td>{{ $entry['room']->name }}</td>
-                            <td class="n">{{ $entry['exits'] }}</td>
-                            <td class="n">{{ $entry['sets'] ?: 'Sin cama' }}</td>
-                            <td class="n">{{ $entry['towels'] }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-                <tfoot><tr><td>Total</td><td class="n">{{ $linenSummary->sum('exits') }}</td><td class="n">{{ $linenTotal }}</td><td class="n">{{ $linenSummary->sum('towels') }}</td></tr></tfoot>
-            </table>
+            @include('partials.aseo-pieces', ['pieces' => $pieces])
         @endif
         <details class="linen-more">
             <summary>Qué incluye cada juego y cómo se cuenta</summary>

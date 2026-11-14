@@ -17,6 +17,38 @@ use Illuminate\Support\Collection;
  */
 class AseoReportService
 {
+    /** Piezas de un juego de cama (una salida de LITE, PLUS o MAX). Las GO no llevan cama. */
+    public const SET_PIECES = ['Bajera' => 1, 'Encimera' => 1, 'Dúvet' => 1, 'Cabeceras' => 2];
+
+    /**
+     * Detalle de piezas a lavar por Playroom: cada pieza del juego de cama más las toallas
+     * (2 por salida + 1 por cada persona sobre 2, también en GO).
+     *
+     * @param  Collection<int, array{room: Room, booking: Booking}>  $rows
+     * @return Collection<int, array{room: Room, exits: int, sets: int, pieces: array<string, int>, towels: int, total: int}>
+     */
+    public function piecesByRoom(Collection $rows): Collection
+    {
+        return $rows->groupBy(fn (array $row) => $row['room']->id)
+            ->map(function (Collection $group) {
+                $room = $group->first()['room'];
+                $sets = $room->category->name === 'GO' ? 0 : $group->count();
+                $pieces = array_map(fn (int $perSet) => $perSet * $sets, self::SET_PIECES);
+                $towels = (int) $group->sum(fn (array $row) => 2 + max(0, (int) $row['booking']->guests_count - 2));
+
+                return [
+                    'room' => $room,
+                    'exits' => $group->count(),
+                    'sets' => $sets,
+                    'pieces' => $pieces,
+                    'towels' => $towels,
+                    'total' => array_sum($pieces) + $towels,
+                ];
+            })
+            ->sortBy(fn (array $entry) => $entry['room']->name, SORT_NATURAL)
+            ->values();
+    }
+
     /**
      * @return Collection<int, array{booking: Booking, room: Room, checkout_at: Carbon, ready_at: ?Carbon, pending: bool, regularized: bool, cleaned_by: ?string}>
      */

@@ -82,6 +82,7 @@ class AseoSummaryController extends Controller
             'totalPending' => $rows->where('pending', true)->count(),
             'linenTotal' => $linenRows->count(),
             'linenByRoom' => $linenByRoom,
+            'pieces' => $reports->piecesByRoom($rows),
         ]);
     }
 }

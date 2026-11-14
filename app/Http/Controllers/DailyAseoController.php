@@ -34,6 +34,7 @@ class DailyAseoController extends Controller
             'rows' => $rows,
             'linenTotal' => $linenRows->count(),
             'linenByRoom' => $linenByRoom,
+            'pieces' => $reports->piecesByRoom($rows),
         ]);
     }
 }
