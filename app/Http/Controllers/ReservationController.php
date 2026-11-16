@@ -224,6 +224,7 @@ class ReservationController extends Controller
         $upsellCombos = [];
         $upgradeTargetRoomId = null;
         $upgradeOffer = null;
+        $upsellComboOffers = [];
         $upsells = UpsellOffer::active()->with('combo')
             ->whereIn('id', $validated['accepted_upsells'] ?? [])
             ->orderByRaw("type = 'time_extension' desc")
@@ -232,7 +233,7 @@ class ReservationController extends Controller
         foreach ($upsells as $u) {
             if ($u->type === 'time_extension' && $u->extra_minutes) {
                 $extraMinutes += $u->extra_minutes;
-                $upsellCharges[] = ['label' => $u->name, 'amount' => (int) $u->price];
+                $upsellCharges[] = ['label' => $u->name, 'amount' => (int) $u->price, 'offer_id' => $u->id];
             } elseif ($u->type === 'category_upgrade' && $u->to_room_category_id && ! $upgradeTargetRoomId && (int) $u->from_room_category_id === (int) $room->room_category_id) {
                 $endsAt = $startsAt->copy()->addMinutes($baseDuration + $extraMinutes);
                 $target = Room::where('room_category_id', $u->to_room_category_id)
@@ -246,6 +247,7 @@ class ReservationController extends Controller
                 }
             } elseif ($u->type === 'combo' && $u->combo) {
                 $upsellCombos[] = $u->combo;
+                $upsellComboOffers[$u->combo->id] = $u->id;
             }
         }
         $customerName = trim($validated['customer_first_name'].' '.$validated['customer_last_name']);
@@ -351,13 +353,13 @@ class ReservationController extends Controller
 
         foreach ($upsellCharges as $c) {
             if ($c['amount'] > 0) {
-                $consumption->addCustom($booking, $c['label'], $c['amount'], auth()->id());
+                $consumption->addCustom($booking, $c['label'], $c['amount'], auth()->id(), $c['offer_id'] ?? null);
             }
         }
 
         try {
             foreach ($upsellCombos as $combo) {
-                $consumption->addCombo($booking, $combo, 1, auth()->id(), (array) request()->input("upsell_combo_choices.{$combo->id}", []));
+                $consumption->addCombo($booking, $combo, 1, auth()->id(), (array) request()->input("upsell_combo_choices.{$combo->id}", []), $upsellComboOffers[$combo->id] ?? null);
             }
             foreach ($validated['combo_quantities'] ?? [] as $comboId => $qty) {
                 if ((int) $qty > 0) {

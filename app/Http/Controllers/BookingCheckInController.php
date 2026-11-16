@@ -378,13 +378,13 @@ class BookingCheckInController extends Controller
                 if ($rateRules->resolve($booking->starts_at, $newEndsAt)
                     && $availability->isAvailable($booking->room, $booking->starts_at, $newEndsAt, $booking->id)) {
                     $booking->update(['ends_at' => $newEndsAt]);
-                    $consumption->addCustom($booking, $u->name, (int) $u->price, auth()->id());
+                    $consumption->addCustom($booking, $u->name, (int) $u->price, auth()->id(), $u->id);
                 }
             } elseif ($u->type === 'category_upgrade' && $u->to_room_category_id) {
                 app(BookingAllocationService::class)->upgrade($booking, $u, auth()->id());
             } elseif ($u->type === 'combo' && $u->combo) {
                 try {
-                    $consumption->addCombo($booking, $u->combo, 1, auth()->id(), (array) request()->input("upsell_combo_choices.{$u->combo->id}", []));
+                    $consumption->addCombo($booking, $u->combo, 1, auth()->id(), (array) request()->input("upsell_combo_choices.{$u->combo->id}", []), $u->id);
                 } catch (InsufficientStockException $e) {
                     // sin stock — se omite
                 }

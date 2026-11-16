@@ -41,7 +41,7 @@ class BookingAllocationService
             }
             $locked->update(['room_id' => $target->id]);
             if ($offer->price > 0) {
-                $this->consumption->addCustom($locked, $offer->name, (int) $offer->price, $userId);
+                $this->consumption->addCustom($locked, $offer->name, (int) $offer->price, $userId, $offer->id);
             }
             $booking->refresh();
 

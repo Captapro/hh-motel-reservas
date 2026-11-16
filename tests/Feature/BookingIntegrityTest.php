@@ -148,6 +148,7 @@ class BookingIntegrityTest extends TestCase
             '2026_11_11_140000_add_ghl_sync_failure_to_bookings.php',
             '2026_11_11_170000_add_checkout_regularized_to_bookings.php',
             '2026_11_16_100000_add_heard_from_to_bookings_table.php',
+            '2026_11_16_120000_add_upsell_offer_id_to_booking_addons.php',
             '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
         ] as $file) {
             (require database_path('migrations/'.$file))->up();
@@ -790,6 +791,39 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(3, $heard['asked']);
         $this->assertSame(4, $heard['total']);
         $this->assertSame(['INSTAGRAM' => 2, 'GOOGLE' => 1], $heard['rows']->pluck('count', 'label')->all());
+    }
+
+    public function test_discounts_and_upsells_section_compares_coupons_and_counts_upsells(): void
+    {
+        $debit = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        $coupon = Coupon::create(['code' => 'MORNING ESCAPE', 'internal_name' => 'Morning Escape', 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 20]);
+        $withCoupon = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $withCoupon->update(['coupon_id' => $coupon->id, 'discount_amount' => 2000, 'price_final' => $withCoupon->price_original - 2000]);
+        $plain = $this->booking(['starts_at' => Carbon::parse('2026-10-05 15:00')]);
+        $offer = UpsellOffer::create(['name' => '+1 hora más', 'type' => 'time_extension', 'extra_minutes' => 60, 'price' => 7000, 'is_active' => true]);
+        $guessed = UpsellOffer::create(['name' => 'Sube a MAX', 'type' => 'category_upgrade', 'price' => 6000, 'is_active' => true]);
+        app(ConsumptionService::class)->addCustom($plain, '+1 hora más', 7000, auth()->id(), $offer->id);
+        // Uno de antes de marcar los upsells: se estima por nombre.
+        app(ConsumptionService::class)->addCustom($plain, 'Sube a MAX', 6000, auth()->id());
+        foreach ([$withCoupon, $plain] as $b) {
+            Payment::create(['booking_id' => $b->id, 'payment_method_id' => $debit->id, 'amount' => (int) $b->fresh()->price_final + (int) $b->addonsTotal(), 'status' => 'aprobado', 'voucher_number' => $b->code]);
+        }
+
+        // Solo soporte.
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        $this->get(route('admin.analytics.discounts'))->assertForbidden();
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+
+        $page = $this->get(route('admin.analytics.discounts', ['from' => '2026-10-01', 'to' => '2026-10-31']))->assertOk()->assertSee('Descuentos y upsells')->assertSee('Morning Escape');
+        $row = $page->viewData('byCoupon')->first();
+        $this->assertSame('Morning Escape', $row['label']);
+        $this->assertSame(1, $row['count']);
+        $this->assertSame(2000, $row['discount']);
+        $this->assertSame(1, $page->viewData('plain')['count']);
+        $rows = $page->viewData('upsellRows')->keyBy('name');
+        $this->assertSame([1, 0, 7000], [$rows['+1 hora más']['exact'], $rows['+1 hora más']['estimated'], $rows['+1 hora más']['amount']]);
+        $this->assertSame([0, 1, 6000], [$rows['Sube a MAX']['exact'], $rows['Sube a MAX']['estimated'], $rows['Sube a MAX']['amount']]);
+        $this->assertSame(2, $page->viewData('upsellTotal')['count']);
     }
 
     private function mpWebhook(string $paymentId, string $secret = 'sekret', ?string $signature = null)

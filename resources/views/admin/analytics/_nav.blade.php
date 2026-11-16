@@ -14,6 +14,7 @@
     <a href="{{ route('admin.analytics.index') }}" @class(['on' => $on === 'analytics'])>Resumen</a>
     @if (auth()->user()?->isSoporte())
         <a href="{{ route('admin.analytics.channels') }}" @class(['on' => $on === 'channels'])>Cómo llegan</a>
+        <a href="{{ route('admin.analytics.discounts') }}" @class(['on' => $on === 'discounts'])>Descuentos y upsells</a>
     @endif
     <a href="{{ route('admin.analytics.customers') }}" @class(['on' => $on === 'customers'])>Comportamiento de clientes</a>
     <a href="{{ route('admin.analytics.extras') }}" @class(['on' => $on === 'extras'])>Extras por mes</a>

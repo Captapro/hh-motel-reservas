@@ -61,9 +61,9 @@ class ConsumptionService
      *                                                                     elección: [combo_item_id => [product_id => cantidad]] por el total vendido
      *                                                                     (ej. 2 packs de "2 bebidas a elegir" = 4 bebidas repartidas entre sabores).
      */
-    public function addCombo(Booking $booking, Combo $combo, int $quantity, ?int $userId, array $choices = []): BookingAddon
+    public function addCombo(Booking $booking, Combo $combo, int $quantity, ?int $userId, array $choices = [], ?int $upsellOfferId = null): BookingAddon
     {
-        return DB::transaction(function () use ($booking, $combo, $quantity, $userId, $choices) {
+        return DB::transaction(function () use ($booking, $combo, $quantity, $userId, $choices, $upsellOfferId) {
             // Lo que se descuenta realmente: [product_id => unidades].
             $needs = [];
             $picked = [];
@@ -122,6 +122,8 @@ class ConsumptionService
             $addon = BookingAddon::create([
                 'booking_id' => $booking->id,
                 'combo_id' => $combo->id,
+                // Solo si se vendió como upsell (la columna es opcional).
+                ...($upsellOfferId ? ['upsell_offer_id' => $upsellOfferId] : []),
                 'description' => $description,
                 'quantity' => $quantity,
                 'amount' => $combo->price * $quantity,
@@ -136,11 +138,12 @@ class ConsumptionService
         });
     }
 
-    public function addCustom(Booking $booking, string $description, int $amount, ?int $userId): BookingAddon
+    public function addCustom(Booking $booking, string $description, int $amount, ?int $userId, ?int $upsellOfferId = null): BookingAddon
     {
         $addon = BookingAddon::create([
             'booking_id' => $booking->id,
             'product_id' => null,
+            ...($upsellOfferId ? ['upsell_offer_id' => $upsellOfferId] : []),
             'description' => $description,
             'quantity' => 1,
             'amount' => $amount,

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['booking_id', 'product_id', 'combo_id', 'description', 'quantity', 'amount', 'components', 'stock_deducted_at', 'added_by'])]
+#[Fillable(['booking_id', 'product_id', 'combo_id', 'upsell_offer_id', 'description', 'quantity', 'amount', 'components', 'stock_deducted_at', 'added_by'])]
 class BookingAddon extends Model
 {
     protected function casts(): array

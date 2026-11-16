@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\HistoricalSale;
 use App\Models\PaymentMethod;
 use App\Models\RoomCategory;
+use App\Models\UpsellOffer;
 use App\Services\Analyst\HistoricalDataService;
 use App\Services\Marketing\Attribution;
 use App\Support\SalesProjection;
@@ -528,6 +529,99 @@ class AnalyticsController extends Controller
             ->values();
 
         return ['rows' => $rows, 'total' => $bookings->count()];
+    }
+
+    /**
+     * «Descuentos y upsells» (soporte): qué cupones y ofertas se usaron, cuánto costaron y cómo
+     * se comparan con las estadías sin descuento; y cuántos upsells se vendieron y cuánto suman.
+     * Sirve para decidir si un descuento se paga solo (16-nov).
+     */
+    public function discounts(Request $request): View
+    {
+        [$start, $end, $preset] = $this->resolveRange($request);
+
+        $bookings = Booking::with(['addons', 'payments', 'coupon', 'room.category'])
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA'])
+            ->whereBetween('starts_at', [$start->copy()->subDay(), $end->copy()->addDay()])
+            ->get()
+            ->filter(fn (Booking $b) => $b->isPaidSale() && $this->inRange($b, $start, $end))
+            ->values();
+
+        $isWeekday = fn (Booking $b) => in_array($b->starts_at->timezone('America/Santiago')->dayOfWeekIso, [1, 2, 3, 4], true);
+        $stats = function (Collection $c) use ($isWeekday): array {
+            $n = $c->count();
+            $sale = (int) $c->sum(fn (Booking $b) => $b->price_final + $b->paidAddonsAmount());
+            $extras = (int) $c->sum(fn (Booking $b) => $b->paidAddonsAmount());
+            $discount = (int) $c->sum('discount_amount');
+
+            return [
+                'count' => $n,
+                'discount' => $discount,
+                'list' => (int) $c->sum('price_original'),
+                'sale' => $sale,
+                'ticket' => $n ? (int) round($sale / $n) : 0,
+                'minutes' => $n ? (int) round($c->avg('duration_minutes')) : 0,
+                'extras_per_stay' => $n ? (int) round($extras / $n) : 0,
+                'with_extras' => $n ? $c->filter(fn (Booking $b) => $b->paidAddonsAmount() > 0)->count() / $n : 0,
+                'weekday' => $n ? $c->filter($isWeekday)->count() / $n : 0,
+                'net_room' => $n ? (int) round($c->avg('price_final')) : 0,
+            ];
+        };
+
+        $discounted = $bookings->filter(fn (Booking $b) => (int) $b->discount_amount > 0)->values();
+        $plain = $bookings->filter(fn (Booking $b) => (int) $b->discount_amount === 0)->values();
+
+        $byCoupon = $discounted
+            ->groupBy(fn (Booking $b) => $b->coupon?->internal_name ?: ($b->coupon_code_snapshot ?: 'Descuento sin cupón (ajuste manual)'))
+            ->map(fn (Collection $g, string $label) => ['label' => $label] + $stats($g))
+            ->sortByDesc('count')->values();
+
+        $total = $stats($discounted);
+        // Cuántas de las estadías con descuento tendrían que ser clientes que no habrían venido sin él
+        // para que el descuento se pague solo (descuento dado ÷ lo que deja cada estadía).
+        $breakEven = fn (array $s) => $s['net_room'] > 0 && $s['count'] > 0 ? ['stays' => round($s['discount'] / $s['net_room'], 1), 'share' => min(1, $s['discount'] / $s['net_room'] / $s['count'])] : null;
+
+        // Upsells: exactos (marcados al aceptarlos) y estimados (antes de marcarlos, por nombre y precio).
+        $addons = $bookings->flatMap(fn (Booking $b) => $b->addons);
+        $upsellRows = UpsellOffer::with('combo')->orderBy('display_order')->orderBy('id')->get()->map(function (UpsellOffer $o) use ($addons) {
+            $exact = $addons->filter(fn ($a) => (int) $a->upsell_offer_id === (int) $o->id);
+            $estimated = $addons->filter(fn ($a) => ! $a->upsell_offer_id && (
+                ($o->type === 'combo' && $o->combo_id && (int) $a->combo_id === (int) $o->combo_id && $a->quantity > 0 && (int) round($a->amount / $a->quantity) === (int) $o->price)
+                || ($o->type !== 'combo' && ! $a->combo_id && ! $a->product_id && $a->description === $o->name)
+            ));
+
+            return [
+                'name' => $o->name,
+                'type' => ['category_upgrade' => 'Subir categoría', 'time_extension' => 'Más tiempo', 'combo' => 'Pack'][$o->type] ?? $o->type,
+                'price' => (int) $o->price,
+                'active' => (bool) $o->is_active,
+                'exact' => $exact->count(),
+                'estimated' => $estimated->count(),
+                'count' => $exact->count() + $estimated->count(),
+                'amount' => (int) $exact->sum('amount') + (int) $estimated->sum('amount'),
+            ];
+        });
+        $upsellStays = $bookings->filter(fn (Booking $b) => $b->addons->contains(fn ($a) => $a->upsell_offer_id));
+        $totalSale = (int) $bookings->sum(fn (Booking $b) => $b->price_final + $b->paidAddonsAmount());
+
+        return view('admin.analytics.discounts', [
+            'preset' => $preset,
+            'from' => $start->toDateString(),
+            'to' => $end->toDateString(),
+            'rangeLabel' => $this->rangeLabel($start, $end),
+            'isLive' => $end->isFuture() || $end->isToday(),
+            'refreshedAt' => now('America/Santiago'),
+            'all' => $stats($bookings),
+            'plain' => $stats($plain),
+            'plainWeekday' => $stats($plain->filter($isWeekday)->values()),
+            'total' => $total,
+            'byCoupon' => $byCoupon,
+            'breakEven' => $breakEven($total),
+            'upsellRows' => $upsellRows,
+            'upsellTotal' => ['count' => $upsellRows->sum('count'), 'amount' => $upsellRows->sum('amount'), 'exact' => $upsellRows->sum('exact'), 'share' => $totalSale > 0 ? $upsellRows->sum('amount') / $totalSale : 0],
+            'upsellMarkedSince' => $addons->whereNotNull('upsell_offer_id')->min('created_at'),
+            'upsellStays' => $upsellStays->count(),
+        ]);
     }
 
     /**
