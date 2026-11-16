@@ -149,6 +149,7 @@ class AnalyticsController extends Controller
             'refreshedAt' => now('America/Santiago'),
             'byOrigin' => $this->byOrigin($current, $val),
             'byChannel' => $byChannel,
+            'heardFrom' => $this->heardFrom($current, $val),
             'table' => $table,
         ]);
     }
@@ -527,6 +528,28 @@ class AnalyticsController extends Controller
             ->values();
 
         return ['rows' => $rows, 'total' => $bookings->count()];
+    }
+
+    /**
+     * «¿Cómo nos conoció?» de las ventas de recepción (presencial y asistida): lo que el cliente
+     * contesta al ingresar. Muestra también cuántas no se preguntaron, para ver si se está usando.
+     *
+     * @return array{rows: Collection, asked: int, total: int}
+     */
+    private function heardFrom(Collection $bookings, callable $val): array
+    {
+        $reception = $bookings->filter(fn (Booking $b) => in_array($b->origin, ['presencial', 'recepcion'], true));
+        $answered = $reception->filter(fn (Booking $b) => filled($b->heard_from));
+        $rows = $answered->groupBy('heard_from')
+            ->map(fn (Collection $g, string $key) => [
+                'key' => $key,
+                'label' => Booking::HEARD_FROM_LABELS[$key] ?? $key,
+                'count' => $g->count(),
+                'value' => (int) $g->sum(fn (Booking $b) => $val($b)),
+            ])
+            ->sortByDesc('count')->values();
+
+        return ['rows' => $rows, 'asked' => $answered->count(), 'total' => $reception->count()];
     }
 
     /**

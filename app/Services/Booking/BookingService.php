@@ -8,7 +8,6 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\BookingGuest;
 use App\Models\Coupon;
-use App\Support\CouponCode;
 use App\Models\CouponRedemption;
 use App\Models\Customer;
 use App\Models\OperationalSetting;
@@ -19,6 +18,7 @@ use App\Services\Pricing\PriceCalculator;
 use App\Services\Pricing\PromotionResolver;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\ShortStayPricer;
+use App\Support\CouponCode;
 use App\Support\GuestLine;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
@@ -175,6 +175,8 @@ class BookingService
                         'created_by' => $data['created_by'] ?? null,
                         // Cómo nació: ingreso presencial, reserva del equipo o catálogo en línea.
                         'origin' => ! empty($data['walk_in']) ? 'presencial' : (($data['created_by'] ?? null) ? 'recepcion' : 'catalogo'),
+                        // Solo se manda si recepción lo preguntó (la columna es opcional).
+                        ...(filled($data['heard_from'] ?? null) ? ['heard_from' => $data['heard_from']] : []),
                         'starts_at' => $startsAt,
                         'ends_at' => $endsAt,
                         'duration_minutes' => $durationMinutes,

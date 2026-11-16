@@ -75,6 +75,20 @@
 
     <div class="an-grid">
     <div class="card t-orange span2">
+        <h3>¿Cómo nos conocieron? (lo que dicen en recepción)</h3>
+        @php $hMax = max(1, (int) $heardFrom['rows']->max('count')); @endphp
+        <p class="legend" style="margin:0 0 10px;">Preguntado en {{ $heardFrom['asked'] }} de {{ $heardFrom['total'] }} ventas de recepción ({{ $heardFrom['total'] ? round($heardFrom['asked'] / $heardFrom['total'] * 100) : 0 }}%).</p>
+        @forelse ($heardFrom['rows'] as $h)
+            <div class="bar-row"><div class="name">{{ $h['label'] }}</div><div class="bar-track"><div class="bar-fill" style="width:{{ round($h['count'] / $hMax * 100) }}%"></div></div><div class="val">{{ $h['count'] }} <small>({{ $money($h['value']) }})</small></div></div>
+        @empty
+            <p class="empty">Todavía no hay respuestas en este rango. Recepción la ve al ingresar a un cliente, junto al teléfono.</p>
+        @endforelse
+        <p class="legend" style="margin-top:8px;">Es lo que el cliente cuenta, no un dato exacto: sirve para ver tendencias de dónde nos conocen, sobre todo entre quienes llegan sin reserva. Solo cuentan las ventas de recepción desde que se empezó a preguntar.</p>
+    </div>
+    </div>
+
+    <div class="an-grid">
+    <div class="card t-orange span2">
         <h3>Ventas por canal y por anuncio</h3>
         @php $cMax = max(1, (int) $byChannel['rows']->max('value')); @endphp
         @forelse ($byChannel['rows'] as $c)

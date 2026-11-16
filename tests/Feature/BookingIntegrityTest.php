@@ -147,6 +147,7 @@ class BookingIntegrityTest extends TestCase
             '2026_11_03_000000_add_marketing_tracking.php',
             '2026_11_11_140000_add_ghl_sync_failure_to_bookings.php',
             '2026_11_11_170000_add_checkout_regularized_to_bookings.php',
+            '2026_11_16_100000_add_heard_from_to_bookings_table.php',
             '2026_11_03_100000_add_room_closing_log_and_booked_ends.php',
         ] as $file) {
             (require database_path('migrations/'.$file))->up();
@@ -749,6 +750,46 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('Presencial', $walkIn->fresh()->originLabel());
         $this->assertSame('Reserva en línea', $online->fresh()->originLabel());
         $this->assertSame('Reserva asistida', $team->fresh()->originLabel());
+    }
+
+    public function test_reception_asks_how_the_client_found_us_and_it_is_saved_optionally(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-05 16:25'));
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+        $this->get(route('reservations.create', ['modo' => 'ingreso']))->assertOk()->assertSee('¿Cómo nos conoció?')->assertSee('ME LO RECOMENDÓ UN AMIGO');
+
+        $data = [
+            'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 16, 'time_minute' => 25,
+            'duration_minutes' => 60, 'guests_count' => 1, 'customer_first_name' => 'Con', 'customer_last_name' => 'Respuesta',
+            'document_type' => 'rut', 'document_number' => '12.345.678-5', 'nationality' => 'Chilena', 'walk_in' => 1,
+        ];
+        // Valor inventado: se rechaza. Sin responder: la reserva se crea igual.
+        $this->post('/reservar', ['heard_from' => 'inventado'] + $data)->assertSessionHasErrors('heard_from');
+        $this->assertSame(0, Booking::count());
+        $this->post('/reservar', ['heard_from' => 'instagram'] + $data)->assertSessionHasNoErrors();
+        $this->assertSame('instagram', Booking::first()->heard_from);
+        $this->assertSame('INSTAGRAM', Booking::first()->heardFromLabel());
+    }
+
+    public function test_how_they_arrive_shows_what_reception_heard_and_how_often_it_was_asked(): void
+    {
+        foreach (['2026_08_18_120020_create_tracking_data_table.php' => 'tracking_data', '2026_11_11_130000_create_booking_ad_origins_table.php' => 'booking_ad_origins'] as $file => $table) {
+            if (! Schema::hasTable($table)) {
+                (require database_path('migrations/'.$file))->up();
+            }
+        }
+        $debit = PaymentMethod::create(['code' => 'debito', 'name' => 'Débito']);
+        foreach ([['12:00', 'instagram'], ['14:00', 'instagram'], ['16:00', 'google'], ['18:00', null]] as [$hour, $heard]) {
+            $b = $this->booking(['starts_at' => Carbon::parse('2026-10-05 '.$hour), 'walk_in' => true, 'created_by' => auth()->id(), 'heard_from' => $heard]);
+            Payment::create(['booking_id' => $b->id, 'payment_method_id' => $debit->id, 'amount' => (int) $b->price_final, 'status' => 'aprobado', 'voucher_number' => $hour]);
+        }
+        $this->actingAs(User::factory()->create(['role' => 'soporte']));
+
+        $page = $this->get(route('admin.analytics.channels', ['from' => '2026-10-01', 'to' => '2026-10-31']))->assertOk()->assertSee('¿Cómo nos conocieron?');
+        $heard = $page->viewData('heardFrom');
+        $this->assertSame(3, $heard['asked']);
+        $this->assertSame(4, $heard['total']);
+        $this->assertSame(['INSTAGRAM' => 2, 'GOOGLE' => 1], $heard['rows']->pluck('count', 'label')->all());
     }
 
     private function mpWebhook(string $paymentId, string $secret = 'sekret', ?string $signature = null)

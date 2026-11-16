@@ -437,6 +437,9 @@
                 <div class="row"><span class="muted">{{ $booking->checked_out_at ? 'Salida contratada' : 'Hora de salida' }}</span><span>{{ $booking->bookedEndsAt()->timezone('America/Santiago')->format('d/m/Y H:i') }}@if ($booking->short_stay) <span class="pill" style="margin-left:6px; background:#2e2410; color:#ffcf6e; border-color:#c98a1b;">SALE AL CIERRE</span>@endif</span></div>
                 <div class="row"><span class="muted">Duración</span><span>@if ($booking->short_stay){{ \App\Support\TimeFormat::minutes((int) $booking->starts_at->diffInMinutes($booking->ends_at)) }} · estadía corta por cierre (tarifa de {{ $booking->duration_minutes / 60 }} h)@else{{ $booking->duration_minutes / 60 }} h @endif</span></div>
                 <div class="row"><span class="muted">Reservado el</span><span>{{ $booking->created_at->timezone('America/Santiago')->format('d/m/Y H:i') }}</span></div>
+                @if ($booking->heardFromLabel())
+                    <div class="row"><span class="muted">¿Cómo nos conoció?</span><span>{{ $booking->heardFromLabel() }}</span></div>
+                @endif
                 <div class="row"><span class="muted">Tarifa aplicada</span><span class="pill">{{ $booking->rate_rule_name_snapshot }}</span></div>
                 @if ($booking->checked_in_at)
                     @php $delay = $booking->checkInDelayMinutes(); @endphp

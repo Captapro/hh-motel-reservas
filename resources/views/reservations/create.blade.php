@@ -523,6 +523,14 @@
                         <span>📲 ¿Acepta recibir promociones por WhatsApp o correo? <span style="font-weight:400;color:#cfcfcf;">Pregúntale y marca si dice que sí.</span></span>
                     </label>
 
+                    <label for="heard-from" style="margin-top:12px;">¿Cómo nos conoció? <span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional — pregúntale)</span></label>
+                    <select name="heard_from" id="heard-from">
+                        <option value="">— Sin preguntar —</option>
+                        @foreach (\App\Models\Booking::HEARD_FROM_LABELS as $key => $label)
+                            <option value="{{ $key }}" @selected(old('heard_from') === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+
                     <div class="sub-head id-extra" style="display:none">Identificación <span></span></div>
 
                     <div class="row row-id id-extra" style="display:none">

@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 #[Fillable([
-    'code', 'pass_token', 'customer_id', 'room_id', 'created_by', 'origin', 'starts_at', 'ends_at', 'duration_minutes', 'short_stay', 'guests_count',
+    'code', 'pass_token', 'customer_id', 'room_id', 'created_by', 'origin', 'heard_from', 'starts_at', 'ends_at', 'duration_minutes', 'short_stay', 'guests_count',
     'booking_status', 'payment_status',
     'rate_rule_id', 'rate_rule_name_snapshot', 'price_original', 'extra_guests_fee',
     'coupon_id', 'coupon_code_snapshot', 'discount_amount', 'price_final', 'deposit_amount',
@@ -215,6 +215,20 @@ class Booking extends Model
 
     /** Cómo nació la reserva (columna origin). Las antiguas sin dato se muestran como "—". */
     public const ORIGIN_LABELS = ['presencial' => 'Presencial', 'recepcion' => 'Reserva asistida', 'catalogo' => 'Reserva en línea'];
+
+    /** «¿Cómo nos conoció?» que recepción le pregunta al cliente (columna heard_from). */
+    public const HEARD_FROM_LABELS = [
+        'facebook' => 'FACEBOOK',
+        'instagram' => 'INSTAGRAM',
+        'google' => 'GOOGLE',
+        'amigo' => 'ME LO RECOMENDÓ UN AMIGO',
+        'otro' => 'OTRO',
+    ];
+
+    public function heardFromLabel(): ?string
+    {
+        return self::HEARD_FROM_LABELS[$this->heard_from] ?? null;
+    }
 
     public function originLabel(): string
     {
