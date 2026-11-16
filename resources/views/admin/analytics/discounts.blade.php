@@ -35,7 +35,7 @@
         @else
             <p class="legend" style="margin:0 0 10px;">{{ $total['count'] }} de {{ $all['count'] }} estadías ({{ $pct($total['count'] / max(1, $all['count'])) }}) usaron descuento, por {{ $money($total['discount']) }}: el {{ number_format($total['discount'] / max(1, $all['sale']) * 100, 1, ',', '.') }}% de la venta.</p>
             <table class="rank-table ch-table">
-                <thead><tr><th>Descuento</th><th class="n">Estadías</th><th class="n">Descuento dado</th><th class="n">Ticket</th><th class="n">Minutos</th><th class="n">Extras por estadía</th><th class="n">% lun–jue</th><th class="n">Hace falta que sean nuevos</th></tr></thead>
+                <thead><tr><th>Descuento</th><th class="n">Estadías</th><th class="n">Descuento dado</th><th class="n">Ticket</th><th class="n">Minutos</th><th class="n">Extras por estadía</th><th class="n">% lun–jue</th><th class="n">¿Cuándo se paga solo?</th></tr></thead>
                 <tbody>
                 @foreach ($byCoupon as $r)
                     @php $be = $r['net_room'] > 0 ? $r['discount'] / $r['net_room'] : 0; @endphp
@@ -47,7 +47,7 @@
                         <td class="n">{{ $r['minutes'] }}</td>
                         <td class="n">{{ $money($r['extras_per_stay']) }}</td>
                         <td class="n">{{ $pct($r['weekday']) }}</td>
-                        <td class="n">{{ number_format($be, 1, ',', '.') }} de {{ $r['count'] }} ({{ $pct(min(1, $be / max(1, $r['count']))) }})</td>
+                        <td class="n">Si {{ number_format($be, 1, ',', '.') }} de {{ $r['count'] }} vinieron solo por el descuento ({{ $pct(min(1, $be / max(1, $r['count']))) }})</td>
                     </tr>
                 @endforeach
                 <tr style="font-weight:700;">
@@ -58,7 +58,7 @@
                     <td class="n">{{ $total['minutes'] }}</td>
                     <td class="n">{{ $money($total['extras_per_stay']) }}</td>
                     <td class="n">{{ $pct($total['weekday']) }}</td>
-                    <td class="n">{{ $breakEven ? number_format($breakEven['stays'], 1, ',', '.').' de '.$total['count'].' ('.$pct($breakEven['share']).')' : '—' }}</td>
+                    <td class="n">{{ $breakEven ? 'Si '.number_format($breakEven['stays'], 1, ',', '.').' de '.$total['count'].' vinieron solo por el descuento ('.$pct($breakEven['share']).')' : '—' }}</td>
                 </tr>
                 @foreach ([['Sin descuento (todas)', $plain], ['Sin descuento · lun–jue', $plainWeekday]] as [$label, $s])
                     <tr style="opacity:.85;">
@@ -74,7 +74,7 @@
                 @endforeach
                 </tbody>
             </table>
-            <p class="legend" style="margin-top:8px;"><b>Hace falta que sean nuevos</b>: cuántas de esas estadías tendrían que ser clientes que no habrían venido sin el descuento para que este se pague solo (descuento dado ÷ lo que deja cada estadía). El sistema no sabe quién vino por el descuento: sirve para comparar, no para probar. <b>Sin descuento · lun–jue</b> es la comparación más justa para cupones que se usan entre semana. Con pocas estadías el promedio se mueve mucho.</p>
+            <p class="legend" style="margin-top:8px;"><b>¿Cuándo se paga solo?</b> Un descuento regala plata a los clientes que habrían venido igual, y solo se recupera con los que vinieron <i>porque</i> había descuento. Ejemplo: se regalaron $70.000 en 14 estadías que dejan unos $23.000 cada una. Si 3 de esos 14 vinieron solo por el descuento, esos 3 dejaron unos $70.000 y quedamos empatados; si fueron más de 3, ganamos; si menos, perdimos plata. El sistema no sabe quiénes vinieron por el descuento: la columna dice cuántos tendrían que haber sido, y tú juzgas si es creíble. Sirve para comparar, no para probar. <b>Sin descuento · lun–jue</b> es la comparación más justa para cupones que se usan entre semana. Con pocas estadías el promedio se mueve mucho.</p>
         @endif
     </div>
     </div>
