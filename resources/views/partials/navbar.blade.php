@@ -176,6 +176,7 @@
                 <a href="{{ route('admin.staff.index') }}" class="{{ request()->routeIs('admin.staff.*') ? 'hh-active' : '' }}">Personal</a>
                 @if (auth()->user()?->isSoporte())
                     <a href="{{ route('admin.access.index') }}" class="{{ request()->routeIs('admin.access.*') ? 'hh-active' : '' }}">Perfiles y accesos</a>
+                    <a href="{{ route('admin.activity.index') }}" class="{{ request()->routeIs('admin.activity.*') ? 'hh-active' : '' }}">Actividad y accesos</a>
                 @endif
                 <a href="{{ route('admin.help.index') }}" class="{{ request()->routeIs('admin.help.*') ? 'hh-active' : '' }}">Asistente de ayuda</a>
             </span>

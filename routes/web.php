@@ -452,6 +452,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
 
         Route::get('/accesos', [AccessController::class, 'index'])->middleware('role:soporte')->name('access.index');
         Route::put('/accesos', [AccessController::class, 'update'])->middleware('role:soporte')->name('access.update');
+        Route::get('/actividad', [App\Http\Controllers\Admin\ActivityController::class, 'index'])->middleware('role:soporte')->name('activity.index');
         Route::post('/cuentas', [AccountController::class, 'store'])->name('accounts.store');
         Route::put('/cuentas/{user}', [AccountController::class, 'update'])->name('accounts.update');
         Route::delete('/cuentas/{user}', [AccountController::class, 'destroy'])->name('accounts.destroy');

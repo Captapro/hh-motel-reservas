@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\LoginEvent;
 use App\Models\StaffShiftLog;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,10 +26,13 @@ class LoginController extends Controller
         ]);
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            LoginEvent::note($request, 'fallido', User::where('email', $credentials['email'])->first(), $credentials['email']);
+
             return back()->withErrors(['email' => 'Datos incorrectos.'])->onlyInput('email');
         }
 
         if (! Auth::user()->is_active) {
+            LoginEvent::note($request, 'desactivada', Auth::user());
             Auth::logout();
 
             return back()->withErrors(['email' => 'Esta cuenta está desactivada.'])->onlyInput('email');
@@ -42,6 +47,7 @@ class LoginController extends Controller
         if (! $user->openShiftLog()) {
             StaffShiftLog::create(['user_id' => $user->id, 'started_at' => now()]);
         }
+        LoginEvent::note($request, 'ok', $user);
 
         return redirect()->intended(route($user->homeRoute()));
     }
@@ -49,6 +55,9 @@ class LoginController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         Auth::user()?->openShiftLog()?->update(['ended_at' => now()]);
+        if (Auth::user()) {
+            LoginEvent::note($request, 'salida', Auth::user());
+        }
 
         Auth::logout();
         $request->session()->invalidate();
