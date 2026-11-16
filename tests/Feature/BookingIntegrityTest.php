@@ -14,8 +14,10 @@ use App\Http\Middleware\CaptureAttribution;
 use App\Models\AttentionRequest;
 use App\Models\AuditLog;
 use App\Models\Booking;
+use App\Models\BookingAddon;
 use App\Models\BookingGuest;
 use App\Models\CashMovement;
+use App\Models\Combo;
 use App\Models\CoreExtra;
 use App\Models\Coupon;
 use App\Models\CouponProof;
@@ -131,6 +133,7 @@ class BookingIntegrityTest extends TestCase
             '2026_08_19_090002_add_product_id_to_booking_addons_table.php',
             '2026_08_19_180001_add_checkin_checkout_to_bookings_table.php',
             '2026_08_20_110001_create_combos_table.php',
+            '2026_08_20_110002_add_combo_id_to_booking_addons_table.php',
             '2026_09_10_130000_add_auto_apply_offers_to_coupons.php',
             '2026_09_10_140000_create_upsell_offers_table.php',
             '2026_09_11_090001_add_min_age_to_coupons_table.php',
@@ -805,6 +808,10 @@ class BookingIntegrityTest extends TestCase
         app(ConsumptionService::class)->addCustom($plain, '+1 hora más', 7000, auth()->id(), $offer->id);
         // Uno de antes de marcar los upsells: se estima por nombre.
         app(ConsumptionService::class)->addCustom($plain, 'Sube a MAX', 6000, auth()->id());
+        // Un pack: el upsell queda con precio 0 y vale lo que cuesta su combo.
+        $pack = Combo::create(['name' => 'Pack Brindis', 'price' => 5000, 'is_active' => true]);
+        UpsellOffer::create(['name' => 'Pack Brindis', 'type' => 'combo', 'combo_id' => $pack->id, 'price' => 0, 'is_active' => true]);
+        BookingAddon::create(['booking_id' => $plain->id, 'combo_id' => $pack->id, 'description' => 'Pack Brindis', 'quantity' => 1, 'amount' => 5000]);
         foreach ([$withCoupon, $plain] as $b) {
             Payment::create(['booking_id' => $b->id, 'payment_method_id' => $debit->id, 'amount' => (int) $b->fresh()->price_final + (int) $b->addonsTotal(), 'status' => 'aprobado', 'voucher_number' => $b->code]);
         }
@@ -823,7 +830,8 @@ class BookingIntegrityTest extends TestCase
         $rows = $page->viewData('upsellRows')->keyBy('name');
         $this->assertSame([1, 0, 7000], [$rows['+1 hora más']['exact'], $rows['+1 hora más']['estimated'], $rows['+1 hora más']['amount']]);
         $this->assertSame([0, 1, 6000], [$rows['Sube a MAX']['exact'], $rows['Sube a MAX']['estimated'], $rows['Sube a MAX']['amount']]);
-        $this->assertSame(2, $page->viewData('upsellTotal')['count']);
+        $this->assertSame([5000, 1, 5000], [$rows['Pack Brindis']['price'], $rows['Pack Brindis']['estimated'], $rows['Pack Brindis']['amount']]);
+        $this->assertSame(3, $page->viewData('upsellTotal')['count']);
     }
 
     private function mpWebhook(string $paymentId, string $secret = 'sekret', ?string $signature = null)

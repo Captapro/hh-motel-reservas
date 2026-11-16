@@ -584,16 +584,18 @@ class AnalyticsController extends Controller
         // Upsells: exactos (marcados al aceptarlos) y estimados (antes de marcarlos, por nombre y precio).
         $addons = $bookings->flatMap(fn (Booking $b) => $b->addons);
         $upsellRows = UpsellOffer::with('combo')->orderBy('display_order')->orderBy('id')->get()->map(function (UpsellOffer $o) use ($addons) {
+            // El precio de un pack es el de su combo (en el upsell queda en 0).
+            $price = $o->type === 'combo' ? (int) ($o->combo?->price ?? $o->price) : (int) $o->price;
             $exact = $addons->filter(fn ($a) => (int) $a->upsell_offer_id === (int) $o->id);
             $estimated = $addons->filter(fn ($a) => ! $a->upsell_offer_id && (
-                ($o->type === 'combo' && $o->combo_id && (int) $a->combo_id === (int) $o->combo_id && $a->quantity > 0 && (int) round($a->amount / $a->quantity) === (int) $o->price)
+                ($o->type === 'combo' && $o->combo_id && (int) $a->combo_id === (int) $o->combo_id && $a->quantity > 0 && (int) round($a->amount / $a->quantity) === $price)
                 || ($o->type !== 'combo' && ! $a->combo_id && ! $a->product_id && $a->description === $o->name)
             ));
 
             return [
                 'name' => $o->name,
                 'type' => ['category_upgrade' => 'Subir categoría', 'time_extension' => 'Más tiempo', 'combo' => 'Pack'][$o->type] ?? $o->type,
-                'price' => (int) $o->price,
+                'price' => $price,
                 'active' => (bool) $o->is_active,
                 'exact' => $exact->count(),
                 'estimated' => $estimated->count(),
