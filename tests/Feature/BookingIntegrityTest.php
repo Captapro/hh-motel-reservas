@@ -542,6 +542,15 @@ class BookingIntegrityTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.reabrir', 'entity_id' => $booking->id]);
     }
 
+    public function test_catalog_top_shows_price_location_and_reserve_button(): void
+    {
+        $this->get('/catalogo')->assertOk()
+            ->assertSee('Almirante Barroso 334', false)
+            ->assertSee('Metro Santa Ana', false)
+            ->assertSee('Reservar ahora', false)
+            ->assertSee(route('catalog.reserve'), false);
+    }
+
     public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);

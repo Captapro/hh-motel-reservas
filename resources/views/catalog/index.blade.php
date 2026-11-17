@@ -26,6 +26,13 @@
         .intro h1 { font-size: 30px; line-height: 1.1; letter-spacing: -.035em; margin: 0 0 6px; }
         .intro p { color:#4b4e54; font-size: 17px; margin: 0; }
 
+        /* ===== Franja de datos rápidos (precio, ubicación, reservar) ===== */
+        .quick-info { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+        .quick-info .qi { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #dcdcd8; border-radius: 999px; padding: 8px 12px; font-size: 14.5px; color: #2a2c30; text-decoration: none; }
+        .quick-info .qi b { font-size: 16.5px; }
+        a.quick-cta { display: block; text-align: center; background: var(--hh-accent); color: #21170e; text-decoration: none; font-weight: 800; font-size: 18px; padding: 14px; border-radius: 16px; margin: 12px 0 0; box-shadow: 0 8px 22px #ff79183a; }
+        a.quick-cta:active { background: var(--hh-accent-hover); transform: scale(.985); }
+
         /* ===== Categorías (chips que se quedan fijos al bajar) ===== */
         .cat-chips-wrap { position: sticky; top: calc(var(--bar-h) + var(--safe-t)); z-index: 40; margin: 12px -16px 4px; padding: 8px 16px; background: rgba(245,245,244,.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
         .cat-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 2px 0; }
@@ -152,6 +159,25 @@
         <section class="intro">
             <h1>Elige tu Playroom</h1>
             <p>Reserva en línea en un minuto o escríbenos por WhatsApp.</p>
+            @php
+                $lowest = null;
+                foreach ($categories as $e) {
+                    foreach ($e['prices'] as $row) {
+                        foreach (['hh', 'hot'] as $k) {
+                            if ($row[$k] && ($lowest === null || $row[$k] < $lowest['price'])) {
+                                $lowest = ['price' => $row[$k], 'duration' => $row['duration']];
+                            }
+                        }
+                    }
+                }
+            @endphp
+            <div class="quick-info">
+                @if ($lowest)
+                    <span class="qi"><b>Desde ${{ number_format($lowest['price'], 0, ',', '.') }}</b> / {{ $lowest['duration'] >= 60 ? intdiv($lowest['duration'], 60).' h' : $lowest['duration'].' min' }}</span>
+                @endif
+                <a class="qi" href="https://www.google.com/maps/search/?api=1&query=Almirante+Barroso+334+Santiago" target="_blank" rel="noopener">📍 Almirante Barroso 334 · Metro Santa Ana</a>
+            </div>
+            <a class="quick-cta" href="{{ route('catalog.reserve') }}">Reservar ahora →</a>
         </section>
 
         @if ($categories->count() > 1)
