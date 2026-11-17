@@ -282,6 +282,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/reservas/{code}/cancelar', [BookingCancelController::class, 'store'])->name('bookings.cancel');
     Route::post('/reservas/{code}/mantener', [BookingHoldController::class, 'store'])->name('bookings.hold');
     Route::post('/reservas/{code}/reactivar', [BookingReactivateController::class, 'store'])->name('bookings.reactivate');
+    Route::post('/reservas/{code}/deshacer-checkin', [App\Http\Controllers\BookingUndoCheckInController::class, 'store'])->middleware('role:administrador')->name('bookings.undo_checkin');
     Route::delete('/reservas/{code}', [BookingDeleteController::class, 'destroy'])->middleware('role:soporte')->name('bookings.destroy');
     Route::post('/reservas/{code}/fidelizacion', [CustomerLoyaltyController::class, 'store'])->name('customers.loyalty');
     Route::post('/reservas/{code}/transferencia-enviada', [BookingPaymentInstructionsController::class, 'transferSent'])->name('bookings.transfer_sent');

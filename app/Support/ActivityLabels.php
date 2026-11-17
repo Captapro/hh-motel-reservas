@@ -29,7 +29,7 @@ class ActivityLabels
         'ronda.pin_creado' => 'Creó un PIN de ronda', 'ronda.pin_borrado' => 'Borró un PIN de ronda',
         'claves.ver' => 'Vio una clave de puerta', 'claves.cambiar' => 'Cambió una clave', 'claves.crear' => 'Creó una clave', 'claves.borrar' => 'Borró una clave', 'claves.importar' => 'Importó claves',
         'reserva.crear' => 'Creó una reserva', 'reserva.crear_desde_planilla' => 'Cargó una reserva de la planilla', 'reserva.modificar' => 'Modificó una reserva', 'reserva.cancelar' => 'Canceló una reserva',
-        'reserva.eliminar' => 'Eliminó una reserva', 'reserva.check_in' => 'Hizo check-in', 'reserva.check_in_sin_documento' => 'Check-in sin foto del documento del cupón', 'reserva.finalizar' => 'Finalizó una reserva', 'reserva.reactivar' => 'Reactivó una reserva',
+        'reserva.eliminar' => 'Eliminó una reserva', 'reserva.check_in' => 'Hizo check-in', 'reserva.check_in_sin_documento' => 'Check-in sin foto del documento del cupón', 'reserva.finalizar' => 'Finalizó una reserva', 'reserva.deshacer_check_in' => 'Deshizo un check-in', 'reserva.reactivar' => 'Reactivó una reserva',
         'reserva.expirar' => 'Venció una reserva', 'reserva.mantener_retencion' => 'Mantuvo una reserva retenida', 'reserva.instrucciones_pago_enviadas' => 'Envió instrucciones de pago',
         'reserva.corregir_horas' => 'Corrigió las horas reales', 'reserva.corregir_venta' => 'Corrigió el precio de una venta',
         'reserva.consumo_agregar' => 'Agregó un consumo', 'reserva.consumo_desde_planilla' => 'Cargó un consumo de planilla', 'reserva.consumo_entregado' => 'Entregó un consumo', 'reserva.consumo_quitado' => 'Quitó un consumo',

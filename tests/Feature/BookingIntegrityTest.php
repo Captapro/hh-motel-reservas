@@ -501,6 +501,29 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame('CHECK_IN', $booking->booking_status);
     }
 
+    public function test_administrator_can_undo_a_wrong_check_in_but_reception_cannot(): void
+    {
+        $booking = $this->booking(['guests_count' => 2]);
+        $this->payRoom($booking);
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))
+            ->post(route('bookings.checkin', $booking->code), ['guest_names' => 'Ana Prueba | 11111111-1'])->assertSessionHasNoErrors();
+        $this->assertSame('CHECK_IN', $booking->fresh()->booking_status);
+        $this->assertSame(1, $booking->fresh()->guests()->count());
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('bookings.undo_checkin', $booking->code))->assertForbidden();
+        $this->assertSame('CHECK_IN', $booking->fresh()->booking_status);
+
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))
+            ->post(route('bookings.undo_checkin', $booking->code))->assertRedirect(route('reservations.show', $booking->code));
+        $undone = $booking->fresh();
+        $this->assertSame('CONFIRMADA', $undone->booking_status);
+        $this->assertNull($undone->checked_in_at);
+        $this->assertSame(0, $undone->guests()->count());
+        $this->assertTrue($undone->ends_at->eq($undone->starts_at->copy()->addMinutes($undone->duration_minutes)));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.deshacer_check_in', 'entity_id' => $booking->id]);
+    }
+
     public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);

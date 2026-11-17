@@ -221,6 +221,12 @@
         @unless (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
             <a class="col-btn" href="{{ route('reservations.edit', $booking->code) }}">Modificar</a>
         @endunless
+        @if (auth()->user()?->isAdministrador() && $booking->booking_status === 'CHECK_IN' && $booking->checked_in_at && ! $booking->checked_out_at)
+            <form method="POST" action="{{ route('bookings.undo_checkin', $booking->code) }}" style="display:inline" onsubmit="return confirm('¿Deshacer el check-in de esta reserva? Vuelve a «confirmada» y se borran los acompañantes registrados.')">
+                @csrf
+                <button type="submit" class="col-btn" title="Solo si el check-in se marcó por error">Deshacer check-in</button>
+            </form>
+        @endif
         @if ($booking->checked_in_at && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
             @if ($booking->balanceDue() <= 0)
                 <a class="col-btn col-primary" href="{{ route('bookings.finalize.show', $booking->code) }}" title="Marca la salida ahora mismo, aunque sea antes de la hora reservada">Finalizar reserva →</a>
