@@ -524,6 +524,24 @@ class BookingIntegrityTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.deshacer_check_in', 'entity_id' => $booking->id]);
     }
 
+    public function test_administrator_can_reopen_a_paid_cancelled_booking_in_another_room(): void
+    {
+        $booking = $this->booking();
+        $this->payRoom($booking);
+        $booking->update(['booking_status' => 'CANCELADA']);
+        $target = Room::create(['name' => 'GO 110', 'room_category_id' => $this->room->room_category_id, 'operational_status' => 'activa']);
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('bookings.reopen', $booking->code), ['room_id' => $target->id])->assertForbidden();
+
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))
+            ->post(route('bookings.reopen', $booking->code), ['room_id' => $target->id])->assertSessionHasNoErrors();
+        $reopened = $booking->fresh();
+        $this->assertSame('CONFIRMADA', $reopened->booking_status);
+        $this->assertSame($target->id, $reopened->room_id);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.reabrir', 'entity_id' => $booking->id]);
+    }
+
     public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
