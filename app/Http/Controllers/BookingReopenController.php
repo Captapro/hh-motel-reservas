@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\PricingException;
-use App\Exceptions\RoomNotAvailableException;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Room;
-use App\Services\Booking\BookingService;
+use App\Services\Booking\AvailabilityChecker;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  */
 class BookingReopenController extends Controller
 {
-    public function store(Request $request, string $code, BookingService $bookingService): RedirectResponse
+    public function store(Request $request, string $code, AvailabilityChecker $availability): RedirectResponse
     {
         $validated = $request->validate(['room_id' => ['required', 'exists:rooms,id']]);
         $booking = Booking::where('code', $code)->firstOrFail();
@@ -29,21 +28,25 @@ class BookingReopenController extends Controller
 
         $room = Room::findOrFail($validated['room_id']);
 
+        if ((int) $room->room_category_id !== (int) $booking->room->room_category_id) {
+            return back()->withErrors(['booking' => 'Reábrela en una pieza de la misma categoría para no cambiar el precio.']);
+        }
+        if (! $room->isOperational()) {
+            return back()->withErrors(['booking' => "El Playroom {$room->name} no está operativo ahora mismo."]);
+        }
+        if (! $availability->isAvailable($room, $booking->starts_at, $booking->ends_at, $booking->id)) {
+            return back()->withErrors(['booking' => "El Playroom {$room->name} no está disponible en el horario de esta reserva."]);
+        }
+
         try {
-            DB::transaction(function () use ($booking, $room, $bookingService) {
+            DB::transaction(function () use ($booking, $room) {
                 $old = $booking->only(['booking_status', 'room_id']);
-                $booking->update(['booking_status' => 'CONFIRMADA']);
-                $bookingService->reschedule($booking->fresh(), [
-                    'room' => $room,
-                    'starts_at' => $booking->starts_at,
-                    'duration_minutes' => (int) $booking->duration_minutes,
-                    'guests_count' => (int) $booking->guests_count,
-                    'updated_by' => auth()->id(),
-                ]);
+                // Estado y pieza en un solo paso: la base no admite dos reservas activas cruzadas en la misma pieza.
+                $booking->update(['booking_status' => 'CONFIRMADA', 'room_id' => $room->id]);
                 AuditLog::record(auth()->id(), 'reserva.reabrir', 'Booking', $booking->id, $old, $booking->fresh()->only(['booking_status', 'room_id']));
             });
-        } catch (RoomNotAvailableException|PricingException $e) {
-            return back()->withErrors(['booking' => $e->getMessage()]);
+        } catch (QueryException) {
+            return back()->withErrors(['booking' => "El Playroom {$room->name} se cruza con otra reserva en ese horario."]);
         }
 
         return redirect()->route('reservations.show', $booking->code)->with('status', 'Reserva reabierta en '.$room->name.' con su pago intacto.');
