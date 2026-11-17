@@ -548,6 +548,7 @@ class BookingIntegrityTest extends TestCase
             ->assertSee('Almirante Barroso 334', false)
             ->assertSee('Metro Santa Ana', false)
             ->assertSee('Reservar ahora', false)
+            ->assertSee('class="qp" href="#cat-', false)
             ->assertSee(route('catalog.reserve'), false);
     }
 

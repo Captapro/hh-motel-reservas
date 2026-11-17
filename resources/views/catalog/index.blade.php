@@ -32,6 +32,8 @@
         .quick-info .qi b { font-size: 16.5px; }
         .quick-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 0; }
         .quick-prices .qp { display: block; background: #fff; border: 1px solid #dcdcd8; border-radius: 14px; padding: 8px 12px; color: #2a2c30; text-decoration: none; line-height: 1.2; }
+        html { scroll-behavior: smooth; }
+        .quick-prices .qp:active { background: #f0f0ee; transform: scale(.98); }
         .quick-prices .qp small { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b6e74; }
         .quick-prices .qp b { font-size: 18px; }
         .quick-prices .qp span { font-size: 13.5px; color: #6b6e74; }
@@ -170,7 +172,7 @@
                     foreach ($e['prices'] as $row) {
                         foreach (['hh', 'hot'] as $k) {
                             if ($row[$k] && ($lowest === null || $row[$k] < $lowest['price'])) {
-                                $lowest = ['price' => $row[$k], 'duration' => $row['duration'], 'name' => $e['category']->name];
+                                $lowest = ['price' => $row[$k], 'duration' => $row['duration'], 'name' => $e['category']->name, 'slug' => Str::slug($e['category']->name)];
                             }
                         }
                     }
@@ -178,7 +180,7 @@
             @endphp
             <div class="quick-prices">
                 @if ($lowest)
-                    <span class="qp"><small>{{ $lowest['name'] }} desde</small><b>${{ number_format($lowest['price'], 0, ',', '.') }}</b> <span>/ {{ $lowest['duration'] >= 60 ? intdiv($lowest['duration'], 60).' h' : $lowest['duration'].' min' }}</span></span>
+                    <a class="qp" href="#cat-{{ $lowest['slug'] }}"><small>{{ $lowest['name'] }} desde</small><b>${{ number_format($lowest['price'], 0, ',', '.') }}</b> <span>/ {{ $lowest['duration'] >= 60 ? intdiv($lowest['duration'], 60).' h' : $lowest['duration'].' min' }}</span></a>
                 @endif
                 @foreach ($categories as $e)
                     @if (in_array(mb_strtoupper($e['category']->name), ['NEW LITE', 'PLUS', 'MAX'], true))
