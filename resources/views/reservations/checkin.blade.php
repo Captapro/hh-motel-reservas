@@ -248,6 +248,12 @@
             @if ($requiredGuests > 0)
                 <button type="button" class="guest-add-btn" onclick="hhAddGuestRow()">+ Agregar acompañante</button>
             @endif
+            @if (auth()->user()?->isAdministrador())
+                <div class="field" style="margin:10px 0;">
+                    <label for="real-arrival" style="font-size:13px;">Hora real de ingreso (opcional — si ya entró y no se marcó a tiempo)</label>
+                    <input type="time" name="real_arrival" id="real-arrival" value="{{ old('real_arrival') }}" style="max-width:160px;">
+                </div>
+            @endif
             <textarea name="guest_names" id="guest-names-hidden" hidden>{{ old('guest_names', $booking->guests->map(fn ($g) => \App\Support\GuestLine::format($g->name, $g->id_document))->implode("\n")) }}</textarea>
             <div class="guests-error" id="guests-error" hidden></div>
         </div>

@@ -472,6 +472,35 @@ class BookingIntegrityTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.check_in_sin_documento', 'entity_id' => $student->id]);
     }
 
+    public function test_administrator_can_set_the_real_arrival_time_at_check_in(): void
+    {
+        $booking = $this->booking(['guests_count' => 1]);
+        $this->payRoom($booking);
+        Carbon::setTestNow(Carbon::parse('2026-10-05 12:40'));
+
+        // Recepción no puede indicar la hora: se ignora y entra "ahora".
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('bookings.checkin', $booking->code), ['real_arrival' => '08:30']);
+        $this->assertEqualsWithDelta(Carbon::parse('2026-10-05 12:40')->timestamp, $booking->fresh()->checked_in_at->timestamp, 1);
+    }
+
+    public function test_real_arrival_before_booked_time_moves_the_whole_schedule(): void
+    {
+        $booking = $this->booking(['guests_count' => 1]);
+        $this->payRoom($booking);
+        Carbon::setTestNow(Carbon::parse('2026-10-05 12:40'));
+        $originalEnd = $booking->ends_at->copy();
+
+        // Media hora antes de la hora anotada (12:00).
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))
+            ->post(route('bookings.checkin', $booking->code), ['real_arrival' => '11:30'])->assertSessionHasNoErrors();
+        $booking = $booking->fresh();
+        $this->assertSame('11:30', $booking->checked_in_at->format('H:i'));
+        $this->assertSame('11:30', $booking->starts_at->format('H:i'));
+        $this->assertSame($originalEnd->copy()->subMinutes(30)->format('H:i'), $booking->ends_at->format('H:i'));
+        $this->assertSame('CHECK_IN', $booking->booking_status);
+    }
+
     public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);

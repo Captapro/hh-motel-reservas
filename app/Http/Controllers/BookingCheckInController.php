@@ -20,8 +20,10 @@ use App\Services\Pricing\UpsellResolver;
 use App\Support\GuestLine;
 use App\Support\PassScans;
 use App\Support\Rut;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -190,6 +192,7 @@ class BookingCheckInController extends Controller
             'accepted_upsells' => ['nullable', 'array'],
             'accepted_upsells.*' => ['integer', 'exists:upsell_offers,id'],
             'guest_names' => ['nullable', 'string'],
+            'real_arrival' => ['nullable', 'date_format:H:i'],
         ]);
 
         // El registro de acompañantes es obligatorio para mayores de 18 —
@@ -215,6 +218,30 @@ class BookingCheckInController extends Controller
 
         // Registro tardío: entró a la hora que se registró, no ahora.
         $arrival = $lateRegistration ? $booking->starts_at->copy() : now();
+
+        // Un administrador puede indicar la hora real de ingreso cuando recepción
+        // no alcanzó a marcar el check-in al momento. Si entró antes de la hora
+        // anotada, el horario completo se corre a esa hora (misma duración).
+        $realArrival = false;
+        if (filled($request->input('real_arrival')) && auth()->user()?->isAdministrador()) {
+            $tz = 'America/Santiago';
+            $given = Carbon::createFromFormat('H:i', (string) $request->input('real_arrival'), $tz);
+            $real = now($tz)->setTime((int) $given->format('H'), (int) $given->format('i'), 0)->setTimezone(config('app.timezone'));
+            if ($real->gt(now())) {
+                return back()->withInput()->withErrors(['booking' => 'La hora real de ingreso todavía no pasa.']);
+            }
+            $arrival = $real;
+            $realArrival = true;
+            if ($arrival->lt($booking->starts_at)) {
+                if (! $availability->isAvailable($booking->room, $arrival, $booking->ends_at, $booking->id)) {
+                    return back()->withInput()->withErrors(['booking' => 'No se puede adelantar el ingreso a esa hora: hay otra reserva en la pieza.']);
+                }
+                $shift = (int) $arrival->diffInMinutes($booking->starts_at);
+                $booking->booked_ends_at = $booking->booked_ends_at?->copy()->subMinutes($shift);
+                $booking->ends_at = $booking->ends_at->copy()->subMinutes($shift);
+                $booking->starts_at = $arrival->copy();
+            }
+        }
         if ($arrival->lt($booking->starts_at)
             && ! $availability->isAvailable($booking->room, $arrival, $booking->ends_at, $booking->id)) {
             return back()->withInput()->withErrors([
@@ -237,7 +264,7 @@ class BookingCheckInController extends Controller
             }
         }
 
-        $old = $booking->only(['booking_status', 'checked_in_at', 'ends_at']);
+        $old = $booking->getOriginal() ? Arr::only($booking->getOriginal(), ['booking_status', 'checked_in_at', 'ends_at', 'starts_at']) : [];
 
         $booking->update([
             'checked_in_at' => $arrival,
@@ -247,7 +274,7 @@ class BookingCheckInController extends Controller
                 : $booking->booking_status,
         ]);
 
-        AuditLog::record(auth()->id(), 'reserva.check_in', 'Booking', $booking->id, $old, $booking->only(['booking_status', 'checked_in_at', 'ends_at']));
+        AuditLog::record(auth()->id(), 'reserva.check_in', 'Booking', $booking->id, $old, $booking->only(['booking_status', 'checked_in_at', 'ends_at', 'starts_at']) + ($realArrival ? ['hora_real_indicada' => true] : []));
 
         if ($holder) {
             $booking->customer->update($holder);
