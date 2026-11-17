@@ -148,7 +148,12 @@ class BookingCheckInController extends Controller
 
         // Cupón con verificación (ej. estudiante): sin foto del documento no
         // hay check-in con descuento — o se sube la foto o se quita el cupón.
-        if (app(CouponProofs::class)->missing($booking)) {
+        // Excepción puntual (sin internet, celular sin señal): un administrador puede
+        // dejar pasar el check-in sin la foto; queda registrado en la auditoría.
+        $skipProof = $request->boolean('skip_coupon_proof') && auth()->user()?->isAdministrador();
+        if ($skipProof && app(CouponProofs::class)->missing($booking)) {
+            AuditLog::record(auth()->id(), 'reserva.check_in_sin_documento', 'Booking', $booking->id, null, ['coupon' => $booking->coupon_code_snapshot]);
+        } elseif (app(CouponProofs::class)->missing($booking)) {
             return back()->withInput()->withErrors([
                 'booking' => 'Falta la foto del documento del cupón '.$booking->coupon_code_snapshot.'. Sácala con el celular (QR) o quita el cupón y cobra la diferencia.',
             ]);

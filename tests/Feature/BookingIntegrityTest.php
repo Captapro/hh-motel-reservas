@@ -454,6 +454,24 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, app(CouponProofs::class)->prune());
     }
 
+    public function test_administrator_can_skip_the_coupon_photo_once_but_reception_cannot(): void
+    {
+        (require database_path('migrations/2026_10_31_150000_create_coupon_proofs_table.php'))->up();
+        Coupon::create(['code' => 'ESTUDIANTE', 'internal_name' => 'Estudiante', 'is_active' => true, 'discount_type' => 'percentage',
+            'discount_value' => 20, 'requires_verification' => true, 'verification_note' => 'Credencial de estudiante vigente']);
+        $student = $this->booking(['coupon_code' => 'ESTUDIANTE', 'guests_count' => 1]);
+        $this->payRoom($student);
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post(route('bookings.checkin', $student->code), ['skip_coupon_proof' => 1])->assertSessionHasErrors('booking');
+        $this->assertNull($student->fresh()->checked_in_at);
+
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))
+            ->post(route('bookings.checkin', $student->code), ['skip_coupon_proof' => 1])->assertSessionHasNoErrors();
+        $this->assertNotNull($student->fresh()->checked_in_at);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.check_in_sin_documento', 'entity_id' => $student->id]);
+    }
+
     public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);

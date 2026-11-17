@@ -223,6 +223,12 @@
                                 onclick="return confirm('¿Quitar el cupón {{ $booking->coupon_code_snapshot }}? Se cobra la diferencia ($' + '{{ number_format($booking->discount_amount, 0, ',', '.') }}' + ') antes del check-in.')">
                                 No trae el documento: quitar cupón y cobrar ${{ number_format($booking->discount_amount, 0, ',', '.') }}
                             </button>
+                            @if (auth()->user()?->isAdministrador())
+                                <label style="display:block;margin-top:8px;font-size:13px;">
+                                    <input type="checkbox" name="skip_coupon_proof" value="1">
+                                    Pasar sin foto esta vez (sin internet) — queda registrado
+                                </label>
+                            @endif
                         </div>
                     </div>
                 @endif
