@@ -30,6 +30,11 @@
         .quick-info { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
         .quick-info .qi { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #dcdcd8; border-radius: 999px; padding: 8px 12px; font-size: 14.5px; color: #2a2c30; text-decoration: none; }
         .quick-info .qi b { font-size: 16.5px; }
+        .quick-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 0; }
+        .quick-prices .qp { display: block; background: #fff; border: 1px solid #dcdcd8; border-radius: 14px; padding: 8px 12px; color: #2a2c30; text-decoration: none; line-height: 1.2; }
+        .quick-prices .qp small { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b6e74; }
+        .quick-prices .qp b { font-size: 18px; }
+        .quick-prices .qp span { font-size: 13.5px; color: #6b6e74; }
         a.quick-cta { display: block; text-align: center; background: var(--hh-accent); color: #21170e; text-decoration: none; font-weight: 800; font-size: 18px; padding: 14px; border-radius: 16px; margin: 12px 0 0; box-shadow: 0 8px 22px #ff79183a; }
         a.quick-cta:active { background: var(--hh-accent-hover); transform: scale(.985); }
 
@@ -165,16 +170,35 @@
                     foreach ($e['prices'] as $row) {
                         foreach (['hh', 'hot'] as $k) {
                             if ($row[$k] && ($lowest === null || $row[$k] < $lowest['price'])) {
-                                $lowest = ['price' => $row[$k], 'duration' => $row['duration']];
+                                $lowest = ['price' => $row[$k], 'duration' => $row['duration'], 'name' => $e['category']->name];
                             }
                         }
                     }
                 }
             @endphp
-            <div class="quick-info">
+            <div class="quick-prices">
                 @if ($lowest)
-                    <span class="qi"><b>Desde ${{ number_format($lowest['price'], 0, ',', '.') }}</b> / {{ $lowest['duration'] >= 60 ? intdiv($lowest['duration'], 60).' h' : $lowest['duration'].' min' }}</span>
+                    <span class="qp"><small>{{ $lowest['name'] }} desde</small><b>${{ number_format($lowest['price'], 0, ',', '.') }}</b> <span>/ {{ $lowest['duration'] >= 60 ? intdiv($lowest['duration'], 60).' h' : $lowest['duration'].' min' }}</span></span>
                 @endif
+                @foreach ($categories as $e)
+                    @if (in_array(mb_strtoupper($e['category']->name), ['NEW LITE', 'PLUS', 'MAX'], true))
+                        @php
+                            $catFrom = null;
+                            foreach ($e['prices'] as $row) {
+                                foreach (['hh', 'hot'] as $k) {
+                                    if ($row[$k] && ($catFrom === null || $row[$k] < $catFrom['price'])) {
+                                        $catFrom = ['price' => $row[$k], 'duration' => $row['duration']];
+                                    }
+                                }
+                            }
+                        @endphp
+                        @if ($catFrom)
+                            <a class="qp" href="#cat-{{ Str::slug($e['category']->name) }}"><small>{{ $e['category']->name }} desde</small><b>${{ number_format($catFrom['price'], 0, ',', '.') }}</b> <span>/ {{ $catFrom['duration'] >= 60 ? intdiv($catFrom['duration'], 60).' h' : $catFrom['duration'].' min' }}</span></a>
+                        @endif
+                    @endif
+                @endforeach
+            </div>
+            <div class="quick-info">
                 <a class="qi" href="https://www.google.com/maps/search/?api=1&query=Almirante+Barroso+334+Santiago" target="_blank" rel="noopener">📍 Almirante Barroso 334 · Metro Santa Ana</a>
             </div>
             <a class="quick-cta" href="{{ route('catalog.reserve') }}">Reservar ahora →</a>
