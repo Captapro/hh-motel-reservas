@@ -312,7 +312,10 @@ class BookingService
         // Si ya hay check-in real, se permite correr el inicio hacia el pasado
         // reciente para que coincida con la llegada real del huésped — no es
         // un error de tipeo, es una corrección deliberada.
-        if (! $booking->checked_in_at && $startsAt->lt(now()->subMinutes(5))) {
+        // Si el horario no cambia (solo se cambia la pieza o las personas), una
+        // reserva cuya hora ya pasó sin check-in igual se puede modificar:
+        // el huésped puede estar llegando tarde y hay que moverlo de pieza.
+        if (! $booking->checked_in_at && ! $startsAt->eq($booking->starts_at) && $startsAt->lt(now()->subMinutes(5))) {
             throw new RoomNotAvailableException('No se puede reprogramar una reserva a una fecha y hora en el pasado.');
         }
 

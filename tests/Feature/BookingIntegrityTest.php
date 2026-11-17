@@ -2175,6 +2175,20 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, $offer->redemptions()->count());
     }
 
+    public function test_late_booking_can_change_room_without_moving_its_time(): void
+    {
+        $booking = $this->booking();
+        Carbon::setTestNow(Carbon::parse('2026-10-05 12:40'));
+        $target = Room::create(['name' => 'GO 109', 'room_category_id' => $this->room->room_category_id, 'operational_status' => 'activa']);
+
+        $updated = app(BookingService::class)->reschedule($booking, ['room' => $target, 'starts_at' => $booking->starts_at, 'duration_minutes' => 60, 'guests_count' => 2]);
+        $this->assertSame($target->id, $updated->room_id);
+
+        // Mover la hora hacia el pasado sigue prohibido.
+        $this->expectException(RoomNotAvailableException::class);
+        app(BookingService::class)->reschedule($updated, ['room' => $target, 'starts_at' => Carbon::parse('2026-10-05 10:00'), 'duration_minutes' => 60, 'guests_count' => 2]);
+    }
+
     public function test_moving_checked_in_booking_to_overdue_occupied_room_is_rejected(): void
     {
         $booking = $this->booking();
