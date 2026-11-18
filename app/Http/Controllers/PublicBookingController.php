@@ -490,8 +490,10 @@ class PublicBookingController extends Controller
         }
 
         $operationalSetting = OperationalSetting::current();
+        // Una pieza en aseo también se ofrece si la llegada deja margen para dejarla lista (el aseo es pasajero).
+        $allowAseo = $startsAt->gte(now()->addMinutes(Room::ASEO_BOOKING_LEAD_MINUTES));
         $roomQuery = Room::where('room_category_id', $categoryId)
-            ->where('operational_status', 'activa')
+            ->whereIn('operational_status', $allowAseo ? ['activa', 'aseo'] : ['activa'])
             ->categoryEnabled()
             ->floorWingEnabled($operationalSetting);
         if (! empty($roomId)) {

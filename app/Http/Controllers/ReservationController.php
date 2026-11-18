@@ -194,7 +194,10 @@ class ReservationController extends Controller
         if ($room->operational_status === 'aseo' && ($validated['aseo_mode'] ?? null) === 'ya_salieron') {
             // Se registra una estadía que ya pasó: la pieza sigue en aseo por estos mismos pasajeros.
             $staysInAseo = true;
-        } elseif ($room->operational_status === 'aseo') {
+        } elseif ($room->operational_status === 'aseo'
+            && ! Carbon::parse($validated['date'].' '.sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']))
+                ->gte(now()->addMinutes(Room::ASEO_BOOKING_LEAD_MINUTES))) {
+            // Reserva para más tarde: la pieza sigue en aseo y se deja lista antes de la llegada; solo se exige la mucama si entra ya.
             $cleanedBy = ($validated['aseo_cleaned_by'] ?? null) ?: $room->aseo_reported_by;
             if (! $cleanedBy || ! Staff::activeMucamas()->where('name', $cleanedBy)->exists()) {
                 return back()->withInput()->withErrors(['aseo_cleaned_by' => $room->name.' está en aseo: indica quién hizo el aseo para marcarlo listo.']);
@@ -411,7 +414,7 @@ class ReservationController extends Controller
         }
 
         $rooms = Room::with('category')
-            ->where('operational_status', 'activa')
+            ->whereIn('operational_status', ['activa', 'aseo'])
             ->orderBy('name')
             ->get()
             ->map(function (Room $room) use ($board) {

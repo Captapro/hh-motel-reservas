@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -97,6 +98,16 @@ class Room extends Model
     public function isOperational(): bool
     {
         return $this->operational_status === 'activa';
+    }
+
+    /** Una pieza en aseo se puede reservar si el cliente llega con al menos este margen (minutos): el aseo es pasajero. */
+    public const ASEO_BOOKING_LEAD_MINUTES = 120;
+
+    /** ¿Se puede reservar para esa hora? Activa siempre; en aseo, solo con margen para dejarla lista. */
+    public function isBookableAt(CarbonInterface $startsAt): bool
+    {
+        return $this->operational_status === 'activa'
+            || ($this->operational_status === 'aseo' && $startsAt->gte(now()->addMinutes(self::ASEO_BOOKING_LEAD_MINUTES)));
     }
 
     /**

@@ -552,6 +552,49 @@ class BookingIntegrityTest extends TestCase
             ->assertSee(route('catalog.reserve'), false);
     }
 
+    public function test_a_room_in_aseo_can_be_booked_with_enough_lead_time_but_not_for_right_now(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-05 09:00'));
+        $this->room->update(['operational_status' => 'aseo']);
+
+        // Para dentro de pocas horas (margen suficiente) sí se reserva.
+        $later = $this->booking(['starts_at' => Carbon::parse('2026-10-05 12:00')]);
+        $this->assertSame($this->room->id, $later->room_id);
+        $this->assertSame('aseo', $this->room->fresh()->operational_status);
+
+        // Para otro día (la tarifa de prueba solo cubre lunes) también.
+        $tomorrow = $this->booking(['starts_at' => Carbon::parse('2026-10-12 12:00')]);
+        $this->assertSame($this->room->id, $tomorrow->room_id);
+
+        // Para dentro de menos del margen, sigue bloqueada.
+        $this->expectException(RoomNotAvailableException::class);
+        $this->booking(['starts_at' => Carbon::parse('2026-10-05 09:30')]);
+    }
+
+    public function test_catalog_offers_a_room_in_aseo_only_for_later_arrivals(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-05 09:00'));
+        $this->room->update(['operational_status' => 'aseo']);
+        $query = fn (string $date, int $hour, int $minute) => '/catalogo/reservar/disponibilidad?'.http_build_query([
+            'room_category_id' => $this->room->room_category_id, 'date' => $date, 'time_hour' => $hour, 'time_minute' => $minute, 'duration_minutes' => 60,
+        ]);
+
+        $this->getJson($query('2026-10-12', 12, 0))->assertOk()->assertJsonPath('available', true);
+        $this->getJson($query('2026-10-05', 12, 0))->assertOk()->assertJsonPath('available', true);
+        $this->getJson($query('2026-10-05', 9, 30))->assertOk()->assertJsonPath('available', false);
+
+        $this->room->update(['operational_status' => 'mantencion']);
+        $this->getJson($query('2026-10-12', 12, 0))->assertOk()->assertJsonPath('available', false);
+    }
+
+    public function test_a_room_in_maintenance_is_never_bookable(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-05 10:00'));
+        $this->room->update(['operational_status' => 'mantencion']);
+        $this->expectException(RoomNotAvailableException::class);
+        $this->booking(['starts_at' => Carbon::parse('2026-10-06 12:00')]);
+    }
+
     public function test_reception_can_keep_a_pending_booking_without_expiry_and_payment_clears_the_hold(): void
     {
         $method = PaymentMethod::create(['code' => 'efectivo', 'name' => 'Efectivo']);
