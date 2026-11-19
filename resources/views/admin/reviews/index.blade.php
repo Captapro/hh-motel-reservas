@@ -71,6 +71,10 @@
                     <div style="font-size:22px; font-weight:800; {{ $lowCount > 0 ? 'color:#e88a9a;' : '' }}">{{ $lowCount }}</div>
                 </div>
                 <div>
+                    <div class="sub" style="margin-bottom:2px;">Notas 4-5 que tocaron «Opinar en Google»</div>
+                    <div style="font-size:22px; font-weight:800;">{{ $googleClicks }} <span class="sub" style="font-size:13px;">de {{ $goodCount }}</span></div>
+                </div>
+                <div>
                     <div class="sub" style="margin-bottom:2px;">Cupones 10% por opinión este mes</div>
                     <div style="font-size:22px; font-weight:800;">{{ $rewards['given'] }} <span class="sub" style="font-size:13px;">entregados · {{ $rewards['used'] }} usados</span></div>
                 </div>

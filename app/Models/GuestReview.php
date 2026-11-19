@@ -9,6 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['booking_id', 'coupon_id', 'rating', 'comment'])]
 class GuestReview extends Model
 {
+    protected function casts(): array
+    {
+        return ['google_clicked_at' => 'datetime'];
+    }
+
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);

@@ -20,7 +20,7 @@ class GuestReviewHistoryTest extends TestCase
         ] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
-        DB::statement('create table guest_reviews (id integer primary key autoincrement, booking_id integer null, rating integer not null, comment text null, created_at datetime null, updated_at datetime null)');
+        DB::statement('create table guest_reviews (id integer primary key autoincrement, booking_id integer null, rating integer not null, comment text null, google_clicked_at datetime null, created_at datetime null, updated_at datetime null)');
     }
 
     public function test_internal_review_history_is_deleted_only_with_confirmation(): void

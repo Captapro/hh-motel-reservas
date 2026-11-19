@@ -31,6 +31,8 @@ class GuestReviewController extends Controller
             'lowCount' => GuestReview::where('rating', '<=', 3)->count(),
             'avgRating' => round((float) GuestReview::avg('rating'), 1),
             'rewards' => $this->rewardsThisMonth(),
+            'goodCount' => GuestReview::where('rating', '>=', 4)->count(),
+            'googleClicks' => GuestReview::whereNotNull('google_clicked_at')->count(),
         ]);
     }
 

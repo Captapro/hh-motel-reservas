@@ -79,8 +79,25 @@ class GuestReviewController extends Controller
 
         return view('reviews.thanks', [
             'coupon' => $review->coupon,
+            'review' => $review,
             'googleLink' => $review->rating > self::LOW_RATING_MAX ? config('services.hh_reviews.google_review_link') : null,
         ]);
+    }
+
+    /** Registra que tocó «Opinar en Google» y lo lleva a la ficha (para medir cuántos llegan). */
+    public function toGoogle(Request $request, GuestReview $review): RedirectResponse
+    {
+        $googleLink = config('services.hh_reviews.google_review_link');
+
+        if (! $googleLink || $review->rating <= self::LOW_RATING_MAX || ! $request->session()->get('review_access.'.$review->id)) {
+            return redirect()->route('reviews.create');
+        }
+
+        if (! $review->google_clicked_at) {
+            $review->forceFill(['google_clicked_at' => now()])->save();
+        }
+
+        return redirect()->away($googleLink);
     }
 
     public function editComment(Request $request, GuestReview $review): View|RedirectResponse

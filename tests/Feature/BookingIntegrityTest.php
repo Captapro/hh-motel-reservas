@@ -1250,7 +1250,7 @@ class BookingIntegrityTest extends TestCase
 
     public function test_after_checkout_the_guest_is_asked_once_and_gets_a_personal_ten_percent_coupon(): void
     {
-        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php', '2026_11_18_120000_add_google_clicked_at_to_guest_reviews.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
         config(['services.ghl.webhook_pedir_opinion' => 'https://services.leadconnectorhq.com/hooks/opinion', 'services.ghl.webhook_cupon_opinion' => 'https://services.leadconnectorhq.com/hooks/cupon']);
@@ -1293,9 +1293,26 @@ class BookingIntegrityTest extends TestCase
         app(CouponValidator::class)->validate($coupon, $this->room, Carbon::parse('2026-11-05 12:00'), 60, $other, 20000);
     }
 
+    public function test_good_rating_gets_prominent_google_step_that_counts_the_tap(): void
+    {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php', '2026_11_18_120000_add_google_clicked_at_to_guest_reviews.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        config(['services.hh_reviews.google_review_link' => 'https://g.page/r/hh/review']);
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 12:00')]);
+
+        $this->post(route('reviews.store', $booking->code), ['rating' => 5])->assertRedirect();
+        $review = GuestReview::firstOrFail();
+        $this->get(route('reviews.thanks', $review))->assertOk()->assertSee('Dejar mi reseña en Google')->assertSee(route('reviews.google', $review));
+
+        $this->assertNull($review->fresh()->google_clicked_at);
+        $this->get(route('reviews.google', $review))->assertRedirect('https://g.page/r/hh/review');
+        $this->assertNotNull($review->fresh()->google_clicked_at);
+    }
+
     public function test_review_requests_respect_consent_go_out_10_minutes_after_checkout_at_any_hour_and_retry_when_ghl_fails(): void
     {
-        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php', '2026_11_18_120000_add_google_clicked_at_to_guest_reviews.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
         config(['services.ghl.webhook_pedir_opinion' => 'https://services.leadconnectorhq.com/hooks/opinion']);
@@ -1340,7 +1357,7 @@ class BookingIntegrityTest extends TestCase
 
     public function test_the_ghl_page_shows_what_happened_to_each_checkout_and_a_failing_step_does_not_block_review_requests(): void
     {
-        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php', '2026_11_18_120000_add_google_clicked_at_to_guest_reviews.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
         config(['services.ghl.webhook_pedir_opinion' => 'https://services.leadconnectorhq.com/hooks/opinion', 'services.ghl.webhook_cupon_opinion' => null]);
@@ -2569,7 +2586,7 @@ class BookingIntegrityTest extends TestCase
 
     public function test_a_planilla_sale_is_loaded_finished_and_paid_without_touching_the_room(): void
     {
-        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php', '2026_08_19_150001_add_inventory_to_products_table.php'] as $file) {
+        foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php', '2026_11_18_120000_add_google_clicked_at_to_guest_reviews.php', '2026_08_19_150001_add_inventory_to_products_table.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
         $this->travelTo(Carbon::parse('2026-10-05 15:00', 'America/Santiago'));
@@ -3429,7 +3446,7 @@ class BookingIntegrityTest extends TestCase
     private function bienvenidaSchema(): void
     {
         if (! Schema::hasColumn('coupons', 'origin')) {
-            foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php'] as $file) {
+            foreach (['2026_09_23_193653_create_guest_reviews_table.php', '2026_10_31_120000_add_review_rewards.php', '2026_11_18_120000_add_google_clicked_at_to_guest_reviews.php'] as $file) {
                 (require database_path('migrations/'.$file))->up();
             }
         }
