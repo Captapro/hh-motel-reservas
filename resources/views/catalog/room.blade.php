@@ -91,6 +91,39 @@
         footer.catalog-footer { text-align:center; color:#6b6e74; font-size:15px; padding: 26px 0 10px; }
 
     </style>
+    @include('catalog._estilo-nuevo')
+    <style>
+        /* Ficha de pieza con el diseño nuevo: tarjeta blanca y foto a sangre. */
+        .wrap { max-width: 760px; padding: 14px 16px 34px; }
+        .room-card { background: var(--hh-bg-2); color: var(--hh-tinta); border: 1px solid var(--hh-line); border-radius: 20px; box-shadow: 0 2px 14px rgba(30,25,20,.06); }
+        .gallery-wrap { background: #e8e4dc; }
+        .gallery a { background: #e8e4dc; }
+        .gallery.empty { color: #8a8d93; }
+        .g-count { background: rgba(255,255,255,.85); color: var(--hh-tinta); }
+        h1 { font-size: 30px; font-weight: 800; letter-spacing: -.035em; }
+        .cat-go h1, .cat-lite h1, .cat-plus h1, .cat-max h1, .cat-new-lite h1 { color: var(--hh-tinta); }
+        .cat-label { color: var(--hh-warm); font-weight: 700; }
+        .cap { color: #4b4e54; }
+        /* La frase de venta va suelta, no en un recuadro de aviso. */
+        .sales-tip { background: none; border: 0; padding: 0; color: #8a5620; font-size: 16px; margin-bottom: 16px; }
+        .room-offer { background: #fff8f0; border-color: #f0d8bf; border-radius: 14px; }
+        .room-offer-label { background: #ffe5d0; border-color: #f0cfae; color: #a8541a; }
+        .room-offer-price .old { color: #8a8d93; }
+        .room-offer-price .new { color: var(--hh-tinta); }
+        .room-offer-price .save { background: #ffe5d0; color: #a8541a; }
+        .room-offer small { color: var(--hh-soft); }
+        .features span { font-family: inherit; background: var(--hh-bg); border-color: var(--hh-line); color: #3a3d42; font-size: 14px; padding: 6px 13px; }
+        .equip-label { color: var(--hh-soft); }
+        .equip-features span { background: var(--hh-bg); border-color: var(--hh-line); }
+        .video-links a { color: #1c6b96; border-color: #bcd9ea; }
+        table.price-table th { color: #8a8d93; }
+        table.price-table td { border-top-color: var(--hh-line); }
+        table.price-table td.price { font-family: inherit; color: var(--hh-tinta); font-variant-numeric: tabular-nums; }
+        table.price-table td.dash { color: #b4b0a8; }
+        a.btn { background: transparent; border-color: #cfcbc2; color: var(--hh-tinta); border-radius: 14px; }
+        a.btn.primary { background: var(--hh-accent); border-color: var(--hh-accent); color: #21170e; }
+        footer.catalog-footer { color: #8a8d93; }
+    </style>
 </head>
 <body class="has-ctabar">
     @include('catalog._app-bar', ['appBack' => route('catalog.index')])

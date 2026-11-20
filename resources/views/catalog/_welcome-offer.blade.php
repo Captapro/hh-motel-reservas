@@ -14,6 +14,8 @@
     $welcomeCoupon = \App\Models\Coupon::where('origin', \App\Services\Pricing\CouponValidator::FIRST_VISIT_ORIGIN)
         ->where('is_active', true)->where('discount_type', 'percentage')->orderBy('id')->first();
     $welcomeApplyInPage = $welcomeApplyInPage ?? false;
+    // Pantalla de reservar a la que lleva el botón. Por defecto, la real.
+    $welcomeReserveRoute = $welcomeReserveRoute ?? 'catalog.reserve';
 @endphp
 @if ($welcomeCoupon && ! request()->filled('cupon'))
     <style>
@@ -39,7 +41,7 @@
             @if ($welcomeApplyInPage)
                 <button type="button" class="hh-welcome-btn" id="hh-welcome-use">Usar mi {{ (int) $welcomeCoupon->discount_value }}%</button>
             @else
-                <a class="hh-welcome-btn" id="hh-welcome-use" href="{{ route('catalog.reserve', array_filter(['cupon' => $welcomeCoupon->code, 'categoria' => $welcomeCategory ?? null])) }}">Usar mi {{ (int) $welcomeCoupon->discount_value }}%</a>
+                <a class="hh-welcome-btn" id="hh-welcome-use" href="{{ route($welcomeReserveRoute, array_filter(['cupon' => $welcomeCoupon->code, 'categoria' => $welcomeCategory ?? null])) }}">Usar mi {{ (int) $welcomeCoupon->discount_value }}%</a>
             @endif
             <div class="hh-welcome-fine">Solo para quienes nos visitan por primera vez.</div>
         </div>

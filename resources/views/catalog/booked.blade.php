@@ -55,6 +55,30 @@
         .pay-hero small { display:block; margin-top:10px; color:#4b4e54; font-size:15px; }
         .qr-pending { background:#fff; border:1px dashed #d7d7d2; border-radius:12px; padding:14px 16px; margin-bottom:20px; color:#4b4e54; font-size:15.5px; }
     </style>
+    @include('catalog._estilo-nuevo')
+    <style>
+        /* Reserva confirmada, con el diseño nuevo. */
+        .wrap { max-width: 460px; }
+        .check { background: #ffe9d6; color: #c2600f; }
+        h1 { font-size: 26px; font-weight: 800; }
+        p.sub { color: var(--hh-soft); }
+        .row { border-bottom-color: var(--hh-line); }
+        .row span.muted { color: var(--hh-soft); }
+        .code { font-family: inherit; color: #a8541a; letter-spacing: .02em; }
+        .status-badge { background: #fff7e8; border-color: #f0dcb4; color: #8a6412; }
+        .discount-row span:last-child { color: #a8541a; font-weight: 700; }
+        .next-steps, .qr-box, .pay-box, .qr-pending { border-color: var(--hh-line); border-radius: 14px; color: #42464e; }
+        .qr-pending { border-style: dashed; }
+        .qr-box strong { color: var(--hh-tinta); }
+        .qr-box small, .pay-box small, .pay-box .line span:first-child { color: var(--hh-soft); }
+        .qr-box a.pass { color: #a8541a; }
+        .pay-box a.mp { background: #f0f8fc; color: #1c6b96; border-radius: 12px; }
+        a.btn { border-radius: 14px; box-shadow: 0 6px 18px rgba(255,121,24,.25); }
+        a.btn.pay-btn { border-radius: 14px; }
+        a.back { color: var(--hh-soft); }
+        .pay-hero { border-radius: 18px; box-shadow: 0 6px 20px rgba(255,121,24,.14); }
+        .pay-timer { color: var(--hh-soft); }
+    </style>
 </head>
 <body>
     @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => 'Mi reserva'])
@@ -76,7 +100,7 @@
         @endphp
 
         @if ($expired)
-            <div class="check" style="background:#3a1c1c; color:#f3b8b8;">✕</div>
+            <div class="check" style="background:#fdeeee; color:#9a2b2b;">✕</div>
             <h1>Reserva vencida</h1>
             <p class="sub">No recibimos el pago a tiempo y el Playroom se liberó.</p>
             <div class="next-steps" style="background:#3a1c1c; border-color:#7a2d2d; color:#f3b8b8;">Puedes hacer una nueva reserva cuando quieras: <a href="{{ route('catalog.reserve') }}" style="color:#ffd699;">reservar de nuevo →</a></div>
@@ -85,7 +109,7 @@
             <h1>¡Reserva confirmada!</h1>
             <p class="sub">Muestra tu código QR en recepción al llegar.</p>
         @else
-            <div class="check" style="background:#3a2a12; color:#ffd699;">⏳</div>
+            <div class="check" style="background:#fff3e0; color:#a8541a;">⏳</div>
             <h1>Falta un paso: paga tu reserva</h1>
             <p class="sub">Tu Playroom está apartado. Se confirma apenas se registre el pago.</p>
         @endif

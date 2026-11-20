@@ -18,6 +18,13 @@
         .updated { font-size:15px; color:#7a7d83; margin-bottom:8px; }
         a { color:var(--hh-accent); }
     </style>
+    @include('catalog._estilo-nuevo')
+    <style>
+        /* Privacidad: mismo papel y mismos títulos que el resto. */
+        h1 { font-size: 28px; font-weight: 800; }
+        h2 { font-size: 19px; font-weight: 800; margin-top: 26px; }
+        a { color: #a8541a; }
+    </style>
 </head>
 <body>
     @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => 'Privacidad'])

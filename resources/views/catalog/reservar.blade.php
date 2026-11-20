@@ -121,6 +121,8 @@
         .extra-qty { width:58px; min-height:34px; padding:6px; font-size:15.5px; }
         .extras-total { color:#ffbd91; font-size:14.5px; margin-top:10px; text-align:right; }
     </style>
+    @include('catalog._estilo-nuevo')
+    @include('catalog._estilo-reservar')
 </head>
 <body>
     @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => 'Reservar'])

@@ -1,3 +1,8 @@
+{{--
+    Catálogo público: portada con foto a pantalla completa, ofertas y cupones,
+    y una tarjeta por categoría a tope en los extremos (sin márgenes laterales),
+    con galería de fotos y videos en la misma página y tarifas desplegables.
+--}}
 <!doctype html>
 <html lang="es">
 <head>
@@ -12,284 +17,343 @@
             color-scheme: light;
             --hh-accent: #ff7918;
             --hh-accent-hover: #ee6909;
-            --hh-canvas: #f5f5f4;
-            --hh-surface: #1b1c1e;
-            --hh-ink: #202124;
+            --hh-ink: #1b1c1e;
+            --hh-bg: #f6f4f0;
+            --hh-bg-2: #ffffff;
+            --hh-line: #e4e0d8;
+            --hh-soft: #6c6f75;
+            --hh-warm: #a8713a;
+            --display: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
         * { box-sizing: border-box; }
-        body { background:var(--hh-canvas); color:var(--hh-ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; line-height: 1.45; }
+        /* Sin margen ni relleno heredado del navegador: el marco blanco que se
+           veía al costado era el margen que algunos navegadores le dan al body. */
+        html, body { margin: 0; padding: 0; width: 100%; max-width: 100%; }
+        html { background: var(--hh-bg); }
+        body { background: var(--hh-bg); color: var(--hh-ink); font-family: var(--ui); line-height: 1.5; overflow-x: hidden; }
         a { color: inherit; }
-        .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px 40px; }
+        img { max-width: 100%; }
+        /* Todo va a tope en los extremos: el respiro es interno, no un margen. */
+        .pad { padding-left: 18px; padding-right: 18px; }
+        @media (min-width: 900px) { .pad { padding-left: 40px; padding-right: 40px; } }
 
-        /* ===== Entrada ===== */
-        .intro { padding: 20px 2px 6px; }
-        .intro h1 { font-size: 30px; line-height: 1.1; letter-spacing: -.035em; margin: 0 0 6px; }
-        .intro p { color:#4b4e54; font-size: 17px; margin: 0; }
+        /* ===== Portada (oscura porque es la foto, no un fondo negro) ===== */
+        .hero { position: relative; min-height: 86svh; display: flex; align-items: flex-end; overflow: hidden; background: #2a2622; color: #fff; }
+        .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .hero-veil { position: absolute; inset: 0; background: linear-gradient(to top, rgba(14,11,9,.9) 4%, rgba(14,11,9,.42) 46%, rgba(14,11,9,.18) 100%); }
+        .hero-in { position: relative; width: 100%; padding-top: 70px; padding-bottom: 30px; }
+        .kicker { font-size: 12px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: #ffbe8d; margin: 0 0 14px; }
+        .hero h1 { font-weight: 800; font-size: clamp(42px, 13vw, 92px); line-height: .96; letter-spacing: -.035em; margin: 0 0 18px; }
+        .hero h1 em { display: block; font-style: normal; font-weight: 800; color: #f0ded0; }
+        .hero-from { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 0 0 20px; }
+        .hero-from small { font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: #d9d5cf; }
+        .hero-from b { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+        .hero-from span { color: #d9d5cf; font-size: 15px; }
+        .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .hero .btn-ghost { border-color: #ffffff5c; color: #fff; }
+        .hero-place { margin: 18px 0 0; font-size: 14.5px; color: #d9d5cf; text-decoration: none; display: inline-block; border-bottom: 1px solid #ffffff40; padding-bottom: 3px; }
+        .scroll-hint { margin-top: 26px; font-size: 11.5px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #bbb5ad; }
+        @media (min-width: 900px) { .hero-actions { max-width: 540px; } .hero-in { padding-bottom: 52px; } }
 
-        /* ===== Franja de datos rápidos (precio, ubicación, reservar) ===== */
-        .quick-info { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
-        .quick-info .qi { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #dcdcd8; border-radius: 999px; padding: 8px 12px; font-size: 14.5px; color: #2a2c30; text-decoration: none; }
-        .quick-info .qi b { font-size: 16.5px; }
-        .quick-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 0; }
-        .quick-prices .qp { display: block; background: #fff; border: 1px solid #dcdcd8; border-radius: 14px; padding: 8px 12px; color: #2a2c30; text-decoration: none; line-height: 1.2; }
-        html { scroll-behavior: smooth; }
-        .quick-prices .qp:active { background: #f0f0ee; transform: scale(.98); }
-        .quick-prices .qp small { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b6e74; }
-        .quick-prices .qp b { font-size: 18px; }
-        .quick-prices .qp span { font-size: 13.5px; color: #6b6e74; }
-        a.quick-cta { display: block; text-align: center; background: var(--hh-accent); color: #21170e; text-decoration: none; font-weight: 800; font-size: 18px; padding: 14px; border-radius: 16px; margin: 12px 0 0; box-shadow: 0 8px 22px #ff79183a; }
-        a.quick-cta:active { background: var(--hh-accent-hover); transform: scale(.985); }
+        .btn-main { flex: 1 1 220px; text-align: center; background: var(--hh-accent); color: #21170e; text-decoration: none; font-weight: 800; font-size: 17px; padding: 17px 20px; border-radius: 14px; box-shadow: 0 6px 18px #ff791833; }
+        .btn-main:active { background: var(--hh-accent-hover); transform: scale(.99); }
+        .btn-ghost { flex: 0 1 auto; text-align: center; border: 1px solid #cfcbc2; color: var(--hh-ink); background: transparent; text-decoration: none; font-weight: 700; font-size: 16px; padding: 17px 22px; border-radius: 14px; }
 
-        /* ===== Categorías (chips que se quedan fijos al bajar) ===== */
-        .cat-chips-wrap { position: sticky; top: calc(var(--bar-h) + var(--safe-t)); z-index: 40; margin: 12px -16px 4px; padding: 8px 16px; background: rgba(245,245,244,.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
-        .cat-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 2px 0; }
-        .cat-chips::-webkit-scrollbar { display: none; }
-        .chip { flex: none; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 16px; border-radius: 999px; background: #fff; border: 1px solid #dcdcd8; color: #3a3d42; font-size: 16px; font-weight: 700; text-decoration: none; white-space: nowrap; }
-        .chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--c, #9a9ca1); }
-        .chip.on { background: #111; border-color: #111; color: #fff; }
-        .chip:active { transform: scale(.97); }
+        /* ===== Encabezado de sección numerada ===== */
+        .sec-head { padding-top: 52px; padding-bottom: 6px; scroll-margin-top: calc(var(--bar-h) + var(--safe-t) + 56px); }
+        section[id] { scroll-margin-top: calc(var(--bar-h) + var(--safe-t) + 56px); }
+        .sec-num { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #8a8d93; margin-bottom: 14px; }
+        .sec-num b { color: var(--hh-accent); font-weight: 800; }
+        .sec-num i { flex: 1; height: 1px; background: var(--hh-line); font-style: normal; }
+        .sec-head h2 { font-weight: 800; font-size: clamp(32px, 8.5vw, 62px); line-height: 1; letter-spacing: -.02em; margin: 0; }
+        .sec-head h2 em { font-style: normal; font-weight: 800; color: var(--hh-warm); }
+        .sec-head p { color: var(--hh-soft); font-size: 16.5px; margin: 14px 0 0; max-width: 620px; }
 
-        /* ===== Ofertas y cupones ===== */
-        .deals-carousel { margin: 14px 0 22px; scroll-margin-top: calc(var(--bar-h) + var(--safe-t) + 60px); }
-        .deals-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin:0 0 10px; }
-        .deals-head h2 { font-size:20px; letter-spacing:-.02em; margin:0; color:#242527; }
-        .limited-badge { display:inline-flex; align-items:center; gap:6px; background:#3a1c10; border:1px solid #ff7918; color:#ffb078; border-radius:20px; padding:4px 10px; font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; }
-        .limited-badge .dot { width:6px; height:6px; border-radius:50%; background:#ff7918; animation: hh-pulse 1.6s ease-in-out infinite; }
-        @keyframes hh-pulse { 0%, 100% { opacity:1; } 50% { opacity:.25; } }
-        .deals-track-wrap { position:relative; margin: 0 -16px; }
-        .deals-track { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; padding:2px 16px 12px; scroll-padding: 0 16px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-        .deals-track::-webkit-scrollbar { display:none; }
-        .deal-card { scroll-snap-align:start; flex:0 0 80%; max-width:300px; display:flex; flex-direction:column; border-radius:18px; overflow:hidden; text-decoration:none; color:inherit; }
-        @media (min-width:600px) { .deal-card { flex-basis:300px; } }
-        .deal-card.is-offer { background:#17181a; border:1px solid #ff7918; }
-        .deal-card.is-coupon { background:#111214; border:1px solid #3a5a72; }
-        .deal-band { padding:9px 15px; font-size:13px; font-weight:800; letter-spacing:.08em; color:#ffb379; background:linear-gradient(90deg, #3a1f0c, #241912); border-bottom:1px solid #4a2c14; }
-        .deal-band.coupon { color:#9edaff; background:linear-gradient(90deg, #12293a, #151d24); border-bottom-color:#243a4c; }
-        .deal-body { padding:14px 16px 16px; display:flex; flex-direction:column; flex:1; }
-        .deal-body strong.deal-title { display:block; font-size:18px; color:#fff; margin-bottom:3px; }
-        .deal-sub-link { color:#c9cbd0; font-size:15px; text-decoration:none; display:inline-block; margin-top:2px; }
-        .offer-price-row { display:flex; align-items:baseline; gap:7px; margin:2px 0 3px; flex-wrap:wrap; }
-        .offer-price-old { color:#6b6e74; text-decoration:line-through; font-size:15.5px; }
-        .offer-price-new { color:#ffd9b8; font-weight:800; font-size:20px; }
-        .offer-save-badge { background:#4a2410; color:#ffb078; border-radius:6px; padding:2px 6px; font-size:12.5px; font-weight:800; }
-        .deal-coupon-benefit { color:#9edaff; font-size:28px; font-weight:800; letter-spacing:-.02em; }
-        .deal-coupon-hint { color:#6b6e74; font-size:14px; margin-top:4px; }
-        .deal-cta-btn { display:block; text-align:center; margin-top:auto; padding-top:12px; }
-        .deal-cta-btn span { display:block; background:#ff7918; color:#21170e; border-radius:12px; padding:13px 12px; font-size:16px; font-weight:800; }
-        .deal-card.is-coupon .deal-cta-btn { color:#9edaff; font-size:15.5px; font-weight:700; }
-        .deals-nav { display:none; align-items:center; justify-content:center; position:absolute; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; background:#fff; border:1px solid #d9dadd; box-shadow:0 2px 8px #0002; cursor:pointer; font-size:18px; z-index:2; padding:0; }
-        .deals-nav.prev { left:4px; }
-        .deals-nav.next { right:4px; }
-        @media (hover:hover) and (min-width:760px) { .deals-nav { display:flex; } }
+        /* ===== Chips de categoría (se quedan fijos al bajar) ===== */
+        .chips-wrap { position: sticky; top: calc(var(--bar-h) + var(--safe-t)); z-index: 40; background: rgba(246,244,240,.93); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--hh-line); padding: 9px 0; }
+        .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 0 18px; }
+        .chips::-webkit-scrollbar { display: none; }
+        .chip { flex: none; display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 15px; border-radius: 999px; background: #fff; border: 1px solid var(--hh-line); color: #3a3d42; font-size: 14.5px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+        .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c, #9a9ca1); }
+        .chip.on { background: var(--hh-ink); border-color: var(--hh-ink); color: #fff; }
+        .chip.cat-go { --c: #3f86c4; } .chip.cat-lite { --c: #2bab9f; } .chip.cat-plus { --c: #8f63d0; }
+        .chip.cat-max { --c: #e07c20; } .chip.cat-new-lite { --c: #c9a233; }
 
-        /* ===== Tarjetas de Playroom ===== */
-        .pg-list { display: grid; gap: 18px; margin-top: 8px; }
-        @media (min-width: 900px) { .pg-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; } .intro h1 { font-size: 36px; } }
-        .pg-card { --c: #9a9ca1; background: var(--hh-surface); color: #f5f5f5; border-radius: 24px; overflow: hidden; box-shadow: 0 8px 28px rgba(16,17,18,.14); scroll-margin-top: calc(var(--bar-h) + var(--safe-t) + 66px); display: flex; flex-direction: column; }
-        .pg-card.cat-go { --c: #5b9dd9; } .pg-card.cat-lite { --c: #4ecdc4; } .pg-card.cat-plus { --c: #b088e8; }
-        .pg-card.cat-max { --c: #f2994a; } .pg-card.cat-new-lite { --c: #e8c76f; }
-        .chip.cat-go { --c: #5b9dd9; } .chip.cat-lite { --c: #4ecdc4; } .chip.cat-plus { --c: #b088e8; }
-        .chip.cat-max { --c: #f2994a; } .chip.cat-new-lite { --c: #e8c76f; }
+        /* ===== Ofertas y cupones (carrusel a tope) ===== */
+        .deals { padding-top: 34px; }
+        .deals-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .deals-head h3 { font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -.01em; }
+        .limited { display: inline-flex; align-items: center; gap: 7px; background: #fff4ea; border: 1px solid #f3cfae; color: #a8541a; border-radius: 999px; padding: 5px 12px; font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+        .limited .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--hh-accent); animation: hh-pulse 1.6s ease-in-out infinite; }
+        @keyframes hh-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+        .deals-track { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 18px 16px; scroll-padding-left: 18px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .deals-track::-webkit-scrollbar { display: none; }
+        @media (hover: hover) { .deals-track { cursor: grab; } .deals-track.dragging { cursor: grabbing; } }
+        /* Aviso de bienvenida (cupón de primera visita) con los colores del catálogo. */
+        .hh-welcome-card { background: var(--hh-bg-2) !important; border-color: #e7d3bd !important; color: var(--hh-ink) !important; box-shadow: 0 -10px 40px rgba(30,25,20,.18) !important; }
+        .hh-welcome-kicker { color: #a8541a !important; }
+        .hh-welcome-text { color: var(--hh-soft) !important; }
+        .hh-welcome-close { color: #a9a49d !important; }
+        .hh-welcome-fine { color: #a9a49d !important; }
+        .hh-welcome-btn { border-radius: 14px !important; }
+        .deal { scroll-snap-align: start; flex: 0 0 78%; max-width: 320px; display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--hh-bg-2); border: 1px solid var(--hh-line); border-radius: 16px; box-shadow: 0 2px 10px rgba(30,25,20,.05); }
+        @media (min-width: 620px) { .deal { flex-basis: 320px; } }
+        .deal.is-offer { border-color: #f0cfae; }
+        .deal-band { padding: 10px 16px; font-size: 11.5px; font-weight: 800; letter-spacing: .14em; color: #a8541a; background: #fff6ee; border-bottom: 1px solid #f3e3d3; }
+        .deal-band.coupon { color: #1c6b96; background: #f0f8fc; border-bottom-color: #dbeaf3; }
+        .deal-body { padding: 16px; display: flex; flex-direction: column; flex: 1; gap: 4px; }
+        .deal-title { font-size: 18px; font-weight: 800; }
+        .price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; }
+        .price-old { color: #8a8d93; text-decoration: line-through; font-size: 15px; }
+        .price-new { color: var(--hh-ink); font-weight: 800; font-size: 22px; }
+        .save-badge { background: #ffe5d0; color: #a8541a; border-radius: 6px; padding: 2px 7px; font-size: 12px; font-weight: 800; }
+        .deal-link { color: var(--hh-soft); font-size: 14.5px; text-decoration: none; border-bottom: 1px solid #d8d4cc; align-self: flex-start; }
+        .deal-benefit { color: #1c6b96; font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+        .deal-hint { color: #8a8d93; font-size: 13.5px; }
+        .deal-cta { margin-top: auto; padding-top: 14px; }
+        .deal-cta span { display: block; text-align: center; background: var(--hh-accent); color: #21170e; padding: 13px; font-weight: 800; font-size: 15.5px; border-radius: 14px; }
+        .deal.is-coupon .deal-cta span { background: transparent; border: 1px solid #bcd9ea; color: #1c6b96; }
 
-        .pg-media { position: relative; background: #232427; }
-        .pg-slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
-        .pg-slides::-webkit-scrollbar { display: none; }
-        .pg-slide { flex: 0 0 100%; scroll-snap-align: center; display: block; aspect-ratio: 4 / 3; overflow: hidden; background: #2a2b2e; }
-        .pg-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .pg-empty { aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center; color: #8a8c90; font-size: 16px; background: linear-gradient(160deg, #26272a, #1b1c1e); }
-        .pg-shade { position: absolute; left: 0; right: 0; bottom: 0; height: 58%; background: linear-gradient(to top, rgba(10,10,11,.82), rgba(10,10,11,0)); pointer-events: none; }
-        .pg-title { position: absolute; left: 18px; right: 18px; bottom: 16px; pointer-events: none; }
-        .pg-title h2 { margin: 0; font-size: 28px; line-height: 1.05; letter-spacing: -.03em; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.4); }
-        .pg-title span { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 15.5px; font-weight: 600; color: #e6e7ea; }
-        .pg-title span::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
-        .pg-count { position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,.55); color: #fff; font-size: 14.5px; font-weight: 700; padding: 5px 10px; border-radius: 999px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); pointer-events: none; }
-        .pg-offer { position: absolute; top: 14px; left: 14px; background: #ff7918; color: #21170e; font-size: 14.5px; font-weight: 800; padding: 6px 11px; border-radius: 999px; pointer-events: none; }
-        .pg-dots { z-index: 2; position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; justify-content: center; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: rgba(0,0,0,.55); box-shadow: 0 1px 4px rgba(0,0,0,.35); pointer-events: none; }
-        .pg-dots i { width: 8px; height: 8px; border-radius: 50%; background: #ffffffa6; transition: all .18s ease; }
-        .pg-dots i.on { width: 20px; border-radius: 5px; background: #fff; }
+        /* ===== Tarjetas de Playroom, a tope en los extremos ===== */
+        .rooms { margin-top: 24px; }
+        .room { scroll-margin-top: calc(var(--bar-h) + var(--safe-t) + 56px); }
+        .room-media { position: relative; background: #e8e4dc; }
+        .slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+        .slides::-webkit-scrollbar { display: none; }
+        /* Con mouse la foto se arrastra; en celular se desliza con el dedo. */
+        @media (hover: hover) { .slides { cursor: grab; } .slides.dragging { cursor: grabbing; } }
+        .slide { flex: 0 0 100%; scroll-snap-align: center; display: block; aspect-ratio: 4 / 5; overflow: hidden; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .slide video { width: 100%; height: 100%; object-fit: contain; background: #16130f; display: block; }
+        @media (min-width: 620px) { .slide { aspect-ratio: 16 / 9; } }
+        /* Con un video a la vista se apaga el velo y el título, para no tapar los controles. */
+        .room-media.show-video .media-veil, .room-media.show-video .media-cap { opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+        .media-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255,255,255,.85); color: #1b1c1e; font-size: 22px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+        .media-nav.prev { left: 10px; } .media-nav.next { right: 10px; }
+        @media (hover: none) { .media-nav { display: none; } }
 
-        .pg-body { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
-        .pg-price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-        .pg-price small { color: #a2a5ab; font-size: 15.5px; font-weight: 600; }
-        .pg-price b { font-size: 30px; letter-spacing: -.03em; color: #fff; }
-        .pg-price em { font-style: normal; color: #a2a5ab; font-size: 15.5px; }
-        .pg-desc { margin: 0; color: #d5d8de; font-size: 16.5px; }
-        .pg-features { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px; }
-        .pg-features::-webkit-scrollbar { display: none; }
-        .pg-features span { flex: none; background: #2a2b2e; border: 1px solid #3a3c40; color: #e6e7ea; font-size: 15px; font-weight: 600; padding: 7px 13px; border-radius: 999px; }
-        .pg-tip { display: flex; gap: 9px; align-items: flex-start; background: #26272a; border-radius: 14px; padding: 11px 13px; color: #f0d18a; font-size: 15.5px; line-height: 1.4; }
-        .pg-tip::before { content: '✦'; color: var(--hh-accent); font-weight: 800; }
+        /* Tira de miniaturas: las fotos y los videos se revisan aquí mismo. */
+        .thumbs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
+        @media (min-width: 900px) { .thumbs { margin: 0 -40px; padding: 0 40px 2px; } }
+        .thumbs::-webkit-scrollbar { display: none; }
+        .thumb { flex: none; width: 62px; height: 62px; padding: 0; border: 2px solid transparent; background: #e8e4dc; cursor: pointer; overflow: hidden; position: relative; opacity: .55; transition: opacity .15s ease, border-color .15s ease; border-radius: 10px; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .thumb.on { opacity: 1; border-color: var(--hh-accent); }
+        .thumb-vid { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #1c6b96; font-size: 20px; }
+        .media-empty { aspect-ratio: 4 / 5; display: flex; align-items: center; justify-content: center; color: #8a8d93; font-size: 15px; background: linear-gradient(160deg, #eeeae2, #e2ded6); }
+        @media (min-width: 620px) { .media-empty { aspect-ratio: 16 / 9; } }
+        .media-veil { position: absolute; inset: 0; background: linear-gradient(to top, rgba(14,11,9,.88) 2%, rgba(14,11,9,.22) 46%, rgba(14,11,9,0) 72%); pointer-events: none; }
+        .media-cap { position: absolute; left: 18px; right: 18px; bottom: 20px; pointer-events: none; color: #fff; }
+        @media (min-width: 900px) { .media-cap { left: 40px; right: 40px; } }
+        .room-n { font-size: 12px; font-weight: 800; letter-spacing: .08em; color: #ffbe8d; margin-bottom: 6px; }
+        .media-cap h3 { font-weight: 800; font-size: clamp(34px, 10vw, 58px); line-height: .98; letter-spacing: -.02em; margin: 0; }
+        .media-cap .cap-sub { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14.5px; font-weight: 600; color: #ece9e4; }
+        .media-cap .cap-sub::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--c, #d6d2ca); }
+        .room.cat-go { --c: #6fb0e8; } .room.cat-lite { --c: #4ecdc4; } .room.cat-plus { --c: #b088e8; }
+        .room.cat-max { --c: #f2994a; } .room.cat-new-lite { --c: #e8c76f; }
+        .badge-offer { position: absolute; top: 16px; left: 18px; background: var(--hh-accent); color: #21170e; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px; }
+        @media (min-width: 900px) { .badge-offer { left: 40px; } }
+        .count { position: absolute; top: 16px; right: 18px; background: rgba(255,255,255,.85); color: #1b1c1e; font-size: 13px; font-weight: 700; padding: 5px 10px; border-radius: 999px; pointer-events: none; }
+        @media (min-width: 900px) { .count { right: 40px; } }
 
-        details.pg-prices { background: #26272a; border-radius: 14px; }
-        details.pg-prices summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; min-height: 48px; padding: 0 14px; font-size: 16px; font-weight: 700; color: #e6e7ea; }
-        details.pg-prices summary::-webkit-details-marker { display: none; }
-        details.pg-prices summary::after { content: '▾'; color: #a2a5ab; transition: transform .18s ease; }
-        details.pg-prices[open] summary::after { transform: rotate(180deg); }
-        table.price-table { width: calc(100% - 28px); margin: 0 14px 12px; border-collapse: collapse; font-size: 16px; }
-        table.price-table th { text-align: left; color: #a2a5ab; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; padding: 0 8px 8px 0; }
-        table.price-table td { padding: 10px 8px 10px 0; border-top: 1px solid #3a3c40; }
-        table.price-table td.price { font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
-        table.price-table td.dash { color: #6f7176; }
+        .room-body { background: var(--hh-bg-2); padding-top: 22px; padding-bottom: 30px; display: flex; flex-direction: column; gap: 16px; }
+        .from { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+        .from small { font-size: 11.5px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--hh-soft); }
+        .from b { font-size: 32px; font-weight: 700; letter-spacing: -.03em; }
+        .from em { font-style: normal; color: var(--hh-soft); font-size: 15px; }
+        .room-desc { margin: 0; color: #4b4e54; font-size: 17px; max-width: 640px; }
+        .feats { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px; }
+        @media (min-width: 900px) { .feats { margin: 0 -40px; padding: 0 40px; } }
+        .feats::-webkit-scrollbar { display: none; }
+        .feats span { flex: none; background: var(--hh-bg); border: 1px solid var(--hh-line); color: #3a3d42; font-size: 14px; font-weight: 600; padding: 7px 13px; border-radius: 999px; }
+        .tip { display: flex; gap: 9px; align-items: flex-start; color: #8a5620; font-size: 16.5px; margin: -4px 0 0; }
+        .tip::before { content: '✦'; color: var(--hh-accent); font-weight: 800; line-height: 1.5; }
+        .extra-note { color: #8a8d93; font-size: 14.5px; margin: -6px 0 0; }
+        .room-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+        .room-actions .btn-main { flex: 1 1 240px; }
+        .room-actions .btn-ghost { flex: 1 1 140px; }
 
-        .video-links { display: flex; flex-wrap: wrap; gap: 8px; }
-        .video-links a { font-size: 15.5px; color: #9edaff; text-decoration: none; border: 1px solid #3a5a72; padding: 8px 14px; border-radius: 999px; }
+        @media (min-width: 1000px) {
+            .room { display: grid; grid-template-columns: 1.15fr 1fr; align-items: stretch; }
+            .room-media { height: 100%; }
+            .room-media .slides, .room-media .slide { height: 100%; }
+            .room-media .slide { aspect-ratio: auto; min-height: 74vh; }
+            .room-body { justify-content: center; padding: 48px 40px; }
+            .room:nth-child(even) .room-media { order: 2; }
+        }
 
-        a.pg-btn { display: block; text-align: center; background: var(--hh-accent); color: #21170e; text-decoration: none; font-weight: 800; font-size: 18px; padding: 16px; border-radius: 16px; margin-top: auto; box-shadow: 0 8px 22px #ff79183a; }
-        a.pg-btn:active { background: var(--hh-accent-hover); transform: scale(.985); }
+        /* ===== Tarifas, dentro de cada Playroom y desplegables como en el catálogo actual ===== */
+        details.rates { background: var(--hh-bg); border: 1px solid var(--hh-line); border-radius: 12px; }
+        details.rates summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; min-height: 48px; padding: 0 14px; font-size: 16px; font-weight: 700; color: var(--hh-ink); }
+        details.rates summary::-webkit-details-marker { display: none; }
+        details.rates summary::after { content: '▾'; color: var(--hh-soft); transition: transform .18s ease; }
+        details.rates[open] summary::after { transform: rotate(180deg); }
+        table.rates-table { width: calc(100% - 28px); margin: 0 14px 12px; border-collapse: collapse; font-size: 15.5px; table-layout: fixed; }
+        table.rates-table th:first-child, table.rates-table td:first-child { width: 32%; }
+        table.rates-table th { text-align: left; color: #8a8d93; font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .12em; padding: 0 10px 9px 0; }
+        table.rates-table td { padding: 11px 10px 11px 0; border-top: 1px solid var(--hh-line); }
+        table.rates-table td.price { font-weight: 700; color: var(--hh-ink); font-variant-numeric: tabular-nums; }
+        table.rates-table td.dash { color: #b4b0a8; }
 
-        .help { margin: 26px 0 6px; background: #fff; border: 1px solid #e4e4e0; border-radius: 22px; padding: 20px; text-align: center; }
-        .help strong { display: block; font-size: 19px; margin-bottom: 4px; }
-        .help p { margin: 0 0 14px; color: #4b4e54; font-size: 16px; }
-        .help a { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border-radius: 14px; background: #111; color: #fff; text-decoration: none; font-weight: 700; font-size: 17px; }
-        footer.catalog-footer { text-align: center; color: #6b6e74; font-size: 15px; padding: 18px 0 8px; }
+        /* ===== Ubicación y ayuda ===== */
+        .place { padding-top: 52px; padding-bottom: 52px; border-top: 1px solid var(--hh-line); }
+        .place h3 { font-weight: 800; font-size: clamp(30px, 8vw, 54px); font-weight: 700; line-height: 1; margin: 12px 0 14px; letter-spacing: -.02em; }
+        .place p { color: var(--hh-soft); font-size: 16.5px; margin: 0 0 20px; max-width: 560px; }
+        .help { background: var(--hh-bg-2); border-top: 1px solid var(--hh-line); padding-top: 52px; padding-bottom: 58px; text-align: center; }
+        .help h3 { font-weight: 800; font-size: clamp(28px, 7.5vw, 48px); font-weight: 700; margin: 0 0 10px; line-height: 1.05; }
+        .help h3 em { font-style: normal; font-weight: 800; color: var(--hh-warm); }
+        .help p { color: var(--hh-soft); margin: 0 0 22px; font-size: 16.5px; }
+        .help a { display: inline-block; background: var(--hh-ink); color: #fff; text-decoration: none; font-weight: 700; font-size: 16px; padding: 16px 28px; border-radius: 14px; }
+        footer.cat-footer { border-top: 1px solid var(--hh-line); text-align: center; color: #8a8d93; font-size: 13.5px; padding: 22px 0 14px; letter-spacing: .06em; }
 
-        .photo-modal, .video-modal { display:none; position:fixed; inset:0; z-index:90; background:rgba(8,8,9,.95); align-items:center; justify-content:center; padding: calc(24px + var(--safe-t)) 12px calc(24px + var(--safe-b)); }
-        .photo-modal.is-open, .video-modal.is-open { display:flex; }
-        .photo-modal img { max-width:min(1000px, 100%); max-height:82vh; object-fit:contain; border-radius:14px; }
-        .video-modal video { max-width:min(1000px, 100%); max-height:82vh; border-radius:14px; }
-        .photo-nav { position:fixed; top:50%; transform:translateY(-50%); border:0; background:#ffffff26; color:#fff; width:48px; height:48px; border-radius:999px; font-size:26px; line-height:1; cursor:pointer; z-index:91; }
-        .photo-nav:hover { background:#ffffff40; }
-        .photo-nav.prev { left:10px; } .photo-nav.next { right:10px; }
-        .photo-nav[hidden], .photo-count[hidden] { display:none; }
-        .photo-count { position:fixed; bottom: calc(18px + var(--safe-b)); left:50%; transform:translateX(-50%); color:#fff; background:#ffffff26; border-radius:999px; padding:6px 14px; font-size:14px; font-weight:700; z-index:91; }
-        .photo-close { position:fixed; top: calc(14px + var(--safe-t)); right:14px; border:0; background:#ffffff26; color:#fff; border-radius:999px; min-height:44px; padding:0 18px; font-weight:700; font-size:16px; cursor:pointer; z-index:91; }
     </style>
 </head>
 @php
     $hasOffers = $categories->contains(fn ($entry) => $entry['offer']);
     $hasDeals = $hasOffers || $coupons->isNotEmpty();
+
+    // Precio más bajo de todo el catálogo, para la portada.
+    $lowest = null;
+    foreach ($categories as $e) {
+        foreach ($e['prices'] as $row) {
+            foreach (['hh', 'hot'] as $k) {
+                if ($row[$k] && ($lowest === null || $row[$k] < $lowest['price'])) {
+                    $lowest = ['price' => $row[$k], 'duration' => $row['duration']];
+                }
+            }
+        }
+    }
+    $durationLabel = fn ($m) => $m >= 60 ? (($m % 60 === 0) ? intdiv($m, 60).' h' : round($m / 60, 1).' h') : $m.' min';
+    // Foto de portada: la de la categoría más cara que tenga fotos.
+    $heroPhoto = $categories->reverse()->flatMap(fn ($e) => $e['photos'])->first()
+        ?: $categories->flatMap(fn ($e) => $e['photos'])->first();
+    $withPhotos = $categories->filter(fn ($e) => $e['photos']->isNotEmpty())->count();
+    // En numero y no en palabra: el titulo cabe en menos lineas.
+    $countWord = $categories->count();
+    // Horario de atención, tal como está cargado en las reglas de tarifa
+    // (rate_rule_windows): HH lunes a jueves 10:30-03:00 y HOT desde el
+    // viernes 10:30 corrido hasta el domingo 22:30.
+    $horario = 'Lunes a jueves de 10:30 a 03:00. Viernes desde las 10:30, sin parar, hasta el domingo a las 22:30.';
 @endphp
-<body class="has-tabbar">
+<body>
     @include('catalog._app-bar', ['appHasOffers' => $hasDeals])
 
-    <div class="wrap">
-        <section class="intro">
-            <h1>Elige tu Playroom</h1>
-            <p>Reserva en línea en un minuto o escríbenos por WhatsApp.</p>
-            @php
-                $lowest = null;
-                foreach ($categories as $e) {
-                    foreach ($e['prices'] as $row) {
-                        foreach (['hh', 'hot'] as $k) {
-                            if ($row[$k] && ($lowest === null || $row[$k] < $lowest['price'])) {
-                                $lowest = ['price' => $row[$k], 'duration' => $row['duration'], 'name' => $e['category']->name, 'slug' => Str::slug($e['category']->name)];
-                            }
-                        }
-                    }
-                }
-            @endphp
-            <div class="quick-prices">
-                @if ($lowest)
-                    <a class="qp" href="#cat-{{ $lowest['slug'] }}"><small>{{ $lowest['name'] }} desde</small><b>${{ number_format($lowest['price'], 0, ',', '.') }}</b> <span>/ {{ $lowest['duration'] >= 60 ? intdiv($lowest['duration'], 60).' h' : $lowest['duration'].' min' }}</span></a>
-                @endif
-                @foreach ($categories as $e)
-                    @if (in_array(mb_strtoupper($e['category']->name), ['NEW LITE', 'PLUS', 'MAX'], true))
-                        @php
-                            $catFrom = null;
-                            foreach ($e['prices'] as $row) {
-                                foreach (['hh', 'hot'] as $k) {
-                                    if ($row[$k] && ($catFrom === null || $row[$k] < $catFrom['price'])) {
-                                        $catFrom = ['price' => $row[$k], 'duration' => $row['duration']];
-                                    }
-                                }
-                            }
-                        @endphp
-                        @if ($catFrom)
-                            <a class="qp" href="#cat-{{ Str::slug($e['category']->name) }}"><small>{{ $e['category']->name }} desde</small><b>${{ number_format($catFrom['price'], 0, ',', '.') }}</b> <span>/ {{ $catFrom['duration'] >= 60 ? intdiv($catFrom['duration'], 60).' h' : $catFrom['duration'].' min' }}</span></a>
-                        @endif
+    {{-- ===== Portada ===== --}}
+    <section class="hero">
+        @if ($heroPhoto)
+            <img class="hero-img" src="{{ \App\Support\Img::url($heroPhoto, 1280) }}" alt="Playroom HH Motel" fetchpriority="high" decoding="async">
+        @endif
+        <div class="hero-veil"></div>
+        <div class="hero-in pad">
+            <p class="kicker">HH Motel · Santiago Centro</p>
+            <h1>Tu momento,<em>sin apuro.</em></h1>
+            @if ($lowest)
+                <div class="hero-from">
+                    <small>Desde</small>
+                    <b>${{ number_format($lowest['price'], 0, ',', '.') }}</b>
+                    <span>· {{ $durationLabel($lowest['duration']) }}</span>
+                </div>
+            @endif
+            <div class="hero-actions">
+                <a class="btn-main" href="{{ route('catalog.reserve') }}">Reservar ahora</a>
+                <a class="btn-ghost" href="#playrooms">Ver Playrooms</a>
+            </div>
+            <a class="hero-place" href="https://www.google.com/maps/search/?api=1&query=Almirante+Barroso+334+Santiago" target="_blank" rel="noopener">Almirante Barroso 334 · Metro Santa Ana</a>
+            <p class="scroll-hint">Baja para entrar ↓</p>
+        </div>
+    </section>
+
+    {{-- ===== Chips de categoría ===== --}}
+    @if ($categories->count() > 1)
+        <div class="chips-wrap">
+            <nav class="chips" id="cat-chips" aria-label="Categorías">
+                <a class="chip on" href="#playrooms" data-target="playrooms">Todas</a>
+                @foreach ($categories as $entry)
+                    <a class="chip cat-{{ Str::slug($entry['category']->name) }}" href="#cat-{{ Str::slug($entry['category']->name) }}" data-target="cat-{{ Str::slug($entry['category']->name) }}"><i></i>{{ $entry['category']->name }}</a>
+                @endforeach
+            </nav>
+        </div>
+    @endif
+
+    {{-- ===== Ofertas y cupones ===== --}}
+    @php
+        $offerPriceRow = function ($offer) {
+            if ($offer['originalPrice'] && $offer['offerPrice']) {
+                $savePct = round((1 - $offer['offerPrice'] / $offer['originalPrice']) * 100);
+                return '<div class="price-row">'
+                    .'<span class="price-old">$'.number_format($offer['originalPrice'], 0, ',', '.').'</span>'
+                    .'<span class="price-new">$'.number_format($offer['offerPrice'], 0, ',', '.').'</span>'
+                    .($savePct > 0 ? '<span class="save-badge">-'.$savePct.'%</span>' : '')
+                    .'</div>';
+            }
+            return '<div class="price-row"><span class="price-new">'.e($offer['label']).'</span></div>';
+        };
+    @endphp
+    @if ($hasDeals)
+        <section class="deals" id="ofertas">
+            <div class="deals-head pad">
+                <h3>Ofertas y cupones</h3>
+                @if ($hasOffers)<span class="limited"><span class="dot"></span> Por tiempo limitado</span>@endif
+            </div>
+            <div class="deals-track" id="deals-track">
+                @foreach ($categories->filter(fn ($entry) => $entry['offer']) as $entry)
+                    @if (count($entry['offer']['rooms']))
+                        @foreach ($entry['offer']['rooms'] as $offerRoom)
+                            <div class="deal is-offer">
+                                <div class="deal-band">✦ OFERTA · {{ $entry['category']->name }}</div>
+                                <div class="deal-body">
+                                    <span class="deal-title">{{ $offerRoom['name'] }}{{ $entry['offer']['durationLabel'] ? ' · '.$entry['offer']['durationLabel'] : '' }}</span>
+                                    {!! $offerPriceRow($entry['offer']) !!}
+                                    <a class="deal-link" href="{{ route('catalog.room', $offerRoom['id']) }}">Ver ficha y fotos →</a>
+                                    <a class="deal-cta" href="{{ route('catalog.reserve', ['categoria' => $entry['category']->id, 'room_id' => $offerRoom['id']]) }}"><span>Reservar oferta</span></a>
+                                </div>
+                            </div>
+                        @endforeach
+                    @else
+                        <div class="deal is-offer">
+                            <div class="deal-band">✦ OFERTA · {{ $entry['category']->name }}</div>
+                            <div class="deal-body">
+                                <span class="deal-title">{{ $entry['category']->name }}{{ $entry['offer']['durationLabel'] ? ' · '.$entry['offer']['durationLabel'] : '' }}</span>
+                                {!! $offerPriceRow($entry['offer']) !!}
+                                <a class="deal-cta" href="{{ route('catalog.reserve', ['categoria' => $entry['category']->id]) }}"><span>Reservar oferta</span></a>
+                            </div>
+                        </div>
                     @endif
                 @endforeach
+                @foreach ($coupons as $coupon)
+                    <a class="deal is-coupon" href="{{ route('catalog.reserve', ['cupon' => $coupon['code']]) }}">
+                        <div class="deal-band coupon">🎟 CUPÓN</div>
+                        <div class="deal-body">
+                            <div class="deal-benefit">{{ $coupon['benefit'] }}</div>
+                            <span class="deal-title" style="font-size:18px;">{{ $coupon['name'] }}</span>
+                            @if ($coupon['hint'])<div class="deal-hint">{{ $coupon['hint'] }}</div>@endif
+                            <span class="deal-cta"><span>Usar este cupón</span></span>
+                        </div>
+                    </a>
+                @endforeach
             </div>
-            <div class="quick-info">
-                <a class="qi" href="https://www.google.com/maps/search/?api=1&query=Almirante+Barroso+334+Santiago" target="_blank" rel="noopener">📍 Almirante Barroso 334 · Metro Santa Ana</a>
-            </div>
-            <a class="quick-cta" href="{{ route('catalog.reserve') }}">Reservar ahora →</a>
         </section>
+    @endif
 
-        @if ($categories->count() > 1)
-            <div class="cat-chips-wrap">
-                <nav class="cat-chips" id="cat-chips" aria-label="Categorías">
-                    <a class="chip on" href="#top" data-target="top">Todas</a>
-                    @foreach ($categories as $entry)
-                        <a class="chip cat-{{ Str::slug($entry['category']->name) }}" href="#cat-{{ Str::slug($entry['category']->name) }}" data-target="cat-{{ Str::slug($entry['category']->name) }}"><i></i>{{ $entry['category']->name }}</a>
-                    @endforeach
-                </nav>
-            </div>
-        @endif
+    {{-- ===== 01 / Playrooms ===== --}}
+    <section id="playrooms">
+        <div class="sec-head pad">
+            <div class="sec-num"><b>01</b> <span>Playrooms</span> <i></i></div>
+            <h2>{{ $countWord }} formas <em>de vivir HH.</em></h2>
+            <p>Cada Playroom tiene su propio ambiente. Elige el tuyo, el horario y la duración: la reserva se confirma en línea.</p>
+        </div>
 
-        @php
-            $offerPriceRow = function ($offer) {
-                if ($offer['originalPrice'] && $offer['offerPrice']) {
-                    $savePct = round((1 - $offer['offerPrice'] / $offer['originalPrice']) * 100);
-                    return '<div class="offer-price-row">'
-                        .'<span class="offer-price-old">$'.number_format($offer['originalPrice'], 0, ',', '.').'</span>'
-                        .'<span class="offer-price-new">$'.number_format($offer['offerPrice'], 0, ',', '.').'</span>'
-                        .($savePct > 0 ? '<span class="offer-save-badge">-'.$savePct.'%</span>' : '')
-                        .'</div>';
-                }
-                return '<div class="offer-price-row"><span class="offer-price-new">'.e($offer['label']).'</span></div>';
-            };
-        @endphp
-        @if ($hasDeals)
-            <section class="deals-carousel" id="ofertas">
-                <div class="deals-head">
-                    <h2>✦ Ofertas y cupones</h2>
-                    @if ($hasOffers)
-                        <span class="limited-badge"><span class="dot"></span> Por tiempo limitado</span>
-                    @endif
-                </div>
-                <div class="deals-track-wrap">
-                    <button type="button" class="deals-nav prev" aria-label="Ver anterior">‹</button>
-                    <div class="deals-track" id="deals-track">
-                        @foreach ($categories->filter(fn ($entry) => $entry['offer']) as $entry)
-                            @if (count($entry['offer']['rooms']))
-                                @foreach ($entry['offer']['rooms'] as $offerRoom)
-                                    <div class="deal-card is-offer">
-                                        <div class="deal-band">✦ OFERTA · {{ $entry['category']->name }}</div>
-                                        <div class="deal-body">
-                                            <strong class="deal-title">{{ $offerRoom['name'] }}{{ $entry['offer']['durationLabel'] ? ' · '.$entry['offer']['durationLabel'] : '' }}</strong>
-                                            {!! $offerPriceRow($entry['offer']) !!}
-                                            <a class="deal-sub-link" href="{{ route('catalog.room', $offerRoom['id']) }}">{{ $entry['category']->name }} · Ver ficha y fotos →</a>
-                                            <a class="deal-cta-btn" href="{{ route('catalog.reserve', ['categoria' => $entry['category']->id, 'room_id' => $offerRoom['id']]) }}"><span>Reservar oferta →</span></a>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            @else
-                                <div class="deal-card is-offer">
-                                    <div class="deal-band">✦ OFERTA · {{ $entry['category']->name }}</div>
-                                    <div class="deal-body">
-                                        <strong class="deal-title">{{ $entry['category']->name }}{{ $entry['offer']['durationLabel'] ? ' · '.$entry['offer']['durationLabel'] : '' }}</strong>
-                                        {!! $offerPriceRow($entry['offer']) !!}
-                                        <a class="deal-cta-btn" href="{{ route('catalog.reserve', ['categoria' => $entry['category']->id]) }}"><span>Reservar oferta →</span></a>
-                                    </div>
-                                </div>
-                            @endif
-                        @endforeach
-                        @foreach ($coupons as $coupon)
-                            <a class="deal-card is-coupon" href="{{ route('catalog.reserve', ['cupon' => $coupon['code']]) }}">
-                                <div class="deal-band coupon">🎟 CUPÓN</div>
-                                <div class="deal-body">
-                                    <div class="deal-coupon-benefit">{{ $coupon['benefit'] }}</div>
-                                    <strong class="deal-title">{{ $coupon['name'] }}</strong>
-                                    @if ($coupon['hint'])<div class="deal-coupon-hint">{{ $coupon['hint'] }}</div>@endif
-                                    <span class="deal-cta-btn">Usar este cupón →</span>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
-                    <button type="button" class="deals-nav next" aria-label="Ver siguiente">›</button>
-                </div>
-            </section>
-        @endif
-
-        <div id="top"></div>
-        <div class="pg-list">
+        <div class="rooms">
         @forelse ($categories as $entry)
             @php
                 [$category, $photos, $videos, $prices] = [$entry['category'], $entry['photos'], $entry['videos'], $entry['prices']];
                 $slug = Str::slug($category->name);
-                $slides = $photos->take(6);
-                // "Desde $X": el precio más bajo de la tabla y a qué duración corresponde.
+                // Fotos y videos van en el mismo carrusel, y se revisan en la
+                // misma página: nada abre otra ventana.
+                $media = $photos->take(8)->map(fn ($u) => ['type' => 'photo', 'url' => $u])
+                    ->concat($videos->map(fn ($u) => ['type' => 'video', 'url' => $u]))
+                    ->values();
                 $from = null;
                 foreach ($prices as $row) {
                     foreach (['hh', 'hot'] as $k) {
@@ -299,187 +363,255 @@
                     }
                 }
             @endphp
-            <section class="pg-card cat-{{ $slug }}" id="cat-{{ $slug }}" data-cat>
-                <div class="pg-media">
-                    @if ($slides->isNotEmpty())
-                        <div class="pg-slides" data-slides>
-                            @foreach ($slides as $url)
-                                <a href="{{ $url }}" class="pg-slide photo-trigger" data-photo="{{ \App\Support\Img::url($url, 1280) }}" aria-label="Ver foto {{ $loop->iteration }} de {{ $category->name }}"><img src="{{ \App\Support\Img::url($url, 640) }}" alt="Foto {{ $category->name }}" width="640" height="480" @if ($loop->first && $loop->parent->first) fetchpriority="high" @else loading="lazy" @endif decoding="async"></a>
+            <section class="room cat-{{ $slug }}" id="cat-{{ $slug }}" data-cat>
+                <div class="room-media">
+                    @if ($media->isNotEmpty())
+                        <div class="slides" data-slides>
+                            @foreach ($media as $item)
+                                @if ($item['type'] === 'photo')
+                                    <div class="slide"><img src="{{ \App\Support\Img::url($item['url'], 960) }}" alt="Foto {{ $category->name }}" width="960" height="1200" loading="lazy" decoding="async"></div>
+                                @else
+                                    <div class="slide is-video"><video src="{{ $item['url'] }}" controls playsinline preload="metadata"></video></div>
+                                @endif
                             @endforeach
                         </div>
-                        @if ($slides->count() > 1)
-                            <span class="pg-count" data-count>1/{{ $slides->count() }}</span>
-                            <div class="pg-dots" data-dots>@foreach ($slides as $s)<i class="{{ $loop->first ? 'on' : '' }}"></i>@endforeach</div>
+                        @if ($media->count() > 1)
+                            <button class="media-nav prev" type="button" data-nav="-1" aria-label="Anterior">‹</button>
+                            <button class="media-nav next" type="button" data-nav="1" aria-label="Siguiente">›</button>
+                            <span class="count" data-count>1/{{ $media->count() }}</span>
                         @endif
                     @else
-                        <div class="pg-empty">Fotos próximamente</div>
+                        <div class="media-empty">Fotos próximamente</div>
                     @endif
-                    @if ($entry['offer'])<span class="pg-offer">✦ Oferta</span>@endif
-                    <div class="pg-shade"></div>
-                    <div class="pg-title">
-                        <h2>{{ $category->name }}</h2>
-                        <span>Hasta {{ $category->max_capacity }} personas</span>
+                    @if ($entry['offer'])<span class="badge-offer">✦ Oferta</span>@endif
+                    <div class="media-veil"></div>
+                    <div class="media-cap">
+                        <div class="room-n">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</div>
+                        <h3>{{ $category->name }}</h3>
+                        <span class="cap-sub">Hasta {{ $category->max_capacity }} personas</span>
                     </div>
                 </div>
 
-                <div class="pg-body">
+                <div class="room-body pad">
+                    @if ($media->count() > 1)
+                        <div class="thumbs" data-thumbs>
+                            @foreach ($media as $item)
+                                <button type="button" class="thumb {{ $loop->first ? 'on' : '' }}" data-i="{{ $loop->index }}" aria-label="Ver {{ $item['type'] === 'video' ? 'video' : 'foto' }} {{ $loop->iteration }} de {{ $category->name }}">
+                                    @if ($item['type'] === 'photo')
+                                        <img src="{{ \App\Support\Img::url($item['url'], 160) }}" alt="" loading="lazy" decoding="async">
+                                    @else
+                                        <span class="thumb-vid">▶</span>
+                                    @endif
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
+
                     @if ($from)
-                        <div class="pg-price"><small>Desde</small><b>${{ number_format($from['price'], 0, ',', '.') }}</b><em>/ {{ $from['duration'] >= 60 ? intdiv($from['duration'], 60).' h' : $from['duration'].' min' }}</em></div>
+                        <div class="from"><small>Desde</small><b>${{ number_format($from['price'], 0, ',', '.') }}</b><em>· {{ $durationLabel($from['duration']) }}</em></div>
                     @endif
 
                     @if ($category->description)
-                        <p class="pg-desc">{{ $category->description }}</p>
+                        <p class="room-desc">{{ $category->description }}</p>
                     @endif
 
                     @if (!empty($category->features))
-                        <div class="pg-features">
+                        <div class="feats">
                             @foreach ($category->features as $feature)
                                 <span>{{ $feature }}</span>
                             @endforeach
                         </div>
                     @endif
 
-                    <div class="pg-tip">{{ $entry['salesTip'] }}</div>
+                    <div class="tip">{{ $entry['salesTip'] }}</div>
 
                     @if ($category->extra_guest_from)
-                        <p class="pg-desc" style="font-size:15.5px;color:#a2a5ab;margin-top:-4px;">Desde la {{ $category->extra_guest_from }}ª persona se cobra un adicional.</p>
+                        <p class="extra-note">Desde la {{ $category->extra_guest_from }}ª persona se cobra un adicional.</p>
                     @endif
 
                     @if ($prices->isNotEmpty())
-                        <details class="pg-prices">
+                        <details class="rates">
                             <summary>Ver todas las tarifas</summary>
-                            <table class="price-table">
-                                <thead>
-                                    <tr><th>Duración</th><th>Lun a jue</th><th>Vie a dom</th></tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($prices as $row)
-                                        <tr>
-                                            <td>{{ $row['duration'] >= 60 ? intdiv($row['duration'], 60).' h' : $row['duration'].' min' }}</td>
-                                            <td class="{{ $row['hh'] ? 'price' : 'dash' }}">{{ $row['hh'] ? '$'.number_format($row['hh'], 0, ',', '.') : '—' }}</td>
-                                            <td class="{{ $row['hot'] ? 'price' : 'dash' }}">{{ $row['hot'] ? '$'.number_format($row['hot'], 0, ',', '.') : '—' }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
+                            <table class="rates-table">
+                            <thead>
+                                <tr><th>Duración</th><th>Lun–jue</th><th>Vie–dom</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($prices as $row)
+                                    <tr>
+                                        <td>{{ $durationLabel($row['duration']) }}</td>
+                                        <td class="{{ $row['hh'] ? 'price' : 'dash' }}">{{ $row['hh'] ? '$'.number_format($row['hh'], 0, ',', '.') : '—' }}</td>
+                                        <td class="{{ $row['hot'] ? 'price' : 'dash' }}">{{ $row['hot'] ? '$'.number_format($row['hot'], 0, ',', '.') : '—' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
                             </table>
                         </details>
                     @endif
 
-                    @if ($videos->isNotEmpty())
-                        <div class="video-links">
-                            @foreach ($videos as $url)
-                                <a href="{{ $url }}" class="video-trigger" data-video="{{ $url }}" target="_blank" rel="noopener">▶ Ver video {{ $loop->index + 1 }}</a>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    <a class="pg-btn" href="{{ route('catalog.reserve', ['categoria' => $category->id]) }}">Reservar {{ $category->name }}</a>
+                    <div class="room-actions">
+                        <a class="btn-main" href="{{ route('catalog.reserve', ['categoria' => $category->id]) }}">Reservar {{ $category->name }}</a>
+                        <a class="btn-ghost" href="{{ $entry['whatsappUrl'] }}" target="_blank" rel="noopener">Preguntar</a>
+                    </div>
                 </div>
             </section>
         @empty
-            <p style="text-align:center; color:#555;">Todavía no hay categorías activas para mostrar.</p>
+            <p class="pad" style="color:#8e9197;">Todavía no hay categorías activas para mostrar.</p>
         @endforelse
         </div>
+    </section>
 
-        <section class="help">
-            <strong>¿Tienes dudas?</strong>
-            <p>Te ayudamos a elegir la mejor opción.</p>
-            <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
-        </section>
-        <footer class="catalog-footer">HH Motel Santiago</footer>
-    </div>
+    {{-- ===== 02 / Ubicación ===== --}}
+    <section class="place pad" id="ubicacion">
+        <div class="sec-num"><b>02</b> <span>Santiago</span> <i></i></div>
+        <h3>Almirante<br>Barroso 334.</h3>
+        <p>Santiago Centro, a pasos del Metro Santa Ana. Entrada discreta.<br>{{ $horario }}</p>
+        <a class="btn-ghost" href="https://www.google.com/maps/search/?api=1&query=Almirante+Barroso+334+Santiago" target="_blank" rel="noopener">Cómo llegar →</a>
+    </section>
 
-    @include('catalog._tab-bar', ['tabOn' => 'home', 'tabHasOffers' => $hasDeals])
+    {{-- ===== 03 / Dudas ===== --}}
+    <section class="help pad">
+        <div class="sec-num" style="justify-content:center;"><b>03</b> <span>Dudas</span></div>
+        <h3>¿Qué Playroom <em>quieres hoy?</em></h3>
+        <p>Te ayudamos a elegir la mejor opción.</p>
+        <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+    </section>
+    <footer class="cat-footer">HH MOTEL SANTIAGO</footer>
 
-    <div class="photo-modal" id="photo-modal" role="dialog" aria-modal="true" aria-label="Vista ampliada de la foto">
-        <button class="photo-close" type="button" id="photo-close">Cerrar ✕</button>
-        <button class="photo-nav prev" type="button" id="photo-prev" aria-label="Foto anterior">‹</button>
-        <img id="photo-modal-image" src="" alt="Foto ampliada">
-        <button class="photo-nav next" type="button" id="photo-next" aria-label="Foto siguiente">›</button>
-        <div class="photo-count" id="photo-count"></div>
-    </div>
-    <div class="video-modal" id="video-modal" role="dialog" aria-modal="true" aria-label="Reproductor de video">
-        <button class="photo-close" type="button" id="video-close">Cerrar ✕</button>
-        <video id="video-modal-player" controls playsinline></video>
-    </div>
+
     <script>
-        const photoModal = document.getElementById('photo-modal');
-        const photoModalImage = document.getElementById('photo-modal-image');
-        // Galería: con la foto abierta se pasa a la siguiente con las flechas, deslizando o con el teclado.
-        const photoPrev = document.getElementById('photo-prev');
-        const photoNext = document.getElementById('photo-next');
-        const photoCount = document.getElementById('photo-count');
-        let gallery = [];
-        let galleryIndex = 0;
-        function showPhoto(i) {
-            if (!gallery.length) return;
-            galleryIndex = (i + gallery.length) % gallery.length;
-            photoModalImage.src = gallery[galleryIndex];
-            const many = gallery.length > 1;
-            photoPrev.hidden = photoNext.hidden = photoCount.hidden = !many;
-            photoCount.textContent = (galleryIndex + 1) + ' / ' + gallery.length;
-        }
-        function closePhoto() { photoModal.classList.remove('is-open'); photoModalImage.src = ''; gallery = []; }
-        document.querySelectorAll('.photo-trigger').forEach((link) => link.addEventListener('click', (event) => {
-            event.preventDefault();
-            const group = link.closest('[data-slides]');
-            const links = group ? Array.from(group.querySelectorAll('.photo-trigger')) : [link];
-            gallery = links.map((l) => l.dataset.photo);
-            showPhoto(links.indexOf(link));
-            photoModal.classList.add('is-open');
-        }));
-        photoPrev.addEventListener('click', () => showPhoto(galleryIndex - 1));
-        photoNext.addEventListener('click', () => showPhoto(galleryIndex + 1));
-        let touchX = null;
-        photoModal.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
-        photoModal.addEventListener('touchend', (e) => {
-            if (touchX === null) return;
-            const dx = e.changedTouches[0].clientX - touchX;
-            touchX = null;
-            if (Math.abs(dx) > 40) showPhoto(galleryIndex + (dx < 0 ? 1 : -1));
-        });
-        document.addEventListener('keydown', (event) => {
-            if (!photoModal.classList.contains('is-open')) return;
-            if (event.key === 'ArrowRight') showPhoto(galleryIndex + 1);
-            if (event.key === 'ArrowLeft') showPhoto(galleryIndex - 1);
-        });
-        document.getElementById('photo-close').addEventListener('click', closePhoto);
-        photoModal.addEventListener('click', (event) => { if (event.target === photoModal) closePhoto(); });
-
-        // El video se reproduce en un modal con su propio "Cerrar" (antes abría
-        // otra pestaña sin forma de volver al catálogo).
-        const videoModal = document.getElementById('video-modal');
-        const videoModalPlayer = document.getElementById('video-modal-player');
-        function closeVideo() { videoModal.classList.remove('is-open'); videoModalPlayer.pause(); videoModalPlayer.removeAttribute('src'); videoModalPlayer.load(); }
-        document.querySelectorAll('.video-trigger').forEach((link) => link.addEventListener('click', (event) => {
-            event.preventDefault();
-            videoModalPlayer.src = link.dataset.video;
-            videoModal.classList.add('is-open');
-            videoModalPlayer.play().catch(() => {});
-        }));
-        document.getElementById('video-close').addEventListener('click', closeVideo);
-        videoModal.addEventListener('click', (event) => { if (event.target === videoModal) closeVideo(); });
-        document.addEventListener('keydown', (event) => {
-            if (event.key !== 'Escape') return;
-            closePhoto();
-            closeVideo();
-        });
-
-        // Carrusel de fotos de cada tarjeta: puntitos y contador siguen el deslizamiento.
-        document.querySelectorAll('[data-slides]').forEach((track) => {
-            const media = track.closest('.pg-media');
-            const dots = media.querySelectorAll('[data-dots] i');
-            const count = media.querySelector('[data-count]');
+        // Galería de cada Playroom: fotos y videos se revisan acá mismo, sin
+        // salir de la página ni abrir otra ventana. Las miniaturas, las
+        // flechas y el deslizamiento mueven el mismo carrusel.
+        document.querySelectorAll('.room').forEach((room) => {
+            const track = room.querySelector('[data-slides]');
+            if (!track) return;
+            const media = room.querySelector('.room-media');
+            const slides = Array.from(track.children);
+            const thumbs = Array.from(room.querySelectorAll('[data-thumbs] .thumb'));
+            const count = room.querySelector('[data-count]');
+            const index = () => Math.round(track.scrollLeft / track.clientWidth);
+            const goTo = (i) => {
+                i = Math.max(0, Math.min(slides.length - 1, i));
+                // Saltar varias fotos de golpe es instantáneo; de a una, suave.
+                track.scrollTo({ left: i * track.clientWidth, behavior: Math.abs(i - index()) > 1 ? 'auto' : 'smooth' });
+            };
+            const sync = (scrollThumbs) => {
+                const i = index();
+                thumbs.forEach((t, n) => t.classList.toggle('on', n === i));
+                if (count) count.textContent = (i + 1) + '/' + slides.length;
+                const onVideo = !!slides[i] && slides[i].classList.contains('is-video');
+                media.classList.toggle('show-video', onVideo);
+                // Un video que se sale de la vista se pausa solo.
+                track.querySelectorAll('video').forEach((v) => { if (v.closest('.slide') !== slides[i]) v.pause(); });
+                // Solo al navegar: al cargar la página no se mueve nada.
+                if (scrollThumbs && thumbs[i]) thumbs[i].scrollIntoView({ inline: 'nearest', block: 'nearest' });
+            };
             let raf = 0;
             track.addEventListener('scroll', () => {
                 cancelAnimationFrame(raf);
-                raf = requestAnimationFrame(() => {
-                    const i = Math.round(track.scrollLeft / track.clientWidth);
-                    dots.forEach((d, n) => d.classList.toggle('on', n === i));
-                    if (count) count.textContent = (i + 1) + '/' + dots.length;
-                });
+                raf = requestAnimationFrame(() => sync(true));
             }, { passive: true });
+            // En computador con mouse no hay deslizar con el dedo: se arrastra
+            // la foto, igual que en el celular. Sobre un video no se arrastra,
+            // para no pelear con sus controles.
+            let arrastre = null;
+            track.addEventListener('pointerdown', (e) => {
+                if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('video')) return;
+                arrastre = { x: e.clientX, left: track.scrollLeft, movio: false };
+            });
+            track.addEventListener('pointermove', (e) => {
+                if (!arrastre) return;
+                const dx = e.clientX - arrastre.x;
+                if (!arrastre.movio && Math.abs(dx) < 4) return;
+                if (!arrastre.movio) {
+                    arrastre.movio = true;
+                    track.classList.add('dragging');
+                    track.style.scrollSnapType = 'none';
+                    try { track.setPointerCapture(e.pointerId); } catch (err) {}
+                }
+                track.scrollLeft = arrastre.left - dx;
+                e.preventDefault();
+            });
+            const soltar = () => {
+                if (!arrastre) return;
+                const movio = arrastre.movio;
+                arrastre = null;
+                track.classList.remove('dragging');
+                track.style.scrollSnapType = '';
+                if (movio) goTo(index());
+            };
+            track.addEventListener('pointerup', soltar);
+            track.addEventListener('pointercancel', soltar);
+            track.addEventListener('pointerleave', soltar);
+            track.addEventListener('dragstart', (e) => e.preventDefault());
+
+            thumbs.forEach((t) => t.addEventListener('click', () => goTo(Number(t.dataset.i))));
+            room.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => goTo(index() + Number(b.dataset.nav))));
+            sync();
         });
+
+        // Cupones y ofertas: se arrastran con el mouse y avanzan solos.
+        (function () {
+            const pista = document.getElementById('deals-track');
+            if (!pista) return;
+            const paso = () => {
+                const c = pista.querySelector('.deal');
+                return (c ? c.getBoundingClientRect().width : 280) + 12;
+            };
+
+            let arrastre = null, movio = false;
+            pista.addEventListener('pointerdown', (e) => {
+                if (e.pointerType !== 'mouse' || e.button !== 0) return;
+                arrastre = { x: e.clientX, left: pista.scrollLeft };
+                movio = false;
+            });
+            pista.addEventListener('pointermove', (e) => {
+                if (!arrastre) return;
+                const dx = e.clientX - arrastre.x;
+                if (!movio && Math.abs(dx) < 4) return;
+                if (!movio) {
+                    movio = true;
+                    pista.classList.add('dragging');
+                    pista.style.scrollSnapType = 'none';
+                    try { pista.setPointerCapture(e.pointerId); } catch (err) {}
+                }
+                pista.scrollLeft = arrastre.left - dx;
+                e.preventDefault();
+            });
+            const soltar = () => {
+                if (!arrastre) return;
+                arrastre = null;
+                pista.classList.remove('dragging');
+                pista.style.scrollSnapType = '';
+            };
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => pista.addEventListener(ev, soltar));
+            // Soltar después de arrastrar no debe abrir el cupón.
+            pista.addEventListener('click', (e) => {
+                if (!movio) return;
+                movio = false;
+                e.preventDefault();
+                e.stopPropagation();
+            }, true);
+            pista.addEventListener('dragstart', (e) => e.preventDefault());
+
+            // Avanza solo cada 5 segundos y vuelve al principio al llegar al final.
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            let reloj = 0;
+            const avanzar = () => {
+                if (document.hidden || arrastre) return;
+                const fin = pista.scrollWidth - pista.clientWidth - 4;
+                if (pista.scrollLeft >= fin) pista.scrollTo({ left: 0, behavior: 'smooth' });
+                else pista.scrollBy({ left: paso(), behavior: 'smooth' });
+            };
+            const seguir = () => { if (!reloj) reloj = setInterval(avanzar, 5000); };
+            const pausar = () => { clearInterval(reloj); reloj = 0; };
+            pista.addEventListener('pointerenter', pausar);
+            pista.addEventListener('pointerleave', seguir);
+            pista.addEventListener('touchstart', pausar, { passive: true });
+            document.addEventListener('visibilitychange', () => document.hidden ? pausar() : seguir());
+            seguir();
+        })();
 
         // Chips de categoría: marcan la tarjeta que se está viendo y llevan a ella.
         (function () {
@@ -494,8 +626,7 @@
             chips.forEach((chip) => chip.addEventListener('click', (e) => {
                 e.preventDefault();
                 const el = document.getElementById(chip.dataset.target);
-                if (chip.dataset.target === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
-                else if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 mark(chip.dataset.target);
             }));
             if ('IntersectionObserver' in window) {
@@ -505,20 +636,9 @@
                     if (visible) mark(visible.target.id);
                 }, { rootMargin: '-35% 0px -55% 0px', threshold: [0, .1, .5] });
                 cards.forEach((c) => io.observe(c));
-                window.addEventListener('scroll', () => { if (window.scrollY < 120) mark('top'); }, { passive: true });
+                window.addEventListener('scroll', () => { if (window.scrollY < 200) mark('playrooms'); }, { passive: true });
             }
         })();
-
-        const dealsTrack = document.getElementById('deals-track');
-        if (dealsTrack) {
-            const scrollByCard = (dir) => {
-                const card = dealsTrack.querySelector('.deal-card');
-                const step = (card ? card.getBoundingClientRect().width : 280) + 12;
-                dealsTrack.scrollBy({ left: dir * step, behavior: 'smooth' });
-            };
-            document.querySelector('.deals-nav.prev')?.addEventListener('click', () => scrollByCard(-1));
-            document.querySelector('.deals-nav.next')?.addEventListener('click', () => scrollByCard(1));
-        }
     </script>
     @include('catalog._welcome-offer')
 </body>
