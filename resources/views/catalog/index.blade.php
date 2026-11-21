@@ -40,7 +40,11 @@
 
         /* ===== Portada (oscura porque es la foto, no un fondo negro) ===== */
         .hero { position: relative; min-height: 86svh; display: flex; align-items: flex-end; overflow: hidden; background: #2a2622; color: #fff; }
-        .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease; }
+        .hero-img.on { opacity: 1; }
+        /* Sin javascript o con "reducir movimiento", se ve solo la primera. */
+        .hero-img:first-of-type { opacity: 1; }
+        @media (prefers-reduced-motion: reduce) { .hero-img:not(:first-of-type) { display: none; } }
         .hero-veil { position: absolute; inset: 0; background: linear-gradient(to top, rgba(14,11,9,.9) 4%, rgba(14,11,9,.42) 46%, rgba(14,11,9,.18) 100%); }
         .hero-in { position: relative; width: 100%; padding-top: 70px; padding-bottom: 30px; }
         .kicker { font-size: 12px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: #ffbe8d; margin: 0 0 14px; }
@@ -225,9 +229,13 @@
         }
     }
     $durationLabel = fn ($m) => $m >= 60 ? (($m % 60 === 0) ? intdiv($m, 60).' h' : round($m / 60, 1).' h') : $m.' min';
-    // Foto de portada: la de la categoría más cara que tenga fotos.
-    $heroPhoto = $categories->reverse()->flatMap(fn ($e) => $e['photos'])->first()
-        ?: $categories->flatMap(fn ($e) => $e['photos'])->first();
+    // Portada: las fotos de la categoría más cara que tenga fotos (MAX). Se
+    // van fundiendo una con otra; la primera carga al tiro y el resto después,
+    // así la primera pantalla no se demora más que antes.
+    $heroPhotos = $categories->reverse()->first(fn ($e) => $e['photos']->isNotEmpty())['photos']
+        ?? $categories->first(fn ($e) => $e['photos']->isNotEmpty())['photos']
+        ?? collect();
+    $heroPhotos = $heroPhotos->take(5)->values();
     $withPhotos = $categories->filter(fn ($e) => $e['photos']->isNotEmpty())->count();
     // En numero y no en palabra: el titulo cabe en menos lineas.
     $countWord = $categories->count();
@@ -241,9 +249,10 @@
 
     {{-- ===== Portada ===== --}}
     <section class="hero">
-        @if ($heroPhoto)
-            <img class="hero-img" src="{{ \App\Support\Img::url($heroPhoto, 1280) }}" alt="Playroom HH Motel" fetchpriority="high" decoding="async">
-        @endif
+        @foreach ($heroPhotos as $foto)
+            <img class="hero-img{{ $loop->first ? ' on' : '' }}" src="{{ \App\Support\Img::url($foto, 1280) }}" alt="Playroom HH Motel" decoding="async"
+                 @if ($loop->first) fetchpriority="high" @else loading="lazy" @endif>
+        @endforeach
         <div class="hero-veil"></div>
         <div class="hero-in pad">
             <p class="kicker">HH Motel · Santiago Centro</p>
@@ -550,6 +559,30 @@
             room.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => goTo(index() + Number(b.dataset.nav))));
             sync();
         });
+
+        // Portada: las fotos de MAX se van fundiendo cada 3 segundos. La
+        // segunda recién entra cuando ya está cargada, para no mostrar un
+        // hueco negro, y se detiene si la pestaña no está a la vista.
+        (function () {
+            const fotos = Array.from(document.querySelectorAll('.hero-img'));
+            if (fotos.length < 2) return;
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            fotos[0].classList.add('on');
+            let actual = 0, reloj = 0;
+            const lista = (f) => f.complete && f.naturalWidth > 0;
+            const pasar = () => {
+                if (document.hidden) return;
+                const siguiente = (actual + 1) % fotos.length;
+                if (!lista(fotos[siguiente])) return; // todavía no carga: se espera al próximo turno
+                fotos[actual].classList.remove('on');
+                fotos[siguiente].classList.add('on');
+                actual = siguiente;
+            };
+            const seguir = () => { if (!reloj) reloj = setInterval(pasar, 3000); };
+            const parar = () => { clearInterval(reloj); reloj = 0; };
+            document.addEventListener('visibilitychange', () => document.hidden ? parar() : seguir());
+            seguir();
+        })();
 
         // Cupones y ofertas: se arrastran con el mouse y avanzan solos.
         (function () {

@@ -27,6 +27,11 @@
         .room-media img { width:64px; height:48px; object-fit:cover; border-radius:6px; border:1px solid #333; }
         .room-media-video { display:flex; align-items:center; justify-content:center; width:64px; height:48px; border-radius:6px; border:1px dashed #444; color:#ff7918; text-decoration:none; font-size:11px; }
         .row.total { font-weight: 700; font-size: 16px; color:#fff; }
+        /* Total de la estadía: la cifra que recepción busca primero (pieza + consumo). */
+        .row.grand { align-items:baseline; border-top:1px solid #3a3a3a; border-bottom:1px solid #3a3a3a; margin:6px 0; padding:11px 0; }
+        .row.grand span:first-child { font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#b4b7bc; }
+        .row.grand span:last-child { font-size:26px; font-weight:800; color:#fff; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+        .row.grand-detail { border-bottom:none; padding:0 0 8px; font-size:13px; color:#8b8e93; }
         .row .muted { color:#999; flex:none; }
         .pill { display:inline-block; font-size:11px; font-family: ui-monospace, monospace; padding:3px 9px; border-radius:20px; background:#2a2a2a; color:#ccc; }
         .balance { color:#ff7918; }
@@ -582,6 +587,11 @@
                 <div class="row total"><span>Precio final (Playroom)</span><span>${{ number_format($booking->price_final, 0, ',', '.') }}</span></div>
                 @if ($booking->addonsTotal() > 0)
                     <div class="row"><span class="muted">Consumo</span><span>${{ number_format($booking->addonsTotal(), 0, ',', '.') }}</span></div>
+                @endif
+                @php $totalEstadia = $booking->price_final + $booking->addonsTotal(); @endphp
+                <div class="row grand"><span>Total de la estadía</span><span>${{ number_format($totalEstadia, 0, ',', '.') }}</span></div>
+                @if ($booking->addonsTotal() > 0)
+                    <div class="row grand-detail"><span>Playroom ${{ number_format($booking->price_final, 0, ',', '.') }} + consumo ${{ number_format($booking->addonsTotal(), 0, ',', '.') }}</span></div>
                 @endif
                 <div class="row"><span class="muted">Abono objetivo</span><span>${{ number_format($booking->deposit_amount, 0, ',', '.') }}</span></div>
                 <div class="row"><span class="muted">Pagado</span><span>${{ number_format($booking->paidAmount(), 0, ',', '.') }}</span></div>
