@@ -81,6 +81,8 @@ class BookingAddonController extends Controller
             'quantity' => ['nullable', 'integer', 'min:1', 'max:20'],
             'description' => ['nullable', 'string', 'max:255'],
             'amount' => ['nullable', 'integer', 'min:1', 'max:200000'],
+            // Motivo: solo lo pide el cobro sobre una reserva ya finalizada.
+            'reason' => ['nullable', 'string', 'min:5', 'max:300'],
         ], [
             'quantity.max' => 'Máximo 20 unidades por línea — si son más, agrégalo en dos veces.',
             'amount.max' => 'Ese monto parece demasiado alto para un ítem de consumo — revísalo.',
@@ -101,8 +103,21 @@ class BookingAddonController extends Controller
                 // actualizar.
                 $booking = Booking::where('code', $code)->lockForUpdate()->firstOrFail();
 
-                if (in_array($booking->booking_status, self::CLOSED, true)) {
-                    return back()->withErrors(['booking' => 'Esta reserva ya está cerrada — no se le puede agregar más consumo.']);
+                // Cobro después del cierre: pasa a veces que el cliente paga
+                // algo (horas de más, un consumo) y la reserva ya se finalizó,
+                // y entonces la plata quedaba en la máquina sin poder anotarse
+                // en ninguna parte. Un administrador puede agregarlo con el
+                // motivo escrito; el resto de los estados cerrados (cancelada,
+                // expirada, no llegó) no tienen estadía que cobrar.
+                $motivo = trim((string) ($validated['reason'] ?? ''));
+                $cobroTrasCierre = $booking->booking_status === 'FINALIZADA'
+                    && auth()->user()?->isAdministrador()
+                    && $motivo !== '';
+
+                if (in_array($booking->booking_status, self::CLOSED, true) && ! $cobroTrasCierre) {
+                    return back()->withErrors(['booking' => $booking->booking_status === 'FINALIZADA'
+                        ? 'La reserva está finalizada: solo un administrador puede agregarle un cobro, y tiene que escribir el motivo.'
+                        : 'Esta reserva ya está cerrada — no se le puede agregar más consumo.']);
                 }
                 if (! $booking->checked_in_at) {
                     return back()->withErrors(['booking' => 'La reserva todavía no tiene check-in — el consumo se ofrece en el check-in o durante la estadía.']);
@@ -124,6 +139,14 @@ class BookingAddonController extends Controller
                     $consumption->addProduct($booking, Product::findOrFail($id), $quantity, auth()->id());
                 } else {
                     $consumption->addCustom($booking, $validated['description'], (int) $validated['amount'], auth()->id());
+                }
+
+                if ($cobroTrasCierre) {
+                    AuditLog::record(auth()->id(), 'reserva.cobro_tras_cierre', 'Booking', $booking->id,
+                        ['descripcion' => $validated['description'] ?? null, 'monto' => $validated['amount'] ?? null],
+                        ['motivo' => $motivo]);
+
+                    return $this->toPaymentIfOwed($booking, 'Cobro agregado a una reserva ya finalizada. Queda registrado quién lo hizo y por qué.');
                 }
 
                 return $this->toPaymentIfOwed($booking, 'Consumo agregado.');

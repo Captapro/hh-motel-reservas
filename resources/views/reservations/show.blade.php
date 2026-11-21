@@ -542,6 +542,32 @@
                 </details>
             @endif
 
+            {{-- Cobro después del cierre: el cliente pagó algo (horas de más, un
+                 consumo) cuando la reserva ya estaba finalizada. Sin esto la plata
+                 quedaba cobrada en la máquina y sin anotar en ninguna parte. --}}
+            @if (auth()->user()->isAdministrador() && $booking->booking_status === 'FINALIZADA')
+                <details style="margin:0 0 12px;" @if ($errors->has('booking') || $errors->has('reason')) open @endif>
+                    <summary style="display:inline-block; cursor:pointer; padding:8px 14px; border:1px solid #ff7918; border-radius:8px; background:#fff; color:#c2410c; font-size:13px; font-weight:700;">Agregar cobro después del cierre (administrador)</summary>
+                    <form method="POST" action="{{ route('addons.store', $booking->code) }}" style="display:grid; gap:10px; margin-top:10px; max-width:460px;">
+                        @csrf
+                        <label style="font-size:12px;">Qué se cobró<br>
+                            <input type="text" name="description" required maxlength="255" value="{{ old('description') }}" placeholder="Ej.: 3 horas adicionales" style="width:100%;">
+                        </label>
+                        <label style="font-size:12px;">Monto<br>
+                            <input type="number" name="amount" min="1" max="200000" required value="{{ old('amount') }}" style="width:100%;">
+                        </label>
+                        <label style="font-size:12px;">Motivo<br>
+                            <input type="text" name="reason" required minlength="5" maxlength="300" value="{{ old('reason') }}" placeholder="Ej.: se vendieron 3 h más, voucher 206" style="width:100%;">
+                        </label>
+                        <button type="submit" class="col-btn">Agregar cobro</button>
+                    </form>
+                    @foreach (['description', 'amount', 'reason', 'booking'] as $field)
+                        @error($field)<div class="delay-late" style="font-size:12px; margin-top:6px;">{{ $message }}</div>@enderror
+                    @endforeach
+                    <div class="muted" style="font-size:12px; margin-top:6px;">Queda registrado quién lo agregó y por qué. Después aparece el botón para registrar el pago con su voucher.</div>
+                </details>
+            @endif
+
             @if (! $booking->checked_in_at && ! in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
                 <a class="checkin-btn" href="{{ route('bookings.checkin.show', $booking->code) }}">Marcar check-in — ofrecer consumo →</a>
             @endif
