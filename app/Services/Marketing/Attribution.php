@@ -110,6 +110,7 @@ class Attribution
      * @return array{0: string, 1: ?string}
      */
     private const SAID_AT_RECEPTION = [
+        'paso' => 'Pasaba por fuera',
         'google' => 'Google · dijo en recepción',
         'facebook' => 'Facebook · dijo en recepción',
         'instagram' => 'Instagram · dijo en recepción',

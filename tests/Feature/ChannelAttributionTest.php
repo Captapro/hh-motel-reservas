@@ -31,6 +31,7 @@ class ChannelAttributionTest extends TestCase
         $this->assertSame('Google · dijo en recepción', Attribution::channelOf($this->booking('presencial', 'google'))[0]);
         $this->assertSame('Instagram · dijo en recepción', Attribution::channelOf($this->booking('recepcion', 'instagram'))[0]);
         $this->assertSame('Recomendado por un amigo', Attribution::channelOf($this->booking('presencial', 'amigo'))[0]);
+        $this->assertSame('Pasaba por fuera', Attribution::channelOf($this->booking('presencial', 'paso'))[0]);
     }
 
     public function test_an_answer_that_says_nothing_stays_in_presencial(): void

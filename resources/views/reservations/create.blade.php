@@ -115,6 +115,15 @@
         .cust-ficha .ficha-value { font-weight:600; text-align:right; }
         .ficha-edit-btn { margin-top:8px; width:100%; background:transparent; border:1px solid #444; color:#bbb; padding:8px; border-radius:7px; font-size:12.5px; font-weight:600; cursor:pointer; }
         .ficha-edit-btn:hover { border-color:#ff7918; color:#ff7918; }
+        .heard-from { margin-top:14px; padding:12px 14px; border:1.5px solid #ff7918; border-radius:10px; background:rgba(255,121,24,.10); }
+        .heard-from-q { font-weight:600; font-size:14.5px; color:#fff; }
+        .heard-from-q span { font-weight:400; color:#cfcfcf; }
+        .heard-from-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .heard-from-chips label { margin:0; cursor:pointer; text-transform:none; letter-spacing:0; }
+        .heard-from-chips input { position:absolute; opacity:0; width:0; height:0; }
+        .heard-from-chips span { display:block; padding:10px 14px; border:1.5px solid #4a4a4a; border-radius:999px; color:#e8e8e8; font-size:14.5px; font-weight:600; background:#1f1f1f; }
+        .heard-from-chips input:checked + span { background:#ff7918; border-color:#ff7918; color:#1b1c1e; }
+        .heard-from-chips input:focus-visible + span { outline:2px solid #fff; outline-offset:2px; }
         #cust-editable-fields[hidden] { display:none; }
         .price-box { margin-top:10px; padding:12px 14px; border-radius:8px; background:#1c1c1c; border:1px solid #333; font-size:13.5px; }
         .aseo-opt { display:flex; gap:8px; align-items:flex-start; font-weight:normal; margin:4px 0; }
@@ -523,14 +532,6 @@
                         <span>📲 ¿Acepta recibir promociones por WhatsApp o correo? <span style="font-weight:400;color:#cfcfcf;">Pregúntale y marca si dice que sí.</span></span>
                     </label>
 
-                    <label for="heard-from" style="margin-top:12px;">¿Cómo nos conoció? <span style="text-transform:none;font-weight:400;color:#9a9a9a;">(opcional — pregúntale)</span></label>
-                    <select name="heard_from" id="heard-from">
-                        <option value="">— Sin preguntar —</option>
-                        @foreach (\App\Models\Booking::HEARD_FROM_LABELS as $key => $label)
-                            <option value="{{ $key }}" @selected(old('heard_from') === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-
                     <div class="sub-head id-extra" style="display:none">Identificación <span></span></div>
 
                     <div class="row row-id id-extra" style="display:none">
@@ -577,6 +578,18 @@
                     </div>
                     <input type="hidden" name="birth_date" id="customer-birth-date" value="{{ old('birth_date') }}">
                         </div>
+                    </div>
+                </div>
+
+                {{-- Fuera del bloque editable a propósito: con un cliente ya conocido
+                     ese bloque se esconde, y antes la pregunta se escondía con él. --}}
+                <div class="heard-from">
+                    <div class="heard-from-q">🔎 ¿Cómo nos conoció? <span>Pregúntale — se contesta de un toque</span></div>
+                    <div class="heard-from-chips">
+                        <label><input type="radio" name="heard_from" value="" @checked(! old('heard_from'))><span>Sin preguntar</span></label>
+                        @foreach (\App\Models\Booking::HEARD_FROM_CHIPS as $key => $label)
+                            <label><input type="radio" name="heard_from" value="{{ $key }}" @checked(old('heard_from') === $key)><span>{{ $label }}</span></label>
+                        @endforeach
                     </div>
                 </div>
 

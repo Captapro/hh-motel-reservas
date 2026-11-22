@@ -218,11 +218,22 @@ class Booking extends Model
 
     /** «¿Cómo nos conoció?» que recepción le pregunta al cliente (columna heard_from). */
     public const HEARD_FROM_LABELS = [
-        'facebook' => 'FACEBOOK',
-        'instagram' => 'INSTAGRAM',
+        'paso' => 'PASABA POR FUERA',
         'google' => 'GOOGLE',
+        'instagram' => 'INSTAGRAM',
+        'facebook' => 'FACEBOOK',
         'amigo' => 'ME LO RECOMENDÓ UN AMIGO',
         'otro' => 'OTRO',
+    ];
+
+    /** Lo mismo, corto, para los botones de recepción: ahí se contesta de un toque. */
+    public const HEARD_FROM_CHIPS = [
+        'paso' => 'Pasaba por fuera',
+        'google' => 'Google',
+        'instagram' => 'Instagram',
+        'facebook' => 'Facebook',
+        'amigo' => 'Un amigo',
+        'otro' => 'Otro',
     ];
 
     public function heardFromLabel(): ?string
