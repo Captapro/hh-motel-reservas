@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\PaymentExceedsBalanceException;
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Services\Booking\PaymentService;
 use Illuminate\Http\RedirectResponse;
@@ -88,6 +89,33 @@ class PaymentController extends Controller
         // una transferencia), generamos una nosotros -- así todo pago manual
         // queda igual de rastreable, sin depender de que alguien la tipee.
         $externalId = ($validated['external_id'] ?? null) ?: 'REC-'.now()->format('ymdHis').'-'.strtoupper(Str::random(4));
+
+        // Dos veces en dos días recepción anotó un N° de voucher que ya estaba
+        // usado (PLUS 307 el 21/11, PLUS 307 el 22/11): el cruce con Mercado
+        // Pago deja de calzar y parece que falta plata aunque esté todo
+        // cobrado. Se avisa antes de guardar, sin bloquear: un mismo cobro de
+        // la máquina puede pagar dos piezas y ahí el voucher se repite de
+        // verdad. El correlativo del voucher es del mes, así que se busca en
+        // el mes corrido.
+        $voucher = trim((string) ($validated['voucher_number'] ?? ''));
+        if ($voucher !== '' && ctype_digit($voucher) && ! $request->boolean('voucher_ok')) {
+            $repetido = Payment::with(['booking:id,code,room_id', 'booking.room:id,name'])
+                ->where('status', 'aprobado')
+                ->whereRaw('TRIM(voucher_number) = ?', [$voucher])
+                ->where('created_at', '>=', now()->startOfMonth())
+                ->orderByDesc('created_at')
+                ->first();
+            if ($repetido) {
+                $donde = $repetido->booking?->code
+                    ? $repetido->booking->code.($repetido->booking->room?->name ? ' ('.$repetido->booking->room->name.')' : '')
+                    : 'otro pago';
+
+                return back()->withInput()->with('voucher_repetido', true)->withErrors(['voucher_number' =>
+                    'El voucher '.$voucher.' ya está anotado en '.$donde.' por $'.number_format((int) $repetido->amount, 0, ',', '.')
+                    .' ('.$repetido->created_at->format('d/m H:i').'). Mira el número en el voucher del POS: si te equivocaste, corrígelo.',
+                ]);
+            }
+        }
 
         $overpayReason = null;
         if ($request->boolean('overpay')) {

@@ -163,6 +163,16 @@
             </div>
         </div>
 
+        @if (session('voucher_repetido') || old('voucher_ok'))
+            <div class="card" style="border:1px solid #ff7918; margin-top:14px;">
+                <label style="display:flex; gap:10px; align-items:center; font-weight:800;">
+                    <input type="checkbox" name="voucher_ok" value="1" style="width:22px;height:22px;" @checked(old('voucher_ok'))>
+                    Es el mismo cobro de la máquina para dos piezas: guardarlo igual
+                </label>
+                <div style="margin-top:8px; font-size:13px;">Si te equivocaste de número, corrígelo arriba y no marques esto: un voucher repetido descuadra el cruce con Mercado Pago.</div>
+            </div>
+        @endif
+
         @if (session('overpay_offer') || old('overpay'))
             <div class="card" style="border:1px solid #ff7918; margin-top:14px;">
                 <label style="display:flex; gap:10px; align-items:center; font-weight:800;">
