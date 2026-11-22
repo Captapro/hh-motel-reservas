@@ -64,6 +64,14 @@
                 </div>
                 <label>Observaciones</label>
                 <input name="notes" maxlength="500" value="{{ old('notes') }}" placeholder="Ej. 15% Halloween, reserva R1102">
+                @if (session('voucher_repetido_estadia'))
+                    <div class="ps-warn" style="margin:14px 0 0;">
+                        <label style="display:flex; gap:10px; align-items:flex-start; cursor:pointer;">
+                            <input type="checkbox" name="voucher_ok" value="1" style="width:18px;height:18px;margin-top:2px;">
+                            <span><b>Es el mismo cobro de la máquina para dos piezas: guardarlo igual.</b><br>Si te equivocaste de número, corrígelo arriba y no marques esto: un voucher repetido descuadra el cruce con Mercado Pago.</span>
+                        </label>
+                    </div>
+                @endif
                 <div class="actions" style="margin-top:16px;"><button class="btn" type="submit">Guardar estadía</button></div>
             </form>
         </div>
@@ -108,6 +116,14 @@
                 </div>
                 <label>Nota del pago (opcional)</label>
                 <input name="notes" maxlength="255" value="{{ old('notes') }}" placeholder="Por defecto: Cargado desde planilla">
+                @if (session('voucher_repetido_consumo'))
+                    <div class="ps-warn" style="margin:14px 0 0;">
+                        <label style="display:flex; gap:10px; align-items:flex-start; cursor:pointer;">
+                            <input type="checkbox" name="voucher_ok" value="1" style="width:18px;height:18px;margin-top:2px;">
+                            <span><b>Es el mismo cobro de la máquina para dos piezas: guardarlo igual.</b><br>Si te equivocaste de número, corrígelo arriba y no marques esto: un voucher repetido descuadra el cruce con Mercado Pago.</span>
+                        </label>
+                    </div>
+                @endif
                 <div class="actions" style="margin-top:16px;"><button class="btn" type="submit">Agregar consumo</button></div>
             </form>
 

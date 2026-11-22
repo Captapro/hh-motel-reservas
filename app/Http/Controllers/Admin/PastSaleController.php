@@ -79,6 +79,8 @@ class PastSaleController extends Controller
         $startsAt->setTimezone(config('app.timezone'));
         $endsAt->setTimezone(config('app.timezone'));
 
+        $this->avisarVoucherRepetido($request, $v, Carbon::parse($v['date'], $tz), 'voucher_repetido_estadia');
+
         $room = Room::findOrFail($v['room_id']);
         $clash = $room->bookings()->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
             ->where('starts_at', '<', $endsAt)->where('ends_at', '>', $startsAt)->first();
@@ -156,6 +158,9 @@ class PastSaleController extends Controller
             $soldAt->addDay();
         }
         $soldAt->setTimezone(config('app.timezone'));
+
+        $this->avisarVoucherRepetido($request, $v, $booking->starts_at->copy(), 'voucher_repetido_consumo');
+
         $name = $product?->name ?? $v['custom_description'];
         $amount = (int) ($product?->price ?? $v['custom_amount']) * (int) $v['quantity'];
 
@@ -175,6 +180,37 @@ class PastSaleController extends Controller
 
         return redirect()->route('admin.past_sales.create')
             ->with('status', "Consumo agregado a {$booking->code}: {$name} ({$v['quantity']}) por $".number_format($amount, 0, ',', '.').' — sin descontar stock.');
+    }
+
+    /**
+     * El mismo aviso de la pantalla de cobro, acá también: recepción copia el
+     * N° de voucher desde la planilla y dos veces en dos días lo anotó repetido.
+     * Un voucher repetido descuadra el cruce con Mercado Pago. No bloquea: un
+     * solo cobro de la máquina puede pagar dos piezas, y ahí se marca la casilla.
+     * El correlativo del voucher es del mes, así que se busca en el mes de la venta.
+     */
+    private function avisarVoucherRepetido(Request $request, array $v, Carbon $cuando, string $campo): void
+    {
+        $voucher = trim((string) ($v['voucher_number'] ?? ''));
+        if ($voucher === '' || ! ctype_digit($voucher) || $request->boolean('voucher_ok')) {
+            return;
+        }
+        $repetido = Payment::with(['booking:id,code,room_id', 'booking.room:id,name'])
+            ->where('status', 'aprobado')
+            ->whereRaw('TRIM(voucher_number) = ?', [$voucher])
+            ->whereBetween('created_at', [$cuando->copy()->startOfMonth(), $cuando->copy()->endOfMonth()])
+            ->orderByDesc('created_at')
+            ->first();
+        if (! $repetido) {
+            return;
+        }
+        $donde = $repetido->booking?->code
+            ? $repetido->booking->code.($repetido->booking->room?->name ? ' ('.$repetido->booking->room->name.')' : '')
+            : 'otro pago';
+        session()->flash($campo, true);
+        throw ValidationException::withMessages(['voucher_number' => 'El voucher '.$voucher.' ya está anotado en '.$donde.' por $'.number_format((int) $repetido->amount, 0, ',', '.')
+            .' ('.$repetido->created_at->format('d/m H:i').'). Revisa el número en la planilla: si te equivocaste, corrígelo.',
+        ]);
     }
 
     private function pay(Booking $booking, PaymentMethod $method, int $amount, array $v, int $userId, Carbon $at, ?string $note = null): void
