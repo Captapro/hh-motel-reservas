@@ -109,6 +109,13 @@ class Attribution
      *
      * @return array{0: string, 1: ?string}
      */
+    private const SAID_AT_RECEPTION = [
+        'google' => 'Google · dijo en recepción',
+        'facebook' => 'Facebook · dijo en recepción',
+        'instagram' => 'Instagram · dijo en recepción',
+        'amigo' => 'Recomendado por un amigo',
+    ];
+
     public static function channelOf(Booking $booking): array
     {
         $ad = $booking->adOrigin;
@@ -121,6 +128,24 @@ class Attribution
             return ['Meta · WhatsApp', $ad->meta_ad_id ? 'Anuncio '.$ad->meta_ad_id.($ad->meta_ad_name ? ' ('.$ad->meta_ad_name.')' : '') : null];
         }
 
+        // Venta de recepción: no hay gclid ni utm que seguir, lo único que se
+        // sabe del origen es lo que el cliente contestó al llegar. Va en su
+        // propia fila -- vale menos que una medición, pero mucho más que
+        // dejarla contada como «Presencial», donde la publicidad desaparece.
+        if ($dicho = self::saidAtReception($booking)) {
+            return [$dicho, null];
+        }
+
         return [$own, null];
+    }
+
+    /** Lo que el cliente dijo en recepción, solo cuando dice algo del origen: «otro» no aporta. */
+    private static function saidAtReception(Booking $booking): ?string
+    {
+        if (! in_array($booking->origin, ['presencial', 'recepcion'], true)) {
+            return null;
+        }
+
+        return self::SAID_AT_RECEPTION[$booking->heard_from] ?? null;
     }
 }

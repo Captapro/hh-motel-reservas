@@ -48,7 +48,7 @@
                 </tbody>
                 <tfoot><tr><td>Total</td><td class="n">{{ $table->sum('count') }}</td><td class="n">{{ $money($table->sum('value')) }}</td><td class="n">{{ $money($table->sum('count') ? (int) round($table->sum('value') / $table->sum('count')) : 0) }}</td><td class="n">100%</td><td></td></tr></tfoot>
             </table>
-            <p class="legend" style="margin-top:8px;"><b>Ticket</b> = venta ÷ reservas del canal. <b>vs</b> compara la venta del canal con el período anterior a la misma altura; «nuevo» = ese canal no vendió antes.</p>
+            <p class="legend" style="margin-top:8px;"><b>Ticket</b> = venta ÷ reservas del canal. <b>vs</b> compara la venta del canal con el período anterior a la misma altura; «nuevo» = ese canal no vendió antes.<br><b>«dijo en recepción»</b> = venta sin rastro técnico, donde el origen es lo que el cliente contestó al llegar; vale menos que una medición, pero deja ver la publicidad que hoy quedaba escondida dentro de Presencial.</p>
         @endif
     </div>
     </div>
