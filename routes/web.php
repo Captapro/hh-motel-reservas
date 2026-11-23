@@ -303,6 +303,7 @@ Route::prefix('contador')->name('contador.')->middleware(['auth', 'role:administ
     Route::get('/ventas', [ContadorController::class, 'ventas'])->name('ventas');
     Route::get('/cobros', [ContadorController::class, 'pagos'])->name('pagos');
     Route::get('/conciliacion', [ContadorController::class, 'conciliacion'])->name('conciliacion');
+    Route::get('/reserva/{code}', [ContadorController::class, 'reserva'])->name('reserva');
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(function () {

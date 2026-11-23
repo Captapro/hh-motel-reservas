@@ -84,7 +84,7 @@
                                 <td style="font-weight:700; white-space:nowrap;">{{ $r['rooms'] ?? '—' }}</td>
                                 <td>
                                     @if ($r['booking'] && ! auth()->user()->isContador())<a class="link" href="{{ route('reservations.show', $r['booking']->code) }}">{{ $r['booking']->code }}</a>
-                                    @elseif ($r['booking'])<span class="mp-muted">{{ $r['booking']->code }}</span>
+                                    @elseif ($r['booking'])<a class="link" href="{{ route('contador.reserva', $r['booking']->code) }}">{{ $r['booking']->code }}</a>
                                     @elseif ($r['code'])<span class="mp-muted">{{ $r['code'] }}</span>
                                     @else<span class="mp-muted">—</span>@endif
                                 </td>
@@ -143,7 +143,7 @@
                         @foreach ($data['missing_in_mp'] as $p)
                             <tr>
                                 <td>{{ $p->created_at->timezone('America/Santiago')->format('d/m H:i') }}</td>
-                                <td>@if ($p->booking && ! auth()->user()->isContador())<a class="link" href="{{ route('reservations.show', $p->booking->code) }}">{{ $p->booking->code }}</a>@elseif ($p->booking){{ $p->booking->code }}@endif</td>
+                                <td>@if ($p->booking && ! auth()->user()->isContador())<a class="link" href="{{ route('reservations.show', $p->booking->code) }}">{{ $p->booking->code }}</a>@elseif ($p->booking)<a class="link" href="{{ route('contador.reserva', $p->booking->code) }}">{{ $p->booking->code }}</a>@endif</td>
                                 <td class="num">{{ $money($p->amount) }}</td>
                                 <td class="mp-muted">{{ $p->external_id }}</td>
                             </tr>

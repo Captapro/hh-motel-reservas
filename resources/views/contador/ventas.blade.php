@@ -10,7 +10,7 @@
                 @forelse ($rows as $r)
                     <tr>
                         <td>{{ $r['date']->format('d/m H:i') }}</td>
-                        <td>{{ $r['code'] }}</td>
+                        <td><a href="{{ route('contador.reserva', $r['code']) }}" style="color:var(--accent);">{{ $r['code'] }}</a></td>
                         <td>{{ $r['customer'] }}</td>
                         <td class="muted">{{ $r['doc'] ?: '—' }}</td>
                         <td>{{ $r['room'] }} <span class="muted">· {{ $r['category'] }}</span></td>

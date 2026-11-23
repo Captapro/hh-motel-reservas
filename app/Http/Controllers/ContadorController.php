@@ -248,6 +248,19 @@ class ContadorController extends Controller
         return view('contador.conciliacion', $this->nav($first) + ['data' => $data, 'error' => $error, 'day' => $day, 'dayRows' => $dayRows]);
     }
 
+    /** Ficha de una reserva, solo lectura: lo que el contador necesita para revisar una venta. */
+    public function reserva(string $code): View
+    {
+        $booking = Booking::with(['customer', 'room.category', 'addons', 'payments.paymentMethod', 'payments.refunds', 'payments.registeredBy:id,name'])
+            ->where('code', $code)->firstOrFail();
+
+        return view('contador.reserva', [
+            'booking' => $booking,
+            'extras' => (int) $booking->paidAddonsAmount(),
+            'mes' => $booking->starts_at->copy()->timezone(self::TZ)->format('Y-m'),
+        ]);
+    }
+
     private function audit(string $what, Carbon $first): void
     {
         AuditLog::record(auth()->id(), 'contador.exportar', 'Planilla', $what.'-'.$first->format('Y-m'), null, ['mes' => $first->format('Y-m')]);

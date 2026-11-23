@@ -152,6 +152,18 @@ class ContadorPanelTest extends TestCase
             ->assertOk()->assertSee('Emitir boleta')->assertDontSee('Volver a mi panel');
     }
 
+    public function test_the_accountant_can_open_the_read_only_sheet_of_a_booking(): void
+    {
+        $this->actingAs($this->contador())->get('/contador/reserva/HH-TEST-0001')
+            ->assertOk()
+            ->assertSee('HH-TEST-0001')
+            ->assertSee('PLUS 307')
+            ->assertSee('206')
+            ->assertSee('$40.000');
+        $this->get('/contador/reserva/NO-EXISTE')->assertNotFound();
+        $this->post('/contador/reserva/HH-TEST-0001')->assertStatus(405);
+    }
+
     public function test_the_accountant_cannot_reach_anything_else(): void
     {
         $this->actingAs($this->contador());

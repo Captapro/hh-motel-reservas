@@ -12,7 +12,7 @@
                     @php $noDoc = ! $p->voucher_number && ! $p->receipt_number && $p->paymentMethod?->code !== 'mercado_pago'; @endphp
                     <tr class="{{ $noDoc ? 'flag' : '' }}">
                         <td>{{ $p->created_at->copy()->timezone('America/Santiago')->format('d/m H:i') }}</td>
-                        <td>{{ $p->booking?->code }}</td>
+                        <td>@if ($p->booking)<a href="{{ route('contador.reserva', $p->booking->code) }}" style="color:var(--accent);">{{ $p->booking->code }}</a>@endif</td>
                         <td>{{ $p->methodLabel() }}</td>
                         <td class="num">{{ $money($p->amount) }}</td>
                         <td>{{ $p->voucher_number ?: '—' }}</td>
