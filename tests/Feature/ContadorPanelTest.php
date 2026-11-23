@@ -11,7 +11,9 @@ use App\Models\RoomCategory;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -172,5 +174,27 @@ class ContadorPanelTest extends TestCase
         config(['services.mercadopago.access_token' => null]);
 
         $this->actingAs($this->contador())->get('/contador/conciliacion?mes=2026-11')->assertOk();
+    }
+
+    public function test_reconciliation_shows_the_detail_of_the_chosen_day(): void
+    {
+        config(['services.mercadopago.access_token' => 'TEST-token']);
+        // El cobro 01 de la máquina calza por N° de voucher con el pago registrado.
+        Payment::query()->update(['voucher_number' => '1']);
+        Cache::flush();
+        Http::fake(['api.mercadopago.com/*' => Http::response(['results' => [[
+            'id' => 123456789, 'status' => 'approved', 'date_approved' => '2026-11-21T12:06:00.000-03:00',
+            'transaction_amount' => 40000, 'payment_type_id' => 'debit_card', 'authorization_code' => 'AUTH42',
+            'point_of_interaction' => ['type' => 'POINT'], 'external_reference' => 'Venta presencial',
+            'fee_details' => [['amount' => 756]], 'transaction_details' => ['net_received_amount' => 39244],
+        ]]])]);
+
+        $this->actingAs($this->contador())->get('/contador/conciliacion?mes=2026-11&dia=2026-11-21')
+            ->assertOk()
+            ->assertSee('Detalle del día')
+            ->assertSee('123456789')
+            ->assertSee('AUTH42')
+            ->assertSee('Registrado')
+            ->assertSee('PLUS 307');
     }
 }

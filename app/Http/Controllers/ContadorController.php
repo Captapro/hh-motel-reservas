@@ -235,7 +235,17 @@ class ContadorController extends Controller
                 ]));
         }
 
-        return view('contador.conciliacion', $this->nav($first) + ['data' => $data, 'error' => $error]);
+        // Detalle de un día: el elegido o, si no, el último del mes con movimientos.
+        $day = null;
+        $dayRows = collect();
+        if ($data) {
+            $wanted = (string) $request->query('dia');
+            $available = $data['rows']->map(fn (array $r) => $r['at']->toDateString())->unique()->sortDesc()->values();
+            $day = $available->contains($wanted) ? $wanted : $available->first();
+            $dayRows = $data['rows']->filter(fn (array $r) => $r['at']->toDateString() === $day)->sortBy(fn (array $r) => $r['at']->getTimestamp())->values();
+        }
+
+        return view('contador.conciliacion', $this->nav($first) + ['data' => $data, 'error' => $error, 'day' => $day, 'dayRows' => $dayRows]);
     }
 
     private function audit(string $what, Carbon $first): void

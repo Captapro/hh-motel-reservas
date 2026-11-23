@@ -32,7 +32,7 @@
                     @forelse ($data['days'] as $d)
                         @php $diff = $d['machine'] - $d['system']; @endphp
                         <tr class="{{ $diff !== 0 && ! $d['compensated_with'] ? 'flag' : '' }}">
-                            <td>{{ ucfirst($d['day']->locale('es')->isoFormat('ddd D/MM')) }}</td>
+                            <td><a href="{{ route('contador.conciliacion', ['mes' => $d['day']->format('Y-m'), 'dia' => $d['day']->toDateString()]) }}#detalle">{{ ucfirst($d['day']->locale('es')->isoFormat('ddd D/MM')) }}</a></td>
                             <td class="num">{{ $d['count'] }}</td><td class="num">{{ $money($d['gross']) }}</td><td class="num">{{ $money($d['net']) }}</td>
                             <td class="num">{{ $money($d['machine']) }}</td><td class="num">{{ $money($d['system']) }}</td>
                             <td class="num">{{ $diff === 0 ? '—' : $money($diff) }}</td>
@@ -53,6 +53,36 @@
                     <tbody>
                         @foreach ($data['missing_in_mp'] as $p)
                             <tr class="flag"><td>{{ $p->created_at->copy()->timezone('America/Santiago')->format('d/m H:i') }}</td><td>{{ $p->booking?->code }}</td><td>{{ $p->external_id }}</td><td class="num">{{ $money($p->amount) }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        @if ($day)
+            @php $dayDate = \Illuminate\Support\Carbon::parse($day, 'America/Santiago'); $ok = $dayRows->where('status', 'approved')->where('channel', '!=', 'Otro'); @endphp
+            <div class="card" id="detalle">
+                <h2>Detalle del día · {{ ucfirst($dayDate->locale('es')->isoFormat('dddd D [de] MMMM')) }}</h2>
+                <p class="muted" style="margin:0 0 10px;">{{ $dayRows->count() }} movimiento(s) · cobrado {{ $money($ok->sum('amount')) }} · comisión {{ $money($ok->sum('fee')) }} · neto {{ $money($ok->sum('net')) }}. Aprieta una fecha del cuadre de arriba para ver otro día.</p>
+                <table>
+                    <thead><tr><th>N° voucher</th><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Habitación</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° operación</th><th>Cód. autorización</th></tr></thead>
+                    <tbody>
+                        @foreach ($dayRows as $r)
+                            <tr class="{{ $r['status'] === 'approved' && $r['point'] && ! $r['in_system'] ? 'flag' : '' }}">
+                                <td>{{ $r['correlative'] ?? '—' }}</td>
+                                <td>{{ $r['at']->format('H:i') }}</td>
+                                <td>{{ $r['status_label'] }}</td>
+                                <td>{{ $r['channel'] }}</td>
+                                <td>{{ $r['type'] }}</td>
+                                <td>{{ $r['rooms'] ?? '—' }}</td>
+                                <td>{{ $r['code'] !== '' ? $r['code'] : '—' }}</td>
+                                <td class="num">{{ $money($r['amount']) }}</td>
+                                <td class="num">{{ $r['status'] === 'approved' ? $money($r['fee']) : '—' }}</td>
+                                <td class="num">{{ $r['status'] === 'approved' ? $money($r['net']) : '—' }}</td>
+                                <td>@if ($r['status'] !== 'approved')—@elseif ($r['in_system'])<span class="ok">✓ Registrado</span>@elseif ($r['channel'] === 'Otro')<span class="muted">No es del motel</span>@else<span class="bad">No registrado{{ $r['deleted_booking'] ? ' (reserva borrada)' : '' }}</span>@endif</td>
+                                <td>{{ $r['id'] }}</td>
+                                <td>{{ $r['auth'] !== '' ? $r['auth'] : '—' }}</td>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>
