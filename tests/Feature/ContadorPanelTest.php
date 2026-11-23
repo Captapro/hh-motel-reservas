@@ -248,6 +248,10 @@ class ContadorPanelTest extends TestCase
             'transaction_amount' => 40000, 'payment_type_id' => 'debit_card', 'authorization_code' => 'AUTH42',
             'point_of_interaction' => ['type' => 'POINT'], 'external_reference' => 'Venta presencial',
             'fee_details' => [['amount' => 756]], 'transaction_details' => ['net_received_amount' => 39244],
+        ], [
+            'id' => 987654321, 'status' => 'approved', 'date_approved' => '2026-11-21T11:00:00.000-03:00',
+            'transaction_amount' => 32500, 'payment_type_id' => 'account_money', 'external_reference' => 'HH-20261121-00099',
+            'fee_details' => [['amount' => 1001]], 'transaction_details' => ['net_received_amount' => 31499],
         ]]])]);
 
         $this->actingAs($this->contador())->get('/contador/conciliacion?mes=2026-11&dia=2026-11-21')
@@ -256,6 +260,7 @@ class ContadorPanelTest extends TestCase
             ->assertSee('123456789')
             ->assertSee('AUTH42')
             ->assertSee('Registrado')
-            ->assertSee('PLUS 307');
+            ->assertSee('PLUS 307')
+            ->assertSee('Reserva online');
     }
 }

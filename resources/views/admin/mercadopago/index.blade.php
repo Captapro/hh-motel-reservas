@@ -3,6 +3,8 @@
 @section('content')
     @php $money = fn ($n) => '$'.number_format((int) $n, 0, ',', '.'); @endphp
     <style>
+        .mp-online-tag { display:inline-block; background:#ff7918; color:#fff; font-weight:800; font-size:12px; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+        tr.mp-online-row > td { background:rgba(255,121,24,.10); }
         .mp-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:14px; }
         .mp-kpi .k { color:#888; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
         .mp-kpi .v { font-size:22px; font-weight:800; margin-top:4px; }
@@ -75,11 +77,11 @@
                     <thead><tr><th>N° voucher</th><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Habitación</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° operación</th><th>Cód. autorización</th></tr></thead>
                     <tbody>
                         @foreach ($data['rows'] as $r)
-                            <tr class="{{ $r['missing'] ? 'mp-missing' : '' }}">
+                            <tr class="{{ $r['missing'] ? 'mp-missing' : '' }} {{ $r['channel'] === 'Reserva online' ? 'mp-online-row' : '' }}">
                                 <td style="font-weight:700; font-family:ui-monospace,monospace;">{{ $r['correlative'] ?? '' }}</td>
                                 <td style="white-space:nowrap;">{{ $r['at']->format('H:i') }}</td>
                                 <td><span class="pill {{ $r['status'] === 'approved' ? '' : ($r['status'] === 'rejected' ? 'pill-bad' : 'pill-warn') }}">{{ $r['status_label'] }}</span></td>
-                                <td>{{ $r['channel'] }}</td>
+                                <td>@if ($r['channel'] === 'Reserva online')<span class="mp-online-tag">Reserva online</span>@else{{ $r['channel'] }}@endif</td>
                                 <td>{{ $r['type'] }}</td>
                                 <td style="font-weight:700; white-space:nowrap;">{{ $r['rooms'] ?? '—' }}</td>
                                 <td>

@@ -68,11 +68,11 @@
                     <thead><tr><th>N° voucher</th><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Habitación</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° operación</th><th>Cód. autorización</th></tr></thead>
                     <tbody>
                         @foreach ($dayRows as $r)
-                            <tr class="{{ $r['status'] === 'approved' && $r['point'] && ! $r['in_system'] ? 'flag' : '' }}">
+                            <tr class="{{ $r['status'] === 'approved' && $r['point'] && ! $r['in_system'] ? 'flag' : '' }}" @if ($r['channel'] === 'Reserva online') style="background:#fff4ea;" @endif>
                                 <td>{{ $r['correlative'] ?? '—' }}</td>
                                 <td>{{ $r['at']->format('H:i') }}</td>
                                 <td>{{ $r['status_label'] }}</td>
-                                <td>{{ $r['channel'] }}</td>
+                                <td>@if ($r['channel'] === 'Reserva online')<span style="display:inline-block;background:var(--accent);color:#fff;font-weight:800;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;">Reserva online</span>@else{{ $r['channel'] }}@endif</td>
                                 <td>{{ $r['type'] }}</td>
                                 <td>{{ $r['rooms'] ?? '—' }}</td>
                                 <td>{{ $r['code'] !== '' ? $r['code'] : '—' }}</td>
