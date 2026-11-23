@@ -671,6 +671,17 @@
                                     </form>
                                 </details>
                             @endif
+                            @if (auth()->user()?->isAdministrador())
+                                <details style="margin-top:8px;">
+                                    <summary style="cursor:pointer;color:#9aa;font-size:12.5px;">Cambiar fecha del cobro</summary>
+                                    <form method="POST" action="{{ route('payments.date', ['code' => $booking->code, 'payment' => $payment]) }}" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                                        @csrf
+                                        <input name="paid_at" type="datetime-local" required value="{{ $payment->created_at?->timezone('America/Santiago')->format('Y-m-d\TH:i') }}" max="{{ now('America/Santiago')->format('Y-m-d\TH:i') }}">
+                                        <input name="reason" required minlength="5" maxlength="255" placeholder="Motivo (ej.: se cobró en la máquina el 12/11 y se anotó tarde)" style="flex:1;min-width:160px;">
+                                        <button type="submit" style="border:none;border-radius:7px;padding:8px 14px;font-weight:600;cursor:pointer;">Guardar fecha</button>
+                                    </form>
+                                </details>
+                            @endif
                             <form method="POST" action="{{ route('payments.document', $payment) }}" class="pay-docs" @if ($hasDoc) hidden @endif>
                                 @csrf @method('PUT')
                                 {{-- Mercado Pago no entrega voucher de máquina: solo se anota la boleta. --}}

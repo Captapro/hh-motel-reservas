@@ -67,6 +67,7 @@ use App\Http\Controllers\MucamaAuthController;
 use App\Http\Controllers\MucamaWorkController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentDateController;
 use App\Http\Controllers\PaymentDocumentController;
 use App\Http\Controllers\PaymentRefundController;
 use App\Http\Controllers\PublicBookingController;
@@ -222,6 +223,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/reservas/{code}/horas-reales', [BookingRealTimesController::class, 'update'])->middleware('role:administrador')->name('bookings.real_times');
     Route::post('/reservas/{code}/corregir-venta', [App\Http\Controllers\BookingSaleCorrectionController::class, 'update'])->middleware('role:administrador')->name('bookings.sale_correction');
     Route::post('/reservas/{code}/pagos/{payment}/devolver', [PaymentRefundController::class, 'store'])->middleware('role:administrador')->name('payments.refund');
+    Route::post('/reservas/{code}/pagos/{payment}/fecha', [PaymentDateController::class, 'update'])->middleware('role:administrador')->name('payments.date');
     Route::put('/pagos/{payment}/documento', [PaymentDocumentController::class, 'update'])->name('payments.document');
     Route::get('/resumen-mensual/{month?}', [MonthlySalesController::class, 'show'])->name('sales.monthly');
     Route::get('/claves', [AccessCodeController::class, 'index'])->name('access_codes.index');

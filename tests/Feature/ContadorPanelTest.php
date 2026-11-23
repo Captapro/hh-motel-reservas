@@ -105,6 +105,27 @@ class ContadorPanelTest extends TestCase
         $this->actingAs($user)->get('/contador/cobros?mes=2026-11')->assertOk()->assertSee('206');
     }
 
+    public function test_an_administrator_can_set_the_real_date_of_a_payment_and_it_is_audited(): void
+    {
+        $payment = Payment::firstOrFail();
+        $admin = User::factory()->create(['role' => 'administrador']);
+
+        $this->actingAs($admin)->post('/reservas/HH-TEST-0001/pagos/'.$payment->id.'/fecha', [
+            'paid_at' => '2026-11-12T22:31', 'reason' => 'Se cobró en la máquina y se anotó tarde',
+        ])->assertRedirect();
+
+        $this->assertSame('2026-11-12 22:31', $payment->fresh()->created_at->timezone('America/Santiago')->format('Y-m-d H:i'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'pago.fecha', 'user_id' => $admin->id]);
+
+        $this->actingAs($admin)->post('/reservas/HH-TEST-0001/pagos/'.$payment->id.'/fecha', [
+            'paid_at' => now('America/Santiago')->addDay()->format('Y-m-d\TH:i'), 'reason' => 'Fecha futura no vale',
+        ])->assertSessionHasErrors('booking');
+
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']))
+            ->post('/reservas/HH-TEST-0001/pagos/'.$payment->id.'/fecha', ['paid_at' => '2026-11-12T22:31', 'reason' => 'No debería poder'])
+            ->assertForbidden();
+    }
+
     public function test_the_accountant_cannot_reach_anything_else(): void
     {
         $this->actingAs($this->contador());
