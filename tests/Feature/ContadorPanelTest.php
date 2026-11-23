@@ -164,6 +164,31 @@ class ContadorPanelTest extends TestCase
         $this->post('/contador/reserva/HH-TEST-0001')->assertStatus(405);
     }
 
+    public function test_the_sales_book_details_voucher_and_boleta_per_payment(): void
+    {
+        $user = $this->contador();
+
+        // El pago de prueba tiene voucher 206 y ninguna boleta.
+        $this->actingAs($user)->get('/contador/ventas?mes=2026-11')
+            ->assertOk()
+            ->assertSee('Solo voucher')
+            ->assertSee('voucher 206')
+            ->assertSee('boleta falta');
+
+        Payment::query()->update(['receipt_number' => '98765']);
+        $this->actingAs($user)->get('/contador/ventas?mes=2026-11')
+            ->assertSee('Con boleta')
+            ->assertSee('boleta 98765');
+        $this->get('/contador/ventas?mes=2026-11&doc=sin')->assertOk()->assertSee('Sin ventas este mes');
+
+        $csv = $this->get('/contador/ventas?mes=2026-11&export=boletas');
+        $csv->assertOk();
+        $body = $csv->streamedContent();
+        $this->assertStringContainsString('N° boleta', $body);
+        $this->assertStringContainsString('98765', $body);
+        $this->assertStringContainsString('Con boleta', $body);
+    }
+
     public function test_the_accountant_cannot_reach_anything_else(): void
     {
         $this->actingAs($this->contador());

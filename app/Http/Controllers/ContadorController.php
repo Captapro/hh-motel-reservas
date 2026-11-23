@@ -139,9 +139,18 @@ class ContadorController extends Controller
     public function ventas(Request $request): View|StreamedResponse
     {
         $first = $this->month($request);
-        $rows = $this->sales($first)->map(function (Booking $b) {
-            $approved = $b->payments->where('status', 'aprobado');
+        $all = $this->sales($first)->map(function (Booking $b) {
+            $approved = $b->payments->where('status', 'aprobado')->sortBy('created_at');
             $extras = (int) $b->paidAddonsAmount();
+            $lines = $approved->map(fn (Payment $p) => [
+                'at' => $p->created_at->copy()->timezone(self::TZ),
+                'method' => $p->methodLabel(),
+                'amount' => (int) $p->amount,
+                'voucher' => trim((string) $p->voucher_number),
+                'receipt' => trim((string) $p->receipt_number),
+                'doc' => $this->docState($p),
+            ])->values();
+            $states = $lines->pluck('doc');
 
             return [
                 'date' => $b->starts_at->copy()->timezone(self::TZ),
@@ -156,22 +165,54 @@ class ContadorController extends Controller
                 'coupon' => $b->coupon_code_snapshot,
                 'extras' => $extras,
                 'total' => (int) $b->price_final + $extras,
+                'lines' => $lines,
                 'methods' => $approved->map(fn ($p) => $p->methodLabel())->unique()->implode(' + '),
                 'vouchers' => $approved->pluck('voucher_number')->filter()->implode(' / '),
                 'receipts' => $approved->pluck('receipt_number')->filter()->implode(' / '),
+                // Estado del documento de la venta: con boleta en todos los pagos, solo voucher en alguno, o sin documento.
+                'docstate' => $states->isEmpty() || $states->contains('sin') ? 'sin' : ($states->contains('voucher') ? 'voucher' : 'boleta'),
                 'status' => $b->booking_status,
             ];
         });
 
-        if ($request->query('export') === 'csv') {
-            $this->audit('ventas', $first);
-
-            return $this->csv('libro-de-ventas-'.$first->format('Y-m'),
-                ['Fecha', 'Reserva', 'Cliente', 'RUT / documento', 'Playroom', 'Categoría', 'Duración (min)', 'Alojamiento', 'Descuento', 'Cupón', 'Extras', 'Total', 'IVA contenido (19%, ref.)', 'Medios de pago', 'N° voucher', 'N° boleta', 'Estado'],
-                $rows->map(fn ($r) => [$r['date']->format('d/m/Y H:i'), $r['code'], $r['customer'], $r['doc'], $r['room'], $r['category'], $r['minutes'], $r['lodging'], $r['discount'], $r['coupon'], $r['extras'], $r['total'], $this->iva($r['total']), $r['methods'], $r['vouchers'], $r['receipts'], $r['status']]));
+        $summary = [];
+        foreach (['boleta' => 'Con boleta en todos los pagos', 'voucher' => 'Con voucher pero sin boleta en algún pago', 'sin' => 'Sin documento en algún pago'] as $key => $label) {
+            $group = $all->where('docstate', $key);
+            $summary[$key] = ['label' => $label, 'count' => $group->count(), 'total' => (int) $group->sum('total')];
         }
 
-        return view('contador.ventas', $this->nav($first) + ['rows' => $rows]);
+        $filter = in_array($request->query('doc'), ['boleta', 'voucher', 'sin'], true) ? $request->query('doc') : null;
+        $rows = $filter ? $all->where('docstate', $filter)->values() : $all;
+
+        if ($request->query('export') === 'csv') {
+            $this->audit('ventas', $first);
+            $stateLabel = ['boleta' => 'Con boleta', 'voucher' => 'Solo voucher', 'sin' => 'Sin documento'];
+
+            return $this->csv('libro-de-ventas-'.$first->format('Y-m'),
+                ['Fecha', 'Reserva', 'Cliente', 'RUT / documento', 'Playroom', 'Categoría', 'Duración (min)', 'Alojamiento', 'Descuento', 'Cupón', 'Extras', 'Total', 'IVA contenido (19%, ref.)', 'Medios de pago', 'N° voucher', 'N° boleta', 'Estado del documento', 'Estado'],
+                $all->map(fn ($r) => [$r['date']->format('d/m/Y H:i'), $r['code'], $r['customer'], $r['doc'], $r['room'], $r['category'], $r['minutes'], $r['lodging'], $r['discount'], $r['coupon'], $r['extras'], $r['total'], $this->iva($r['total']), $r['methods'], $r['vouchers'], $r['receipts'], $stateLabel[$r['docstate']], $r['status']]));
+        }
+
+        // Una fila por pago: para cruzar cada cobro con su boleta en el SII.
+        if ($request->query('export') === 'boletas') {
+            $this->audit('ventas-boletas', $first);
+
+            return $this->csv('detalle-boletas-por-pago-'.$first->format('Y-m'),
+                ['Fecha de pago', 'Reserva', 'Cliente', 'Playroom', 'Medio de pago', 'Monto', 'N° voucher', 'N° boleta', 'Estado del documento'],
+                $all->flatMap(fn ($r) => $r['lines']->map(fn ($l) => [$l['at']->format('d/m/Y H:i'), $r['code'], $r['customer'], $r['room'], $l['method'], $l['amount'], $l['voucher'], $l['receipt'], $l['doc'] === 'boleta' ? 'Con boleta' : ($l['doc'] === 'voucher' ? 'Solo voucher' : 'Sin documento')])));
+        }
+
+        return view('contador.ventas', $this->nav($first) + ['rows' => $rows, 'summary' => $summary, 'filter' => $filter]);
+    }
+
+    /** boleta: tiene N° de boleta · voucher: solo voucher de la máquina · sin: ningún documento. */
+    private function docState(Payment $p): string
+    {
+        if (trim((string) $p->receipt_number) !== '') {
+            return 'boleta';
+        }
+
+        return trim((string) $p->voucher_number) !== '' ? 'voucher' : 'sin';
     }
 
     public function pagos(Request $request): View|StreamedResponse
