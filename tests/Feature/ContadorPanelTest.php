@@ -128,6 +128,14 @@ class ContadorPanelTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_staff_see_a_back_to_system_link_but_the_accountant_does_not(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))->get('/contador?mes=2026-11')
+            ->assertOk()->assertSee('Volver al sistema');
+        $this->actingAs($this->contador())->get('/contador?mes=2026-11')
+            ->assertOk()->assertDontSee('Volver al sistema');
+    }
+
     public function test_the_accountant_cannot_reach_anything_else(): void
     {
         $this->actingAs($this->contador());

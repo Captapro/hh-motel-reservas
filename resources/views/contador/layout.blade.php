@@ -53,6 +53,9 @@
 @php $money = fn ($n) => ($n < 0 ? '−$' : '$').number_format(abs((int) $n), 0, ',', '.'); @endphp
 <header class="top">
     <div class="bar">
+        @unless (auth()->user()->isContador())
+            <a href="{{ route('rooms.board') }}" style="font-weight:700;color:var(--accent);text-decoration:none;">← Volver al sistema</a>
+        @endunless
         <div class="brand">HH MOTEL<small>Panel del contador · solo lectura</small></div>
         <nav class="tabs" aria-label="Secciones">
             @foreach ([['contador.index', 'Resumen'], ['contador.ventas', 'Libro de ventas'], ['contador.pagos', 'Libro de cobros'], ['contador.conciliacion', 'Conciliación Mercado Pago']] as [$r, $label])
