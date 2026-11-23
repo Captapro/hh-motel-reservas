@@ -19,14 +19,14 @@ class AccountController extends Controller
      */
     private function assignableRoles(): array
     {
-        return auth()->user()?->isSoporte() ? ['administrador', 'recepcion', 'marketing', 'soporte'] : ['recepcion'];
+        return auth()->user()?->isSoporte() ? ['administrador', 'recepcion', 'marketing', 'contador', 'soporte'] : ['recepcion', 'contador'];
     }
 
     /** El administrador solo gestiona cuentas de Anfitrión (y su propia cuenta, sin cambiarle el rol). */
     private function guardManage(User $user): void
     {
         $me = auth()->user();
-        abort_unless($me?->isSoporte() || $user->role === 'recepcion' || $user->id === $me?->id, 403, 'Solo el Master puede gestionar esta cuenta.');
+        abort_unless($me?->isSoporte() || in_array($user->role, ['recepcion', 'contador'], true) || $user->id === $me?->id, 403, 'Solo el Master puede gestionar esta cuenta.');
     }
 
     /** Las cuentas de soporte solo las administra otro soporte; para un administrador no existen. */

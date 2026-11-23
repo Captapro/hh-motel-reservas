@@ -8,8 +8,8 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -78,9 +78,19 @@ class User extends Authenticatable
         return AccessSections::allows($this->role, $section);
     }
 
+    /** Contador / auditor externo: solo lectura, únicamente el panel del contador. */
+    public function isContador(): bool
+    {
+        return $this->role === 'contador';
+    }
+
     /** Primera sección a la que este perfil puede entrar, para después del login. */
     public function homeRoute(): string
     {
+        if ($this->isContador()) {
+            return 'contador.index';
+        }
+
         foreach (AccessSections::SECTIONS as $key => [, $route]) {
             if ($this->canAccess($key)) {
                 return $route;

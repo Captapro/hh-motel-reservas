@@ -26,6 +26,7 @@
                 <div style="flex:0 1 150px;"><label>Rol</label>
                     <select name="role" required>
                         <option value="recepcion">Anfitrión</option>
+                        <option value="contador">Contador / auditor (solo lectura)</option>
                         @if (auth()->user()?->isSoporte())
                             <option value="administrador">Administrador</option>
                             <option value="soporte">Soporte (master)</option>
@@ -47,7 +48,7 @@
                         <tr>
                             <td>{{ $account->name }}</td>
                             <td style="color:#aaa;">{{ $account->email }}</td>
-                            <td>{{ ['recepcion' => 'Anfitrión', 'soporte' => 'Soporte (master)'][$account->role] ?? ucfirst($account->role) }}</td>
+                            <td>{{ ['recepcion' => 'Anfitrión', 'soporte' => 'Soporte (master)', 'contador' => 'Contador (solo lectura)'][$account->role] ?? ucfirst($account->role) }}</td>
                             <td style="white-space:nowrap;">
                                 @if ($account->canUseAi('ayuda'))<span class="pill" title="Puede usar Ayuda IA">Ayuda</span>@endif
                                 @if ($account->canUseAi('analista'))<span class="pill" title="Puede usar Analista IA">Analista</span>@endif
@@ -55,7 +56,7 @@
                             </td>
                             <td><span class="pill {{ $account->is_active ? '' : 'pill-bad' }}">{{ $account->is_active ? 'ACTIVA' : 'DESACTIVADA' }}</span></td>
                             <td style="text-align:right;">
-                                @if (auth()->user()?->isSoporte() || $account->role === 'recepcion' || $account->id === auth()->id())
+                                @if (auth()->user()?->isSoporte() || in_array($account->role, ['recepcion', 'contador'], true) || $account->id === auth()->id())
                                 <details class="pop">
                                     <summary>Editar</summary>
                                     <div class="pop-body">
@@ -63,19 +64,20 @@
                                             @csrf @method('PUT')
                                             <div><label>Nombre</label><input name="name" value="{{ $account->name }}" maxlength="100" required></div>
                                             <div><label>Rol</label>
-                                                <select name="role" @disabled(! auth()->user()?->isSoporte() && $account->role !== 'recepcion')>
-                                                    @if (auth()->user()?->isSoporte() || $account->role === 'recepcion')
+                                                <select name="role" @disabled(! auth()->user()?->isSoporte() && ! in_array($account->role, ['recepcion', 'contador'], true))>
+                                                    @if (auth()->user()?->isSoporte() || in_array($account->role, ['recepcion', 'contador'], true))
                                                         <option value="recepcion" @selected($account->role === 'recepcion')>Anfitrión</option>
+                                                        <option value="contador" @selected($account->role === 'contador')>Contador (solo lectura)</option>
                                                     @endif
                                                     @if (auth()->user()?->isSoporte())
                                                         <option value="administrador" @selected($account->role === 'administrador')>Administrador</option>
                                                         <option value="soporte" @selected($account->role === 'soporte')>Soporte (master)</option>
                                                         <option value="marketing" @selected($account->role === 'marketing')>Marketing</option>
-                                                    @elseif ($account->role !== 'recepcion')
+                                                    @elseif (! in_array($account->role, ['recepcion', 'contador'], true))
                                                         <option value="{{ $account->role }}" selected>{{ ucfirst($account->role) }}</option>
                                                     @endif
                                                 </select>
-                                                @if (! auth()->user()?->isSoporte() && $account->role !== 'recepcion')<input type="hidden" name="role" value="{{ $account->role }}">@endif
+                                                @if (! auth()->user()?->isSoporte() && ! in_array($account->role, ['recepcion', 'contador'], true))<input type="hidden" name="role" value="{{ $account->role }}">@endif
                                             </div>
                                             <div class="full"><label>Email</label><input type="email" name="email" value="{{ $account->email }}" maxlength="255" required></div>
                                             <div><label>Estado</label>

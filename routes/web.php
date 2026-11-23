@@ -49,6 +49,7 @@ use App\Http\Controllers\BookingRealTimesController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\ContadorController;
 use App\Http\Controllers\CouponProofController;
 use App\Http\Controllers\CustomerLoyaltyController;
 use App\Http\Controllers\DailyAseoController;
@@ -293,6 +294,14 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::post('/reservas/{code}/finalizar', [BookingFinalizeController::class, 'store'])->name('bookings.finalize.store');
 
 }); // fin del grupo auth
+
+// Panel del contador / auditor (solo lectura). RestrictContador deja a esa cuenta únicamente aquí.
+Route::prefix('contador')->name('contador.')->middleware(['auth', 'role:administrador,contador'])->group(function () {
+    Route::get('/', [ContadorController::class, 'index'])->name('index');
+    Route::get('/ventas', [ContadorController::class, 'ventas'])->name('ventas');
+    Route::get('/cobros', [ContadorController::class, 'pagos'])->name('pagos');
+    Route::get('/conciliacion', [ContadorController::class, 'conciliacion'])->name('conciliacion');
+});
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(function () {
     // Conversaciones: quién entra se configura en Perfiles y accesos.

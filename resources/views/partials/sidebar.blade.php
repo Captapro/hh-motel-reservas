@@ -30,6 +30,10 @@
     if (auth()->user()?->isAdministrador()) {
         $navigation[] = ['admin.mercadopago.index', 'admin.mercadopago.*', 'Mercado Pago', 'M2 6h20v12H2z M2 10h20 M6 15h4 M15 15h3'];
     }
+    // Vista previa del panel que ve el contador (solo administrador y soporte).
+    if (auth()->user()?->isAdministrador()) {
+        $navigation[] = ['contador.index', 'contador.*', 'Contador', 'M9 7h6 M9 11h6 M9 15h2 M5 3h14v18H5z'];
+    }
     if (auth()->user()?->canAccess('conversaciones')) {
         $navigation[] = ['admin.conversations.index', 'admin.conversations.*', 'Conversaciones', 'M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z'];
     }
