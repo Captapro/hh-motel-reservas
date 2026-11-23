@@ -21,6 +21,12 @@ class RestrictContador
             return $next($request);
         }
 
+        // La página de Mercado Pago de administración: el contador tiene su propia versión
+        // (mismos datos, sin el menú operativo), con el mismo mes y día.
+        if ($request->routeIs('admin.mercadopago.index')) {
+            return redirect()->route('contador.conciliacion', array_filter($request->only('mes', 'dia')));
+        }
+
         return $request->expectsJson()
             ? response()->json(['message' => 'Esta cuenta es solo del panel del contador.'], 403)
             : redirect()->route('contador.index');

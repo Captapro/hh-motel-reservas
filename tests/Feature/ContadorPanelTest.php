@@ -136,11 +136,21 @@ class ContadorPanelTest extends TestCase
             ->assertOk()->assertDontSee('Volver al sistema');
     }
 
+    public function test_the_admin_mercado_pago_address_opens_the_accountants_version(): void
+    {
+        $this->actingAs($this->contador())->get('/admin/mercado-pago?mes=2026-11&dia=2026-11-21')
+            ->assertRedirect(route('contador.conciliacion', ['mes' => '2026-11', 'dia' => '2026-11-21']));
+
+        // Administración sigue entrando a la suya.
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))->get('/admin/mercado-pago')
+            ->assertOk();
+    }
+
     public function test_the_accountant_cannot_reach_anything_else(): void
     {
         $this->actingAs($this->contador());
 
-        foreach (['/caja', '/reservar', '/reservas/HH-TEST-0001', '/admin/categorias', '/admin/mercado-pago', '/ventas/reserva/HH-TEST-0001', '/resumen-mensual'] as $url) {
+        foreach (['/caja', '/reservar', '/reservas/HH-TEST-0001', '/admin/categorias', '/ventas/reserva/HH-TEST-0001', '/resumen-mensual'] as $url) {
             $this->get($url)->assertRedirect(route('contador.index'));
         }
         $this->post('/reservas/HH-TEST-0001/finalizar')->assertRedirect(route('contador.index'));
