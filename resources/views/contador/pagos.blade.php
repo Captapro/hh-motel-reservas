@@ -2,9 +2,15 @@
 @section('title', 'Libro de cobros')
 @section('content')
     @php $money = fn ($n) => ($n < 0 ? '−$' : '$').number_format(abs((int) $n), 0, ',', '.'); @endphp
-    @include('contador._month', ['heading' => 'Libro de cobros', 'lead' => 'Cada pago aprobado del mes, con N° de voucher, boleta y operación de Mercado Pago, más las devoluciones.', 'routeName' => 'contador.pagos', 'exports' => [['Libro de cobros (CSV)', 'csv']]])
+    @include('contador._month', ['heading' => 'Libro de cobros', 'lead' => 'Cada pago aprobado del mes, con N° de voucher, boleta y operación de Mercado Pago, más las devoluciones.', 'routeName' => 'contador.pagos', 'exports' => [['Libro de cobros (CSV)', 'csv']], 'query' => array_filter(['medio' => $filter])])
+    <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;">
+        <a class="btn {{ $filter ? '' : 'primary' }}" href="{{ route('contador.pagos', ['mes' => $first->format('Y-m')]) }}">Todos · {{ $allCount }} · {{ $money($allTotal) }}</a>
+        @foreach ($chips as $key => $c)
+            <a class="btn {{ $filter === $key ? 'primary' : '' }}" href="{{ route('contador.pagos', ['mes' => $first->format('Y-m'), 'medio' => $key]) }}">{{ $c['label'] }} · {{ $c['count'] }} · {{ $money($c['total']) }}</a>
+        @endforeach
+    </div>
     <div class="card">
-        <h2>Cobros · {{ $payments->count() }} · {{ $money($payments->sum('amount')) }}</h2>
+        <h2>Cobros{{ $filter ? ' · '.$chips[$filter]['label'] : '' }} · {{ $payments->count() }} · {{ $money($payments->sum('amount')) }}</h2>
         <table>
             <thead><tr><th>Fecha</th><th>Reserva</th><th>Medio</th><th class="num">Monto</th><th>N° voucher</th><th>N° boleta</th><th>N° operación MP</th><th>Registrado por</th></tr></thead>
             <tbody>
@@ -38,7 +44,7 @@
                 @forelse ($refunds as $r)
                     <tr>
                         <td>{{ $r->created_at->copy()->timezone('America/Santiago')->format('d/m H:i') }}</td>
-                        <td>{{ $r->payment?->booking?->code }}</td>
+                        <td>@if ($r->payment?->booking)<a href="{{ route('contador.reserva', $r->payment->booking->code) }}" style="color:var(--accent);">{{ $r->payment->booking->code }}</a>@endif</td>
                         <td>{{ $r->payment?->methodLabel() }}</td>
                         <td class="num">{{ $money(-$r->amount) }}</td>
                         <td>{{ $r->reason }}</td>

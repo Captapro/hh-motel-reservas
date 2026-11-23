@@ -189,6 +189,20 @@ class ContadorPanelTest extends TestCase
         $this->assertStringContainsString('Con boleta', $body);
     }
 
+    public function test_the_payments_book_can_be_filtered_by_how_it_was_collected(): void
+    {
+        $user = $this->contador();
+
+        $this->actingAs($user)->get('/contador/cobros?mes=2026-11')
+            ->assertOk()->assertSee('Transferencia ·')->assertSee('Pago online ·')->assertSee('Máquina presencial ·');
+        // El cobro de prueba es débito (máquina presencial).
+        $this->get('/contador/cobros?mes=2026-11&medio=maquina')->assertOk()->assertSee('HH-TEST-0001');
+        $this->get('/contador/cobros?mes=2026-11&medio=transferencia')->assertOk()->assertDontSee('HH-TEST-0001')->assertSee('Sin cobros este mes');
+        $this->get('/contador/cobros?mes=2026-11&medio=online')->assertOk()->assertDontSee('HH-TEST-0001');
+        // Un valor desconocido se ignora y muestra todo.
+        $this->get('/contador/cobros?mes=2026-11&medio=inventado')->assertOk()->assertSee('HH-TEST-0001');
+    }
+
     public function test_the_accountant_cannot_reach_anything_else(): void
     {
         $this->actingAs($this->contador());

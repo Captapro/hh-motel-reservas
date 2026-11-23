@@ -6,11 +6,11 @@
     </div>
     <div class="actions">
         <span class="month">
-            <a class="btn" href="{{ route($routeName, ['mes' => $prev]) }}">← Anterior</a>
-            @unless ($isCurrent)<a class="btn" href="{{ route($routeName, ['mes' => $next]) }}">Siguiente →</a>@endunless
+            <a class="btn" href="{{ route($routeName, ['mes' => $prev] + ($query ?? [])) }}">← Anterior</a>
+            @unless ($isCurrent)<a class="btn" href="{{ route($routeName, ['mes' => $next] + ($query ?? [])) }}">Siguiente →</a>@endunless
         </span>
         @foreach ($exports ?? [] as [$label, $param])
-            <a class="btn primary" href="{{ route($routeName, ['mes' => $first->format('Y-m'), 'export' => $param]) }}">⬇ {{ $label }}</a>
+            <a class="btn primary" href="{{ route($routeName, ['mes' => $first->format('Y-m'), 'export' => $param] + ($query ?? [])) }}">⬇ {{ $label }}</a>
         @endforeach
         <button class="btn" type="button" onclick="window.print()">Imprimir</button>
     </div>

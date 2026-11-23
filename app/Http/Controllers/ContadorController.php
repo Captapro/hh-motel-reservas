@@ -218,8 +218,25 @@ class ContadorController extends Controller
     public function pagos(Request $request): View|StreamedResponse
     {
         $first = $this->month($request);
-        $payments = $this->payments($first);
-        $refunds = $this->refunds($first);
+        $allPayments = $this->payments($first);
+        $allRefunds = $this->refunds($first);
+
+        // Filtro por forma de cobro: transferencia, pago online, máquina presencial o efectivo.
+        $groups = [
+            'transferencia' => ['Transferencia', ['transferencia']],
+            'online' => ['Pago online', ['mercado_pago']],
+            'maquina' => ['Máquina presencial', ['debito', 'credito']],
+            'efectivo' => ['Efectivo', ['efectivo']],
+        ];
+        $filter = array_key_exists((string) $request->query('medio'), $groups) ? (string) $request->query('medio') : null;
+        $inGroup = fn (?string $code, string $key) => in_array($code, $groups[$key][1], true);
+        $chips = collect($groups)->map(fn ($g, $key) => [
+            'label' => $g[0],
+            'count' => $allPayments->filter(fn (Payment $p) => $inGroup($p->paymentMethod?->code, $key))->count(),
+            'total' => (int) $allPayments->filter(fn (Payment $p) => $inGroup($p->paymentMethod?->code, $key))->sum('amount'),
+        ]);
+        $payments = $filter ? $allPayments->filter(fn (Payment $p) => $inGroup($p->paymentMethod?->code, $filter))->values() : $allPayments;
+        $refunds = $filter ? $allRefunds->filter(fn (Refund $r) => $inGroup($r->payment?->paymentMethod?->code, $filter))->values() : $allRefunds;
 
         if ($request->query('export') === 'csv') {
             $this->audit('cobros', $first);
@@ -235,7 +252,7 @@ class ContadorController extends Controller
                 ['Fecha', 'Tipo', 'Reserva', 'Medio de pago', 'Monto', 'N° voucher', 'N° boleta', 'N° operación MP', 'Registrado por', 'Motivo (devoluciones)'], $rows);
         }
 
-        return view('contador.pagos', $this->nav($first) + ['payments' => $payments, 'refunds' => $refunds]);
+        return view('contador.pagos', $this->nav($first) + ['payments' => $payments, 'refunds' => $refunds, 'chips' => $chips, 'filter' => $filter, 'allCount' => $allPayments->count(), 'allTotal' => (int) $allPayments->sum('amount')]);
     }
 
     public function conciliacion(Request $request, MercadoPagoClient $client, MercadoPagoHistory $history): View|StreamedResponse
