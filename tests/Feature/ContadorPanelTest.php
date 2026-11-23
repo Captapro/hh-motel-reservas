@@ -136,14 +136,20 @@ class ContadorPanelTest extends TestCase
             ->assertOk()->assertDontSee('Volver al sistema');
     }
 
-    public function test_the_admin_mercado_pago_address_opens_the_accountants_version(): void
+    public function test_the_accountant_opens_the_mercado_pago_page_without_the_operational_menu(): void
     {
-        $this->actingAs($this->contador())->get('/admin/mercado-pago?mes=2026-11&dia=2026-11-21')
-            ->assertRedirect(route('contador.conciliacion', ['mes' => '2026-11', 'dia' => '2026-11-21']));
+        config(['services.mercadopago.access_token' => null]);
 
-        // Administración sigue entrando a la suya.
+        $this->actingAs($this->contador())->get('/admin/mercado-pago?mes=2026-11')
+            ->assertOk()
+            ->assertSee('Mercado Pago')
+            ->assertSee('Volver a mi panel')
+            ->assertDontSee('Emitir boleta')
+            ->assertDontSee('Ingreso presencial');
+
+        // Administración sigue entrando a la suya, con su menú.
         $this->actingAs(User::factory()->create(['role' => 'administrador']))->get('/admin/mercado-pago')
-            ->assertOk();
+            ->assertOk()->assertSee('Emitir boleta')->assertDontSee('Volver a mi panel');
     }
 
     public function test_the_accountant_cannot_reach_anything_else(): void

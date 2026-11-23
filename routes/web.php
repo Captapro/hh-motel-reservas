@@ -448,9 +448,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'section'])->group(f
     Route::delete('/opiniones', [App\Http\Controllers\Admin\GuestReviewController::class, 'destroyAll'])->middleware('role:administrador')->name('reviews.destroy_all');
     Route::get('/opiniones/qr.png', [App\Http\Controllers\Admin\GuestReviewController::class, 'qrImage'])->name('reviews.qr_image');
 
+    // Historial de la cuenta de Mercado Pago cruzado con el sistema (también lo ve el contador).
+    Route::get('/mercado-pago', [App\Http\Controllers\Admin\MercadoPagoController::class, 'index'])->middleware('role:administrador,contador')->name('mercadopago.index');
+
     Route::middleware('role:administrador')->group(function () {
-        // Historial de la cuenta de Mercado Pago cruzado con el sistema.
-        Route::get('/mercado-pago', [App\Http\Controllers\Admin\MercadoPagoController::class, 'index'])->name('mercadopago.index');
         // Ventas que quedaron en la planilla en vez del sistema.
         Route::get('/venta-pasada', [PastSaleController::class, 'create'])->name('past_sales.create');
         Route::post('/venta-pasada', [PastSaleController::class, 'store'])->name('past_sales.store');

@@ -66,7 +66,7 @@
                 </div>
             </div>
             @php $approvedRows = $data['rows']->where('status', 'approved'); @endphp
-            <p class="sub" style="margin:0 0 8px;">{{ $data['rows']->count() }} movimiento(s) · motel {{ $money($approvedRows->where('channel', '!=', 'Otro')->sum('amount')) }} · neto {{ $money($approvedRows->where('channel', '!=', 'Otro')->sum('net')) }} · <a class="link" href="{{ route('cash.show', $day->toDateString()) }}">ver caja del día</a></p>
+            <p class="sub" style="margin:0 0 8px;">{{ $data['rows']->count() }} movimiento(s) · motel {{ $money($approvedRows->where('channel', '!=', 'Otro')->sum('amount')) }} · neto {{ $money($approvedRows->where('channel', '!=', 'Otro')->sum('net')) }} @unless (auth()->user()->isContador())· <a class="link" href="{{ route('cash.show', $day->toDateString()) }}">ver caja del día</a>@endunless</p>
             @if ($data['rows']->isEmpty())
                 <p class="sub" style="margin:0;">No hay pagos ese día.</p>
             @else
@@ -83,7 +83,8 @@
                                 <td>{{ $r['type'] }}</td>
                                 <td style="font-weight:700; white-space:nowrap;">{{ $r['rooms'] ?? '—' }}</td>
                                 <td>
-                                    @if ($r['booking'])<a class="link" href="{{ route('reservations.show', $r['booking']->code) }}">{{ $r['booking']->code }}</a>
+                                    @if ($r['booking'] && ! auth()->user()->isContador())<a class="link" href="{{ route('reservations.show', $r['booking']->code) }}">{{ $r['booking']->code }}</a>
+                                    @elseif ($r['booking'])<span class="mp-muted">{{ $r['booking']->code }}</span>
                                     @elseif ($r['code'])<span class="mp-muted">{{ $r['code'] }}</span>
                                     @else<span class="mp-muted">—</span>@endif
                                 </td>
@@ -142,7 +143,7 @@
                         @foreach ($data['missing_in_mp'] as $p)
                             <tr>
                                 <td>{{ $p->created_at->timezone('America/Santiago')->format('d/m H:i') }}</td>
-                                <td>@if ($p->booking)<a class="link" href="{{ route('reservations.show', $p->booking->code) }}">{{ $p->booking->code }}</a>@endif</td>
+                                <td>@if ($p->booking && ! auth()->user()->isContador())<a class="link" href="{{ route('reservations.show', $p->booking->code) }}">{{ $p->booking->code }}</a>@elseif ($p->booking){{ $p->booking->code }}@endif</td>
                                 <td class="num">{{ $money($p->amount) }}</td>
                                 <td class="mp-muted">{{ $p->external_id }}</td>
                             </tr>

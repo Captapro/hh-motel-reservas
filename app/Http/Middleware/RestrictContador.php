@@ -13,18 +13,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RestrictContador
 {
-    private const ALLOWED = ['contador.*', 'account.password*', 'logout', 'login', 'login.store'];
+    private const ALLOWED = ['contador.*', 'admin.mercadopago.index', 'account.password*', 'logout', 'login', 'login.store'];
 
     public function handle(Request $request, Closure $next): Response
     {
         if (! $request->user()?->isContador() || $request->routeIs(...self::ALLOWED)) {
             return $next($request);
-        }
-
-        // La página de Mercado Pago de administración: el contador tiene su propia versión
-        // (mismos datos, sin el menú operativo), con el mismo mes y día.
-        if ($request->routeIs('admin.mercadopago.index')) {
-            return redirect()->route('contador.conciliacion', array_filter($request->only('mes', 'dia')));
         }
 
         return $request->expectsJson()

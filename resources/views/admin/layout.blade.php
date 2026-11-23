@@ -75,7 +75,15 @@
     </style>
 </head>
 <body>
-    @include('partials.navbar')
+    @if (auth()->user()?->isContador())
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid #292929;background:#111;">
+            <b style="color:#eee;">HH MOTEL <span style="font-weight:500;color:#999;font-size:12px;">· Contador · solo lectura</span></b>
+            <a href="{{ route('contador.index') }}" style="color:#ff7918;text-decoration:none;font-weight:700;">← Volver a mi panel</a>
+            <form method="POST" action="{{ route('logout') }}" style="margin-left:auto;">@csrf<button type="submit" style="background:none;border:none;color:#bbb;cursor:pointer;">Salir</button></form>
+        </div>
+    @else
+        @include('partials.navbar')
+    @endif
     <div class="wrap">
         @if ($errors->any())
             <div class="errors">
