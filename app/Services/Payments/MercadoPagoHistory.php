@@ -202,7 +202,7 @@ class MercadoPagoHistory
             ->map(fn ($g) => (int) $g->sum('amount'));
         $byDay = $rows->groupBy(fn ($r) => $r['at']->toDateString());
 
-        return self::markCompensated($byDay->keys()->merge($cards->keys())->unique()->sortDesc()->values()
+        return self::markCompensated($byDay->keys()->merge($cards->keys())->unique()->sort()->values()
             ->map(function (string $day) use ($byDay, $cards, $tz) {
                 $approved = $byDay->get($day, collect())->where('status', 'approved')->where('channel', '!=', 'Otro');
 

@@ -76,7 +76,7 @@
                 <table class="tbl-compact">
                     <thead><tr><th>N° voucher</th><th>Hora</th><th>Estado</th><th>Canal</th><th>Medio</th><th>Habitación</th><th>Reserva / referencia</th><th class="num">Monto</th><th class="num">Comisión</th><th class="num">Neto</th><th>En el sistema</th><th>N° operación</th><th>Cód. autorización</th></tr></thead>
                     <tbody>
-                        @foreach ($data['rows'] as $r)
+                        @foreach ($data['rows']->sortBy(fn ($r) => $r['at']->getTimestamp()) as $r)
                             <tr class="{{ $r['missing'] ? 'mp-missing' : '' }} {{ $r['channel'] === 'Reserva online' ? 'mp-online-row' : '' }}">
                                 <td style="font-weight:700; font-family:ui-monospace,monospace;">{{ $r['correlative'] ?? '' }}</td>
                                 <td style="white-space:nowrap;">{{ $r['at']->format('H:i') }}</td>

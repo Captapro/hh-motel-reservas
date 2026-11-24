@@ -250,6 +250,37 @@ class ContadorPanelTest extends TestCase
         $this->get('/caja-detalle/2026-11-21')->assertOk()->assertDontSee('HH-TEST-0001');
     }
 
+    public function test_days_and_sales_are_always_listed_oldest_first_so_the_first_is_on_top(): void
+    {
+        $user = $this->contador();
+        $first = Booking::firstOrFail();
+        $later = Booking::create([
+            'code' => 'HH-TEST-0002', 'pass_token' => (string) Str::uuid(),
+            'customer_id' => $first->customer_id, 'room_id' => $first->room_id,
+            'starts_at' => Carbon::parse('2026-11-22 15:00', 'America/Santiago'), 'ends_at' => Carbon::parse('2026-11-22 18:00', 'America/Santiago'),
+            'duration_minutes' => 180, 'guests_count' => 2,
+            'booking_status' => 'FINALIZADA', 'payment_status' => 'PAGADA',
+            'price_original' => 30000, 'price_final' => 30000,
+        ]);
+        $p = Payment::create([
+            'booking_id' => $later->id, 'payment_method_id' => PaymentMethod::where('code', 'debito')->value('id'),
+            'amount' => 30000, 'status' => 'aprobado', 'voucher_number' => '207', 'external_id' => 'REC-TEST-0009',
+        ]);
+        DB::table('payments')->where('id', $p->id)->update(['created_at' => '2026-11-22 15:05:00']);
+        DB::table('payments')->where('id', '!=', $p->id)->update(['created_at' => '2026-11-21 15:05:00']);
+
+        // Libro de ventas y de cobros: el primero arriba, el 21 antes que el 22.
+        $this->actingAs($user)->get('/contador/ventas?mes=2026-11')->assertSeeInOrder(['HH-TEST-0001', 'HH-TEST-0002']);
+        $this->get('/contador/cobros?mes=2026-11')->assertSeeInOrder(['206', '207']);
+        // Resumen, día por día: primero el 21.
+        $this->get('/contador?mes=2026-11')->assertSeeInOrder(['21/11', '22/11']);
+        // Reporte de ventas del día: la estadía más temprana primero.
+        $this->actingAs(User::factory()->create(['role' => 'administrador']));
+        Booking::query()->update(['checked_in_at' => Carbon::parse('2026-11-22 15:00', 'America/Santiago')]);
+        DB::table('bookings')->where('id', $first->id)->update(['starts_at' => '2026-11-22 09:00:00', 'ends_at' => '2026-11-22 12:00:00']);
+        $this->get('/caja-detalle/2026-11-22')->assertSeeInOrder(['HH-TEST-0001', 'HH-TEST-0002']);
+    }
+
     public function test_the_payments_book_can_be_filtered_by_how_it_was_collected(): void
     {
         $user = $this->contador();
