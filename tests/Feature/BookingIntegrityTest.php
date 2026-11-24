@@ -3793,4 +3793,38 @@ class BookingIntegrityTest extends TestCase
         $other = ['customer_phone' => '+56922222222', 'document_number' => '22.222.222-2', 'time_hour' => 18] + $data;
         $this->post('/reservar', $other)->assertSessionDoesntHaveErrors('duplicate_ok');
     }
+
+    public function test_an_administrator_can_set_the_real_date_of_a_payment_when_registering_it(): void
+    {
+        $booking = $this->booking();
+        $this->travelTo(Carbon::parse('2026-10-06 10:00'));
+
+        $this->get('/reservas/'.$booking->code.'/pago')->assertOk()->assertSee('¿Cuándo se cobró de verdad?');
+        $this->post('/reservas/'.$booking->code.'/pago', $this->paymentData(5000) + ['paid_at' => '2026-10-05T12:20'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $payment = $booking->payments()->firstOrFail();
+        $this->assertSame('2026-10-05 12:20', $payment->created_at->timezone('America/Santiago')->format('Y-m-d H:i'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'pago.fecha', 'entity_id' => $payment->id]);
+
+        // Una fecha futura no vale y no guarda nada.
+        $this->post('/reservas/'.$booking->code.'/pago', $this->paymentData(1000) + ['paid_at' => '2026-10-07T12:20'])
+            ->assertSessionHasErrors('paid_at');
+        $this->assertSame(1, $booking->payments()->count());
+
+        // Sin fecha, el cobro es de ahora.
+        $this->post('/reservas/'.$booking->code.'/pago', $this->paymentData(1000))->assertSessionHasNoErrors();
+        $this->assertSame('2026-10-06', $booking->payments()->latest('id')->first()->created_at->timezone('America/Santiago')->format('Y-m-d'));
+    }
+
+    public function test_reception_cannot_back_date_a_payment(): void
+    {
+        $booking = $this->booking();
+        $this->travelTo(Carbon::parse('2026-10-06 10:00'));
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+
+        $this->get('/reservas/'.$booking->code.'/pago')->assertOk()->assertDontSee('¿Cuándo se cobró de verdad?');
+        $this->post('/reservas/'.$booking->code.'/pago', $this->paymentData(5000) + ['paid_at' => '2026-10-05T12:20'])->assertSessionHasNoErrors();
+        $this->assertSame('2026-10-06', $booking->payments()->firstOrFail()->created_at->timezone('America/Santiago')->format('Y-m-d'));
+    }
 }

@@ -161,6 +161,20 @@
                 <label for="payment-notes">Nota</label>
                 <input id="payment-notes" type="text" name="notes" value="{{ old('notes') }}" maxlength="255">
             </div>
+
+            @if (auth()->user()?->isAdministrador())
+                <div style="margin-top:12px; @if ($booking->booking_status === 'FINALIZADA') border:1px solid #ff7918; border-radius:10px; padding:10px 12px; @endif">
+                    <label for="paid-at" style="margin-top:0;">¿Cuándo se cobró de verdad? <span style="color:#888; font-weight:400;">(solo si no fue ahora)</span></label>
+                    <input id="paid-at" type="datetime-local" name="paid_at" value="{{ old('paid_at') }}" max="{{ now('America/Santiago')->format('Y-m-d\TH:i') }}">
+                    <div style="margin-top:6px; font-size:12.5px; color:#999;">
+                        @if ($booking->booking_status === 'FINALIZADA')
+                            Esta reserva ya está finalizada: si el cobro se hizo antes en la máquina, pon aquí su hora para que cuente en su día y cuadre con Mercado Pago.
+                        @else
+                            Déjalo vacío si el cobro es de ahora. Si lo hiciste antes en la máquina, pon su hora real para que cuente en su día.
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
 
         @if (session('voucher_repetido') || old('voucher_ok'))

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\PaymentExceedsBalanceException;
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Services\Booking\PaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -117,6 +119,17 @@ class PaymentController extends Controller
             }
         }
 
+        // Fecha real del cobro (solo administrador): un cobro que se hizo antes en la máquina y se anota
+        // tarde, o después del cierre, no debe quedar con la fecha de hoy. Pasó con 11 pagos en noviembre.
+        $paidAt = null;
+        if ($request->user()?->isAdministrador() && $request->filled('paid_at')) {
+            $request->validate(['paid_at' => ['date_format:Y-m-d\TH:i']], [], ['paid_at' => 'fecha y hora real del cobro']);
+            $paidAt = Carbon::createFromFormat('Y-m-d\TH:i', (string) $request->input('paid_at'), 'America/Santiago');
+            if ($paidAt->isFuture()) {
+                return back()->withInput()->withErrors(['paid_at' => 'La fecha real del cobro no puede ser futura.']);
+            }
+        }
+
         $overpayReason = null;
         if ($request->boolean('overpay')) {
             $overpayReason = trim((string) ($validated['overpay_reason'] ?? ''));
@@ -126,7 +139,7 @@ class PaymentController extends Controller
         }
 
         try {
-            $paymentService->register(
+            $payment = $paymentService->register(
                 $booking,
                 $method,
                 (int) $validated['amount'],
@@ -140,6 +153,14 @@ class PaymentController extends Controller
             );
         } catch (PaymentExceedsBalanceException $e) {
             return back()->withInput()->with('overpay_offer', true)->withErrors(['amount' => $e->getMessage()]);
+        }
+
+        if ($paidAt) {
+            $old = ['created_at' => $payment->created_at?->toIso8601String()];
+            $payment->created_at = $paidAt;
+            $payment->save();
+            AuditLog::record(auth()->id(), 'pago.fecha', 'Payment', $payment->id,
+                $old + ['reason' => 'Fecha real indicada al registrar el cobro'], ['created_at' => $payment->created_at->toIso8601String()]);
         }
 
         // Pago dividido (ej. parte débito y parte efectivo): si todavía falta
