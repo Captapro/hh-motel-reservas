@@ -189,6 +189,49 @@ class ContadorPanelTest extends TestCase
         $this->assertStringContainsString('Con boleta', $body);
     }
 
+    public function test_the_daily_sales_detail_groups_by_stay_day_and_flags_prepaid_online_payments(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador']);
+        Booking::query()->update(['checked_in_at' => Carbon::parse('2026-11-21 15:02', 'America/Santiago')]);
+        $online = PaymentMethod::create(['code' => 'mercado_pago', 'name' => 'Mercado Pago', 'is_active' => true]);
+        $prepaid = Payment::create([
+            'booking_id' => Booking::firstOrFail()->id, 'payment_method_id' => $online->id, 'amount' => 5000, 'status' => 'aprobado',
+            'external_id' => 'REC-TEST-0002', 'receipt_number' => '555',
+        ]);
+        // created_at no es asignable en masa: se fija directo en la base (hora de Santiago, tal cual).
+        DB::table('payments')->where('id', $prepaid->id)->update(['created_at' => '2026-11-19 10:00:00']);
+        DB::table('payments')->where('id', '!=', $prepaid->id)->update(['created_at' => '2026-11-21 15:05:00']);
+
+        // La estadía es del 21: ahí aparece, con sus dos cobros (el online se pagó el 19).
+        $this->actingAs($admin)->get('/caja-detalle/2026-11-21')
+            ->assertOk()
+            ->assertSee('HH-TEST-0001')
+            ->assertSee('PLUS 307')
+            ->assertSee('Tarjeta · máquina (débito)')
+            ->assertSee('Mercado Pago · online')
+            ->assertSee('pagado otro día')
+            ->assertSee('206');
+
+        // El 19 no hay estadías, pero el cobro online entró ese día y se avisa.
+        $this->get('/caja-detalle/2026-11-19')->assertOk()
+            ->assertSee('No hay estadías con check-in este día')
+            ->assertSee('Cobrado este día por estadías de otra fecha');
+
+        // Una fecha mal escrita no revienta.
+        $this->get('/caja-detalle/2026-13-45')->assertNotFound();
+
+        $csv = $this->get('/caja-detalle/2026-11-21?export=csv');
+        $csv->assertOk();
+        $body = $csv->streamedContent();
+        $this->assertStringContainsString('N° voucher', $body);
+        $this->assertStringContainsString('206', $body);
+        $this->assertStringContainsString('555', $body);
+        $this->assertStringContainsString("'=HYPERLINK", $body);
+
+        // El contador no entra a la caja del motel.
+        $this->actingAs($this->contador())->get('/caja-detalle/2026-11-21')->assertRedirect();
+    }
+
     public function test_the_payments_book_can_be_filtered_by_how_it_was_collected(): void
     {
         $user = $this->contador();

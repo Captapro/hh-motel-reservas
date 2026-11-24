@@ -94,6 +94,7 @@
                 <a href="{{ route('cash.show') }}" class="today">Ir a hoy</a>
             @endunless
             <a href="{{ route('cash.show', $day->copy()->addDay()->toDateString()) }}">Día siguiente →</a>
+            <a href="{{ route('cash.detail', ['date' => $day->format('Y-m-d')]) }}">Detalle de ventas del día</a>
             @if (auth()->user()?->isAdministrador())
                 <a href="{{ route('cash.shifts') }}">Entregas de turno</a>
                 <a href="{{ route('admin.mercadopago.index', ['mes' => $day->format('Y-m')]) }}">Mercado Pago</a>

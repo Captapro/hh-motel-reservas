@@ -50,6 +50,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContadorController;
+use App\Http\Controllers\DailySalesDetailController;
 use App\Http\Controllers\CouponProofController;
 use App\Http\Controllers\CustomerLoyaltyController;
 use App\Http\Controllers\DailyAseoController;
@@ -236,6 +237,7 @@ Route::middleware(['auth', 'section'])->group(function () {
         Route::delete('/claves/{accessCode}', [AccessCodeController::class, 'destroy'])->name('access_codes.destroy');
     });
     Route::get('/caja/{date?}', [CashRegisterController::class, 'show'])->name('cash.show');
+    Route::get('/caja-detalle/{date?}', [DailySalesDetailController::class, 'show'])->where('date', '\d{4}-\d{2}-\d{2}')->name('cash.detail');
     Route::post('/caja', [CashRegisterController::class, 'store'])->name('cash.store');
     Route::get('/caja-turnos', [ShiftHandoverController::class, 'index'])->middleware('role:administrador')->name('cash.shifts');
     Route::post('/caja-turnos/{handover}/revisada', [ShiftHandoverController::class, 'review'])->middleware('role:administrador')->name('cash.shifts.review');
