@@ -50,8 +50,6 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContadorController;
-use App\Http\Controllers\IdCardPhotoController;
-use App\Http\Controllers\IdScanSessionController;
 use App\Http\Controllers\DailySalesDetailController;
 use App\Http\Controllers\CouponProofController;
 use App\Http\Controllers\CustomerLoyaltyController;
@@ -105,9 +103,6 @@ Route::middleware(CaptureAttribution::class)->group(function () {
     Route::get('/catalogo/habitacion/{room}', [CatalogController::class, 'room'])->name('catalog.room');
     Route::get('/catalogo/reservar', [PublicBookingController::class, 'create'])->name('catalog.reserve');
 });
-// Celular como cámara del computador (carnets): el código de un solo uso de la sesión es el permiso.
-Route::get('/escaner/{token}', [IdScanSessionController::class, 'phone'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:60,1,id_scan.phone')->name('id_scan.phone');
-Route::post('/escaner/{token}/foto', [IdScanSessionController::class, 'upload'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:20,1,id_scan.upload')->name('id_scan.upload');
 Route::get('/catalogo/reservar/horarios', [PublicBookingController::class, 'times'])->middleware('throttle:30,1,catalog.reserve.times')->name('catalog.reserve.times');
 Route::get('/catalogo/reservar/disponibilidad', [PublicBookingController::class, 'checkAvailability'])->middleware('throttle:30,1,catalog.reserve.availability')->name('catalog.reserve.availability');
 Route::view('/privacidad', 'catalog.privacidad')->name('catalog.privacy');
@@ -213,11 +208,6 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::patch('/novedades/{note}', [ShiftNoteController::class, 'update'])->name('shift_notes.update');
     Route::delete('/novedades/{note}', [ShiftNoteController::class, 'destroy'])->name('shift_notes.destroy');
     Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1,customers.lookup')->name('customers.lookup');
-    Route::post('/clientes/carnet-foto', [IdCardPhotoController::class, 'read'])->middleware('throttle:20,1,customers.id_photo')->name('customers.id_photo');
-    Route::post('/clientes/escaner', [IdScanSessionController::class, 'create'])->middleware('throttle:20,1,id_scan.create')->name('id_scan.create');
-    Route::get('/clientes/escaner/{token}/qr.png', [IdScanSessionController::class, 'qr'])->where('token', '[A-Za-z0-9]{40}')->name('id_scan.qr');
-    Route::get('/clientes/escaner/{token}/lecturas', [IdScanSessionController::class, 'poll'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:90,1,id_scan.poll')->name('id_scan.poll');
-    Route::delete('/clientes/escaner/{token}', [IdScanSessionController::class, 'close'])->where('token', '[A-Za-z0-9]{40}')->name('id_scan.close');
     Route::get('/clientes/nombres', fn (NameSuggestions $names) => response()->json($names->lists())->header('Cache-Control', 'private, max-age=3600'))->name('customers.names');
     Route::get('/reservar/precio', [ReservationController::class, 'priceQuote'])->middleware('throttle:80,1,reservations.price')->name('reservations.price');
     Route::get('/buscar', [ReservationSearchController::class, 'index'])->name('reservations.search');

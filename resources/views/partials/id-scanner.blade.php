@@ -86,10 +86,6 @@
                 if (kind === 'ok') kind = 'warn';
                 lines.push('Carnet de extranjero: revisa la nacionalidad.');
             }
-            if (card.fromPhoto) {
-                if (kind === 'ok') kind = 'warn';
-                lines.push('📷 Leído por foto: <b>revisa el RUT y los nombres</b> antes de guardar.');
-            }
             if (!lines.length) lines.push('✓ Carnet leído' + (years !== null ? ' · ' + years + ' años' : ''));
             if (extra) lines.push(extra);
             toast(kind, lines.join('<br>'));
@@ -120,7 +116,6 @@
                 report(card, 'Ya están registradas todas las personas de esta reserva.');
                 return;
             }
-            if (card.firstName) person = { first_name: card.firstName, last_name: card.lastName || '' };
             const first = row.querySelector('.guest-first');
             first.value = (person && person.first_name) || '';
             row.querySelector('.guest-last').value = (person && person.last_name) || '';
@@ -203,99 +198,6 @@
         document.addEventListener('click', function (e) {
             if (e.target.closest && e.target.closest('#id-scan-toast')) document.getElementById('id-scan-toast').hidden = true;
         });
-
-        // ---- Carnets con el celular como cámara (QR) ----
-        // El computador muestra un QR; el celular lo abre y escanea el carnet del titular y los de los acompañantes.
-        // La foto no se guarda: se lee y se descarta. Cada lectura entra como si la hubiera leído el lector USB.
-
-        function sendToForm(data) {
-            document.dispatchEvent(new CustomEvent('hh:id-scan', { detail: {
-                rut: data.rut, foreigner: !!data.foreigner, birthDate: data.birth_date, expiresOn: data.expires_on,
-                firstName: data.first_name, lastName: data.last_name, nationality: data.nationality, fromPhoto: true,
-            } }));
-        }
-
-        // ---- Celular como cámara (QR): el computador muestra un QR, el celular lo abre y escanea los carnets ----
-        async function openPhoneScanner() {
-            if (document.getElementById('hh-qr')) return;
-            toast('warn', 'Preparando el código…');
-            let session;
-            try {
-                const r = await fetch('{{ route('id_scan.create') }}', { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
-                if (!r.ok) throw new Error('sesion');
-                session = await r.json();
-            } catch (e) {
-                toast('bad', 'No pude preparar el código. Intenta de nuevo.');
-                return;
-            }
-            document.getElementById('id-scan-toast').hidden = true;
-
-            const box = document.createElement('div');
-            box.id = 'hh-qr';
-            box.style.cssText = 'position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:16px;font:15px/1.45 -apple-system,Segoe UI,sans-serif;color:#fff;';
-            box.innerHTML =
-                '<div style="background:#1c1c1c;border:1px solid #444;border-radius:16px;padding:20px;max-width:420px;width:100%;text-align:center;">' +
-                  '<div style="font-weight:800;font-size:17px;margin-bottom:4px;">📱 Escanear con el celular</div>' +
-                  '<div style="color:#bbb;margin-bottom:12px;">Apunta la cámara del celular a este código. Se abre la cámara: escanea el carnet del titular y luego los de los acompañantes.</div>' +
-                  '<img id="hh-qr-img" alt="Código QR" style="width:280px;height:280px;max-width:100%;background:#fff;border-radius:12px;padding:6px;">' +
-                  '<div id="hh-qr-status" style="margin-top:12px;font-weight:700;color:#ffb379;">Esperando el celular…</div>' +
-                  '<div id="hh-qr-list" style="margin-top:6px;color:#9be39b;text-align:left;"></div>' +
-                  '<button type="button" id="hh-qr-close" style="margin-top:14px;background:#2a2a2a;color:#fff;border:1px solid #555;border-radius:999px;padding:12px 26px;font:700 15px -apple-system,Segoe UI,sans-serif;cursor:pointer;">Listo</button>' +
-                '</div>';
-            document.body.appendChild(box);
-            box.querySelector('#hh-qr-img').src = session.qr;
-            const status = box.querySelector('#hh-qr-status'), list = box.querySelector('#hh-qr-list');
-
-            let after = 0, stopped = false, timer = null;
-            function stop() {
-                stopped = true;
-                clearTimeout(timer);
-                fetch(session.close, { method: 'DELETE', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' } }).catch(() => {});
-                box.remove();
-            }
-            box.querySelector('#hh-qr-close').addEventListener('click', stop);
-
-            async function poll() {
-                if (stopped) return;
-                try {
-                    const r = await fetch(session.poll + '?after=' + after, { headers: { 'Accept': 'application/json' } });
-                    if (r.status === 410 || r.status === 404) { status.textContent = 'El código venció. Cierra y genera otro.'; status.style.color = '#ffb4b4'; return; }
-                    if (r.ok) {
-                        const data = await r.json();
-                        for (const item of data.reads) {
-                            sendToForm(item.data);
-                            const who = [item.data.first_name, item.data.last_name].filter(Boolean).join(' ') || item.data.rut;
-                            list.insertAdjacentHTML('beforeend', '<div>✓ ' + who.replace(/</g, '&lt;') + (item.n > 1 ? ' (acompañante)' : '') + '</div>');
-                            status.textContent = 'Recibido. Escanea el siguiente carnet o toca «Listo».';
-                            status.style.color = '#9be39b';
-                            await new Promise(res => setTimeout(res, 500)); // el formulario procesa de a uno
-                        }
-                        after = data.last;
-                    }
-                } catch (e) { /* se reintenta en el próximo ciclo */ }
-                timer = setTimeout(poll, 1500);
-            }
-            poll();
-        }
-
-        function addPhotoButton() {
-            if (document.getElementById('hh-id-phone-btn')) return;
-            if (!document.body || !document.querySelector('[name="document_number"], [name="holder_document_number"], .guest-doc')) return;
-            const phone = document.createElement('button');
-            phone.type = 'button';
-            phone.id = 'hh-id-phone-btn';
-            phone.textContent = '📱 Escanear carnet (QR)';
-            phone.title = 'Mostrar un código QR: el celular lo abre y hace de cámara para escanear los carnets';
-            phone.style.cssText = 'position:fixed;right:16px;bottom:76px;z-index:9998;background:#ff7918;color:#fff;border:0;border-radius:999px;padding:12px 18px;font:700 15px -apple-system,Segoe UI,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.45);cursor:pointer;';
-            phone.addEventListener('click', openPhoneScanner);
-            document.body.appendChild(phone);
-        }
-        // Esta pantalla puede ejecutar el script antes o después de terminar de cargar: se intenta en cada momento
-        // (la función no hace nada si el botón ya existe o si la pantalla no tiene un documento que completar).
-        addPhotoButton();
-        document.addEventListener('DOMContentLoaded', addPhotoButton);
-        window.addEventListener('load', addPhotoButton);
-        setTimeout(addPhotoButton, 800);
 
         return { parse, report, lookup, addGuest };
     })();
