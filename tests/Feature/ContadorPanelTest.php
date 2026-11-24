@@ -232,6 +232,24 @@ class ContadorPanelTest extends TestCase
         $this->actingAs($this->contador())->get('/caja-detalle/2026-11-21')->assertRedirect();
     }
 
+    public function test_the_daily_sales_detail_includes_paid_stays_nobody_checked_in(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador']);
+        // Reserva online pagada cuya llegada nadie marcó en el sistema: la planilla igual la anota.
+        Booking::query()->update(['checked_in_at' => null, 'booking_status' => 'CONFIRMADA']);
+        $this->actingAs($admin)->get('/caja-detalle/2026-11-21')
+            ->assertOk()->assertSee('HH-TEST-0001')->assertSee('sin check-in');
+
+        // Sin ningún pago aprobado y sin check-in no es una venta.
+        Payment::query()->update(['status' => 'rechazado']);
+        $this->get('/caja-detalle/2026-11-21')->assertOk()->assertDontSee('HH-TEST-0001');
+
+        // Cancelada: nunca.
+        Payment::query()->update(['status' => 'aprobado']);
+        Booking::query()->update(['booking_status' => 'CANCELADA']);
+        $this->get('/caja-detalle/2026-11-21')->assertOk()->assertDontSee('HH-TEST-0001');
+    }
+
     public function test_the_payments_book_can_be_filtered_by_how_it_was_collected(): void
     {
         $user = $this->contador();

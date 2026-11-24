@@ -57,7 +57,7 @@
             @forelse ($rows as $r)
                 <tr class="{{ $r['first'] ? 'dd-first' : '' }}">
                     <td>{{ $r['first'] ? $r['start']->format('H:i') : '' }}</td>
-                    <td>{{ $r['first'] ? $r['code'] : '' }}</td>
+                    <td>{{ $r['first'] ? $r['code'] : '' }}@if ($r['first'] && $r['no_checkin']) <span class="dd-tag pre" title="Está pagada pero nadie marcó su llegada en el sistema">sin check-in</span>@endif</td>
                     <td>{{ $r['first'] ? $r['customer'] : '' }}</td>
                     <td>{{ $r['first'] ? $r['room'] : '' }}</td>
                     <td class="num">{{ $r['first'] ? $money($r['lodging']) : '' }}</td>

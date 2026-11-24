@@ -40,7 +40,9 @@ class DailySalesDetailController extends Controller
         $end = $day->copy()->endOfDay();
 
         $bookings = Booking::with(['room.category', 'customer', 'payments.paymentMethod', 'addons'])
-            ->whereNotNull('checked_in_at')
+            ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
+            // Con check-in, o pagada aunque recepción no haya marcado la llegada (la planilla igual la anota).
+            ->where(fn ($q) => $q->whereNotNull('checked_in_at')->orWhereHas('payments', fn ($p) => $p->where('status', 'aprobado')))
             ->whereBetween('starts_at', [$day->copy(), $end])
             ->orderBy('starts_at')
             ->get();
@@ -59,6 +61,7 @@ class DailySalesDetailController extends Controller
                 'lodging' => (int) $b->price_final,
                 'extras' => $extras,
                 'total' => (int) $b->price_final + $extras,
+                'no_checkin' => $b->checked_in_at === null,
             ];
             if ($approved->isEmpty()) {
                 return [$base + ['first' => true, 'method' => '— sin cobro —', 'code_m' => null, 'amount' => 0, 'voucher' => '', 'receipt' => '', 'paid_at' => null, 'prepaid' => false]];
@@ -117,7 +120,7 @@ class DailySalesDetailController extends Controller
     private function csv(string $name, Collection $rows): StreamedResponse
     {
         $safe = fn ($v) => is_string($v) && $v !== '' && in_array($v[0], ['=', '+', '-', '@', "\t", "\r"], true) ? "'".$v : $v;
-        $headers = ['Fecha estadía', 'Hora ingreso', 'Reserva', 'Cliente', 'RUT / documento', 'Playroom', 'Categoría', 'Alojamiento', 'Extras', 'Total venta', 'Medio de pago', 'Monto cobrado', 'N° voucher', 'N° boleta', 'Cobrado el'];
+        $headers = ['Fecha estadía', 'Hora ingreso', 'Reserva', 'Cliente', 'RUT / documento', 'Playroom', 'Categoría', 'Alojamiento', 'Extras', 'Total venta', 'Medio de pago', 'Monto cobrado', 'N° voucher', 'N° boleta', 'Cobrado el', 'Observación'];
 
         return response()->streamDownload(function () use ($rows, $headers, $safe) {
             $out = fopen('php://output', 'w');
@@ -128,6 +131,7 @@ class DailySalesDetailController extends Controller
                     $r['start']->format('d/m/Y'), $r['start']->format('H:i'), $r['code'], $r['first'] ? $r['customer'] : '', $r['first'] ? $r['doc'] : '',
                     $r['room'], $r['category'], $r['first'] ? $r['lodging'] : '', $r['first'] ? $r['extras'] : '', $r['first'] ? $r['total'] : '',
                     $r['method'], $r['amount'], $r['voucher'], $r['receipt'], $r['paid_at']?->format('d/m/Y H:i') ?? '',
+                    $r['first'] && $r['no_checkin'] ? 'Sin check-in en el sistema' : '',
                 ]), ';');
             }
             fclose($out);
