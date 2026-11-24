@@ -27,21 +27,20 @@
             <tbody>
                 @forelse ($rows as $r)
                     <tr>
-                        <td>{{ $r['date']->format('d/m H:i') }}</td>
-                        <td><a href="{{ route('contador.reserva', $r['code']) }}" style="color:var(--accent);">{{ $r['code'] }}</a></td>
+                        <td style="white-space:nowrap;">{{ $r['date']->format('d/m H:i') }}</td>
+                        <td style="white-space:nowrap;"><a href="{{ route('contador.reserva', $r['code']) }}" style="color:var(--accent);">{{ $r['code'] }}</a></td>
                         <td>{{ $r['customer'] }}</td>
-                        <td class="muted">{{ $r['doc'] ?: '—' }}</td>
+                        <td class="muted" style="white-space:nowrap;">{{ $r['doc'] ?: '—' }}</td>
                         <td>{{ $r['room'] }} <span class="muted">· {{ $r['category'] }}</span></td>
                         <td class="num">{{ $money($r['lodging']) }}</td>
                         <td class="num muted">{{ $r['discount'] ? $money($r['discount']) : '' }}{{ $r['coupon'] ? ' '.$r['coupon'] : '' }}</td>
                         <td class="num">{{ $money($r['extras']) }}</td>
                         <td class="num"><b>{{ $money($r['total']) }}</b></td>
-                        <td>
+                        <td style="min-width:230px;">
                             @foreach ($r['lines'] as $l)
-                                <div style="white-space:nowrap;">
-                                    {{ $l['method'] }} <b>{{ $money($l['amount']) }}</b>
-                                    · voucher {{ $l['voucher'] ?: '—' }}
-                                    · <span class="{{ $l['receipt'] ? 'ok' : 'bad' }}">boleta {{ $l['receipt'] ?: 'falta' }}</span>
+                                <div style="padding:3px 0;{{ ! $loop->last ? 'border-bottom:1px dashed var(--line);' : '' }}">
+                                    <div>{{ $l['method'] }} <b>{{ $money($l['amount']) }}</b></div>
+                                    <div class="muted" style="font-size:12px;">voucher {{ $l['voucher'] ?: '—' }} · <span class="{{ $l['receipt'] ? 'ok' : 'bad' }}">boleta {{ $l['receipt'] ?: 'falta' }}</span></div>
                                 </div>
                             @endforeach
                         </td>
