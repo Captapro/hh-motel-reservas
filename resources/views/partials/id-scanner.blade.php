@@ -248,12 +248,14 @@
         }
 
         // El botón solo aparece en las pantallas donde hay un documento que completar.
-        document.addEventListener('DOMContentLoaded', function () {
-            if (!document.querySelector('[name="document_number"], [name="holder_document_number"], .guest-doc')) return;
+        function addPhotoButton() {
+            if (document.getElementById('hh-id-photo-btn')) return;
+            if (!document.body || !document.querySelector('[name="document_number"], [name="holder_document_number"], .guest-doc')) return;
             const input = document.createElement('input');
             input.type = 'file'; input.accept = 'image/*'; input.setAttribute('capture', 'environment'); input.hidden = true;
             const button = document.createElement('button');
             button.type = 'button';
+            button.id = 'hh-id-photo-btn';
             button.textContent = '📷 Carnet';
             button.title = 'Sacar foto al carnet para completar RUT y nombre';
             button.style.cssText = 'position:fixed;right:16px;bottom:76px;z-index:9998;background:#ff7918;color:#fff;border:0;border-radius:999px;padding:12px 18px;font:700 15px -apple-system,Segoe UI,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.45);cursor:pointer;';
@@ -264,7 +266,13 @@
             });
             document.body.appendChild(input);
             document.body.appendChild(button);
-        });
+        }
+        // Esta pantalla puede ejecutar el script antes o después de terminar de cargar: se intenta en cada momento
+        // (la función no hace nada si el botón ya existe o si la pantalla no tiene un documento que completar).
+        addPhotoButton();
+        document.addEventListener('DOMContentLoaded', addPhotoButton);
+        window.addEventListener('load', addPhotoButton);
+        setTimeout(addPhotoButton, 800);
 
         return { parse, report, lookup, addGuest };
     })();
