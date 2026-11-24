@@ -73,6 +73,7 @@ use App\Http\Controllers\PaymentDocumentController;
 use App\Http\Controllers\PaymentRefundController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\RoomChangeController;
 use App\Http\Controllers\ReservationSearchController;
 use App\Http\Controllers\RoomBoardController;
 use App\Http\Controllers\RoomClosingController;
@@ -217,6 +218,8 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::get('/reservas/{code}', [ReservationController::class, 'show'])->name('reservations.show');
     Route::get('/reservas/{code}/editar', [ReservationController::class, 'edit'])->name('reservations.edit');
     Route::put('/reservas/{code}', [ReservationController::class, 'update'])->name('reservations.update');
+    Route::get('/reservas/{code}/cambiar-pieza', [RoomChangeController::class, 'show'])->name('reservations.change_room');
+    Route::post('/reservas/{code}/cambiar-pieza', [RoomChangeController::class, 'store'])->name('reservations.change_room.store');
 
     Route::get('/ventas/reserva/{code}', [SaleDetailController::class, 'show'])->name('sales.detail');
     Route::get('/ventas/planilla/{sale}', [HistoricalSaleDetailController::class, 'show'])->name('sales.historical');

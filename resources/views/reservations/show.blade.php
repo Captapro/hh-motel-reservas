@@ -225,6 +225,7 @@
         <a class="col-btn" href="{{ route('rooms.board') }}">← Tablero</a>
         @unless (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA']))
             <a class="col-btn" href="{{ route('reservations.edit', $booking->code) }}">Modificar</a>
+            <a class="col-btn" href="{{ route('reservations.change_room', $booking->code) }}">Cambiar de pieza (con diferencia)</a>
         @endunless
         @if (auth()->user()?->isAdministrador() && $booking->booking_status === 'CHECK_IN' && $booking->checked_in_at && ! $booking->checked_out_at)
             <form method="POST" action="{{ route('bookings.undo_checkin', $booking->code) }}" style="display:inline" onsubmit="return confirm('¿Deshacer el check-in de esta reserva? Vuelve a «confirmada» y se borran los acompañantes registrados.')">

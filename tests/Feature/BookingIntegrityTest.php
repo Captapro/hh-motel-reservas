@@ -3673,4 +3673,68 @@ class BookingIntegrityTest extends TestCase
         // Una segunda vez no repite nada.
         $this->assertSame(['sent' => 0, 'skipped' => 1, 'error' => null], app(MetaConversions::class)->sendPastPurchases(Carbon::parse('2026-11-01')));
     }
+
+    private function plusRoom(int $price = 30000): Room
+    {
+        $cat = RoomCategory::create(['name' => 'PLUS', 'base_capacity' => 2, 'is_active' => true]);
+        RateRule::first()->prices()->create(['room_category_id' => $cat->id, 'duration_minutes' => 60, 'price' => $price]);
+
+        return Room::create(['name' => 'PLUS 102', 'room_category_id' => $cat->id, 'operational_status' => 'activa']);
+    }
+
+    public function test_room_change_with_difference_keeps_the_contracted_price_and_charges_the_difference_separately(): void
+    {
+        $b = $this->reserve();
+        $target = $this->plusRoom(30000);
+
+        $this->get('/reservas/'.$b->code.'/cambiar-pieza')->assertOk()->assertSee('PLUS 102')->assertSee('diferencia sugerida $10.000');
+
+        $this->post('/reservas/'.$b->code.'/cambiar-pieza', ['room_id' => $target->id, 'reason' => 'Pidió una pieza más grande'])
+            ->assertRedirect(route('payments.create', $b->code))->assertSessionHasNoErrors();
+
+        $b->refresh();
+        $this->assertSame($target->id, $b->room_id);
+        $this->assertSame(20000, (int) $b->price_final);                 // lo contratado no se recalcula
+        $addon = $b->addons()->firstOrFail();
+        $this->assertSame(10000, (int) $addon->amount);                   // la diferencia es un cobro propio
+        $this->assertStringContainsString('Diferencia por cambio de pieza', $addon->description);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.cambiar_pieza']);
+    }
+
+    public function test_room_change_difference_can_only_be_edited_by_an_administrator(): void
+    {
+        $b = $this->reserve();
+        $target = $this->plusRoom(30000);
+        $this->actingAs(User::factory()->create(['role' => 'recepcion']));
+
+        // Recepción manda un monto distinto: se ignora y vale la diferencia calculada.
+        $this->post('/reservas/'.$b->code.'/cambiar-pieza', ['room_id' => $target->id, 'amount' => 1, 'reason' => 'Cambio pedido por el cliente'])->assertSessionHasNoErrors();
+        $this->assertSame(10000, (int) $b->addons()->firstOrFail()->amount);
+
+        // Un administrador sí puede fijarla.
+        $b2 = $this->reserve('15:00');
+        $this->actingAs(User::factory()->create(['role' => 'administrador']))
+            ->post('/reservas/'.$b2->code.'/cambiar-pieza', ['room_id' => $target->id, 'amount' => 7000, 'reason' => 'Descuento acordado'])->assertSessionHasNoErrors();
+        $this->assertSame(7000, (int) $b2->addons()->firstOrFail()->amount);
+    }
+
+    public function test_room_change_requires_a_reason_and_rejects_closed_or_busy_destinations(): void
+    {
+        $b = $this->reserve();
+        $target = $this->plusRoom(30000);
+
+        $this->post('/reservas/'.$b->code.'/cambiar-pieza', ['room_id' => $target->id])->assertSessionHasErrors('reason');
+        $this->assertSame(Room::first()->id, $b->fresh()->room_id);
+
+        // Destino ocupado en ese horario.
+        $this->reserve('12:00', ['room' => $target]);
+        $this->post('/reservas/'.$b->code.'/cambiar-pieza', ['room_id' => $target->id, 'reason' => 'Prueba de ocupada'])->assertSessionHasErrors('room_id');
+        $this->assertSame(Room::first()->id, $b->fresh()->room_id);
+
+        // Reserva ya finalizada: no se mueve.
+        $free = Room::create(['name' => 'PLUS 103', 'room_category_id' => $target->room_category_id, 'operational_status' => 'activa']);
+        $b->update(['booking_status' => 'FINALIZADA']);
+        $this->post('/reservas/'.$b->code.'/cambiar-pieza', ['room_id' => $free->id, 'reason' => 'Ya cerrada'])->assertSessionHasErrors('room_id');
+        $this->assertSame(Room::first()->id, $b->fresh()->room_id);
+    }
 }
