@@ -150,6 +150,8 @@ return [
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY', ''),
         'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+        // Lectura de carnets por foto: si no se define, usa el modelo principal.
+        'vision_model' => env('ANTHROPIC_VISION_MODEL', ''),
     ],
 
 ];

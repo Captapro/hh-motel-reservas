@@ -1477,6 +1477,8 @@
                 hhForeignCard = card.foreigner;
                 if (card.foreigner) hhAskNationality(); else hhSetNationality('Chilena');
                 if (card.birthDate) { hhSetBirthDate(card.birthDate); hhQuotePrice(); }
+                if (card.firstName) { showEditableFields(); fn.value = card.firstName; ln.value = card.lastName || ''; }
+                if (card.fromPhoto && card.nationality && card.foreigner) hhSetNationality(card.nationality);
                 hhSyncIdExtra();
             }
             function useFoundByRut(d) {
@@ -1536,6 +1538,11 @@
                     return;
                 }
                 showEditableFields();
+                if (card.firstName) {
+                    if (!phone.value) phone.focus();
+                    hhIdScan.report(card, 'Agrega el teléfono.');
+                    return;
+                }
                 if (d && d.first_name) {
                     fn.value = d.first_name;
                     ln.value = d.last_name || '';

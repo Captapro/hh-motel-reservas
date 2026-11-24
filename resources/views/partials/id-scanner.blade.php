@@ -86,6 +86,10 @@
                 if (kind === 'ok') kind = 'warn';
                 lines.push('Carnet de extranjero: revisa la nacionalidad.');
             }
+            if (card.fromPhoto) {
+                if (kind === 'ok') kind = 'warn';
+                lines.push('📷 Leído por foto: <b>revisa el RUT y los nombres</b> antes de guardar.');
+            }
             if (!lines.length) lines.push('✓ Carnet leído' + (years !== null ? ' · ' + years + ' años' : ''));
             if (extra) lines.push(extra);
             toast(kind, lines.join('<br>'));
@@ -116,6 +120,7 @@
                 report(card, 'Ya están registradas todas las personas de esta reserva.');
                 return;
             }
+            if (card.firstName) person = { first_name: card.firstName, last_name: card.lastName || '' };
             const first = row.querySelector('.guest-first');
             first.value = (person && person.first_name) || '';
             row.querySelector('.guest-last').value = (person && person.last_name) || '';
@@ -197,6 +202,68 @@
 
         document.addEventListener('click', function (e) {
             if (e.target.closest && e.target.closest('#id-scan-toast')) document.getElementById('id-scan-toast').hidden = true;
+        });
+
+        // ---- Carnet por foto (piloto): celular o tablet, sin instalar nada ----
+        // Reduce la foto en el aparato (los celulares sacan fotos de varios MB) y la manda a leer.
+        // La foto no se guarda; el resultado entra como si lo hubiera leído el lector USB.
+        function shrink(file, maxSide) {
+            return new Promise(function (resolve, reject) {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = function () {
+                    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob(b => (b ? resolve(b) : reject(new Error('imagen'))), 'image/jpeg', 0.85);
+                };
+                img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('imagen')); };
+                img.src = url;
+            });
+        }
+
+        async function readPhoto(file) {
+            toast('warn', '📷 Leyendo el carnet… un momento.');
+            try {
+                const blob = await shrink(file, 1600);
+                const form = new FormData();
+                form.append('photo', blob, 'carnet.jpg');
+                form.append('_token', '{{ csrf_token() }}');
+                const r = await fetch('{{ route('customers.id_photo') }}', { method: 'POST', body: form, headers: { 'Accept': 'application/json' } });
+                const data = await r.json().catch(() => null);
+                if (!r.ok || !data || !data.ok) {
+                    toast('bad', (data && (data.error || data.message)) || 'No se pudo leer el carnet. Toma la foto de nuevo o escribe los datos a mano.');
+                    return;
+                }
+                document.dispatchEvent(new CustomEvent('hh:id-scan', { detail: {
+                    rut: data.rut, foreigner: !!data.foreigner, birthDate: data.birth_date, expiresOn: data.expires_on,
+                    firstName: data.first_name, lastName: data.last_name, nationality: data.nationality, fromPhoto: true,
+                } }));
+            } catch (e) {
+                toast('bad', 'No se pudo leer el carnet. Toma la foto de nuevo o escribe los datos a mano.');
+            }
+        }
+
+        // El botón solo aparece en las pantallas donde hay un documento que completar.
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!document.querySelector('[name="document_number"], [name="holder_document_number"], .guest-doc')) return;
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'image/*'; input.setAttribute('capture', 'environment'); input.hidden = true;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = '📷 Carnet';
+            button.title = 'Sacar foto al carnet para completar RUT y nombre';
+            button.style.cssText = 'position:fixed;right:16px;bottom:76px;z-index:9998;background:#ff7918;color:#fff;border:0;border-radius:999px;padding:12px 18px;font:700 15px -apple-system,Segoe UI,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.45);cursor:pointer;';
+            button.addEventListener('click', () => input.click());
+            input.addEventListener('change', function () {
+                if (input.files && input.files[0]) readPhoto(input.files[0]);
+                input.value = '';
+            });
+            document.body.appendChild(input);
+            document.body.appendChild(button);
         });
 
         return { parse, report, lookup, addGuest };

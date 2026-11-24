@@ -50,6 +50,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContadorController;
+use App\Http\Controllers\IdCardPhotoController;
 use App\Http\Controllers\DailySalesDetailController;
 use App\Http\Controllers\CouponProofController;
 use App\Http\Controllers\CustomerLoyaltyController;
@@ -208,6 +209,7 @@ Route::middleware(['auth', 'section'])->group(function () {
     Route::patch('/novedades/{note}', [ShiftNoteController::class, 'update'])->name('shift_notes.update');
     Route::delete('/novedades/{note}', [ShiftNoteController::class, 'destroy'])->name('shift_notes.destroy');
     Route::get('/clientes/buscar', [ReservationController::class, 'lookupCustomer'])->middleware('throttle:40,1,customers.lookup')->name('customers.lookup');
+    Route::post('/clientes/carnet-foto', [IdCardPhotoController::class, 'read'])->middleware('throttle:20,1,customers.id_photo')->name('customers.id_photo');
     Route::get('/clientes/nombres', fn (NameSuggestions $names) => response()->json($names->lists())->header('Cache-Control', 'private, max-age=3600'))->name('customers.names');
     Route::get('/reservar/precio', [ReservationController::class, 'priceQuote'])->middleware('throttle:80,1,reservations.price')->name('reservations.price');
     Route::get('/buscar', [ReservationSearchController::class, 'index'])->name('reservations.search');
