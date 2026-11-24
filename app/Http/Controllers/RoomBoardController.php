@@ -91,6 +91,7 @@ class RoomBoardController extends Controller
             'dailySummary' => $this->dailySummary(),
             'pendingBookings' => $this->pendingBookings(),
             'unpaidWalkIns' => $this->unpaidWalkIns(),
+            'paidNoCheckin' => $this->paidNoCheckin(),
         ]);
     }
 
@@ -218,6 +219,23 @@ class RoomBoardController extends Controller
             ->where('created_at', '<=', now()->subMinutes(30))
             ->where('created_at', '>=', now()->subHours(12))
             ->orderBy('created_at')
+            ->get();
+    }
+
+    /**
+     * Reservas ya pagadas (típico: online) cuya hora de llegada pasó hace más de una hora y nadie
+     * marcó el check-in. O el cliente no llegó o llegó y quedó sin registrar: en los dos casos hay
+     * que resolverlo, porque la venta no se ve en Ventas del día ni en el cuadre.
+     */
+    private function paidNoCheckin(): Collection
+    {
+        return Booking::with(['room.category', 'customer'])
+            ->where('booking_status', 'CONFIRMADA')
+            ->where('payment_status', 'PAGADA')
+            ->whereNull('checked_in_at')
+            ->where('starts_at', '<=', now()->subHour())
+            ->where('starts_at', '>=', now()->subHours(24))
+            ->orderBy('starts_at')
             ->get();
     }
 

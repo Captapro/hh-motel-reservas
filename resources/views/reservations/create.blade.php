@@ -336,6 +336,16 @@
     <form method="POST" action="{{ route('reservations.store') }}">
         @csrf
 
+        @if (session('reserva_duplicada') || old('duplicate_ok'))
+            <div class="panel" style="border:1px solid #ff7918; margin-bottom:12px;">
+                <label style="display:flex; gap:10px; align-items:center; font-weight:800;">
+                    <input type="checkbox" name="duplicate_ok" value="1" style="width:22px;height:22px;" @checked(old('duplicate_ok'))>
+                    Es otra estadía distinta: crearla igual
+                </label>
+                <div style="margin-top:8px; font-size:13px;">Si el cliente solo quiere más tiempo o cambiarse de pieza, no crees una reserva nueva: hazlo desde la reserva que ya tiene, para no contar su cobro dos veces.</div>
+            </div>
+        @endif
+
         <input type="hidden" name="walk_in" id="walk-in-flag" value="{{ $walkInMode ? 1 : 0 }}">
         <input type="hidden" name="short_stay" id="short-stay-flag" value="0">
         <div class="form-grid{{ $walkInMode ? ' walkin-grid' : '' }}">

@@ -275,6 +275,22 @@ class ReservationController extends Controller
             'nationality' => $validated['nationality'] ?? null,
             'birth_date' => $validated['birth_date'] ?? null,
         ];
+        // Posible reserva duplicada: el mismo cliente ya tiene una reserva en esa misma pieza a pocas horas.
+        // Pasó el 22/11: una extensión se cargó como reserva nueva y el cobro se contó dos veces.
+        $existing = $phone ? Customer::where('phone_e164', $phone)->first()
+            : (($rut ? Customer::where('rut', $rut)->first() : null) ?? ($passportNumber ? Customer::where('passport_number', $passportNumber)->first() : null));
+        if ($existing && ! $request->boolean('duplicate_ok')) {
+            $near = Booking::where('customer_id', $existing->id)
+                ->where('room_id', $room->id)
+                ->whereNotIn('booking_status', ['CANCELADA', 'EXPIRADA', 'NO_SHOW'])
+                ->whereBetween('starts_at', [$startsAt->copy()->subHours(8), $startsAt->copy()->addHours(8)])
+                ->orderBy('starts_at')->first();
+            if ($near) {
+                return back()->withInput()->with('reserva_duplicada', true)->withErrors(['duplicate_ok' => 'Este cliente ya tiene la reserva '.$near->code.' en '.$room->name.' ('
+                    .$near->starts_at->timezone('America/Santiago')->format('d/m H:i').'–'.$near->ends_at->timezone('America/Santiago')->format('H:i')
+                    .'). Si quiere más tiempo, usa «Hora adicional» o «Cambiar de pieza» en esa reserva; si de verdad es otra estadía, marca la casilla y vuelve a guardar.']);
+            }
+        }
         if ($phone) {
             $customer = Customer::firstOrCreate(['phone_e164' => $phone], $newCustomer);
         } else {

@@ -3737,4 +3737,60 @@ class BookingIntegrityTest extends TestCase
         $this->post('/reservas/'.$b->code.'/cambiar-pieza', ['room_id' => $free->id, 'reason' => 'Ya cerrada'])->assertSessionHasErrors('room_id');
         $this->assertSame(Room::first()->id, $b->fresh()->room_id);
     }
+
+    public function test_board_flags_paid_bookings_nobody_checked_in_an_hour_after_arrival(): void
+    {
+        $b = $this->reserve('12:00');
+        $b->update(['booking_status' => 'CONFIRMADA', 'payment_status' => 'PAGADA']);
+        $flagged = function (): array {
+            $method = new \ReflectionMethod(RoomBoardController::class, 'paidNoCheckin');
+
+            return $method->invoke(app(RoomBoardController::class))->pluck('code')->all();
+        };
+
+        // Todavía no pasa una hora de la llegada: sin alerta.
+        $this->travelTo(Carbon::parse('2026-10-05 12:30'));
+        $this->assertSame([], $flagged());
+
+        // Pasada la hora: aparece con su reserva.
+        $this->travelTo(Carbon::parse('2026-10-05 13:15'));
+        $this->assertSame([$b->code], $flagged());
+
+        // Pasadas 24 horas ya es historia, no alerta del tablero.
+        $this->travelTo(Carbon::parse('2026-10-06 13:15'));
+        $this->assertSame([], $flagged());
+
+        // Con check-in hecho, la alerta se va.
+        $this->travelTo(Carbon::parse('2026-10-05 13:15'));
+        $b->update(['checked_in_at' => Carbon::parse('2026-10-05 12:10'), 'booking_status' => 'CHECK_IN']);
+        $this->assertSame([], $flagged());
+
+        // Una reserva sin pagar no entra en esta alerta (tiene la suya).
+        $b->update(['checked_in_at' => null, 'booking_status' => 'CONFIRMADA', 'payment_status' => 'NO_PAGADA']);
+        $this->assertSame([], $flagged());
+    }
+
+    public function test_creating_a_second_booking_for_the_same_client_and_room_asks_for_confirmation(): void
+    {
+        $data = [
+            'room_id' => $this->room->id, 'date' => '2026-10-05', 'time_hour' => 12, 'time_minute' => 0,
+            'duration_minutes' => 60, 'guests_count' => 1, 'customer_first_name' => 'Cliente', 'customer_last_name' => 'Repetido',
+            'document_type' => 'rut', 'document_number' => '11.111.111-1', 'nationality' => 'Chilena', 'customer_phone' => '+56911111111',
+        ];
+        $this->post('/reservar', $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(1, Booking::count());
+
+        // Misma persona, misma pieza, 3 horas después: avisa y no crea nada.
+        $again = ['time_hour' => 15] + $data;
+        $this->post('/reservar', $again)->assertSessionHasErrors('duplicate_ok')->assertSessionHas('reserva_duplicada');
+        $this->assertSame(1, Booking::count());
+
+        // Si confirma que es otra estadía, se crea.
+        $this->post('/reservar', ['duplicate_ok' => 1] + $again)->assertSessionHasNoErrors();
+        $this->assertSame(2, Booking::count());
+
+        // Otro cliente en esa misma pieza y hora no dispara el aviso (ese caso es de disponibilidad).
+        $other = ['customer_phone' => '+56922222222', 'document_number' => '22.222.222-2', 'time_hour' => 18] + $data;
+        $this->post('/reservar', $other)->assertSessionDoesntHaveErrors('duplicate_ok');
+    }
 }
