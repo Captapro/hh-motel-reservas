@@ -380,7 +380,7 @@
                                 @if ($item['type'] === 'photo')
                                     <div class="slide"><img src="{{ \App\Support\Img::url($item['url'], 960) }}" alt="Foto {{ $category->name }}" width="960" height="1200" loading="lazy" decoding="async"></div>
                                 @else
-                                    <div class="slide is-video"><video src="{{ $item['url'] }}" controls playsinline preload="metadata"></video></div>
+                                    <div class="slide is-video"><video src="{{ $item['url'] }}" controls playsinline preload="none"></video></div>
                                 @endif
                             @endforeach
                         </div>
@@ -435,7 +435,7 @@
                     <div class="tip">{{ $entry['salesTip'] }}</div>
 
                     @if ($category->extra_guest_from)
-                        <p class="extra-note">Desde la {{ $category->extra_guest_from }}ª persona se cobra un adicional.</p>
+                        <p class="extra-note">Tarifa base para {{ $category->base_capacity }} {{ $category->base_capacity == 1 ? 'persona' : 'personas' }}. Desde la {{ $category->extra_guest_from }}ª persona se cobra un adicional.</p>
                     @endif
 
                     @if ($prices->isNotEmpty())
@@ -485,7 +485,7 @@
         <p>Te ayudamos a elegir la mejor opción.</p>
         <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
     </section>
-    <footer class="cat-footer">HH MOTEL SANTIAGO</footer>
+    <footer class="cat-footer">HH MOTEL SANTIAGO · <a href="{{ route('catalog.privacy') }}" style="color:inherit">Privacidad</a></footer>
 
 
     <script>

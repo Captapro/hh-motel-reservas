@@ -62,6 +62,7 @@ use App\Services\Marketing\MetaConversions;
 use App\Services\Payments\MercadoPagoClient;
 use App\Services\Payments\MercadoPagoHistory;
 use App\Services\Payments\MercadoPagoPayments;
+use App\Services\Pricing\CatalogPriceQuote;
 use App\Services\Pricing\CouponValidator;
 use App\Services\Rooms\RoomClosingLog;
 use App\Services\Sales\WeekdayAverages;
@@ -77,6 +78,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\Concerns\PaysBookings;
 use Tests\TestCase;
 
@@ -2999,7 +3001,7 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, $b->addons()->count());
     }
 
-    private function catalogQuoteRequest(array $overrides = []): \Illuminate\Testing\TestResponse
+    private function catalogQuoteRequest(array $overrides = []): TestResponse
     {
         return $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query(array_merge([
             'room_category_id' => $this->room->room_category_id, 'date' => '2026-10-05',
@@ -3016,6 +3018,22 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(0, Booking::count());
         $booking = $this->booking(['guests_count' => 3]);
         $this->assertSame($booking->price_final, $quote['stay_total']);
+    }
+
+    public function test_catalog_quote_supports_the_twelve_guests_advertised_by_the_category(): void
+    {
+        $this->room->category->update(['max_capacity' => 12]);
+        $quote = $this->catalogQuoteRequest(['guests_count' => 12])->assertOk()
+            ->assertJsonPath('available', true)->json('quote');
+        $this->post('/catalogo/reservar', [
+            'room_category_id' => $this->room->room_category_id, 'date' => '2026-10-05',
+            'time_hour' => 12, 'time_minute' => 0, 'duration_minutes' => 60, 'guests_count' => 12,
+            'first_name' => 'Cliente', 'last_name' => 'Prueba', 'phone' => Customer::first()->phone_e164,
+            'email' => 'cliente@ejemplo.cl', 'document_type' => 'rut', 'document_number' => '11.111.111-1', 'accept_privacy' => 1,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(12, Booking::firstOrFail()->guests_count);
+        $this->assertSame(Booking::firstOrFail()->price_final, $quote['stay_total']);
+        $this->catalogQuoteRequest(['guests_count' => 13])->assertUnprocessable()->assertJsonValidationErrors('guests_count');
     }
 
     public function test_catalog_quote_prefers_the_offer_over_a_non_stackable_code(): void
@@ -3061,7 +3079,7 @@ class BookingIntegrityTest extends TestCase
     {
         $rate = RateRule::first();
         $short = ['rate_rule' => $rate, 'full_price' => 20000, 'price' => 15000];
-        $quote = app(\App\Services\Pricing\CatalogPriceQuote::class)->forStay($this->room, Carbon::parse('2026-10-05 12:00'), 60, 3, $short, 'NO-EXISTE');
+        $quote = app(CatalogPriceQuote::class)->forStay($this->room, Carbon::parse('2026-10-05 12:00'), 60, 3, $short, 'NO-EXISTE');
         $this->assertSame(30000, $quote['original']);
         $this->assertSame(5000, $quote['discount']);
         $this->assertSame(25000, $quote['stay_total']);

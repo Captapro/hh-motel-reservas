@@ -192,7 +192,7 @@
                 <div><label for="date-pick">Fecha</label><input type="date" id="date-pick" min="{{ now()->toDateString() }}" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}" required></div>
                 <div><label for="arrival-time">Hora de llegada</label><div id="time-picker"><select id="arrival-time" aria-label="Hora de llegada"><option value="">Elige una hora</option></select></div></div>
                 <div><label for="duration_minutes">Duración</label><select id="duration_minutes" name="duration_minutes" required></select></div>
-                <div><label for="guests_count">Personas</label><select id="guests_count" name="guests_count" required>@for ($people = 1; $people <= 10; $people++)<option value="{{ $people }}" @selected(old('guests_count', 2) == $people)>{{ $people }} {{ $people == 1 ? 'persona' : 'personas' }}</option>@endfor</select></div>
+                <div><label for="guests_count">Personas</label><select id="guests_count" name="guests_count" required>@for ($people = 1; $people <= max(1, (int) ($categories->firstWhere('id', old('room_category_id', $selectedCategoryId))?->max_capacity ?: 10)); $people++)<option value="{{ $people }}" @selected(old('guests_count', 2) == $people)>{{ $people }} {{ $people == 1 ? 'persona' : 'personas' }}</option>@endfor</select></div>
             </div>
             <input type="hidden" name="date" id="date" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}">
             <input type="hidden" id="time-select" value="">
@@ -271,16 +271,16 @@
             <div class="row2">
                 <div>
                     <label for="first_name">Nombre</label>
-                    <input type="text" id="first_name" name="first_name" value="{{ old('first_name') }}" required>
+                    <input type="text" id="first_name" name="first_name" autocomplete="given-name" value="{{ old('first_name') }}" required>
                 </div>
                 <div>
                     <label for="last_name">Apellido</label>
-                    <input type="text" id="last_name" name="last_name" value="{{ old('last_name') }}" required>
+                    <input type="text" id="last_name" name="last_name" autocomplete="family-name" value="{{ old('last_name') }}" required>
                 </div>
             </div>
 
             <label for="phone">Teléfono / WhatsApp</label>
-            <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" placeholder="+56 9 1234 5678" required>
+            <input type="tel" id="phone" name="phone" autocomplete="tel" value="{{ old('phone') }}" placeholder="+56 9 1234 5678" required>
             <small class="field-note">Te escribiremos por WhatsApp para confirmar tu reserva y avisarte si queda algo pendiente.</small>
 
             <label for="email">Correo electrónico</label>
@@ -350,6 +350,24 @@
         <small>En unos segundos pasas al pago.<br>No cierres esta página.</small>
     </div>
     <script>
+        const hhPriceDock = document.querySelector('.booking-price');
+        const hhResizeDock = () => {
+            const space = hhPriceDock.getBoundingClientRect().height + 24;
+            document.querySelector('.wrap').style.paddingBottom = space + 'px';
+            document.documentElement.style.scrollPaddingBottom = space + 'px';
+        };
+        new ResizeObserver(hhResizeDock).observe(hhPriceDock);
+        const hhGuestLimits = @json($categories->mapWithKeys(fn ($cat) => [(string) $cat->id => (int) ($cat->max_capacity ?: 10)]));
+        function hhUpdateGuests() {
+            const select = document.getElementById('guests_count');
+            const limit = Math.max(1, hhGuestLimits[document.getElementById('room_category_id').value] || 10);
+            const guests = Math.min(limit, Math.max(1, Number(select.value) || 2));
+            select.replaceChildren();
+            for (let n = 1; n <= limit; n++) select.add(new Option(n + (n === 1 ? ' persona' : ' personas'), n));
+            select.value = String(guests);
+        }
+        document.getElementById('room_category_id').addEventListener('change', hhUpdateGuests);
+        hhUpdateGuests();
         const hhRoomPhotos = @json($categories->mapWithKeys(fn ($cat) => [(string) $cat->id => $cat->rooms->flatMap(fn ($room) => $room->photos ?? [])->filter()->map(fn ($photo) => \App\Support\Img::url($photo, 960))->first()]));
         function hhUpdateHero() {
             const select = document.getElementById('room_category_id');

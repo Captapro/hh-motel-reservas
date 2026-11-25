@@ -76,7 +76,7 @@ class PublicBookingController extends Controller
             ->values();
         $categoryUpsells = UpsellOffer::active()->where('type', 'category_upgrade')
             ->with(['fromCategory', 'toCategory'])
-            ->where('from_room_category_id', $selectedCategoryId)
+            ->whereIn('from_room_category_id', $categories->pluck('id'))
             ->orderBy('display_order')->get();
 
         // "Reservar de nuevo" (WhatsApp de rescate) trae fecha, hora y duración ya elegidas.
@@ -121,7 +121,7 @@ class PublicBookingController extends Controller
             'time_hour' => ['required', 'integer', 'min:0', 'max:23'],
             'time_minute' => ['required', 'integer', 'min:0', 'max:59'],
             'duration_minutes' => ['required', 'integer'],
-            'guests_count' => ['required', 'integer', 'min:1', 'max:10'],
+            'guests_count' => ['required', 'integer', 'min:1', 'max:'.max(10, (int) RoomCategory::max('max_capacity'))],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20', new ValidPhone('Revisa tu número de WhatsApp: ')],
@@ -392,7 +392,7 @@ class PublicBookingController extends Controller
             'time_hour' => ['required', 'integer', 'min:0', 'max:23'],
             'time_minute' => ['required', 'integer', 'min:0', 'max:59'],
             'duration_minutes' => ['required', 'integer'],
-            'guests_count' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'guests_count' => ['nullable', 'integer', 'min:1', 'max:'.max(10, (int) RoomCategory::max('max_capacity'))],
             'coupon_code' => ['nullable', 'string', 'max:50'],
         ]);
 
