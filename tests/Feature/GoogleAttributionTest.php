@@ -36,6 +36,39 @@ class GoogleAttributionTest extends TestCase
         $this->assertSame('0AAAA', $ios['gbraid']);
     }
 
+    public function test_own_website_return_does_not_erase_an_existing_google_click(): void
+    {
+        $session = app('session')->driver('array');
+        foreach ([
+            ['https://app.hhmotel.cl/catalogo?gclid=CLICK-ORIGINAL', 'https://www.google.com/'],
+            ['https://app.hhmotel.cl/catalogo/reservar', 'https://hhmotel.cl/playrooms'],
+        ] as [$url, $referrer]) {
+            $request = Request::create($url, 'GET', server: ['HTTP_REFERER' => $referrer]);
+            $request->setLaravelSession($session);
+            (new CaptureAttribution)->handle($request, fn () => response('ok'));
+        }
+        $this->assertSame('CLICK-ORIGINAL', $session->get(CaptureAttribution::SESSION_KEY)['gclid'] ?? null);
+    }
+
+    public function test_first_visit_from_own_website_is_still_recorded(): void
+    {
+        $session = app('session')->driver('array');
+        $request = Request::create('https://app.hhmotel.cl/catalogo', 'GET', server: ['HTTP_REFERER' => 'https://www.hhmotel.cl/playrooms']);
+        $request->setLaravelSession($session);
+        (new CaptureAttribution)->handle($request, fn () => response('ok'));
+        $this->assertSame('https://www.hhmotel.cl/playrooms', $session->get(CaptureAttribution::SESSION_KEY)['referrer']);
+    }
+
+    public function test_a_new_explicit_campaign_from_own_site_replaces_the_old_attribution(): void
+    {
+        $session = app('session')->driver('array');
+        $session->put(CaptureAttribution::SESSION_KEY, ['gclid' => 'OLD']);
+        $request = Request::create('https://app.hhmotel.cl/catalogo?gclid=NEW', 'GET', server: ['HTTP_REFERER' => 'https://hhmotel.cl/']);
+        $request->setLaravelSession($session);
+        (new CaptureAttribution)->handle($request, fn () => response('ok'));
+        $this->assertSame('NEW', $session->get(CaptureAttribution::SESSION_KEY)['gclid']);
+    }
+
     public function test_labels_separate_the_maps_listing_from_ads_campaigns(): void
     {
         $this->assertSame('Google · ficha_maps', Attribution::labelFor(new TrackingData(['utm_source' => 'google', 'utm_medium' => 'organic', 'utm_campaign' => 'ficha_maps'])));

@@ -42,6 +42,14 @@ class CaptureAttribution
         $referrer = (string) $request->headers->get('referer', '');
         $refHost = strtolower((string) parse_url($referrer, PHP_URL_HOST));
         $external = $refHost !== '' && $refHost !== strtolower($request->getHost());
+        // Volver desde la web del motel no es una nueva adquisición. Conserva
+        // el clic ya capturado; una primera entrada desde la web sí se registra.
+        $ownHosts = ['hhmotel.cl', 'www.hhmotel.cl', 'app.hhmotel.cl'];
+        if (in_array($refHost, $ownHosts, true)
+            && in_array(strtolower($request->getHost()), $ownHosts, true)
+            && $request->session()->get(self::SESSION_KEY)) {
+            $external = false;
+        }
 
         if (! $utm && $fbclid === '' && $gclid === '' && $gbraid === '' && $wbraid === '' && ! $external) {
             return;
