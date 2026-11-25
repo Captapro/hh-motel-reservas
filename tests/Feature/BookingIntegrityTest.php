@@ -2972,6 +2972,74 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, $b->addons()->count());
     }
 
+    private function catalogQuoteRequest(array $overrides = []): \Illuminate\Testing\TestResponse
+    {
+        return $this->getJson('/catalogo/reservar/disponibilidad?'.http_build_query(array_merge([
+            'room_category_id' => $this->room->room_category_id, 'date' => '2026-10-05',
+            'time_hour' => 12, 'time_minute' => 0, 'duration_minutes' => 60, 'guests_count' => 2,
+        ], $overrides)));
+    }
+
+    public function test_catalog_quote_matches_the_booking_price_including_extra_people(): void
+    {
+        $this->room->category->update(['max_capacity' => 5]);
+        $quote = $this->catalogQuoteRequest(['guests_count' => 3])->assertOk()
+            ->assertJsonPath('available', true)->assertJsonPath('quote.stay_total', 30000)
+            ->assertJsonPath('quote.currency', 'CLP')->json('quote');
+        $this->assertSame(0, Booking::count());
+        $booking = $this->booking(['guests_count' => 3]);
+        $this->assertSame($booking->price_final, $quote['stay_total']);
+    }
+
+    public function test_catalog_quote_prefers_the_offer_over_a_non_stackable_code(): void
+    {
+        $this->offer(['discount_value' => 20]);
+        Coupon::create(['code' => 'HALF', 'internal_name' => 'Mitad', 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 50]);
+        $quote = $this->catalogQuoteRequest(['coupon_code' => 'HALF'])->assertOk()
+            ->assertJsonPath('quote.original', 20000)->assertJsonPath('quote.discount', 4000)
+            ->assertJsonPath('quote.stay_total', 16000)->json('quote');
+        $this->assertSame(0, CouponRedemption::count());
+        $this->assertSame($this->booking(['coupon_code' => 'HALF'])->price_final, $quote['stay_total']);
+    }
+
+    public function test_catalog_quote_applies_a_valid_public_code_without_redeeming_it(): void
+    {
+        Coupon::create(['code' => 'QUARTER', 'internal_name' => 'Cuarto', 'is_active' => true, 'discount_type' => 'percentage', 'discount_value' => 25]);
+        $quote = $this->catalogQuoteRequest(['coupon_code' => 'QUARTER'])->assertOk()
+            ->assertJsonPath('quote.discount', 5000)->assertJsonPath('quote.conditional', false)->json('quote');
+        $this->assertSame(0, CouponRedemption::count());
+        $this->assertSame($this->booking(['coupon_code' => 'QUARTER'])->price_final, $quote['stay_total']);
+    }
+
+    public function test_catalog_quote_does_not_promise_age_discounts_or_invalid_codes(): void
+    {
+        Coupon::create(['code' => 'MAYORES', 'internal_name' => 'Mayores', 'is_active' => true, 'min_age' => 65, 'discount_type' => 'percentage', 'discount_value' => 50]);
+        $this->catalogQuoteRequest(['coupon_code' => 'MAYORES'])->assertOk()
+            ->assertJsonPath('quote.stay_total', 20000)->assertJsonPath('quote.conditional', true);
+        $this->catalogQuoteRequest(['coupon_code' => 'NO-EXISTE'])->assertOk()
+            ->assertJsonPath('quote.discount', 0)->assertJsonPath('quote.conditional', true);
+        $this->assertSame(0, Booking::count());
+    }
+
+    public function test_catalog_quote_is_cleared_when_there_is_no_capacity_or_availability(): void
+    {
+        $this->room->category->update(['max_capacity' => 2]);
+        $this->catalogQuoteRequest(['guests_count' => 3])->assertOk()
+            ->assertJsonPath('available', false)->assertJsonPath('quote', null);
+        $this->booking();
+        $this->catalogQuoteRequest()->assertOk()->assertJsonPath('available', false)->assertJsonPath('quote', null);
+    }
+
+    public function test_catalog_quote_short_stay_keeps_extra_people_and_skips_coupons(): void
+    {
+        $rate = RateRule::first();
+        $short = ['rate_rule' => $rate, 'full_price' => 20000, 'price' => 15000];
+        $quote = app(\App\Services\Pricing\CatalogPriceQuote::class)->forStay($this->room, Carbon::parse('2026-10-05 12:00'), 60, 3, $short, 'NO-EXISTE');
+        $this->assertSame(30000, $quote['original']);
+        $this->assertSame(5000, $quote['discount']);
+        $this->assertSame(25000, $quote['stay_total']);
+    }
+
     public function test_regression_public_availability_requires_price_for_duration(): void
     {
         $other = RateRule::create(['name' => 'OTRA', 'is_active' => false]);
