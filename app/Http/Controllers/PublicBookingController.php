@@ -55,7 +55,7 @@ class PublicBookingController extends Controller
 {
     public function create(Request $request): View
     {
-        $categories = RoomCategory::where('is_active', true)->orderBy('display_order')->get();
+        $categories = RoomCategory::with('rooms:id,room_category_id,photos')->where('is_active', true)->orderBy('display_order')->get();
         $selectedCategoryId = (int) $request->query('categoria', $categories->first()?->id);
         $selectedRoomId = $request->integer('room_id') ?: null;
         $selectedCoupon = $request->filled('cupon')
