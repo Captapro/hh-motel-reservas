@@ -37,7 +37,7 @@
             <button type="button" class="hh-welcome-close" id="hh-welcome-close" aria-label="Cerrar">×</button>
             <div class="hh-welcome-kicker">✦ HH Secret Pass</div>
             <div class="hh-welcome-title">¿Primera vez en HH? Tienes {{ (int) $welcomeCoupon->discount_value }}% de bienvenida</div>
-            <div class="hh-welcome-text">Válido en tu primera reserva, en cualquier Playroom. Reserva en línea en 1 minuto.</div>
+            <div class="hh-welcome-text">Válido en tu primera reserva, en cualquier Playroom. Reserva en línea.</div>
             @if ($welcomeApplyInPage)
                 <button type="button" class="hh-welcome-btn" id="hh-welcome-use">Usar mi {{ (int) $welcomeCoupon->discount_value }}%</button>
             @else
@@ -60,8 +60,16 @@
 
         const box = document.getElementById('hh-welcome');
         let shown = false;
+        if (document.getElementById('reserve-form')) {
+            new MutationObserver(() => {
+                if (Number(document.body.dataset.reserveStep || 1) > 1) box.hidden = true;
+            }).observe(document.body, { attributes: true, attributeFilter: ['data-reserve-step'] });
+        }
         function show() {
             if (shown || store.get(KEY_DONE)) return;
+            // No interrumpir los extras, los datos ni la transición al pago.
+            if (document.getElementById('reserve-form') && Number(document.body.dataset.reserveStep || 1) > 1) return;
+            if (document.getElementById('go-pay')?.classList.contains('show')) return;
             shown = true;
             box.hidden = false;
             if (window.gtag) gtag('event', 'hh_bienvenida_vista');

@@ -39,7 +39,7 @@
         <ul>
             <li>Nombre y apellido, teléfono y correo electrónico, al reservar en línea.</li>
             <li>Fecha de nacimiento, solo si usas un cupón que depende de la edad.</li>
-            <li>Documento de identidad, que se verifica en persona al llegar al motel.</li>
+            <li>Tipo y número de documento (RUT o pasaporte), y nacionalidad, al reservar en línea. Tu documento se verifica en persona al llegar al motel.</li>
         </ul>
 
         <h2>Para qué los usamos</h2>
