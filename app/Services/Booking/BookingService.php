@@ -12,6 +12,8 @@ use App\Models\CouponRedemption;
 use App\Models\Customer;
 use App\Models\OperationalSetting;
 use App\Models\Room;
+use App\Models\RoomCategory;
+use App\Models\UpsellOffer;
 use App\Services\Integrations\GhlBookingSync;
 use App\Services\Pricing\CouponValidator;
 use App\Services\Pricing\PriceCalculator;
@@ -264,6 +266,31 @@ class BookingService
         }, 3);
     }
 
+    /**
+     * Pieza "para cotizar": si la reserva tiene un upgrade de categoría cobrado como consumo y sigue
+     * en la categoría de destino, se cotiza con la categoría de origen (lo contratado). La pieza
+     * real no se toca; es una copia en memoria, nunca se guarda.
+     */
+    private function upgradePricingRoom(Booking $booking, Room $room): Room
+    {
+        $offerIds = $booking->addons()->whereNotNull('upsell_offer_id')->pluck('upsell_offer_id');
+        if ($offerIds->isEmpty()) {
+            return $room;
+        }
+        $offer = UpsellOffer::whereIn('id', $offerIds)->where('type', 'category_upgrade')
+            ->where('to_room_category_id', $room->room_category_id)
+            ->whereNotNull('from_room_category_id')->orderByDesc('id')->first();
+        $from = $offer ? RoomCategory::find($offer->from_room_category_id) : null;
+        if (! $from) {
+            return $room;
+        }
+        $priced = clone $room;
+        $priced->room_category_id = $from->id;
+        $priced->setRelation('category', $from);
+
+        return $priced;
+    }
+
     private function rescheduleLocked(Booking $booking, array $data): Booking
     {
         if (in_array($booking->booking_status, ['CANCELADA', 'EXPIRADA', 'NO_SHOW', 'FINALIZADA'], true)) {
@@ -304,7 +331,7 @@ class BookingService
         // Una estadía corta por cierre sigue siéndolo al moverla (sale a la
         // hora de cierre del nuevo horario); si el nuevo horario ya cabe
         // completo, pasa a ser una reserva normal con su precio completo.
-        $short = $booking->short_stay ? $this->shortStayPricer->quote($room, $startsAt, $durationMinutes) : null;
+        $short = $booking->short_stay ? $this->shortStayPricer->quote($this->upgradePricingRoom($booking, $room), $startsAt, $durationMinutes) : null;
         if ($short) {
             $endsAt = $short['closes_at']->copy();
         }
@@ -339,11 +366,15 @@ class BookingService
         // Al cambiar solo personas conservamos la base contratada, incluso
         // después de un upgrade cobrado como consumo. Solo varía el recargo
         // por personas; las promociones se evalúan abajo con ese nuevo total.
+        // Tras un "Sube a ..." cobrado como consumo, la base sigue siendo la tarifa de la categoría
+        // de ORIGEN mientras la reserva esté en la categoría de destino: si no, al moverla de pieza
+        // o de horario con "Modificar" se cobraba dos veces la subida (caso HH-20261125-00006).
+        $pricingRoom = $this->upgradePricingRoom($booking, $room);
         $onlyGuestsChanged = (int) $room->id === (int) $booking->room_id
             && $startsAt->eq($booking->starts_at)
             && (int) $durationMinutes === (int) $booking->duration_minutes;
         if ($short) {
-            $pricing = $this->priceCalculator->priceWith($short['rate_rule'], $room, $durationMinutes, $data['guests_count']);
+            $pricing = $this->priceCalculator->priceWith($short['rate_rule'], $pricingRoom, $durationMinutes, $data['guests_count']);
         } elseif ($onlyGuestsChanged && $booking->rateRule && ! $booking->short_stay) {
             $pricing = [
                 'rate_rule' => $booking->rateRule,
@@ -351,7 +382,7 @@ class BookingService
                 'extra_guests_fee' => max(0, $data['guests_count'] - $room->category->base_capacity) * $booking->rateRule->extra_person_price,
             ];
         } else {
-            $pricing = $this->priceCalculator->calculate($room, $startsAt, $endsAt, $durationMinutes, $data['guests_count']);
+            $pricing = $this->priceCalculator->calculate($pricingRoom, $startsAt, $endsAt, $durationMinutes, $data['guests_count']);
         }
         $priceOriginal = $pricing['price_original'] + $pricing['extra_guests_fee'];
 
@@ -369,7 +400,7 @@ class BookingService
             $couponSnapshot = ShortStayPricer::LABEL;
             $discountAmount = max(0, $short['full_price'] - $short['price']);
         } elseif ($reResolveOffer) {
-            $offer = $this->promotionResolver->bestFor($room, $startsAt, $durationMinutes, $booking->customer, $priceOriginal, (int) $data['guests_count'], (int) $pricing['rate_rule']->extra_person_price, $booking->id);
+            $offer = $this->promotionResolver->bestFor($pricingRoom, $startsAt, $durationMinutes, $booking->customer, $priceOriginal, (int) $data['guests_count'], (int) $pricing['rate_rule']->extra_person_price, $booking->id);
             if ($offer) {
                 $couponId = $offer['coupon']->id;
                 $couponSnapshot = $offer['coupon']->label();

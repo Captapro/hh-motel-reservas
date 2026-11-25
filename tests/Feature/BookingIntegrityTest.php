@@ -2947,6 +2947,33 @@ class BookingIntegrityTest extends TestCase
         $this->assertSame(1, $b->addons()->count());
     }
 
+    public function test_regression_upgraded_booking_moved_within_destination_keeps_origin_price(): void
+    {
+        $b = $this->reserve();
+        $cat = RoomCategory::create(['name' => 'PLUS', 'base_capacity' => 2, 'is_active' => true]);
+        Room::create(['name' => 'PLUS 101', 'room_category_id' => $cat->id, 'operational_status' => 'activa']);
+        $other = Room::create(['name' => 'PLUS 102', 'room_category_id' => $cat->id, 'operational_status' => 'activa']);
+        RateRule::first()->prices()->create(['room_category_id' => $cat->id, 'duration_minutes' => 60, 'price' => 30000]);
+        $offer = UpsellOffer::create(['name' => 'Sube a PLUS', 'type' => 'category_upgrade', 'is_active' => true, 'from_room_category_id' => $b->room->room_category_id, 'to_room_category_id' => $cat->id, 'price' => 1000]);
+        $this->assertTrue(app(BookingAllocationService::class)->upgrade($b, $offer, auth()->id()));
+        $b->refresh();
+        $this->assertSame(21000, $b->price_final + $b->addonsTotal());
+
+        // Recepción la mueve a otra PLUS con "Modificar": no se vuelve a cobrar la subida.
+        $target = $b->room_id === $other->id ? Room::where('name', 'PLUS 101')->first() : $other;
+        $b = app(BookingService::class)->reschedule($b, ['room' => $target, 'starts_at' => $b->starts_at, 'duration_minutes' => 60, 'guests_count' => 1]);
+        $this->assertSame(20000, $b->price_final);
+        $this->assertSame(21000, $b->price_final + $b->addonsTotal());
+
+        // Y al correr el horario tampoco.
+        $b = app(BookingService::class)->reschedule($b, ['room' => $target, 'starts_at' => $b->starts_at->copy()->addHour(), 'duration_minutes' => 60, 'guests_count' => 1]);
+        $this->assertSame(21000, $b->price_final + $b->addonsTotal());
+
+        // Si vuelve a la categoría de origen, se cotiza normal con su pieza real.
+        $b = app(BookingService::class)->reschedule($b, ['room' => $this->room, 'starts_at' => $b->starts_at, 'duration_minutes' => 60, 'guests_count' => 1]);
+        $this->assertSame(20000, $b->price_final);
+    }
+
     public function test_regression_restock_reloads_stock_after_sale(): void
     {
         (require database_path('migrations/2026_08_19_150001_add_inventory_to_products_table.php'))->up();
