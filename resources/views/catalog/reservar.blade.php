@@ -817,7 +817,7 @@
                 document.body.dataset.reserveStep = current;
                 recap();
                 if (push) history.pushState({ hhStep: current }, '');
-                document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (push) window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
             function fail(msg, el) {
