@@ -177,14 +177,16 @@
 
             <figure class="room-hero" id="room-hero">
                 <img id="room-hero-image" alt="" decoding="async">
-                <figcaption><span>HH MOTEL · PLAYROOM</span><strong id="room-hero-name" hidden></strong>            <label for="room_category_id">Tu Playroom</label>
+                <figcaption>
+                    <span>HH MOTEL · PLAYROOM</span>
+                    <label for="room_category_id">Tu Playroom</label>
             <select id="room_category_id" name="room_category_id" aria-label="Tu Playroom" required onchange="hhUpdateDurations()">
                 @foreach ($categories as $cat)
                     <option value="{{ $cat->id }}" @selected(old('room_category_id', $selectedCategoryId) == $cat->id)>{{ $cat->name }}</option>
                 @endforeach
             </select>
 
-</figcaption>
+                </figcaption>
             </figure>
             <div class="stay-grid">
                 <div><label for="date-pick">Fecha</label><input type="date" id="date-pick" min="{{ now()->toDateString() }}" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}" required></div>
@@ -220,7 +222,6 @@
 
             @endunless
             <div class="step-error" id="step1-error" role="alert"></div>
-            <button class="submit step-action" type="button" data-next>Continuar →</button>
             </div>
 
             @if ($hasExtras)
@@ -247,7 +248,7 @@
                     </div>
                     <div class="extras-total" id="extras-total">Sin extras seleccionados</div>
                 </section>
-                            @unless ($selectedCoupon)
+                @unless ($selectedCoupon)
                 {{-- Cupón con código: recarga el formulario con lo ya elegido y el cupón aplicado. --}}
                 <label for="coupon-input">¿Tienes un cupón de descuento?</label>
                 <div class="coupon-entry">
@@ -260,7 +261,6 @@
             @endunless
 
 
-                <button class="submit step-action" type="button" data-next>Continuar →</button>
                 <button type="button" class="step-back" data-goto="1">← Volver</button>
                 </div>
             @endif
@@ -322,7 +322,6 @@
             </div>
 
             <div class="summary" id="booking-summary" aria-live="polite"><strong>Resumen de tu reserva</strong><small>Selecciona Playroom, fecha, hora y duración para ver el detalle.</small></div>
-            <button class="submit step-action" type="submit">Continuar al pago</button>
             <button type="button" class="step-back" data-goto="{{ count($stepNames) - 1 }}">← Volver</button>
             <p class="legal">Al reservar aceptas presentar tu documento de identidad al llegar. HH se reserva el derecho de admisión.</p>
             </div>
@@ -359,7 +358,6 @@
             image.hidden = !photo;
             if (photo) image.src = photo; else image.removeAttribute('src');
             image.alt = select.selectedOptions[0]?.textContent || 'Playroom';
-            document.getElementById('room-hero-name').textContent = image.alt;
         }
         document.getElementById('room_category_id').addEventListener('change', hhUpdateHero);
         document.getElementById('room-hero-image').addEventListener('error', (event) => { event.target.hidden = true; });
@@ -468,30 +466,6 @@
             input.dispatchEvent(new Event('change', { bubbles: true }));
             hhRenderPicker();
         }
-        // + / − de hora: salta a la hora disponible siguiente/anterior, con los mismos minutos si se puede.
-        // + / − de minutos: avanza de 15 en 15 por la lista (pasa a la hora siguiente al llegar a :45).
-        // El primer toque, sin hora elegida, pone la primera hora del día (no la madrugada) o la última con −.
-        function hhStepTime(part, d) {
-            if (!hhTimeList.length || hhTimesLoading) return;
-            const value = document.getElementById('time-select').value;
-            const i = hhTimeList.indexOf(value);
-            if (i < 0) { hhSetTime(d > 0 ? (hhTimeList.find((v) => hhTkHour(v) >= HH_NIGHT_ENDS) || hhTimeList[0]) : hhTimeList[hhTimeList.length - 1]); return; }
-            if (part === 'm') {
-                const next = hhTimeList[i + d];
-                if (next) hhSetTime(next);
-                return;
-            }
-            const hourKey = (v) => v.slice(0, 13);
-            const hours = [];
-            hhTimeList.forEach((v) => { if (!hours.includes(hourKey(v))) hours.push(hourKey(v)); });
-            const h = hours[hours.indexOf(hourKey(value)) + d];
-            if (!h) return;
-            const inHour = hhTimeList.filter((v) => hourKey(v) === h);
-            const same = inHour.find((v) => v.slice(14) === value.slice(14));
-            // Sin los mismos minutos, el más cercano dentro de esa hora.
-            hhSetTime(same || inHour.reduce((a, b) => Math.abs(hhAbs(b) - hhAbs(value)) < Math.abs(hhAbs(a) - hhAbs(value)) ? b : a));
-        }
-        document.querySelectorAll('[data-tp]').forEach((b) => b.addEventListener('click', () => hhStepTime(b.dataset.tp, Number(b.dataset.d))));
         document.getElementById('arrival-time').addEventListener('change', (event) => hhSetTime(event.target.value));
         function hhRenderPicker() {
             const picker = document.getElementById('time-picker');
