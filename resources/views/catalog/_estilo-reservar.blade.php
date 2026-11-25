@@ -109,7 +109,7 @@
     .card { background:transparent; border:0; padding:0; box-shadow:none; }
     .steps { margin-bottom:14px; gap:12px; }
     .steps button { font-size:11px; text-transform:uppercase; letter-spacing:.08em; padding:12px 0; border-bottom-width:3px; }
-    .room-hero { margin:0 0 16px; height:180px; border-radius:16px; overflow:hidden; position:relative; background:#ded5ca; }
+    .room-hero { margin:0 0 16px; aspect-ratio:4 / 3; border-radius:16px; overflow:hidden; position:relative; background:#ded5ca; }
     .room-hero img { width:100%; height:100%; object-fit:cover; }
     .room-hero img[hidden] { display:none; }
     .room-hero figcaption { position:absolute; bottom:0; left:0; right:0; padding:28px 16px 16px; color:white; background:linear-gradient(transparent,rgba(0,0,0,.72)); }
@@ -142,11 +142,9 @@
     .extra-name { font-size:16px; }
     .coupon-entry { margin-bottom:12px; }
     body[data-reserve-step="2"] p.sub, body[data-reserve-step="3"] p.sub { display:none; }
-    @media(min-width:760px) { .room-hero { height:250px; } }
     @media(max-height:650px) { .booking-price { position:fixed; } .booking-help { display:none; } }
     .wrap > p.sub { display:none; }
     .wrap > h1 { font-size:27px; margin-bottom:8px; }
-    .room-hero { height:160px; }
     .steps button { padding:10px 0; }
     .stay-grid label { margin-top:8px; }
     .stay-grid input, .stay-grid select { min-height:44px; }
