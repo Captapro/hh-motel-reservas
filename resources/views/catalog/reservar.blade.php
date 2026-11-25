@@ -127,8 +127,8 @@
 <body>
     @include('catalog._app-bar', ['appBack' => route('catalog.index'), 'appTitle' => 'Reservar'])
     <div class="wrap">
-        <h1>Reserva tu Playroom</h1>
-        <p class="sub">Elige tu fecha y horario. Te mostraremos una opción disponible y recibirás la confirmación al finalizar.</p>
+        <h1 id="reserve-heading">Elige tu Playroom</h1>
+        <p class="sub">Tu momento empieza aquí. Elige cuándo venir.</p>
 
         @if ($errors->any())
             <div class="errors">
@@ -154,7 +154,7 @@
                 <button type="button" data-goto="{{ $i + 1 }}">{{ $i + 1 }}. {{ $stepName }}</button>
             @endforeach
         </div>
-        <div class="hint-box" data-only-step="1">Horario: lunes a jueves 10:30 a 03:00 · viernes a domingo 10:30 a 22:30 corrido.</div>
+
 
         @if ($selectedCoupon)
             <div class="coupon-applied" data-only-step="1">
@@ -173,69 +173,41 @@
                 <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
             </div>
 
-            <section class="booking-price" aria-label="Precio de tu reserva" aria-live="polite" aria-atomic="true">
-                <div class="price-heading">Tu reserva <span>CLP</span></div>
-                <div id="price-empty">Elige habitación, horario y duración para ver el precio.</div>
-                <div id="price-detail" hidden>
-                    <div class="price-row"><span>Habitación y personas</span><span id="price-original"></span></div>
-                    <div class="price-row price-discount" id="price-discount-row" hidden><span id="price-discount-label">Descuento</span><span id="price-discount"></span></div>
-                    <div class="price-row"><span>Extras seleccionados</span><span id="price-extras"></span></div>
-                    <div class="price-row price-total"><strong id="price-total-label">Total</strong><strong id="price-total"></strong></div>
-                </div>
-                <p class="price-note" id="price-note"></p>
-                <button type="button" class="price-retry" id="price-retry" hidden onclick="hhCheckAvailability()">Volver a consultar</button>
-            </section>
-
             <div class="step" data-step="1">
-            <label for="room_category_id">Elige tu Playroom</label>
-            <select id="room_category_id" name="room_category_id" required onchange="hhUpdateDurations()">
+
+            <figure class="room-hero" id="room-hero">
+                <img id="room-hero-image" alt="" decoding="async">
+                <figcaption>
+                    <span>HH MOTEL · PLAYROOM</span>
+                    <label for="room_category_id">Tu Playroom</label>
+            <select id="room_category_id" name="room_category_id" aria-label="Tu Playroom" required onchange="hhUpdateDurations()">
                 @foreach ($categories as $cat)
                     <option value="{{ $cat->id }}" @selected(old('room_category_id', $selectedCategoryId) == $cat->id)>{{ $cat->name }}</option>
                 @endforeach
             </select>
 
-            <label for="date">Fecha</label>
-            <input type="date" id="date-pick" min="{{ now()->toDateString() }}" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}" required>
-            {{-- Fecha real que se envía: la del día siguiente si la hora elegida es de madrugada. --}}
-            <input type="hidden" name="date" id="date" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}">
-
-            {{-- Hora: hora y minutos con + / −, que solo recorren los horarios disponibles de ese día. --}}
-            <label>Hora de llegada</label>
-            <div class="tp" id="time-picker">
-                <div class="tp-col">
-                    <button type="button" data-tp="h" data-d="1" aria-label="Hora siguiente">+</button>
-                    <output id="tp-h" aria-label="Hora">--</output>
-                    <button type="button" data-tp="h" data-d="-1" aria-label="Hora anterior">−</button>
-                </div>
-                <div class="tp-colon">:</div>
-                <div class="tp-col">
-                    <button type="button" data-tp="m" data-d="1" aria-label="Más minutos">+</button>
-                    <output id="tp-m" aria-label="Minutos">--</output>
-                    <button type="button" data-tp="m" data-d="-1" aria-label="Menos minutos">−</button>
-                </div>
+                </figcaption>
+            </figure>
+            <div class="stay-grid">
+                <div><label for="date-pick">Fecha</label><input type="date" id="date-pick" min="{{ now()->toDateString() }}" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}" required></div>
+                <div><label for="arrival-time">Hora de llegada</label><div id="time-picker"><select id="arrival-time" aria-label="Hora de llegada"><option value="">Elige una hora</option></select></div></div>
+                <div><label for="duration_minutes">Duración</label><select id="duration_minutes" name="duration_minutes" required></select></div>
+                <div><label for="guests_count">Personas</label><select id="guests_count" name="guests_count" required>@for ($people = 1; $people <= 10; $people++)<option value="{{ $people }}" @selected(old('guests_count', 2) == $people)>{{ $people }} {{ $people == 1 ? 'persona' : 'personas' }}</option>@endfor</select></div>
             </div>
-            <div class="tp-note" id="tp-note"></div>
-            <div class="time-range" id="time-range"></div>
+            <input type="hidden" name="date" id="date" value="{{ old('date', $prefill['date'] ?? now()->toDateString()) }}">
             <input type="hidden" id="time-select" value="">
             <input type="hidden" id="time" value="">
             <input type="hidden" name="time_hour" id="time_hour" value="{{ old('time_hour', $prefill['time']['hour'] ?? '') }}">
             <input type="hidden" name="time_minute" id="time_minute" value="{{ old('time_minute', $prefill['time']['minute'] ?? '') }}">
 
-            <label for="duration_minutes">¿Cuánto tiempo quieres quedarte?</label>
-            <select id="duration_minutes" name="duration_minutes" required></select>
+            <div class="tp-note" id="tp-note"></div><div class="time-range" id="time-range"></div>
             <div class="avail-status" id="avail-status" aria-live="polite"></div>
             <label class="short-accept" id="short-accept" hidden>
                 <input type="checkbox" name="short_stay_accept" value="1" id="short-accept-input" @checked(old('short_stay_accept'))>
                 <span id="short-accept-text">Acepto salir a la hora de cierre</span>
             </label>
 
-            <label for="guests_count">Cantidad de personas</label>
-            <div class="people-stepper" id="people-stepper">
-                <button type="button" data-d="-1" aria-label="Una persona menos">−</button>
-                <input type="number" id="guests_count" name="guests_count" min="1" max="10" value="{{ old('guests_count', 2) }}" required inputmode="numeric" aria-live="polite">
-                <button type="button" data-d="1" aria-label="Una persona más">+</button>
-            </div>
-
+            @unless ($hasExtras)
             @unless ($selectedCoupon)
                 {{-- Cupón con código: recarga el formulario con lo ya elegido y el cupón aplicado. --}}
                 <label for="coupon-input">¿Tienes un cupón de descuento?</label>
@@ -248,8 +220,8 @@
                 @endif
             @endunless
 
+            @endunless
             <div class="step-error" id="step1-error" role="alert"></div>
-            <button class="submit" type="button" data-next>Continuar →</button>
             </div>
 
             @if ($hasExtras)
@@ -276,7 +248,19 @@
                     </div>
                     <div class="extras-total" id="extras-total">Sin extras seleccionados</div>
                 </section>
-                <button class="submit" type="button" data-next>Continuar →</button>
+                @unless ($selectedCoupon)
+                {{-- Cupón con código: recarga el formulario con lo ya elegido y el cupón aplicado. --}}
+                <label for="coupon-input">¿Tienes un cupón de descuento?</label>
+                <div class="coupon-entry">
+                    <input type="text" id="coupon-input" value="{{ $couponNotFound ? request('cupon') : '' }}" placeholder="Escribe tu código" autocomplete="off" autocapitalize="characters" maxlength="50">
+                    <button type="button" id="coupon-apply">Aplicar</button>
+                </div>
+                @if ($couponNotFound)
+                    <div class="coupon-error">Ese cupón no existe o ya no está vigente. Revisa que esté bien escrito.</div>
+                @endif
+            @endunless
+
+
                 <button type="button" class="step-back" data-goto="1">← Volver</button>
                 </div>
             @endif
@@ -338,10 +322,25 @@
             </div>
 
             <div class="summary" id="booking-summary" aria-live="polite"><strong>Resumen de tu reserva</strong><small>Selecciona Playroom, fecha, hora y duración para ver el detalle.</small></div>
-            <button class="submit" type="submit">Continuar al pago</button>
             <button type="button" class="step-back" data-goto="{{ count($stepNames) - 1 }}">← Volver</button>
             <p class="legal">Al reservar aceptas presentar tu documento de identidad al llegar. HH se reserva el derecho de admisión.</p>
             </div>
+            <section class="booking-price" aria-label="Precio de tu reserva" aria-live="polite" aria-atomic="true">
+                <div class="price-heading">Tu reserva <span>CLP</span></div>
+                <div id="price-empty">Elige habitación, horario y duración para ver el precio.</div>
+                <div id="price-detail" hidden>
+                    <div class="price-row"><span>Habitación</span><span id="price-original"></span></div>
+                    <div class="price-row price-discount" id="price-discount-row" hidden><span id="price-discount-label">Descuento</span><span id="price-discount"></span></div>
+                    <div class="price-row"><span>Extras</span><span id="price-extras"></span></div>
+                    <div class="price-row price-total"><strong id="price-total-label">Total</strong><strong id="price-total"></strong></div>
+                </div>
+                <p class="price-note" id="price-note"></p>
+                <button type="button" class="price-retry" id="price-retry" hidden onclick="hhCheckAvailability()">Volver a consultar</button>
+                <button class="submit" type="button" data-next id="dock-next">Continuar</button>
+                <button class="submit" type="submit" id="dock-pay" hidden>Continuar al pago</button>
+                <a class="booking-help" href="{{ \App\Http\Controllers\CatalogController::whatsappUrl() }}" target="_blank" rel="noopener">¿Necesitas ayuda? Escríbenos por WhatsApp</a>
+            </section>
+
         </form>
         </div>
     </div>
@@ -351,6 +350,18 @@
         <small>En unos segundos pasas al pago.<br>No cierres esta página.</small>
     </div>
     <script>
+        const hhRoomPhotos = @json($categories->mapWithKeys(fn ($cat) => [(string) $cat->id => $cat->rooms->flatMap(fn ($room) => $room->photos ?? [])->filter()->map(fn ($photo) => \App\Support\Img::url($photo, 960))->first()]));
+        function hhUpdateHero() {
+            const select = document.getElementById('room_category_id');
+            const image = document.getElementById('room-hero-image');
+            const photo = hhRoomPhotos[select.value];
+            image.hidden = !photo;
+            if (photo) image.src = photo; else image.removeAttribute('src');
+            image.alt = select.selectedOptions[0]?.textContent || 'Playroom';
+        }
+        document.getElementById('room_category_id').addEventListener('change', hhUpdateHero);
+        document.getElementById('room-hero-image').addEventListener('error', (event) => { event.target.hidden = true; });
+        hhUpdateHero();
         const hhDurationsByCategory = @json($durationsByCategory->mapWithKeys(fn ($v, $k) => [(string) $k => $v]));
         const hhCouponConstraints = @json($couponConstraints);
         const hhDurationLabel = (min) => min >= 60 ? (min / 60) + ' h' : min + ' min';
@@ -455,54 +466,21 @@
             input.dispatchEvent(new Event('change', { bubbles: true }));
             hhRenderPicker();
         }
-        // + / − de hora: salta a la hora disponible siguiente/anterior, con los mismos minutos si se puede.
-        // + / − de minutos: avanza de 15 en 15 por la lista (pasa a la hora siguiente al llegar a :45).
-        // El primer toque, sin hora elegida, pone la primera hora del día (no la madrugada) o la última con −.
-        function hhStepTime(part, d) {
-            if (!hhTimeList.length || hhTimesLoading) return;
-            const value = document.getElementById('time-select').value;
-            const i = hhTimeList.indexOf(value);
-            if (i < 0) { hhSetTime(d > 0 ? (hhTimeList.find((v) => hhTkHour(v) >= HH_NIGHT_ENDS) || hhTimeList[0]) : hhTimeList[hhTimeList.length - 1]); return; }
-            if (part === 'm') {
-                const next = hhTimeList[i + d];
-                if (next) hhSetTime(next);
-                return;
-            }
-            const hourKey = (v) => v.slice(0, 13);
-            const hours = [];
-            hhTimeList.forEach((v) => { if (!hours.includes(hourKey(v))) hours.push(hourKey(v)); });
-            const h = hours[hours.indexOf(hourKey(value)) + d];
-            if (!h) return;
-            const inHour = hhTimeList.filter((v) => hourKey(v) === h);
-            const same = inHour.find((v) => v.slice(14) === value.slice(14));
-            // Sin los mismos minutos, el más cercano dentro de esa hora.
-            hhSetTime(same || inHour.reduce((a, b) => Math.abs(hhAbs(b) - hhAbs(value)) < Math.abs(hhAbs(a) - hhAbs(value)) ? b : a));
-        }
-        document.querySelectorAll('[data-tp]').forEach((b) => b.addEventListener('click', () => hhStepTime(b.dataset.tp, Number(b.dataset.d))));
+        document.getElementById('arrival-time').addEventListener('change', (event) => hhSetTime(event.target.value));
         function hhRenderPicker() {
             const picker = document.getElementById('time-picker');
             const value = document.getElementById('time-select').value;
             const i = hhTimeList.indexOf(value);
             const empty = hhTimesLoading || !hhTimeList.length;
-            let msg = picker.querySelector('.tp-empty');
-            if (empty) {
-                if (!msg) { msg = document.createElement('div'); msg.className = 'tp-empty'; picker.appendChild(msg); }
-                msg.textContent = hhTimesLoading ? 'Cargando horarios…' : 'No quedan horarios para esta fecha. Prueba otro día.';
-            } else if (msg) {
-                msg.remove();
-            }
-            picker.querySelectorAll('.tp-col, .tp-colon').forEach((el) => { el.hidden = empty; });
-            picker.classList.toggle('set', i >= 0);
-            document.getElementById('tp-h').textContent = i >= 0 ? value.slice(11, 13) : '--';
-            document.getElementById('tp-m').textContent = i >= 0 ? value.slice(14, 16) : '--';
-            const first = hhTimeList[0], last = hhTimeList[hhTimeList.length - 1];
-            picker.querySelectorAll('[data-tp]').forEach((b) => {
-                const up = Number(b.dataset.d) > 0;
-                if (i < 0) { b.disabled = empty; return; }
-                b.disabled = b.dataset.tp === 'm'
-                    ? (up ? value === last : value === first)
-                    : (up ? value.slice(0, 13) === last.slice(0, 13) : value.slice(0, 13) === first.slice(0, 13));
+            const arrival = document.getElementById('arrival-time');
+            arrival.replaceChildren(new Option(hhTimesLoading ? 'Cargando…' : 'Elige una hora', ''));
+            if (!hhTimesLoading) hhTimeList.forEach((time) => {
+                const nextDay = hhTkDate(time) !== hhPick();
+                arrival.add(new Option(hhTkTime(time) + (nextDay ? ' · día siguiente' : ''), time));
             });
+            arrival.value = i >= 0 ? value : '';
+            arrival.disabled = empty;
+            picker.classList.toggle('set', i >= 0);
             // La madrugada es del día siguiente al elegido: se muestra la fecha real para que no se confunda.
             const note = document.getElementById('tp-note');
             if (i >= 0 && hhTkDate(value) !== hhPick()) {
@@ -735,7 +713,7 @@
         // Un solo envío: sin esto, un doble toque creaba dos reservas en dos habitaciones.
         (function () {
             const form = document.getElementById('reserve-form');
-            const btn = form.querySelector('button[type="submit"]');
+            const btn = document.getElementById('dock-pay');
             let sending = false;
             form.addEventListener('submit', function (e) {
                 if (sending) { e.preventDefault(); return; }
@@ -832,6 +810,11 @@
                     b.classList.toggle('on', k === current);
                     b.classList.toggle('done', k < current);
                 });
+                document.getElementById('dock-next').hidden = current === last;
+                document.getElementById('dock-pay').hidden = current !== last;
+                document.getElementById('dock-next').textContent = current === 2 ? 'Continuar con mis datos' : 'Continuar';
+                document.getElementById('reserve-heading').textContent = current === 1 ? 'Elige tu Playroom' : (current === last ? 'Completa tu reserva' : 'Hazlo a tu medida');
+                document.body.dataset.reserveStep = current;
                 recap();
                 if (push) history.pushState({ hhStep: current }, '');
                 document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -852,7 +835,7 @@
                     const picker = document.getElementById('time-picker');
                     const range = document.getElementById('time-range');
                     picker.classList.add('missing');
-                    range.textContent = 'Elige la hora de llegada con los botones + / −.';
+                    range.textContent = 'Selecciona tu hora de llegada.';
                     range.classList.add('err');
                     picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return false;
