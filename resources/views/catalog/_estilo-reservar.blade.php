@@ -73,6 +73,7 @@
     /* Extras: una tarjeta de producto, sin la barra de color al costado
        que la hacía parecer un cuadro de advertencia. */
     .extra-item { background: var(--hh-bg-2); border: 1px solid var(--hh-line); border-left: 1px solid var(--hh-line); border-radius: 14px; box-shadow: none; padding: 14px; }
+    .extra-item[hidden] { display:none; }
     .extra-name { color: var(--hh-tinta); }
     .extra-detail { color: var(--hh-soft); }
     .extra-badge { background: #f2efe9; color: #6c6f75; font-weight: 700; letter-spacing: .06em; }
@@ -81,6 +82,20 @@
     .extras h2 { color: var(--hh-tinta); }
 
     .summary { border-color: var(--hh-line); border-radius: 14px; }
+
+    .booking-price { position:sticky; top:calc(64px + env(safe-area-inset-top, 0px)); z-index:35; background:#fff; color:var(--hh-tinta,#202123); border:1px solid var(--hh-line,#dedbd5); border-radius:14px; padding:14px 16px; margin:0 0 20px; box-shadow:0 4px 14px #0000000d; }
+    .booking-price [hidden] { display:none !important; }
+    .price-heading { display:flex; justify-content:space-between; font-weight:800; margin-bottom:8px; }
+    .price-heading > span { color:var(--hh-soft,#6c6f75); font-size:12px; font-weight:600; }
+    .price-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; font-size:14px; line-height:1.6; }
+    .price-row > :last-child { white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .price-discount { color:#27633d; }
+    .price-total { border-top:1px solid var(--hh-line,#dedbd5); margin-top:7px; padding-top:7px; font-size:18px; }
+    .price-note, #price-empty { color:var(--hh-soft,#6c6f75); font-size:12px; line-height:1.4; }
+    .price-note { margin:6px 0 0; }
+    .price-note:empty { display:none; }
+    .price-retry { margin-top:8px; border:1px solid var(--hh-accent); border-radius:8px; background:#fff; padding:8px 12px; color:var(--hh-tinta); cursor:pointer; }
+    @media(max-height:650px) { .booking-price { position:static; } }
 
     /* Botones redondos, como en el catálogo. */
     button.submit { border-radius: 14px; box-shadow: 0 8px 24px rgba(255,121,24,.28); }

@@ -158,7 +158,7 @@
 
         @if ($selectedCoupon)
             <div class="coupon-applied" data-only-step="1">
-                <span>🏷️ Cupón aplicado: <strong>{{ $selectedCoupon->internal_name }}</strong></span>
+                <span>🏷️ Cupón seleccionado: <strong>{{ $selectedCoupon->internal_name }}</strong></span>
                 <a href="{{ route('catalog.reserve', request()->except('cupon')) }}">Quitar</a>
             </div>
             <div class="coupon-warning" id="coupon-warning"></div>
@@ -172,6 +172,19 @@
                 <label for="website">No completar</label>
                 <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
             </div>
+
+            <section class="booking-price" aria-label="Precio de tu reserva" aria-live="polite" aria-atomic="true">
+                <div class="price-heading">Tu reserva <span>CLP</span></div>
+                <div id="price-empty">Elige habitación, horario y duración para ver el precio.</div>
+                <div id="price-detail" hidden>
+                    <div class="price-row"><span>Habitación y personas</span><span id="price-original"></span></div>
+                    <div class="price-row price-discount" id="price-discount-row" hidden><span id="price-discount-label">Descuento</span><span id="price-discount"></span></div>
+                    <div class="price-row"><span>Extras seleccionados</span><span id="price-extras"></span></div>
+                    <div class="price-row price-total"><strong id="price-total-label">Total</strong><strong id="price-total"></strong></div>
+                </div>
+                <p class="price-note" id="price-note"></p>
+                <button type="button" class="price-retry" id="price-retry" hidden onclick="hhCheckAvailability()">Volver a consultar</button>
+            </section>
 
             <div class="step" data-step="1">
             <label for="room_category_id">Elige tu Playroom</label>
@@ -243,8 +256,8 @@
                 <div class="step" data-step="2" hidden>
                 <div class="recap"><span data-recap></span><button type="button" data-goto="1">Cambiar</button></div>
                 <section class="extras" aria-labelledby="extras-title">
-                    <h2 id="extras-title">Aprovecha esta oportunidad exclusiva</h2>
-                    <p>Extras y combos con precio preferencial al reservar online. Agrégalos ahora y disfruta más tu experiencia.</p>
+                    <h2 id="extras-title">Hazlo a tu medida</h2>
+                    <p>Los extras son opcionales. El total se actualiza al elegirlos.</p>
                     <div class="extra-list">
                         @foreach ($catalogCombos as $combo)
                             <label class="extra-item">
@@ -255,7 +268,7 @@
                         @endforeach
                         @foreach ($categoryUpsells as $upsell)
                             <label class="extra-item">
-                                <input type="checkbox" name="accepted_upsells[]" value="{{ $upsell->id }}" data-extra-price="{{ $upsell->price }}" data-extra-toggle>
+                                <input type="checkbox" name="accepted_upsells[]" value="{{ $upsell->id }}" data-from-category="{{ $upsell->from_room_category_id }}" data-extra-price="{{ $upsell->price }}" data-extra-toggle>
                                 <span class="extra-copy"><span class="extra-badge">OPORTUNIDAD ONLINE</span><span class="extra-name">{{ $upsell->name }}</span><span class="extra-detail">Pasa de {{ $upsell->fromCategory?->name }} a {{ $upsell->toCategory?->name }} por un adicional preferencial</span></span>
                                 <span class="extra-price">+ ${{ number_format($upsell->price, 0, ',', '.') }}</span>
                             </label>
@@ -325,7 +338,7 @@
             </div>
 
             <div class="summary" id="booking-summary" aria-live="polite"><strong>Resumen de tu reserva</strong><small>Selecciona Playroom, fecha, hora y duración para ver el detalle.</small></div>
-            <button class="submit" type="submit">Solicitar reserva</button>
+            <button class="submit" type="submit">Continuar al pago</button>
             <button type="button" class="step-back" data-goto="{{ count($stepNames) - 1 }}">← Volver</button>
             <p class="legal">Al reservar aceptas presentar tu documento de identidad al llegar. HH se reserva el derecho de admisión.</p>
             </div>
@@ -555,6 +568,31 @@
         // formulario -- ahora se chequea en vivo apenas elige categoría,
         // fecha, hora y duración, con un debounce para no pegarle al
         // servidor en cada tecla/cambio.
+        var hhPriceQuote = null;
+        var hhPriceMessage = 'Elige habitación, horario y duración para ver el precio.';
+        var hhPriceFailed = false;
+        function hhPaintPrice() {
+            const quote = hhPriceQuote;
+            const detail = document.getElementById('price-detail');
+            const empty = document.getElementById('price-empty');
+            const note = document.getElementById('price-note');
+            detail.hidden = !quote;
+            empty.hidden = !!quote;
+            empty.textContent = hhPriceMessage;
+            document.getElementById('price-retry').hidden = !hhPriceFailed;
+            note.textContent = quote ? (quote.note || 'Disponibilidad y precio se vuelven a validar al confirmar.') : '';
+            if (!quote) return;
+            const money = n => '$' + Number(n).toLocaleString('es-CL');
+            let extras = 0;
+            document.querySelectorAll('[data-extra-toggle]:checked').forEach(input => { extras += Number(input.dataset.extraPrice || 0); });
+            document.getElementById('price-original').textContent = money(quote.original);
+            document.getElementById('price-extras').textContent = money(extras);
+            document.getElementById('price-discount-row').hidden = !quote.discount;
+            document.getElementById('price-discount-label').textContent = quote.discount_label || 'Descuento';
+            document.getElementById('price-discount').textContent = '− ' + money(quote.discount);
+            document.getElementById('price-total-label').textContent = quote.conditional ? 'Total estimado' : 'Total';
+            document.getElementById('price-total').textContent = money(quote.stay_total + extras) + ' CLP';
+        }
         let hhAvailTimer = null;
         let hhAvailSeq = 0;
         function hhCheckAvailability() {
@@ -565,18 +603,26 @@
             const timeHour = document.getElementById('time_hour').value;
             const timeMinute = document.getElementById('time_minute').value;
             clearTimeout(hhAvailTimer);
+            const mySeq = ++hhAvailSeq;
+            hhPriceQuote = null;
+            hhPriceFailed = false;
+            hhPriceMessage = 'Elige habitación, horario y duración para ver el precio.';
             if (!catId || !date || !duration || timeHour === '' || timeMinute === '') {
                 status.classList.remove('show');
                 hhShortStay(null);
+                hhPaintPrice();
                 return;
             }
-            const mySeq = ++hhAvailSeq;
+            hhPriceMessage = 'Calculando precio y disponibilidad…';
+            hhPaintPrice();
             status.className = 'avail-status show checking';
             status.innerHTML = '<span class="spin"></span> Verificando disponibilidad…';
             hhAvailTimer = setTimeout(() => {
                 const params = new URLSearchParams({
                     room_category_id: catId, date, duration_minutes: duration,
                     time_hour: timeHour, time_minute: timeMinute,
+                    guests_count: document.getElementById('guests_count').value,
+                    coupon_code: document.querySelector('input[name="coupon_code"]').value,
                 });
                 const roomId = document.querySelector('input[name="room_id"]').value;
                 if (roomId) params.set('room_id', roomId);
@@ -584,6 +630,10 @@
                     .then((r) => r.ok ? r.json() : Promise.reject())
                     .then((data) => {
                         if (mySeq !== hhAvailSeq) return;
+                        hhSyncTime();
+                        hhPriceQuote = data.available ? data.quote : null;
+                        hhPriceMessage = 'No hay disponibilidad para esta selección. Prueba otra hora o categoría.';
+                        hhPaintPrice();
                         hhShortStay(data.available ? data.short_stay : null);
                         if (data.available && data.short_stay) {
                             // Cerca del cierre: se vende hasta la hora de cierre, con precio menor.
@@ -600,7 +650,16 @@
                             status.textContent = '✗ No hay disponibilidad para ese horario — prueba otra fecha, hora o duración';
                         }
                     })
-                    .catch(() => { if (mySeq === hhAvailSeq) status.classList.remove('show'); });
+                    .catch(() => {
+                        if (mySeq !== hhAvailSeq) return;
+                        hhPriceQuote = null;
+                        hhPriceFailed = true;
+                        hhPriceMessage = 'No pudimos consultar el precio. Vuelve a intentarlo.';
+                        hhPaintPrice();
+                        hhShortStay(null);
+                        status.className = 'avail-status show no';
+                        status.textContent = 'No pudimos verificar esta selección. Vuelve a consultar.';
+                    });
             }, 450);
         }
 
@@ -629,10 +688,17 @@
         }
 
         function hhUpdateExtrasTotal() {
+            const category = document.getElementById('room_category_id').value;
+            document.querySelectorAll('[data-from-category]').forEach(input => {
+                const matches = input.dataset.fromCategory === category;
+                input.closest('.extra-item').hidden = !matches;
+                if (!matches) input.checked = false;
+            });
             let total = 0;
             document.querySelectorAll('[data-extra-toggle]:checked').forEach((input) => { total += Number(input.dataset.extraPrice || 0); });
             const el = document.getElementById('extras-total');
             if (el) el.textContent = total ? `Extras seleccionados: + $${total.toLocaleString('es-CL')}` : 'Sin extras seleccionados';
+            hhPaintPrice();
         }
 
         // Personas: botones − y + (1 a 10), sin teclear.
@@ -683,14 +749,14 @@
                 setTimeout(function () {
                     sending = false;
                     document.getElementById('go-pay').classList.remove('show');
-                    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Solicitar reserva'; }
+                    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Continuar al pago'; }
                 }, 20000);
             });
             // Al volver atrás desde la confirmación, el botón debe quedar usable otra vez.
             window.addEventListener('pageshow', function () {
                 sending = false;
                 document.getElementById('go-pay').classList.remove('show');
-                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Solicitar reserva'; }
+                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Continuar al pago'; }
             });
         })();
         ['room_category_id','date-pick','time-select','duration_minutes'].forEach(id => document.getElementById(id).addEventListener('change', () => { hhSyncTime(); hhUpdateSummary(); hhCheckCouponWindow(); hhCheckAvailability(); }));
@@ -712,6 +778,9 @@
         hhCheckAvailability();
         document.querySelectorAll('[data-extra-toggle]').forEach((input) => input.addEventListener('change', hhUpdateExtrasTotal));
         hhUpdateExtrasTotal();
+        document.getElementById('room_category_id').addEventListener('change', hhUpdateExtrasTotal);
+        document.getElementById('guests_count').addEventListener('change', hhCheckAvailability);
+        document.getElementById('guests_count').addEventListener('input', hhCheckAvailability);
         (function () {
             const apply = document.getElementById('coupon-apply');
             if (!apply) return;
@@ -744,6 +813,7 @@
             const fmtDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' }); };
 
             function recap() {
+                hhSyncTime();
                 const cat = document.getElementById('room_category_id');
                 const dur = document.getElementById('duration_minutes');
                 const date = document.getElementById('date').value;
@@ -792,6 +862,7 @@
                     if (!el.checkValidity()) { el.reportValidity(); return false; }
                 }
                 const status = document.getElementById('avail-status');
+                if (!hhPriceQuote && !status.classList.contains('checking')) return fail('Consulta el precio y la disponibilidad antes de continuar.', status);
                 if (status.classList.contains('no')) return fail('No hay disponibilidad para ese horario. Prueba otra fecha, hora o duración.', status);
                 if (status.classList.contains('checking')) return fail('Estamos revisando la disponibilidad, espera un segundo y vuelve a intentar.');
                 const accept = document.getElementById('short-accept');

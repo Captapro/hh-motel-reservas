@@ -25,6 +25,7 @@ use App\Services\Booking\ConsumptionService;
 use App\Services\Marketing\Attribution;
 use App\Services\Payments\MercadoPagoClient;
 use App\Services\Payments\MercadoPagoPayments;
+use App\Services\Pricing\CatalogPriceQuote;
 use App\Services\Pricing\RateRuleResolver;
 use App\Services\Pricing\ShortStayPricer;
 use App\Support\CouponCode;
@@ -382,7 +383,7 @@ class PublicBookingController extends Controller
      * "disponible" acá nunca contradice el resultado real del envío (salvo
      * que otra reserva tome el horario justo entre medio).
      */
-    public function checkAvailability(Request $request, AvailabilityChecker $availability, RateRuleResolver $rateRules, ShortStayPricer $shortStays): JsonResponse
+    public function checkAvailability(Request $request, AvailabilityChecker $availability, RateRuleResolver $rateRules, ShortStayPricer $shortStays, CatalogPriceQuote $quotes): JsonResponse
     {
         $validated = $request->validate([
             'room_category_id' => ['required', 'exists:room_categories,id'],
@@ -391,6 +392,8 @@ class PublicBookingController extends Controller
             'time_hour' => ['required', 'integer', 'min:0', 'max:23'],
             'time_minute' => ['required', 'integer', 'min:0', 'max:59'],
             'duration_minutes' => ['required', 'integer'],
+            'guests_count' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'coupon_code' => ['nullable', 'string', 'max:50'],
         ]);
 
         $startsAt = Carbon::parse($validated['date'].' '.sprintf('%02d:%02d', $validated['time_hour'], $validated['time_minute']));
@@ -407,8 +410,15 @@ class PublicBookingController extends Controller
 
         $room = $this->findAvailableRoom($validated['room_category_id'], $validated['room_id'] ?? null, $startsAt, $endsAt, $availability, $rateRules, $short);
 
+        $guests = (int) ($validated['guests_count'] ?? 2);
+        if ($room && $room->category->max_capacity > 0 && $guests > $room->category->max_capacity) {
+            $room = null;
+        }
+        $quote = $room ? $quotes->forStay($room, $startsAt, (int) $validated['duration_minutes'], $guests, $short, $validated['coupon_code'] ?? null) : null;
+
         return response()->json([
             'available' => (bool) $room,
+            'quote' => $quote,
             'short_stay' => $short ? [
                 'closes_at' => $short['closes_at']->copy()->timezone('America/Santiago')->format('H:i'),
                 'minutes_label' => TimeFormat::minutes($short['minutes']),
