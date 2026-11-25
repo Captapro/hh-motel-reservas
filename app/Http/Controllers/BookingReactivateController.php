@@ -37,6 +37,13 @@ class BookingReactivateController extends Controller
             return back()->withInput()->withErrors(['reactivar' => $e->getMessage()]);
         }
 
+        // Si ya tenía un pago (ej. transfirió después de vencer), queda confirmada
+        // de inmediato y sin hora de retención: no hay link que mandar.
+        if (! $booking->expires_at) {
+            return redirect()->route('reservations.show', $booking->code)
+                ->with('status', 'Reserva reactivada y confirmada: ya tenía su pago registrado.');
+        }
+
         return redirect()->route('reservations.show', $booking->code)
             ->with('status', 'Reserva reactivada hasta las '.$booking->expires_at->timezone('America/Santiago')->format('H:i').'. Envíale el link de pago al cliente.');
     }

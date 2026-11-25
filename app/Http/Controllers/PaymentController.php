@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\PaymentExceedsBalanceException;
+use App\Exceptions\PricingException;
+use App\Exceptions\RoomNotAvailableException;
+use App\Services\Booking\BookingService;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Payment;
@@ -41,7 +44,7 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function store(Request $request, string $code, PaymentService $paymentService): RedirectResponse
+    public function store(Request $request, string $code, PaymentService $paymentService, BookingService $bookingService): RedirectResponse
     {
         $booking = Booking::where('code', $code)->firstOrFail();
 
@@ -161,6 +164,20 @@ class PaymentController extends Controller
             $payment->save();
             AuditLog::record(auth()->id(), 'pago.fecha', 'Payment', $payment->id,
                 $old + ['reason' => 'Fecha real indicada al registrar el cobro'], ['created_at' => $payment->created_at->toIso8601String()]);
+        }
+
+        // Pago a una reserva vencida (el cliente transfirió después de que se
+        // liberó la retención): antes el pago quedaba guardado pero la reserva
+        // seguía EXPIRADA, fuera del tablero y con la pieza libre para otro.
+        // Se reactiva sola con la misma pieza y hora si sigue libre; si no se
+        // puede, se avisa para reactivarla a mano con otra hora.
+        if ($booking->fresh()->booking_status === 'EXPIRADA') {
+            try {
+                $bookingService->reactivate($booking->fresh(), $booking->starts_at->copy(), 15, auth()->id());
+            } catch (RoomNotAvailableException|PricingException $e) {
+                return redirect()->route('reservations.show', $booking->code)
+                    ->withErrors(['reactivar' => 'Pago registrado, pero la reserva sigue VENCIDA: '.$e->getMessage().' Usa «Reactivar reserva» con otra hora (queda confirmada al instante porque ya está pagada).']);
+            }
         }
 
         // Pago dividido (ej. parte débito y parte efectivo): si todavía falta

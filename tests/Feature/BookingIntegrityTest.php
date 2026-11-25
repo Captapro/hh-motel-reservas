@@ -1989,6 +1989,41 @@ class BookingIntegrityTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'reserva.reactivar', 'entity_id' => $booking->id]);
     }
 
+    public function test_regression_payment_on_expired_booking_reactivates_it_or_warns_if_the_slot_was_taken(): void
+    {
+        // 25-nov: Daniel Toro transfirió después de que su reserva venció. Recepción registró el pago,
+        // pero la reserva siguió VENCIDA (fuera del tablero, con la pieza libre para otro).
+        Cache::flush();
+        $this->travelTo(Carbon::parse('2026-11-02 11:00'));
+        $method = PaymentMethod::create(['code' => 'transferencia', 'name' => 'Transferencia']);
+        $pay = fn (Booking $b) => $this->post(route('payments.store', $b->code), [
+            'payment_method_id' => $method->id, 'amount' => $b->balanceDue(), 'request_token' => (string) Str::uuid(), 'receipt_number' => '1',
+        ]);
+
+        $booking = $this->booking(['starts_at' => Carbon::parse('2026-11-02 14:00'), 'origin' => 'catalogo']);
+        $booking->update(['booking_status' => 'EXPIRADA', 'expires_at' => now()->subMinutes(5)]);
+        $pay($booking)->assertRedirect(route('reservations.show', $booking->code))->assertSessionHasNoErrors();
+        $fresh = $booking->fresh();
+        $this->assertSame('CONFIRMADA', $fresh->booking_status);
+        $this->assertSame('PAGADA', $fresh->payment_status);
+        $this->assertNull($fresh->expires_at);
+        $this->assertSame('14:00', $fresh->starts_at->format('H:i'));
+
+        // Reactivar a mano una vencida que ya estaba pagada no se cae: queda confirmada al tiro.
+        $fresh->update(['booking_status' => 'EXPIRADA']);
+        $this->post(route('bookings.reactivate', $booking->code), ['date' => '2026-11-02', 'time' => '14:00', 'hold_minutes' => 15])
+            ->assertRedirect(route('reservations.show', $booking->code))->assertSessionHasNoErrors();
+        $this->assertSame('CONFIRMADA', $booking->fresh()->booking_status);
+
+        // Si otro cliente tomó la pieza en ese horario: el pago queda, la reserva sigue vencida y se avisa.
+        $late = $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00'), 'origin' => 'catalogo', 'customer' => Customer::create(['name' => 'Tarde', 'phone_e164' => '+56944444444'])]);
+        $late->update(['booking_status' => 'EXPIRADA', 'expires_at' => now()->subMinutes(5)]);
+        $this->booking(['starts_at' => Carbon::parse('2026-11-02 18:00'), 'customer' => Customer::create(['name' => 'Otro', 'phone_e164' => '+56955555555'])]);
+        $pay($late)->assertRedirect(route('reservations.show', $late->code))->assertSessionHasErrors('reactivar');
+        $this->assertSame('EXPIRADA', $late->fresh()->booking_status);
+        $this->assertSame('PAGADA', $late->fresh()->payment_status);
+    }
+
     public function test_reactivation_is_refused_when_the_slot_was_taken_or_the_time_already_passed(): void
     {
         Cache::flush();
