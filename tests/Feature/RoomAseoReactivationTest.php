@@ -175,6 +175,35 @@ class RoomAseoReactivationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_maid_pin_locks_after_repeated_wrong_pins(): void
+    {
+        $mucama = Staff::create(['name' => 'Ana Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
+
+        for ($i = 0; $i < 6; $i++) {
+            $this->post('/qr/mucamas/entrar', ['staff_id' => $mucama->id, 'pin' => '0000'])->assertSessionHasErrors('pin');
+        }
+
+        // Bloqueada: ni el PIN correcto entra hasta que pase el tiempo.
+        $this->post('/qr/mucamas/entrar', ['staff_id' => $mucama->id, 'pin' => '1234'])
+            ->assertSessionHasErrors('pin')->assertSessionMissing('mucama_staff_id');
+
+        $this->travel(16)->minutes();
+        $this->post('/qr/mucamas/entrar', ['staff_id' => $mucama->id, 'pin' => '1234'])->assertSessionHas('mucama_staff_id', $mucama->id);
+    }
+
+    public function test_ronda_pin_locks_after_repeated_wrong_pins(): void
+    {
+        $host = User::factory()->create(['role' => 'recepcion']);
+        $host->forceFill(['ronda_pin' => '1234'])->save();
+
+        for ($i = 0; $i < 6; $i++) {
+            $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '0000'])->assertSessionHasErrors('pin');
+        }
+
+        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '1234'])->assertSessionHasErrors('pin');
+        $this->assertGuest();
+    }
+
     public function test_maid_login_succeeds_with_the_correct_pin(): void
     {
         $mucama = Staff::create(['name' => 'Ana Mucama', 'role' => 'Mucama', 'is_active' => true, 'pin' => '1234']);
@@ -368,7 +397,13 @@ class RoomAseoReactivationTest extends TestCase
         $this->assertNull($host->fresh()->ronda_pin);
         $this->assertGuest();
 
-        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '1234', 'pin_confirmation' => '1234'])->assertRedirect(route('shift_round.index'));
+        // ...y la clave de la cuenta: sin ella nadie le crea el PIN a otro.
+        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '1234', 'pin_confirmation' => '1234'])->assertSessionHasErrors('pin');
+        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '1234', 'pin_confirmation' => '1234', 'password' => 'otra-clave'])->assertSessionHasErrors('pin');
+        $this->assertNull($host->fresh()->ronda_pin);
+        $this->assertGuest();
+
+        $this->post(route('ronda.login.store'), ['user_id' => $host->id, 'pin' => '1234', 'pin_confirmation' => '1234', 'password' => 'password'])->assertRedirect(route('shift_round.index'));
         $this->assertAuthenticatedAs($host);
         $this->assertNotSame('1234', $host->fresh()->ronda_pin);
 

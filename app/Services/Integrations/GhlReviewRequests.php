@@ -79,7 +79,7 @@ class GhlReviewRequests
                     return;
                 }
 
-                $sent = $this->post('pedir_opinion', $url, $booking, ['link_opinion' => route('reviews.create', $booking->code)]);
+                $sent = $this->post('pedir_opinion', $url, $booking, ['link_opinion' => route('reviews.create', $booking->pass_token)]);
                 $attemptsKey = 'ghl:review-attempts:'.$booking->id;
                 Cache::add($attemptsKey, 0, now()->addDays(2));
                 if ($sent || Cache::increment($attemptsKey) >= self::MAX_ATTEMPTS) {

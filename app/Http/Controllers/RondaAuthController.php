@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Middleware\RestrictRondaSession;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Support\LoginLockout;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +14,8 @@ use Illuminate\View\View;
 
 /**
  * Ingreso a la Ronda de turno con nombre y PIN. El anfitrión que no tiene PIN
- * lo crea al entrar. La sesión queda limitada a la ronda (RestrictRondaSession)
+ * lo crea al entrar, confirmando con la clave de su cuenta: sin eso, cualquiera
+ * que abriera esta página podía crearle el PIN y entrar como esa persona. La sesión queda limitada a la ronda (RestrictRondaSession)
  * y no abre ni cierra turno: eso sigue siendo el ingreso con correo y clave.
  */
 class RondaAuthController extends Controller
@@ -33,6 +35,7 @@ class RondaAuthController extends Controller
             'user_id' => ['required', 'integer'],
             'pin' => ['required', 'digits:4'],
             'pin_confirmation' => ['nullable', 'string'],
+            'password' => ['nullable', 'string'],
         ], [
             'user_id.required' => 'Elige tu nombre.',
             'pin.digits' => 'El PIN tiene 4 dígitos.',
@@ -43,16 +46,28 @@ class RondaAuthController extends Controller
             return back()->withErrors(['pin' => 'Elige tu nombre.'])->withInput($request->only('user_id'));
         }
 
+        if ($blocked = LoginLockout::blocked('ronda', $host->id)) {
+            return back()->withErrors(['pin' => $blocked])->withInput($request->only('user_id'));
+        }
+
         if (! $host->ronda_pin) {
             if ($validated['pin'] !== ($validated['pin_confirmation'] ?? null)) {
                 return back()->withErrors(['pin' => 'Los dos PIN no coinciden.'])->withInput($request->only('user_id'));
             }
+            if (! Hash::check((string) ($validated['password'] ?? ''), $host->password)) {
+                LoginLockout::fail('ronda', $host->id);
+
+                return back()->withErrors(['pin' => 'Para crear tu PIN escribe la clave con la que entras al sistema.'])->withInput($request->only('user_id'));
+            }
             $host->forceFill(['ronda_pin' => $validated['pin']])->save();
             AuditLog::record($host->id, 'ronda.pin_creado', 'User', $host->id, null, null);
         } elseif (! Hash::check($validated['pin'], $host->ronda_pin)) {
+            LoginLockout::fail('ronda', $host->id);
+
             return back()->withErrors(['pin' => 'PIN incorrecto. Si no lo recuerdas, pide que lo borren en Personal.'])->withInput($request->only('user_id'));
         }
 
+        LoginLockout::clear('ronda', $host->id);
         Auth::login($host);
         $request->session()->regenerate();
         $request->session()->put(RestrictRondaSession::SESSION_KEY, true);

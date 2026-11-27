@@ -47,12 +47,14 @@
                             <option value="{{ $host->id }}" data-new="{{ $host->ronda_pin ? '0' : '1' }}" @selected(old('user_id') == $host->id)>{{ $host->name }}</option>
                         @endforeach
                     </select>
-                    <p class="hint" id="new-hint" hidden>Aún no tienes PIN. Crea uno de 4 dígitos: lo usarás siempre para entrar.</p>
+                    <p class="hint" id="new-hint" hidden>Aún no tienes PIN. Crea uno de 4 dígitos: lo usarás siempre para entrar. Para crearlo te pedimos, solo esta vez, la clave con la que entras al sistema.</p>
                     <label for="pin" id="pin-label">PIN</label>
                     <input type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" id="pin" name="pin" placeholder="••••" autocomplete="off" required>
                     <div id="repeat" hidden>
                         <label for="pin_confirmation">Repite tu PIN</label>
                         <input type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" id="pin_confirmation" name="pin_confirmation" placeholder="••••" autocomplete="off">
+                        <label for="password">Tu clave del sistema</label>
+                        <input type="password" id="password" name="password" autocomplete="current-password">
                     </div>
                     <button type="submit" id="submit">Entrar</button>
                 </form>
@@ -70,6 +72,7 @@
                 document.getElementById('new-hint').hidden = !isNew;
                 document.getElementById('repeat').hidden = !isNew;
                 document.getElementById('pin_confirmation').required = isNew;
+                document.getElementById('password').required = isNew;
                 document.getElementById('pin-label').textContent = isNew ? 'Crea tu PIN' : 'PIN';
                 document.getElementById('submit').textContent = isNew ? 'Crear PIN y entrar' : 'Entrar';
             };

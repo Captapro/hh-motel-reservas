@@ -7,7 +7,7 @@
     <p class="eyebrow">Después de tu visita</p>
     <h1>¿Qué tal<br>estuvo HH?</h1>
     <p class="intro">La playrooms, la atención, los detalles.<br>¿Con qué nota te quedas?</p>
-    <form class="review-form" method="POST" action="{{ route('reviews.store', $booking?->code) }}">
+    <form class="review-form" method="POST" action="{{ route('reviews.store', $booking?->pass_token) }}">
         @csrf
         <fieldset>
             <legend>Tu visita, de 1 a 5 estrellas</legend>

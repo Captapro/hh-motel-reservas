@@ -1271,10 +1271,16 @@ class BookingIntegrityTest extends TestCase
         $requests->sendDue();
         $requests->sendDue();
         Http::assertSentCount(1);
-        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/opinion') && str_ends_with($r['link_opinion'], '/opinion/'.$booking->code));
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/hooks/opinion') && str_ends_with($r['link_opinion'], '/opinion/'.$booking->pass_token));
 
         // Opina (aunque sea con nota baja): recibe su cupón personal del 10%, que no sale en el catálogo.
-        $this->post(route('reviews.store', $booking->code), ['rating' => 2])->assertRedirect();
+        // Con el código de la reserva (correlativo, adivinable) no queda ligada a la estadía ni da cupón.
+        $this->post(route('reviews.store', $booking->code), ['rating' => 5]);
+        $this->assertSame(0, Coupon::where('customer_id', $this->customer->id)->count());
+        $this->assertSame(0, GuestReview::whereNotNull('booking_id')->count());
+        GuestReview::query()->delete();
+
+        $this->post(route('reviews.store', $booking->pass_token), ['rating' => 2])->assertRedirect();
         $coupon = Coupon::where('customer_id', $this->customer->id)->firstOrFail();
         $this->assertSame(10, (int) $coupon->discount_value);
         $this->assertSame(1, $coupon->max_uses_total);
@@ -1283,7 +1289,7 @@ class BookingIntegrityTest extends TestCase
         $this->get(route('reviews.thanks', $review))->assertOk()->assertSee($coupon->code);
 
         // Volver a opinar no da otro cupón; y a quien ya opinó no se le vuelve a pedir.
-        $this->post(route('reviews.store', $booking->code), ['rating' => 5]);
+        $this->post(route('reviews.store', $booking->pass_token), ['rating' => 5]);
         $this->assertSame(1, Coupon::where('customer_id', $this->customer->id)->count());
         $next->update(['booking_status' => 'FINALIZADA', 'checked_out_at' => Carbon::parse('2026-11-02 14:40')]);
         $requests->sendDue();

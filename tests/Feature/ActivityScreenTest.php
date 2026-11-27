@@ -57,6 +57,21 @@ class ActivityScreenTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_account_locks_after_repeated_wrong_passwords(): void
+    {
+        for ($i = 0; $i < 6; $i++) {
+            $this->post('/login', ['email' => $this->host->email, 'password' => 'mala'])->assertSessionHasErrors('email');
+        }
+
+        // Bloqueada: ni la clave correcta entra hasta que pase el tiempo.
+        $this->post('/login', ['email' => $this->host->email, 'password' => 'secreto123'])->assertSessionHasErrors('email');
+        $this->assertGuest();
+
+        $this->travel(16)->minutes();
+        $this->post('/login', ['email' => $this->host->email, 'password' => 'secreto123'])->assertRedirect();
+        $this->assertAuthenticatedAs($this->host);
+    }
+
     public function test_logins_logouts_and_failed_attempts_are_recorded_with_ip_and_device(): void
     {
         $this->post('/login', ['email' => $this->host->email, 'password' => 'mala'], ['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0'])->assertSessionHasErrors('email');

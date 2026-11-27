@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use App\Models\StaffShiftLog;
+use App\Support\LoginLockout;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -42,10 +43,19 @@ class MucamaAuthController extends Controller
 
         $staff = Staff::activeMucamas()->find($validated['staff_id']);
 
+        if ($staff && ($blocked = LoginLockout::blocked('mucama', $staff->id))) {
+            return back()->withErrors(['pin' => $blocked])->withInput();
+        }
+
         if (! $staff || ! $staff->pin || ! Hash::check($validated['pin'], $staff->pin)) {
+            if ($staff) {
+                LoginLockout::fail('mucama', $staff->id);
+            }
+
             return back()->withErrors(['pin' => 'PIN incorrecto -- pedile a recepción que te lo revise en Personal.'])->withInput();
         }
 
+        LoginLockout::clear('mucama', $staff->id);
         $request->session()->put('mucama_staff_id', $staff->id);
         $request->session()->regenerate();
 

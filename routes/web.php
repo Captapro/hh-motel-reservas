@@ -125,10 +125,11 @@ Route::get('/reservas/pase/{token}', [BookingPassController::class, 'preview'])-
 Route::get('/reservas/pase/{token}/pdf', [BookingPassController::class, 'download'])->name('bookings.pass.pdf');
 
 // Opinión del huésped -- 4-5 estrellas va directo a Google, 0-3 se queda
-// adentro (ver GuestReviewController). {code} es opcional: el QR fijo de
-// recepción no viene de una reserva puntual, el link post-check-out sí.
-Route::get('/opinion/{code?}', [GuestReviewController::class, 'create'])->name('reviews.create');
-Route::post('/opinion/{code?}', [GuestReviewController::class, 'store'])->middleware('throttle:10,1,reviews.store')->name('reviews.store');
+// adentro (ver GuestReviewController). {token} (pass_token, no el código) es
+// opcional: el QR fijo de recepción no viene de una reserva puntual, el link
+// post-check-out sí.
+Route::get('/opinion/{token?}', [GuestReviewController::class, 'create'])->name('reviews.create');
+Route::post('/opinion/{token?}', [GuestReviewController::class, 'store'])->middleware('throttle:10,1,reviews.store')->name('reviews.store');
 Route::get('/opinion/{review}/comentario', [GuestReviewController::class, 'editComment'])->name('reviews.comment.edit');
 Route::post('/opinion/{review}/comentario', [GuestReviewController::class, 'updateComment'])->middleware('throttle:10,1,reviews.comment.update')->name('reviews.comment.update');
 Route::get('/opinion/{review}/gracias', [GuestReviewController::class, 'thanks'])->name('reviews.thanks');

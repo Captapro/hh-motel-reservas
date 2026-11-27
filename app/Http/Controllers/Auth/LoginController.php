@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LoginEvent;
 use App\Models\StaffShiftLog;
 use App\Models\User;
+use App\Support\LoginLockout;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,7 +26,13 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Bloqueo por cuenta, además del límite por conexión de la ruta.
+        if ($blocked = LoginLockout::blocked('cuenta', $credentials['email'])) {
+            return back()->withErrors(['email' => $blocked])->onlyInput('email');
+        }
+
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            LoginLockout::fail('cuenta', $credentials['email']);
             LoginEvent::note($request, 'fallido', User::where('email', $credentials['email'])->first(), $credentials['email']);
 
             return back()->withErrors(['email' => 'Datos incorrectos.'])->onlyInput('email');
@@ -38,6 +45,7 @@ class LoginController extends Controller
             return back()->withErrors(['email' => 'Esta cuenta está desactivada.'])->onlyInput('email');
         }
 
+        LoginLockout::clear('cuenta', $credentials['email']);
         $request->session()->regenerate();
 
         // Mismo registro real de entrada/salida que ya tienen las mucamas

@@ -13,28 +13,31 @@ use Illuminate\View\View;
  * Página pública de "¿cómo fue tu experiencia?" -- 4-5 estrellas se manda
  * directo a la ficha de Google (config('services.hh_reviews.google_review_link')),
  * 0-3 se queda adentro pidiendo un comentario, para poder hacer algo con la
- * queja antes de que se vuelva una reseña pública. {code} es opcional: el
+ * queja antes de que se vuelva una reseña pública. {token} es opcional: el
  * QR fijo de recepción no viene de una reserva puntual, el link mandado
- * después del check-out sí (así queda asociada a esa estadía).
+ * después del check-out sí (así queda asociada a esa estadía). Es el
+ * pass_token aleatorio y NO el código de la reserva: el código es correlativo
+ * por día, y con él cualquiera podía opinar por otro cliente y dispararle el
+ * cupón por WhatsApp. Un enlace antiguo con código cae como opinión sin reserva.
  */
 class GuestReviewController extends Controller
 {
     private const LOW_RATING_MAX = 3;
 
-    public function create(?string $code = null): View
+    public function create(?string $token = null): View
     {
-        $booking = $code ? Booking::where('code', $code)->first() : null;
+        $booking = $this->bookingFor($token);
 
         return view('reviews.create', ['booking' => $booking]);
     }
 
-    public function store(Request $request, GhlReviewRequests $rewards, ?string $code = null): RedirectResponse
+    public function store(Request $request, GhlReviewRequests $rewards, ?string $token = null): RedirectResponse
     {
         $validated = $request->validate([
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
         ]);
 
-        $booking = $code ? Booking::where('code', $code)->first() : null;
+        $booking = $this->bookingFor($token);
 
         // Una opinión por estadía: si vuelve a abrir el link, se usa la que ya dejó.
         $review = ($booking ? GuestReview::where('booking_id', $booking->id)->first() : null)
@@ -68,6 +71,11 @@ class GuestReviewController extends Controller
         }
 
         return redirect()->route('reviews.comment.edit', $review);
+    }
+
+    private function bookingFor(?string $token): ?Booking
+    {
+        return $token ? Booking::where('pass_token', $token)->first() : null;
     }
 
     /** Gracias, con el cupón de la próxima visita y (si le gustó) la invitación opcional a Google. */
