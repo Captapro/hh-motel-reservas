@@ -24,8 +24,9 @@ use Throwable;
 
 /**
  * Conversaciones de WhatsApp, Instagram, Facebook y correo dentro del panel.
- * Quién entra se define en Perfiles y accesos; los chats del equipo quedan
- * solo para administración.
+ * Quién entra se define en Perfiles y accesos. Todos los que entran ven los
+ * chats del equipo (pestaña Equipo); marcar o quitar a alguien del equipo es
+ * solo de administración.
  */
 class ConversationController extends Controller
 {
@@ -44,6 +45,7 @@ class ConversationController extends Controller
             'pendingOpen' => preg_match('/^[A-Za-z0-9]{1,64}$/', (string) request()->query('abrir')) ? request()->query('abrir') : null,
             'pendingTeam' => request()->boolean('equipo') && $this->seesTeam(request()),
             'seesTeam' => $this->seesTeam(request()),
+            'managesTeam' => request()->user()->isAdministrador(),
         ]);
     }
 
@@ -124,10 +126,13 @@ class ConversationController extends Controller
         return $found['items'] === [] && $customer->phone_e164 ? $ghl->search('todas', null, $customer->phone_e164) : $found;
     }
 
-    /** Los chats del equipo pueden ser internos: los anfitriones no los ven. */
+    /**
+     * Los chats del equipo los ve todo el que entra a la bandeja (desde el 27-nov
+     * también los anfitriones, para que vean al equipo como grupo).
+     */
     private function seesTeam(Request $request): bool
     {
-        return $request->user()->isAdministrador();
+        return $request->user() !== null;
     }
 
     private function visibleTo(Request $request, array $result): array
@@ -260,7 +265,7 @@ class ConversationController extends Controller
 
     public function team(Request $request, string $conversation, GhlConversations $ghl): JsonResponse
     {
-        abort_unless($this->seesTeam($request), 403);
+        abort_unless($request->user()->isAdministrador(), 403);
         $data = $request->validate(['on' => ['required', 'boolean']]);
 
         return $this->guarded(function () use ($request, $conversation, $ghl, $data) {

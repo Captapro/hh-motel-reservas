@@ -83,22 +83,24 @@ class ConversationInboxTest extends TestCase
         $this->actingAs($marketing)->postJson(route('admin.conversations.reply', 'abc'), ['message' => 'Hola'])->assertForbidden();
     }
 
-    public function test_hosts_never_see_or_mark_team_conversations(): void
+    public function test_hosts_see_and_answer_the_team_but_only_administration_marks_who_is_team(): void
     {
+        // 27-nov: los anfitriones ven al equipo como grupo (pestaña Equipo), pero no cambian quién es del equipo.
         $this->thread();
-        Http::fake([self::GHL.'/conversations/search*' => Http::response(['conversations' => [
-            ['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Equipo', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs()],
-        ]])]);
+        Http::fake([
+            self::GHL.'/conversations/search*' => Http::response(['conversations' => [
+                ['id' => 'abc', 'contactId' => 'c1', 'fullName' => 'Equipo', 'lastMessageType' => 'TYPE_WHATSAPP', 'lastMessageDirection' => 'inbound', 'lastMessageDate' => now()->getTimestampMs()],
+            ]]),
+        ]);
         TeamContact::create(['ghl_contact_id' => 'c1']);
         $host = User::factory()->create(['role' => 'recepcion']);
 
-        $this->actingAs($host)->getJson(route('admin.conversations.list', ['vista' => 'equipo']))->assertForbidden();
-        $this->getJson(route('admin.conversations.list', ['q' => 'Equipo']))->assertJsonCount(0, 'items');
-        $this->getJson(route('admin.conversations.show', 'abc'))->assertStatus(422);
-        $this->postJson(route('admin.conversations.reply', 'abc'), ['message' => 'Hola'])->assertStatus(422);
+        $this->actingAs($host)->get(route('admin.conversations.index'))->assertOk()->assertSee('data-view="equipo"', false);
+        $this->getJson(route('admin.conversations.list', ['vista' => 'equipo']))->assertOk();
+        $this->getJson(route('admin.conversations.list', ['q' => 'Equipo']))->assertJsonCount(1, 'items')->assertJsonPath('items.0.team', true);
+        $this->getJson(route('admin.conversations.show', 'abc'))->assertOk();
         $this->postJson(route('admin.conversations.team', 'abc'), ['on' => false])->assertForbidden();
         $this->assertSame(1, TeamContact::count());
-        Http::assertNotSent(fn (Request $r) => $r->method() === 'POST');
     }
 
     public function test_list_keeps_only_the_requested_view_and_channel_even_if_ghl_ignores_the_filter(): void
@@ -199,7 +201,8 @@ class ConversationInboxTest extends TestCase
 
         $rows = $this->actingAs(User::factory()->create(['role' => 'recepcion']))->getJson(route('attention.pending'))->assertOk()->json();
 
-        $this->assertSame(['Cliente traspaso te escribió', 'Cliente reserva te escribió'], array_column($rows, 'title'), 'Lo que atiende Cata no avisa; recepción no ve al equipo.');
+        $this->assertSame(['Cliente traspaso te escribió', 'Cliente reserva te escribió'], array_slice(array_column($rows, 'title'), 0, 2), 'Lo que atiende Cata no avisa.');
+        $this->assertCount(3, $rows, 'Recepción también ve cuando escribe el equipo.');
         $this->assertStringStartsWith('Traspasado por Cata · WhatsApp', $rows[0]['detail']);
         $this->assertStringStartsWith('Reserva vigente · WhatsApp', $rows[1]['detail']);
         $this->assertStringEndsWith('/admin/conversaciones?abrir=traspaso', $rows[0]['conversation']);
