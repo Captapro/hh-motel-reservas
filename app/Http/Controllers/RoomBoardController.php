@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Combo;
 use App\Models\Coupon;
 use App\Models\OperationalSetting;
+use App\Models\RateRule;
 use App\Models\Room;
 use App\Models\RoomCategory;
 use App\Models\Staff;
@@ -92,7 +93,77 @@ class RoomBoardController extends Controller
             'pendingBookings' => $this->pendingBookings(),
             'unpaidWalkIns' => $this->unpaidWalkIns(),
             'paidNoCheckin' => $this->paidNoCheckin(),
+            'priceSheet' => $this->priceSheet(),
         ]);
+    }
+
+    /**
+     * Precios de lista para la ventana "Precios" del tablero: las tarifas
+     * activas (HH, HOT...) con su precio por categoría y duración, tal como
+     * están cargadas en Admin → Tarifas. Sin ofertas ni cupones.
+     */
+    private function priceSheet(): array
+    {
+        $categories = RoomCategory::where('is_active', true)->orderBy('display_order')->orderBy('id')->get();
+
+        $rules = RateRule::where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('valid_from')->orWhereDate('valid_from', '<=', today()))
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', today()))
+            ->with(['windows', 'prices'])
+            ->orderBy('priority')
+            ->get();
+
+        return $rules->map(function (RateRule $rule) use ($categories) {
+            $durations = $rule->prices->pluck('duration_minutes')->map(fn ($m) => (int) $m)->unique()->sort()->values();
+            $rows = $categories->map(fn (RoomCategory $category) => [
+                'name' => $category->name,
+                'prices' => $durations->mapWithKeys(fn (int $minutes) => [
+                    $minutes => $rule->prices->first(fn ($p) => (int) $p->room_category_id === (int) $category->id && (int) $p->duration_minutes === $minutes)?->price,
+                ])->all(),
+            ])->filter(fn (array $row) => collect($row['prices'])->filter()->isNotEmpty())->values();
+
+            return [
+                'id' => $rule->id,
+                'name' => $rule->name,
+                'schedule' => $this->describeWindows($rule->windows),
+                'durations' => $durations->all(),
+                'rows' => $rows->all(),
+                'extra_person' => (int) $rule->extra_person_price,
+                'extra_hour' => (int) $rule->extra_hour_price,
+            ];
+        })->filter(fn (array $sheet) => $sheet['rows'] !== [])->values()->all();
+    }
+
+    /** "lun–jue 10:30–03:00 · vie 10:30–24:00 · sáb todo el día" (agrupa días seguidos con el mismo horario). */
+    private function describeWindows(Collection $windows): string
+    {
+        $names = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+        $hhmm = fn (string $t) => substr($t, 0, 5);
+        $label = function ($w) use ($hhmm) {
+            $start = $hhmm($w->start_time);
+            $end = $hhmm($w->end_time);
+            if ($start === '00:00' && $end === '00:00') {
+                return 'todo el día';
+            }
+
+            return $start.'–'.($end === '00:00' ? '24:00' : $end);
+        };
+
+        // Semana de lunes a domingo, como se lee en recepción.
+        $sorted = $windows->sortBy(fn ($w) => [((int) $w->weekday + 6) % 7, $w->start_time])->values();
+        $groups = [];
+        foreach ($sorted as $w) {
+            $text = $label($w);
+            $day = (int) $w->weekday;
+            $last = count($groups) - 1;
+            if ($last >= 0 && $groups[$last]['text'] === $text && ($groups[$last]['to'] + 1) % 7 === $day) {
+                $groups[$last]['to'] = $day;
+            } else {
+                $groups[] = ['from' => $day, 'to' => $day, 'text' => $text];
+            }
+        }
+
+        return collect($groups)->map(fn ($g) => ($g['from'] === $g['to'] ? $names[$g['from']] : $names[$g['from']].'–'.$names[$g['to']]).' '.$g['text'])->implode(' · ');
     }
 
     /**

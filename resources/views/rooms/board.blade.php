@@ -269,6 +269,28 @@
         /* Vista compacta — para cuando hay muchos Playrooms y hay que ver más de un vistazo. */
         .compact-toggle { background:#1c1c1c; border:1px solid #333; color:#ccc; border-radius:7px; padding:8px 13px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
         .compact-toggle:hover { border-color:#ff7918; color:#ff7918; }
+        /* Ventana "$ Precios" -- ya en el tono claro (hh-theme.css no la conoce). */
+        #price-sheet-btn { font-weight:700; }
+        .price-sheet { border:1px solid #d1d3d8; border-radius:12px; padding:18px 20px 14px; width:min(760px, calc(100vw - 32px)); max-height:calc(100vh - 48px); background:#fff; color:#202124; box-shadow:0 18px 50px rgba(0,0,0,.25); }
+        .price-sheet::backdrop { background:rgba(16,17,18,.45); }
+        .price-sheet .ps-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+        .price-sheet h2 { font-size:17px; margin:0; letter-spacing:.02em; }
+        .price-sheet .ps-close { background:none; border:1px solid #d1d3d8; border-radius:7px; width:32px; height:32px; font-size:15px; color:#42464e; }
+        .price-sheet .ps-close:hover { border-color:#ff7918; color:#a74600; }
+        .price-sheet .ps-rate { border:1px solid #e3e4e8; border-radius:10px; padding:10px 12px; margin-bottom:10px; }
+        .price-sheet .ps-rate.is-current { border-color:#ff7918; box-shadow:0 0 0 2px rgba(255,121,24,.18); }
+        .price-sheet .ps-rate-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+        .price-sheet .ps-tag { background:#202124; color:#fff; font-weight:800; font-size:12.5px; padding:3px 9px; border-radius:6px; letter-spacing:.04em; }
+        .price-sheet .is-current .ps-tag { background:#ff7918; color:#21170e; }
+        .price-sheet .ps-now { color:#a74600; font-size:12px; font-weight:700; }
+        .price-sheet .ps-when { color:#6b6f78; font-size:12px; }
+        .price-sheet table { width:100%; border-collapse:collapse; font-size:13.5px; font-variant-numeric:tabular-nums; }
+        .price-sheet th { text-align:right; color:#6b6f78; font-weight:600; font-size:12px; padding:5px 8px; border-bottom:1px solid #e3e4e8; }
+        .price-sheet td { text-align:right; padding:6px 8px; border-bottom:1px solid #f0f1f3; }
+        .price-sheet th:first-child, .price-sheet td:first-child { text-align:left; font-weight:700; }
+        .price-sheet tbody tr:last-child td { border-bottom:none; }
+        .price-sheet .ps-extras { margin:6px 0 0; font-size:12.5px; color:#42464e; }
+        .price-sheet .ps-note { margin:4px 0 0; font-size:11.5px; color:#8a8e96; }
         .compact .grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }
         .compact .card { padding: 8px 10px; }
         .compact .card-head b { font-size: 13px; }
@@ -511,6 +533,7 @@
             <p class="sub">Se actualiza solo cada 30s · <a href="{{ route('rooms.board') }}">actualizar ahora</a></p>
         </div>
         <div class="topline-toolbar">
+            <button type="button" class="compact-toggle" id="price-sheet-btn" onclick="document.getElementById('price-sheet').showModal()">$ Precios</button>
             <a class="compact-toggle" href="{{ route('catalog.index') }}" target="_blank" rel="noopener">Ver catálogo ↗</a>
             <button type="button" class="compact-toggle" id="catalog-link-btn" data-room-link="{{ route('catalog.index') }}" data-room-text="Aquí puedes ver todos nuestros Playrooms con fotos y precios, elegir día y hora, y dejar tu reserva confirmada con pago en línea 👇" onclick="hhCopyRoomLink(this)">Copiar link del catálogo</button>
             <div class="wing-filter" id="wing-filter" role="group" aria-label="Filtrar por ala">
@@ -521,6 +544,37 @@
             <button type="button" class="compact-toggle" id="compact-toggle-btn" onclick="hhToggleCompact()">⊟ Vista compacta</button>
         </div>
     </div>
+
+    {{-- Precios de lista de los Playrooms, para consultarlos sin salir del
+         tablero. Salen de Admin → Tarifas (RoomBoardController::priceSheet). --}}
+    <dialog id="price-sheet" class="price-sheet" onclick="if (event.target === this) this.close()">
+        <div class="ps-head">
+            <h2>Precios de Playrooms</h2>
+            <button type="button" class="ps-close" onclick="this.closest('dialog').close()" aria-label="Cerrar">✕</button>
+        </div>
+        @forelse ($priceSheet as $sheet)
+            @php $isCurrent = $tariff && $tariff['rate_rule']->id === $sheet['id']; @endphp
+            <section class="ps-rate {{ $isCurrent ? 'is-current' : '' }}">
+                <div class="ps-rate-head">
+                    <span class="ps-tag">{{ $sheet['name'] }}</span>
+                    @if ($isCurrent)<span class="ps-now">vigente ahora</span>@endif
+                    <span class="ps-when">{{ $sheet['schedule'] }}</span>
+                </div>
+                <table>
+                    <thead><tr><th>Categoría</th>@foreach ($sheet['durations'] as $minutes)<th>{{ \App\Support\TimeFormat::minutes($minutes) }}</th>@endforeach</tr></thead>
+                    <tbody>
+                        @foreach ($sheet['rows'] as $row)
+                            <tr><td>{{ $row['name'] }}</td>@foreach ($sheet['durations'] as $minutes)<td>{{ $row['prices'][$minutes] !== null ? '$'.number_format($row['prices'][$minutes], 0, ',', '.') : '—' }}</td>@endforeach</tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                <p class="ps-extras">Persona extra ${{ number_format($sheet['extra_person'], 0, ',', '.') }} · Hora extra ${{ number_format($sheet['extra_hour'], 0, ',', '.') }}</p>
+            </section>
+        @empty
+            <p class="ps-extras">No hay tarifas activas cargadas.</p>
+        @endforelse
+        <p class="ps-note">Precios de lista. Ofertas y cupones se aplican al crear la reserva.</p>
+    </dialog>
 
     {{-- Pases escaneados con el celular: aviso para atenderlos acá, en el computador. --}}
     <div id="pass-scans"></div>
@@ -1028,7 +1082,7 @@
             const active = document.activeElement;
             return window.hhHoldRefresh
                 || (active && active.matches('input, select, textarea') && page.contains(active))
-                || !!page.querySelector('details[open]');
+                || !!page.querySelector('details[open], dialog[open]');
         };
         let busy = false;
         async function refresh() {
