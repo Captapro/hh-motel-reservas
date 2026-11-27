@@ -65,13 +65,13 @@ class AttentionRequestController extends Controller
             'attend_url' => route('attention.attend', $a),
         ])->values();
 
-        return response()->json($inbox ? $rows->concat($this->waitingRows($ghl, $handoffs->pluck('phone')->all(), $request->user()->isAdministrador())) : $rows);
+        return response()->json($inbox ? $rows->concat($this->waitingRows($ghl, $handoffs->pluck('phone')->all(), true)) : $rows);
     }
 
     /**
      * Mensajes que tiene que ver una persona (ver GhlConversations::alerts). Hasta tres para no tapar el tablero;
-     * quien ya tiene aviso de traspaso no se repite. Los chats del equipo son
-     * solo para administración, igual que en la bandeja.
+     * quien ya tiene aviso de traspaso no se repite. Los chats del equipo avisan
+     * a todos los que usan la bandeja, igual que en ella.
      *
      * @param  array<int, string>  $handoffPhones
      */

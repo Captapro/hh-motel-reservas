@@ -199,6 +199,7 @@
         };
         const csrf = @json(csrf_token());
         const seesTeam = @json($seesTeam);
+        const managesTeam = @json($managesTeam);
         const labels = { whatsapp: 'WhatsApp', instagram: 'Instagram', facebook: 'Facebook', email: 'Correo' };
         const icons = {
             whatsapp: '<path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/>',
@@ -377,7 +378,7 @@
                 form.addEventListener('submit', event => saveContact(event, form, save, saved));
             }
             const content = [el('h3', '', 'Ficha'), form, list];
-            if (data.contact && seesTeam) {
+            if (data.contact && managesTeam) {
                 const team = el('button', 'cv-btn cv-team', data.team ? 'Quitar de Equipo' : 'Marcar como Equipo');
                 team.type = 'button';
                 team.addEventListener('click', () => toggleTeam(team, !data.team));
